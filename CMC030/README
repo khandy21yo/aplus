@@ -1,0 +1,16 @@
+Based on the CMC020 code, but completely rewritten.
+
+uses RMs data files, dates are stored as 'YYYYMMDD' so is Y2K complient.
+uses SMG so multiple terminal tyoes work, but VT220;s with their extra
+function keys are preferred.
+
+menu rewritten to handle multiple menu levels. menus were stored as text
+files. 
+
+Most of the code is here. Should be easy to recompile. a build script
+is included. Make sure you create the .olb files with room for many more
+symbols and objects than it defaults to.
+
+there are some scripts that need to be run before using, they define the
+location of the source and compiled code. Modify for your system.
+

@@ -1,0 +1,39 @@
+This repository contains several versions of accounting programs.
+
+This code was used by a timesharing service. the programs were available
+for so much an hour. the company is now gone, so i thought that the code
+nught be interesting to other programmers.
+
+
+CMC010
+	PDP-11 rsts/E based programs.
+	designed for use on printing terminals.
+	Sourxe in Basic+
+	ISAM data files. 9delf written)
+	Not Y2K complient.
+	Incomplete.A Much code lost over time.
+
+CMC020
+	PDP-11 rstS/e basedprograms
+	Designed for use on VT100 terminals.
+	Source in basic+ and Basic+2
+	ISAM data files. 9delf written)
+	not y2k complient.
+	Complete? (Missing sort prohram)
+
+CMC030
+	VAX VMS based programs
+	Designed for video terminals (SMG based)
+	Source in VAX Basic, and C
+	RMS data files.
+	Y2K complient.
+	Complete.
+
+CMC040
+	Linux based programs
+	Desiged for video terminals (ncurses based)
+	source in C++
+	postgrESQl data files
+	incomplete/in progress
+
+

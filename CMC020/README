@@ -1,0 +1,19 @@
+This version ws an upgrade to the CMC010 version.
+
+the programs were designed for vt100 terminals, with hardcoded escape
+sequences. iSaM was still in use.
+
+The menuing system was updted to "menu' with more features.
+
+was offered commercially, but mostly used by timesharing customers
+because of the cost of the necessary hardware. Some users had their
+own systems.
+
+isam was rewritten to be faster 9delayed updating the headers of the
+files until they were closed to avoid thrashing when records were being
+added0=, etc.).
+
+Much of the code exists, but much of it has been through a decompiler.
+storage was expensive, and it was easier to decompile it than recover
+the soure from tapes.
+

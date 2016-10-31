@@ -1,0 +1,20 @@
+Version 1.* of the CMC Aplus accounting system.
+
+Originally started with some Digital code for the database (DMS-500?),
+which was probably a precursor to RMS written in Basic+.
+After loading that code into the program, it left only 3 or 4K for
+the rest of the rogram, So a simpler database was created that was much
+smaller, called isam. tis version was much smaller, but retained the
+nmes abs parameters used by the original library.
+
+each user had his own custimized versions of the programs, stored
+in his own account. not much of this code survives.
+
+a menu system was eventully created, called 'do'.
+
+dates were not stored in a Y2K complient format.
+The data files were limited to 32K records.
+Designed to be used on lA35 terminals, as both a printer and a scope
+were too expensive for most users $2K each)
+data files were sorted after leaving the programs, not immediately.
+
