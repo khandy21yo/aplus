@@ -1,0 +1,46 @@
+
+
+
+                                 Rowland Dairy
+                            PRICE.NE1 record layout
+                              Record length = 256
+                         Program name [244,0]RWD???.BAS
+                                        
+
+Item                           Type  Length  Offset   Comments
+-------------------------      ----  ------  ------   ---------------------------
+
+Product code                     $      6       0                                   
+Category                         $      1       6     A number from 1-7*
+Description                      $     35       7                                   
+Unit type                        $      7      42                                   
+Gallon factor                    F      8      49                                   
+Pound factor                     F      8      57                                   
+Cost                             F      8      65                                   
+Retail 1                         F      8      73     Price
+Retail 2                         F      8      81       "
+Wholesale 1                      F      8      89       "
+Wholesale 2                      F      8      97       "
+Restaurant                       F      8     105       "
+Store drop                       F      8     113       "
+Bid                              F      8     121       "
+D1                               F      8     129       "
+D2                               F      8     137       "
+D3                               F      8     145       "
+D4                               F      8     153       "
+D5                               F      8     161       "
+Meadow Gold                      F      8     169       "
+Other                            F      8     177       "
+Extra                            -     71     185       
+                                      ---
+                                      256
+
+
+*These are the product categories:
+	1 - Milk
+	2 - Butter/eggs
+	3 - Ice cream
+	4 - Cheese
+	5 - Frozen foods
+	6 - Meadow Gold
+	7 - Misc.

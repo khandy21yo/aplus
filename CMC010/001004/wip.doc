@@ -1,0 +1,132 @@
+
+                             Work in Process Notes
+ 
+ 
+I. The Various Files
+
+          (1) The JOB file - stores basic information about each  job.
+
+          (2) The WIPACC file - Divides the general  ledger  for  each
+     work in process account by job.
+
+          (3) The HOUR file - Divides labor by account and job.
+
+          (4) The EST file - stores job estimates.
+ 
+II. Programs
+ 
+     JOB                       WIPREP
+     STASET                    WIPACC
+     STATUS                    HOUR
+ 
+III. Normal Sequence
+ 
+     (1) Run JOB and enter the JOB information.
+     (2) Run STASET to update current costs.
+         (See note below)
+     (3) Run STATUS to print daily status reports.
+     (4) At the end of the month, run WIPREP for monthly
+         work in process report.
+     (5) Update WIPACC for the month using the WIPREP program.
+         (Sets current costs into "to-date" costs)
+ 
+     Note:   STASET  will  automatically  add new jobs and accounts to
+     WIPACC and HOUR as it encounters  them,  but  budget  information
+     must be manually entered into WIPACC.
+ 
+IV. Running Information
+
+          Job numbers should be three characters if you are using  job
+     phases and five if you are not.  In all systems, the form will be
+     either JJJJJ for job number, or JJJ-PP for job number and  phase.
+     The distinguishing character is the "-", which should be used for
+     no other purpose within a job number code.
+ 
+
+          The WIPREP is run monthly, similarly to the LEDGER  program,
+     to  get  a  monthly  work  in  process report by job and account.
+     Note:  Always run STASET for the desired month immediately  prior
+     to running WIPREP.
+
+          The STASET program can be run repeatedly  during  the  month
+     and  is  used to update current costs from CKDATA.  Costs are not
+     updated more than once.
+
+
+          The STATUS program gives current status reports by  job  and
+     will usually immediately follow the STASET program.
+
+
+
+
+
+
+
+
+
+                    
+                                                                Page 2
+
+
+
+          The WIPACC program allows you to enter budget figures by job
+     number and general ledger number.
+
+          A "." in the  "UPDATE"  column  in  CKTOTA  indicates  which
+     records  have  been  updated  and  which  have  not.  STASET also
+     updates to PO file (part of the payables  system)  with  invoices
+     for each PO.   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

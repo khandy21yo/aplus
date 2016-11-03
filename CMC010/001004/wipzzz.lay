@@ -1,0 +1,66 @@
+
+
+
+
+
+           Work in process ZZZ record 
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : WIPZZZ
+
+    KEY FILE NAME : WIPACC.DAT              KEY = 14 + 2   DATA = 64
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _ZZZ[Z]__________________  __6A/1____  __F$( 1)_ : 
+
+      2 _BLANK___________________  __8A/7____  __F$( 2)_ : 
+
+      3 _First month in new year_  __2I/15___  __M%( 1)_ : 
+
+      4 _Last month updated______  __2I/17___  __M%( 2)_ : 
+
+      5 _1st month ststus set____  __2I/19___  __M%( 3)_ : 
+
+      6 _2nd month ststus set____  __2I/21___  __M%( 4)_ : 
+
+      7 _3rd month ststus set____  __2I/23___  __M%( 5)_ : 
+
+      8 _4th month ststus set____  __2I/25___  __M%( 6)_ : 
+
+      9 _Current year____________  __2I/27___  YEAR%_____ : 
+
+     10 _Record count 1st ststus_  __2I/29___  __R%( 3)_ : 
+
+     11 _Record count 2nd ststus_  __2I/31___  __R%( 4)_ : 
+
+     12 _Record count 3rd ststus_  __2I/33___  __R%( 5)_ : 
+
+     13 _Update status___________  __2I/35___  UPDATE%_____ : 
+
+     14 _________________________  __________  _________ : 
+
+     15 _Update counter start____  __2I/37___  EACMON%_____ : 
+
+     16 _Update counter finish___  __2I/39___  EACREC%_____ : 
+
+     17 _________________________  __________  _________ : 
+
+     18 _________________________  __________  _________ : 
+
+     19 _________________________  __________  _________ : 
+
+     20 _________________________  __________  _________ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 40, FROM  64, FREE = 24
+
+
+
+
+
+
+
+
+
+

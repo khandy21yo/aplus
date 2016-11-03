@@ -1,0 +1,66 @@
+
+
+
+
+
+          GENERAL PAYABLES SYSTEM
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : PAHOLD.BAS AND PAYABL.BAS
+
+    KEY FILE NAME : PAHOLD & PAYABL         KEY = 19 + 2   DATA = 64
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _VENDOR NUMBER___________  __6A/1____  __L$( 1)_ : 
+
+      2 _INVOICE NUMBER__________  _13A/7____  __L$( 2)_ : 
+
+      3 _CHECK NUMBER____________  __6A/20___  __L$( 3)_ : (*) SEE BELOW
+
+      4 _EXPENSE ACCOUNT (G/L#)__  __3S/26___  __L$( 4)_ : (**) SEE BELOW
+
+      5 _A/P NUMBER (G/L #)______  __3S/29___  __L$(12)_ : (**) SEE BELOW
+
+      6 _TAX FLAG________________  __1A/32___  __L$( 5)_ : 
+
+      7 _JOB NUMBER______________  __6A/33___  __L$( 6)_ : 
+
+      8 _PO NUMBER_______________  __6A/39___  __L$( 7)_ : 
+
+      9 _AMOUNT__________________  __8F/45___  ___L( 1)_ : 
+
+     10 _DISCOUNT________________  __8F/53___  ___L( 2)_ : 
+
+     11 _INVOICE DATE____________  __2I/61___  __L$( 8)_ : (***) SEE BELOW
+
+     12 _CHECK DATE______________  __2I/63___  __L$( 9)_ : (***) SEE BELOW
+
+     13 _________________________  __________  _________ : 
+
+     14 _________________________  __________  _________ : 
+
+     15 _________________________  __________  _________ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 64, FROM  64   
+
+  (*) THE CHECK NUMBER WILL START WITH A 'D' FOR DATE FROM PAHOLD,
+      '*' FOR A PARTIAL PAYMENT RECORD, 'N' FOR A CHECK NUMBER, AND
+      ANYTHING ELSE WILL BE FROM THE PAY OPTION.
+ (**) THE G/L NUMBER IS STORED AS AN INTEGER AND A CHR$. TO USE IT,
+      TAKE INTEGER PLUS A DECIMAL POINT PLUS CHR$.
+(***) DATES ARE STORED IN AN INTEGER (M%+D%*16%+Y%*512%), RETRIEVED BY:
+
+           M%=( I% AND 15% )
+           D%=( I% AND 31%*16% )
+           Y%=( SWAP%(I%) AND 254% )/2%
+
+
+
+
+
+
+
+
+

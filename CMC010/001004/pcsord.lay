@@ -1,0 +1,67 @@
+
+
+
+
+
+           ROWLAND DAIRY PRODUCTION CALCULATION SYSTEM
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : PCSxxx.B2S
+
+    KEY FILE NAME : PCSORD.DAT              KEY = 18 + 2   DATA = 32
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _LOCATION CODE___________  __3A/1____  LOC$_____ : 
+
+      2 _ORDER TYPE______________  __3A/4____  TYP$_____ : 
+
+      3 _ORDER DATE______________  __2D/7____  ORD.DATE$ : 
+
+      4 _PACK DATE_______________  __2D/9____  PCK.DATE$ : 
+
+      5 _LOAD DATE_______________  __2D/11___  LOD.DATE$ : 
+
+      6 _PRODUCT CODE____________  __6A/13___  PROCODE$_ : 
+
+      7 _ORDER AMOUNT____________  __8F/19___  ORD.AMT__ : 
+
+      8 _ADD FLAG________________  __2I/27___  ADD.FLAG% : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 28, FROM  32, FREE =  4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

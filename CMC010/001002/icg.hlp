@@ -1,0 +1,109 @@
+
+
+
+
+
+
+                            Description of ICG.BAC
+
+This program is designed to perform three functions on a disk file:
+  (1) to print a defined field from designated records
+  (2) to search for a field within a disk file
+  (3) to change the contents of a field in designated records
+
+
+Example:
+
+
+File:STORE.DAT-32                       'STORE.DAT' is a disk file
+Opening STORE.DAT ... in R/W mode.      If no write access then 'in R/O mode.'
+   25 records of 32 characters   ( S,128 )  32 is the length of a record
+
+
+Field: 3-18/$     character string    start: 3   length: 18
+
+Field: 19/F       floating point no.  start: 19  length: 8
+
+Field: 29/%       integer no.         start: 29  length: 2
+
+also  /D = 2 chr dates,     /G = 3 chr G/L numbers,
+      /3 = 3 chr floating,  /4 = 4 chr floating
+      /L = full floating point numbers
+      /I = 4 byte integers
+
+Field: 32/C       ascii value         start: 32  length: 1
+
+Note:  More than one field may be defined by using commas to separate each
+       field.  Fields may also be defined in any order.  They do not need to be
+       defined in the order that they appear in the record.  A maximum of 10
+       fields may be defined at a time.
+
+The change and search commands will only use the first field, while the print
+command will print out all fields.
+
+
+Examples:
+
+Option: LP:>20-100-5,144/P     Prints the field of records 20-100 step 5 and
+                               144 on the LP: where 'LP:>' is an optional
+                               output device or file.
+
+Option: JAN>5-10,20-30-2/S     Searches through the field of records 5-10 and
+                               20-30 step 2 for the string 'JAN'.  When the
+                               search option is selected ICG will prompt for
+                               an output file.  This allows the records found
+                               in the search operation to be written to another
+                               file for further processing.  If output to the
+                               screen is desired, then just press RETURN.
+
+
+
+
+
+
+
+Option: JON>21,35,40/C         Changes the field in records 21, 35, and 40 to
+                               the string 'JON'.
+
+Option: D>10-20/F              Identical to change (/C) except fills the entire
+                               string with the specified character (D's in this
+                               example).  NOTE: only that portion of the record
+                               descibed in the 'field' option will be set to the
+                               desired value.
+
+NOTE: If many changes are being made it is possible to tell ICG to not
+      print the changes after they are made.  This is done with the SET
+      command at the 'Option: ' prompt.  Examples:
+
+Option: SET NOPRINT	       This tells ICG that when changes are
+			       made the printing will be suppressed.
+                               Instead, the message 'Changes complete.' will
+			       be printed.
+
+Option: SET PRINT	       This tells ICG to print changes.
+
+To define a different field, press RETURN after 'Option: '
+
+To get another file, press RETURN after 'Field: '
+
+To exit, press RETURN after 'FILE: ', or type QUIT, EXIT, or STOP from the 
+       'Option' prompt.
+
+
+NOTE:  It  is possible to define often used descriptions as 'MACROS' and then
+       reference these macros by name rather than going through the laborious
+       process  of  describing the field each time you need to exam a file.  To
+       do this you use the 'MACRO' command when prompted with the 'Field: '.
+
+This command is of the format:
+
+MACRO={name>description}               (To define a macro)
+MACRO=?                                (Gives a list of currently defined
+                                       macros)
+MACRO=FIX                              (To modify a macro)
+   or
+MACRO\{name}                           (To use a macro to define a field)
+Where:
+    name = 1-8 character macro name
+    description = Valid field description as described above.
+

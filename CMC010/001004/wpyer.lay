@@ -1,0 +1,66 @@
+
+
+
+
+
+           WORK IN PROCESS YEAR END LEDGER
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : WPYER.BAS AND WPYERP.BAS
+
+    KEY FILE NAME : WPYER.DAS               KEY = 30 + 2   DATA = 32
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _JOB NUMBER______________  __6A/1____  __J$_____ : 
+
+      2 _TYPE OF W.I.P. ACCOUNT__  __1A/7____  __F%_____ : 
+
+      3 _ACCOUNT NUMBER__________  __8A/8____  __A$_____ : 
+
+      4 _YEAR ___________________  __1A/16___  __Y%_____ : 
+
+      5 _MONTH___________________  _1%A/17___  __M%_____ : 
+
+      6 _FLAG____________________  __1A/18___  __U$(4%)_ : 
+
+      7 _POINTER TO CKDATA FILE__  __2A/19___  __R%_____ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 20, FROM  32, FREE = 12
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,132 @@
+
+ 
+                             Accounts Payable Notes
+ 
+ 
+I. Programs
+ 
+     VENDOR - Maintain VENDOR file
+     PAHOLD - Enter and change invoices in the holding file
+     PAYREG - Print register
+     PINVCK - Set invoices to pay, print checks
+ 
+II. Files
+ 
+     VENDOR - Stores vendor names and addresses
+     PAHOLD - Stores invoices as they are entered,
+              allows changes or deletions.
+     PAYREG - Stores actual register. Invoices from PAHOLD
+              are moved to here.
+ 
+III. Sequence of operation
+ 
+     (1) Enter your vendors using the VENDOR program.
+     (2) Enter  invoices  into  the  holding  file  using  the  PAHOLD
+     program.
+     (3) Check for accuracy and make any necessary changes.
+     (4) UPDATE  the  invoices  to  the  PAYREG  file using the UPDATE
+     option.
+     (5) Print the payables register using PAYREG.
+     (6) Use the various pay options in PINVCK to set to pay  all  the
+     invoices which you wish to pay.
+     (7) Print the checks using PINVCK.
+     (8) Transfer  the paid checks to CKDATA using the TRANSFER option
+     in PAYREG.
+ 
+IV. Special notes
+ 
+  A. Vendor Numbers
+ 
+          Vendor numbers are, are constructed just as customer numbers
+     by taking the  first letter of each  word in the name, and taking
+     additional letters from the  first  word  if necessary until  the
+     desired length is reached.  Maximum length is six.
+ 
+  B. The "Pay Date" stored in VENDOR
+          The payables system gives you the capability of specifying a
+     "pay  date"  for each vendor, or a day of the month on which that
+     vendor's invoices should be paid.  You can then pay all  invoices
+     for  all vendors with a specified pay date, using the DATE option
+     in the check printer program.
+ 
+  C. The "Discount Amount" stored in VENDOR
+          This can be either a rate or an amount;  in either  case  it
+     is  a default.  For a rate, enter a number followed by a "percent
+     sign" ("%").  For an amount,  enter  just  a  number.   For  each
+     invoice  you  will be asked for discount.  Entering <RETURN> will
+     enter the default  for  that  vendor.   Entering  anything  else,
+
+
+
+
+
+
+
+
+
+                    
+                                                                Page 2
+
+
+
+     either a rate or an amount, will over-ride this default.
+ 
+  D. General Ledger Entries
+          A  cash  account  and one or more Accounts Payables accounts
+     will be set up for your system.  When you enter each invoice  you
+     will  have  to  enter the expense account.  If you have more than
+     one payables account, you will be asked to enter it at the  start
+     of   the  enter  option.   The  cash  account  entries  are  made
+     automatically since there can be only one accounts  payable  cash
+     account.
+ 
+  E. Methods of Paying invoices.
+          There  are  five  different  meathods  for  paying invoices.
+     Methods 1 thru 3 all place the  word  PAY  in  the  check  number
+     column;   writing the check changes the "PAY" to the check number
+     used.  The methods are as follows:
+ 
+     (1) Individually by invoice.  Use the PAY option to specify which
+     invoices you wish to pay.
+ 
+     (2)  By  Vendor.   Use  the PAY option and specify ALL to pay all
+     invoices for that vendor.
+ 
+     (3) By Pay Date.  (See note B. above) Use the  DATE  option,  and
+     specify which day you are paying for.  (4) By Invoice Date.  When
+     you write checks, specify which date to pay for, and all invoices
+     entered on that date will be paid.  (The date entered shows up in
+     the CHECK number column as 'Dmm.dd' where mm is the month and  dd
+     is  the day). Note:  this option requires no initial "PAY" option
+     before check printing.
+ 
+     (5) Partially pay an invoice.  Use the PARTIAL option to  specify
+     which  invoice  and  how much to pay.  Partial payments and their
+     associated invoices show up with  an  "*"  in  the  check  number
+     column.
+ 
+     Note:   If  an  item  which  has  already  been set to pay or has
+     already been paid is called out to be paid  again,  the  computer
+     will  say  "ALREADY SET TO" followed by the current status of the
+     check number field, and will ask how it is to be changed.   Enter
+     <RETURN> for no change, enter "." to make it blank, or enter your
+     desired code, such as check number or "PAY1".   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

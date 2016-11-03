@@ -1,0 +1,45 @@
+
+
+
+         [P]ublisher [A]ddress [M]aintenance [S]ystem - [PAMS] -- V1.0
+                      Expired subscriber file record layout
+                              Record length = 128
+                            Program name PUB???.BAS
+                                        
+
+Item                           Type  Length  Offset   Comments
+-------------------------      ----  ------  ------   ---------------------------
+
+Subscriber key                   $      6       0     PUBSCR creates unique key     
+Last name                        $     14       6                                   
+First name                       $     14      20                                   
+Business name                    $     20      34     May be used as address        
+Address                          $     20      54                                   
+City                             $     20      74                                   
+State                            $      2      94                                   
+Zip                              $     10      96     Long zip may be used          
+Mailing zone                     I      2     106                                   
+County                           $      5     108                                   
+Paid subscriber flag             $      1     113     Y or N                        
+Paid date                        $      2     114     Compressed from MM.YY         
+Expiration date                  $      2     116     Set to date expired
+Subscription length              C      1     118     As CHR$(# of months)          
+Amount paid                      I      2     119     As CVT%$(Amount*100.0)        
+Type A                           I      2     121     As CVT%$(type)*               
+Type B                           I      2     123     As CVT%$(type)                
+Type C                           I      2     125     As CVT%$(type)                
+Status                           $      1     127     A or S**                      
+                                      ---
+                                      128
+
+*The type is merely a numeric code that can be used to assign a subscriber to 
+ a specific group.  The group definitions are user defined and are significant
+ only to the user.  The program does not care what the code is as long as it is
+ an integer between -32768 and 32767.
+
+**The status flag can be used to indicate 1 of 2 possible conditions:
+     A - Active subscriber
+     S - Suspended subscriber (i.e. the record still exists but it will
+         only be 'accessed' by the contents listing program and the file
+         maintenance program.  All other programs will ignore the record.)
+

@@ -1,0 +1,66 @@
+
+
+
+
+
+           Work in process SHORT jobs file
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : 
+
+    KEY FILE NAME : JOB.DAT                 KEY = 6 + 2   DATA = 64
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _Job number______________  __6A/1____  __F$( 1)_ : 
+
+      2 _Description_____________  _58A/7____  __F$( 2)_ : 
+
+      3 _First month in new year_  __2I/65___  __M%( 1)_ : 
+
+      4 _Last month updated______  __2I/67___  __M%( 2)_ : 
+
+      5 _1st month ststus set____  __2I/69___  __M%( 3)_ : 
+
+      6 _2nd month ststus set____  __2I/71___  __M%( 4)_ : 
+
+      7 _3rd month ststus set____  __2I/73___  __M%( 5)_ : 
+
+      8 _4th month ststus set____  __2I/75___  __M%( 6)_ : 
+
+      9 _Current year____________  __2I/77___  YEAR%_____ : 
+
+     10 _Record count 1st ststus_  __2I/79___  __R%( 3)_ : 
+
+     11 _Record count 2nd ststus_  __2I/81___  __R%( 4)_ : 
+
+     12 _Record count 3rd ststus_  __2I/83___  __R%( 5)_ : 
+
+     13 _Update status___________  __2I/85___  UPDATE%_____ : 
+
+     14 _________________________  __________  _________ : 
+
+     15 _Update counter start____  __2I/87___  EACMON%_____ : 
+
+     16 _Update counter finish___  __2I/89___  EACREC%_____ : 
+
+     17 _________________________  __________  _________ : 
+
+     18 _________________________  __________  _________ : 
+
+     19 _________________________  __________  _________ : 
+
+     20 _________________________  __________  _________ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 90, FROM  64, FREE =-26
+
+
+
+
+
+
+
+
+
+

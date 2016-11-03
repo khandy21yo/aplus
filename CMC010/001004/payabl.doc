@@ -1,0 +1,1056 @@
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                    THE ACCOUNTS PAYABLE SYSTEM OF PROGRAMS
+ 
+                      User's guide and instruction manual
+                           Written by Bill Lovegrove
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+                                                                Page 2
+
+
+
+                              General Information
+ 
+
+          All the programs in this system are entered using  the  MENU
+     system (see the MENU documentation for details). You should be in
+     the PAYABL system, and need only to type the program name at  the
+     "PAYABL>" prompt.
+
+          All typed statements must be followed by a RETURN or  ENTER,
+     to   send   the   command   to   the  computer.   Throughout  the
+     documentation "<RETURN>" means this RETURN or ENTER key.
+
+          Several programs will ask  "SET  PAGE  ?"  when  you  run  a
+     printing option.  This is to allow you to turn the paper to a new
+     page so that the list, report, ect.  will start at the top  of  a
+     page.   You  should  manually turn the paper to the first line on
+     the next page, and press <RETURN>. The computer will  then  start
+     printing.
+
+          All programs sort their files if  necessary  when  they  are
+     ended.   If you type "END" and the computer responds with "Please
+     wait.  . ." this is what is happening.Sorts can take from  a  few
+     seconds  to  two  or  three minutes, depending on the size of the
+     file being sorted.  When the sort is complete, the computer  will
+     respond with a message such as "SORT COMPLETE AT 5:06 PM" and you
+     will be able to continue on.
+
+          There are several necessary items that are  unique  to  your
+     company,  such as name, address, etc.  These items will be stored
+     using a program called UNIQUE.   Specific  information  regarding
+     what  is  needed  and how to enter it can be found by calling the
+     INSTRUCTIONS option in the UNIQUE program.  One item, however, is
+     very important and needs explanation here.  The entry of invoices
+     will have a column for purchase order number.  If you specify  NO
+     PURCHASE ORDER in UNIQUE, this column will be skipped completely.
+     If you specify PURCHASE ORDER, you must enter it.   The  computer
+     will  then  look  for that PO number in the PO file.  If it finds
+     it, you will be allowed to continue the entry as  usual.   If  it
+     does not, it will ask you to confirm entering that PO number.  IF
+     you type YES, the entry will continue.
+
+          You will be asked to assign a VENDOR NUMBER to each of  your
+     vendor.   This  need  not be a number;  letters can also be used.
+     We recommend the following system for assigning  vendor  numbers:
+     (1)  Take  the  first  letter of each word in the name.  Example:
+     "AS" for ACME SHOELACES or "DJM" for DOE, JOHN  M.  (2)  Take  as
+     many  additional  characters  from the first word as necessary to
+     make a four letter code.  Example:  "ASCM" for ACME Shoelaces  or
+     "DJMO"  for DOE, JOhn M. If this system produces duplicate codes,
+     merely replace the fourth character with a number (such as "ASCM"
+     and  "ASC1"  ).  In this manner numbers can be assigned that will
+     sort the file into semi-alphabetical order and will  be  easy  to
+     recall  without  having  to  consult a table each time you need a
+
+
+
+
+
+
+
+
+                    
+                                                                Page 3
+
+
+
+     vendor's number.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+                                                                Page 4
+
+
+
+                    THE ACCOUNTS PAYABLE SYSTEM OF PROGRAMS
+ 
+ 
+
+
+          The Accounts  Payable  system  consists  of  four  programs.
+
+     These four programs are:
+ 
+ 
+      VENDOR   Used to maintain a list of your vendors.
+      PAHOLD   Used to enter invoices.
+      PAYREG   Transfer invoices to the holding file, print a register
+               of accounts payable, and specify which invoices to pay.
+      PINVCK   Used to print checks for the invoices set to pay in the
+               PAYREG program.
+ 
+ 
+ 
+
+          Each of these programs will be described in  detail  in  the
+     following sections. . .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                Page 5
+The program VENDOR
+
+
+I. VENDOR
+
+
+          This program is used to enter, change,  and  delete  vendors
+     from the vendor file and to print a vendor list.  The vendor file
+     also stores a discount amount or  discount  rate.   This  is  the
+     amount  of  discount  or  discount  rate in percent to be used in
+     computing discount.  This is  a  default-when  entering  invoices
+     using  PAHOLD  you  will  be  asked  for  DISCOUNT.   If you type
+     <RETURN>, the default amount or percent from the vendor file will
+     be  used.   Otherwise  the amount or percentage you enter will be
+     used.  This default is useful if, for example, you have a  vendor
+     who gives you a standard discount on all purchases.
+
+          On the following page is a list of each of  the  options  in
+     the VENDOR program, and a description of each.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                Page 6
+The program VENDOR
+
+
+ 
+ 
+       ENTER   Used   to  enter  a  new  vendor.   Questions  are
+               self-explanatory.
+       CHANGE  Used to change any item of the information  stored
+               for a vendor in the file(entered using the 'ENTER'
+               option). This is used for correcting mistakes made
+               in entry and for making changes if, for example, a
+               vendor's address should change.  Each  item  of  a
+               vendor's  data  will be printed one at a time, and
+               the computer will wait for a  response  for  each.
+               Enter the correct data at this point;  if the item
+               is not to be changed, type  <RETURN>,  which  will
+               leave the data un-altered.
+       DELETE  Used to remove an existing vendor from the file.
+       PRINT   This  option  is  used  to  print  a  list  of all
+               vendors.  It has two printing forms, and you  will
+               be asked which form to use.  The short form prints
+               only vendor numbers and names, while the long form
+               also prints the vendor's address.
+       EXAMINE This  option  is  identical  to  PRINT (long form)
+               except it allows you to print a  range  of  vendor
+               numbers, rather than the whole file.
+       FIND    Identical   to   EXAMINE  except  does  individual
+               vendors one at a time.
+       SORT    Used to sort the vendor file.  When a  new  vendor
+               is  entered using the ENTER option, he remains out
+               of order until the file is sorted NOTE:  A sort is
+               automatically  done when the program is ended (the
+               END option) if it is necessary.
+       END     Used to end the program.  Will sort  the  file  if
+               necessary.
+ 
+
+          All three of the other programs  use  the  vendor  file  for
+     retrieving information.  No invoices can be entered or statements
+     printed for a vendor until he is entered in the vendor file.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                Page 7
+The Program PAHOLD
+
+
+II. PAHOLD
+
+
+          The payables system works with two files, called the HOLDING
+     file  and  the  PAYABLES  file.   Invoices  are  entered into the
+     holding file, where they are checked for accuracy  and  corrected
+     as  necessary.   They  are then 'updated' into the payables file.
+     The reason for this is that when invoices are entered, they  must
+     also be entered into a file called the CHECK DATA file for use by
+     the general ledger system.  Since this is an irreversable step, a
+     holding file is used to allow you to correct any mistakes made in
+     entry without affecting the general ledger system.  This entry to
+     check   data   is   made   automatically   during   the   update;
+     consequentially no changes are  allowed  after  an  update.   The
+     procedure,  then, is as follows:  Entries are made to the holding
+     file, and a list is obtained  of  these  entries.   The  list  is
+     checked for mistakes and any changes are made.  These entries are
+     then 'updated' into the payables file using the  PAYREG  program.
+     The  rest of the system then works with this payables file.  Each
+     option of the  PAHOLD  program  is  explained  in  the  following
+     sections:
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                Page 8
+The Program PAHOLD
+
+
+     A. ENTER
+
+          This option is used to enter invoices into the holding file.
+     below  is  a  table  of each item to be entered, and the possible
+     resopnses for each:
+ 
+        Item     !     Response         !    Meaning
+     ------------------------------------------------------------
+                 !                      !
+     VENDOR #    !     A vendor       !      Enter the vendor  number  of
+                 !     number.          !   the  vendor you which  to enter
+                 !                      !   an invoice for.
+                 !                      !
+                 !     <RETURN>         !      A  <RETURN>  will  cause the
+                 !                      !   previous  vendor number  to  be
+                 !                      !   repeated.
+                 !                      !
+                 !     "."              !      A period will end the option
+                 !                      !   and return to "SELECTION ?".
+                 !                      !
+       NAME      !     **NONE**         !      The computer will print  the
+                 !                      !   name  of  the   vendor  entered
+                 !                      !   to verify that it is correct.
+                 !                      !
+      INVOICE    !    The Invoice       !       Enter the invoice number.
+                 !                      !
+                 !     "-"              !       A dash will abort the entry.
+                 !                      !
+      PO NUMBER  !     *NO RESPONSE*    !       If you are not using a PO
+                 !                      !    system, this space will be skipped
+                 !                      !    an no entry will be necessary.
+                 !                      !
+                 !        A PO number   !       If you are using a PO system,
+                 !                      !    you must enter a PO number. The
+                 !                      !    computer will check in the PO file
+                 !                      !    to see if the PO number you entered
+                 !                      !    is there. If it is, the entry will
+                 !                      !    continue. If not, you will be
+                 !                      !    be asked to confirm entering a PO
+                 !                      !    number not in the PO file.
+                 !                      !
+       AMOUNT    !     An amount        !      Enter  the   amount  of  the
+                 !                      !   invoice.   DO  NOT  enter   the
+                 !                      !   decimal-it  will  be positioned
+                 !                      !   automatically.
+                 !                      !
+                 !    "-"               !      If you  find that  you  have
+                 !                      !   entered a wrong number,  or  if
+                 !                      !   for some other reason you  wish
+                 !                      !   to abort this entry, type "-" .
+                 !                      !
+     DISCNT      !   <RETURN>           !       If you enter a <RETURN>,
+                 !                      !   the computer will find the default
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                          Page 9
+The Program PAHOLD
+
+
+                 !                      !   amount or percentage in the vendor
+                 !                      !    file ,and print it.
+                 !                      !
+                 !    An amount         !       If an amount is entered, this
+                 !                      !    amount will be subtracted as a
+                 !                      !    discount.
+                 !                      !
+                 !    A percentage      !       If you enter a percentage,
+                 !                      !    the computer will compute a
+                 !                      !    discount based on that percentage.
+                 !                      !
+      TAX        !     <RETURN>         !       A <RETURN> will give the
+                 !                      !   invoice an exempt status and
+                 !                      !    tax will not be calculated.
+                 !                      !
+                 !   "T"                !       A "T" will give the invoice
+                 !                      !    a tax status, and tax will be.
+                 !                      !    calculated.
+                 !                      !
+      G/L number !    <RETURN>          !      A default G/L number will be
+                 !                      !   stored in the vendor file. If
+                 !                      !   you enter <RETURN> this  stored
+                 !                      !   number   will   be   found  and
+                 !                      !   printed.
+                 !                      !
+                 !   A G/L number       !     Should you wish to use a  G/L
+                 !                      !   number other  than  the  stored
+                 !                      !   one,  enter it  and it  will be
+                 !                      !   used instead.
+                 !                      !
+                 !      "-"             !      The entry can also be voided
+                 !                      !   at this point with a "-" .
+                 !                      !
+     -------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 10
+The Program PAHOLD
+
+
+     Below is a step-by-step sample entry (the [] symbol indicates
+     the position of the print head at each point in the entry ).
+     In order to allow this type of horizontal entry, "NO ECHO" is set,
+     which means that nothing you type will be printed at your terminal
+     until after you type <RETURN>, in contrast to the usual way in which
+     each character is printed as you type it.
+ 
+ 
+ (1)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > []
+    !
+ (2)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC   []
+    !
+ (3)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC      1230000       []
+    !
+ (4)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC      1230000       1000     []
+    !
+ (5)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC      1230000       1000        125.47   []
+    !
+ (6)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC     1230000        1000        125.47     0  ]                                                         [
+    !
+ (7)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC     1230000        1000        125.47     0    125.00    MH25                                                        E
+    ! > []
+    !
+ (8)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC    []
+    !
+ (9)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOULACE COMPANY
+    !   ASCC    1230001   []
+    !
+(10)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+   ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC   1230001              1234    - NOT FOUND ENTER ANYWAY ? []
+    !
+(11)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC   1230001             1234     - NOT FOUND. ENTER ANYWAY ? YES
+    !   ASCC   1230001             1234   []
+    !
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 11
+The Program PAHOLD
+
+
+(12) VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC   1230001             1234    100.75  []
+    !
+(13)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    !   ASCC   1230001             1234    100.75  3 ]                                                    [
+    !
+(14)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB #
+    ! > ASCC     ACME SHOELACE COMPANY
+    ! > ASCC      1230001            1234     100.75   3  125.01  []                                                        T
+    !
+(15)! VENDOR #  INVOICE #         PO#       AMOUNT   DISCNT TAX GEN CD#  JOB#
+    ! > ASCC      ACME SHOELACE COMPANY
+    !   ASCC       1230001             1234     100.75    3  125.01  JN125                                                           T
+    ! > []
+    !
+PAGE
+     NOTES:
+ 
+ (1) The position at the start.
+ (2) I enter ASCC and <RETURN.  The computer prints this and the  name
+     for  the  vendor  I  have  entered.   It then goes to a new line,
+     prints the vendor number again, and waits for the invoice number.
+ (3) I enter "1230000", the invoice number, and <RETURN>.
+ ($) I  enter  "1000",  the  Purchase  order number, adn <RETURN>, The
+     computer prints this and continues, indicating that it  did  find
+     this purchase order in the PO file.
+ (5) I  enter  "12547"  adn <RETURN>. Notice that the decimal point is
+     not entered, it will be  positioned  automatically.   If  you  do
+     enter it, however, the amount will be taken as you enter it.  You
+     should, however, enter it without a decimal  ,  because  in  some
+     other   programs  entering  it  with  a  decimal  does  not  work
+     correctly.
+ (6) I type <RETURN> and get 0%, the amount which I previously entered
+     in VENDOR as the discount rate.
+ (7) I  type <RETURN> again, to enter the default tax code of "E". The
+     general ledger number and the job number are taken  from  the  PO
+     file  and  automatically  entered.   You will need to enter them,
+     however , if you are not using  a  PO  file,  or  if  as  in  the
+     following entry you enter a PO number that is not in the PO file.
+     After printing these two items, the computer is ready for another
+     input.
+ (*) I type <RETURN>, and the vendor number ASCC is repeated.
+ (9) I enter "1230001" and <RETURN>, to enter this invoice number.
+(10) I  enter  "1234" and <RETURN> for the PO number.  This time it is
+     not found in the PO file, so the computer asks "ENTER  ANYWAY ?".
+(11) I  enter  "YES"  adn  <RETURN>, the computer re-prints the vendor
+     number, invoice number ,and PO number,  and  continues  with  the
+     entry.
+(!2) I enter "10075" and <RETURN>.
+(13) I  enter  "3%"  and  <RETURN>,  so  that  a  3%  discount will be
+     calculated on this invoice.
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 12
+The Program PAHOLD
+
+
+(14) I enter "T" and <RETURN>, to show that tax has been calculated on
+     this invoice.
+(15) This  time  the computer waits for me to enter the general ledger
+     number.  I enter"125.01" and <RETURN>.
+(16) I enter "jn125" adn <RETURN>, the job number.  This entry is  now
+     complete, and I return to the ">" prompt.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 13
+The Program PAHOLD
+
+
+     C.  The CHANGE option
+
+     This option is used to change entries in the holding file.  It is
+     largely self-explanatory.  You will be asked  for  vendor  number
+     and  invoice  number.   The computer will print the item if it is
+     found.  It will then ask "CONFIRM (Y,N,+,-) ?". If aa vendor  has
+     more  than  one entry of the same invoice number ( a payment will
+     have the same invoice number as the invoice it applies  to  under
+     an  open  item  system  )  the change option will always find the
+     first one.  The purpose of the confirm question is to  allow  you
+     to change these other records.  Typing "+" will cause the compter
+     to find the next item with the same invoice number, if it exists.
+     A  "-" will "back up" one entry.  In this manner you can find the
+     record you wish to change.  When you have the correct one, typing
+     a "Y" will allow you to proceed to the actual change.  A "N" will
+     return to "vendor # TO CHANGE ? ",  should  you  wish  to  return
+     without  changing  anything.Below is a small exapmle of a change.
+     What I type is in darker printing.
+ 
+OPTION ? CHANGECHANGECHANGECHANGE
+CHANGE VENDOR # ? ASCCASCCASCCASCC
+INVOICE NUMBER ? 12345123451234512345
+ITEM TO CHANGE (? FOR HELP) ? ????
+ 
+ 
+TYPE: V FOR VENDOR #
+      I FOR INVOICE #    C FOR CHECK NUMBER
+      G FOR F/L NUMBER
+      T FOR TAX FLAG
+      J FOR JOB NUMBER
+      P FOR PO NUMBER
+      A FOR AMOUNT
+      D FOR DISCOUNT
+ 
+ 
+ITEM TO CHANGE (? FOR HELP) ? AMAMAMAM
+OLD: 125.00 - NEW ? 130.00130.00130.00130.00
+ITEM TO CHANGE (? FOR HELP) ?
+ 
+CHANGE VENDOR #
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 14
+The Program PAHOLD
+
+
+     D.  The DELETE option
+
+ 
+
+          This option is used to delete entries from the holding file.
+     It  is  largely  self-explanatory.   It uses the CONFIRM question
+     explained under the CHANGE option to find the correct  record  to
+     delete.  You should read that section for explanation.
+ 
+ 
+     F.  The LIST option
+
+
+          This option prints a list of all items in the holding  file.
+     Questions  are  self-explanatory.  If there are no records in the
+     holding file,the computer will return to "OPTION ? " when LIST is
+     typed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 15
+The PAYREG program
+
+
+III. The PAYREG Program
+ 
+
+          This program works with the payables file.  It  is  used  to
+     update invoices from the holding file into the payables file, and
+     to print a register of all  accounts  payable.   Options  are  as
+     follows
+ 
+ 
+     A.  The REGISTER option
+
+          Identical to LIST except this  option  prints  the  payables
+     file instead of the holding file.
+ 
+ 
+     B.  The EXAMINE option
+
+          This option will list all of the entries for a given  vendor
+     in the payables file.
+ 
+ 
+     C.  The UPDATE option
+
+          This option transfers all records in the holding file to the
+     payables file.  The holding file is always empty after an update.
+     An update is final and irreversable.  The only way to correct  an
+     error  after  an  update  is to enter an adjustment and update it
+     into the payables file.  For this reason all  records  should  be
+     checked  for  errors  before  an update.  It is during the update
+     option that entries are made to the general ledger system.  These
+     entries  are  automatic.   You will, however, be asked to enter a
+     month to make the entries for, since the  general  ledger  system
+     stores  things  by  month.   Consult  the  general  ledger system
+     instructions for more information.
+ 
+ 
+     D.  The END option
+
+          This option will end the  program  and  sort  the  files  if
+     necessary.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+Accounts Payable                                                         Page 16
+The PINVCK Program
+
+
+IV. PINVCK
+
+          This program is used for printing invoice checks.   The  way
+     our system pays invoices is as follows:
+
+          (1) All invoices that you wish to pay are  marked  as  such,
+     using several different meathods which will be described below.
+
+          (2) Checks are printed for all invoices marked to pay.
+
+          (3) All paid invoices are then  removed  from  the  payables
+     register.
+
+          There are several different  ways  to  mark  invoices.   The
+     first and easiest is individually, using the PAY option.  Specify
+     the vendor number and the specific  invoices  you  wish  to  pay.
+     These will show in the register printout with the word PAY beside
+     them in the check number column.
+
+          The second way is to pay all invoices for  a  given  vendor.
+     Use the PAY option, and enter ALL when asked for which invoice to
+     pay.
+
+          A third way is to pay by pay date.  In the vendor file is an
+     item  called  PAY  DATE.  This is a day of the month on which may
+     wish to pay that vendor's invoices.   Use  the  DATE  option  and
+     specify  a  date,  and  all  invoices will be set to pay for each
+     vendor who has that pay date.
+
+          A fourth way is to pay by date entered.  When  each  invoice
+     is  entered,  the date will be stored and will print in the check
+     number column, preceeded by a "D" (as in "D05.17" for an  invoice
+     entered  May  17 ).  WHEN YOU PRINT THE CHECKS, you can specify a
+     date, and it will set to pay and pay all invoices entered on that
+     date.
+
+          The fifth way is to partially pay an invoice ( and this gets
+     complicated,  I  must  admit).  Use the PARTIAL option to specify
+     which invoice and how much to pay.  In the register, the  invoice
+     will  then  show  up  with  an asterisk ("*") in the check number
+     column, and there will  be  on  a  separate  line  another  entry
+     showing the amount of the partial payment.  As additional partial
+     payments are made, more entries will be made until the invoice is
+     paid off.  It will then get removed.
+
+          And if you don't like any of these, you can always write the
+     check  by  hand and enter it using the VOID option.  It will then
+     get transferred to CKDATA without you having to actually write  a
+     check using PINVCK.
+
+          If a vendor has more invoices than will fit on one check, it
+     will  print  "LISTING  ON SEPARATE SHEET", and you should run the
+     ATTACHMENTS options to get a list to attach to the check.   
+
+
+
+
+
+
+
+

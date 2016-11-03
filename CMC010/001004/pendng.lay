@@ -1,0 +1,20 @@
+
+
+
+         [P]ublisher [A]ddress [M]aintenance [S]ystem - [PAMS] -- V1.0
+                     Subscriber pending file record layout
+                               Record length = 16
+                            Program name PUB???.BAS
+                                        
+
+Item                           Type  Length  Offset   Comments
+-------------------------      ----  ------  ------   ---------------------------
+
+Subscriber code                  $      6       0                                   
+Date warning statement se        $      2       6     Compressed from MM.YY         
+Date final statement sent        $      2       8     Compressed from MM.YY
+Extra                            -      6      10                                   
+                                      ---
+                                       16
+
+

@@ -1,0 +1,858 @@
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                     The General Ledger System of Programs
+ 
+                       Users Guide and Instruction Manual
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                       Page 2
+
+
+
+                              General Information
+ 
+
+          This documentation describes the General  Ledger  system  of
+     programs,  the  central  system  which "ties together" all of the
+     other accounting systems.  The link between  General  Ledger  and
+     the  other systems is a file called the CHECK DATA file ( or just
+     CKDATA ). CKDATA files are divided into months;  whenever working
+     with  a CKDATA file you will be asked which month to work in, and
+     the computer will open the correct file for that month.
+
+          This provides for division of information by months, and  is
+     the  reason for the "MONTH FOR CHECK DATA ENTRIES ? " question in
+     the other systems.  It is important that you enter the month  the
+     activity  actually  took place in, rather than the current month,
+     if they are different.  For example, invoices  entered  the  last
+     day  in May should be updated to the May CKDATA file, even if the
+     update does not take place until the next day, in June.
+
+          The General Ledger system consists of six  programs,  listed
+     and briefly described below:
+ 
+        CKDATA This  program is used to work with the check data file,
+               and allows you to examine the entries made and to print
+               check registers.
+        CKTOTA This  program  also  works  with the CKDATA file.  It,s
+               main  function  is  to  provide  quick  totals  of  the
+               information in a CKDATA file.
+        ADJENT This  program  is  used  to make journal entries to the
+               CKDATA file that are not easily entered through any  of
+               the other systems.
+        CHART  This program maintains your chart of accounts.
+        LEDGER This  program  is used to create and print your monthly
+               ledger, and to update that information into the account
+               history stored in the CHART file.
+        FINSTA This  program  is  used  to print financial statements,
+               based on the information obtained from CKDATA.
+
+          Each of these programs will be described in  detail  in  the
+     following sections.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                       Page 3
+The Program CKDATA
+
+
+I. CKDATA
+ 
+ 
+
+          This is the main program you will use in working with CKDATA
+     files.   It  is  used  to create new CKDATA files, to examine the
+     CKDATA files,  and  to  print  a  check  register.   It  has  the
+     following options:
+ 
+ 
+    ENTER Used  to  enter  checks  into the CKDATA file.  This is
+          used primarily for hand checks not entered through  the
+          Payables system.
+   CHANGE Change the information stored for a check.
+  EXAMINE Examine checks in the CKDATA file.
+  MISSING Lists all missing check numbers in a file.
+    PRINT Print a check register.
+     SORT Sort the CKDATA file.
+      END End the program, and sort the file if necessary.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                       Page 4
+The Program CKDATA
+
+
+ 
+ 
+     The following items are stored for each check in a CKDATA file:
+ 
+ 
+      
+     Item                       Meaning
+     ------------------------------------------------------------
+     CHECK NUMBER          On a true check written through the Payables
+                        system, this will be the check number. Since
+                        most entries to CKDATA are not actual checks,
+                        but other types of journal entries, the check
+                        number has no rean meaning. These types of
+                        entries are assigneda check number of "1", or
+                        some other number less than 10. There are
+                        exceptions to this, such as entries for payments
+                        received in which the CHECK NUMBER stores the
+                        receipt number, preceeded by an "R" to
+                        distinguish it from a true check.
+      
+     ACCOUNT NUMBER        This is the General Ledger account number
+                        which this entry is to apply to.
+      
+     SOURCE CODE           This is a two-character code indicating
+                        where this entry came from. For example, all
+                        entries made by the Payroll system will have a
+                        source code of "PR".
+      
+     JOB NUMBER    This is the job number which this item is
+                        to apply to. Job numbers will be used only if
+                        you are using a system with job costing. Otherwise
+                        it should always be blank.
+      
+     DATE                  The date the check was written, or for other
+                        types of entries the invoice date, payroll date,
+                        etc.
+      
+     DESCRIPTION           A description of the entry. For checks it
+                        be who the check was written to, for receivables
+                        entries the customer name, for payroll entries
+                        the employee number, etc.
+      
+      
+ 
+
+          All of the options should  be  self-  explanatory,  and  you
+     should  be  able  to  quickly  learn  to use them all.  The enter
+     option is slightly different from the other options, however, and
+     should  be  mentioned  here.   Checks are entered in a horizontal
+     format, with columns for each item to be entered.  In this manner
+     all entry for one check is made on a single line.  To allow this,
+     however, it is necesaary for the program to set the terminal such
+     that  nothing  you  type  is  printed  until  after  you type the
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                 Page 5
+The Program CKDATA
+
+
+     <RETURN> key, in contrast to  the  usual  manner  in  which  each
+     character is printed as you type it..
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                 Page 6
+The Program CKTOTA
+
+
+II. CKTOTA
+ 
+
+          This program is similar to CKDATA, in that it works with the
+     CKDATA file.  It has two main functions.  First, it allows you to
+     print the CKDATA file in  chronological  order,  rather  than  in
+     check  number  order,  as  CKDATA  does.  Second it allows you to
+     print totals by General Ledger Account number.  It has only these
+     two options, LIST AND TOTAL
+
+          The list option has three different meathods of listing  the
+     file.  They are forewards, backwards, and by specific check.  You
+     will be asked," LIST WHAT ? ". Typing a "?" will get you  a  list
+     of what to type, and what each possible response means.
+
+          You will also be asked for " ACCOUNT # TO PRINT ? ". Enter a
+     <RETURN>  to  print  the entire file.  Enter an account number to
+     print all entries with that account number.  Etnter a job  number
+     to print all entries with that job number.
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                 Page 7
+The program ADJENT
+
+
+III.ADJENT
+ 
+ 
+
+          This program is designed to be used for initial entry of all
+     Journal  Entries  which  do  not  relate  well to the basic entry
+     systems for payroll,  accounts  receivable,or  accounts  payable.
+     The  program  works on a file called ADJEyy.DAT where "yy" is the
+     year, eg.  ADJE79.DAT  contains  adjusting  journal  entries  for
+     1979.
+
+          Once a Journal Entry  has  been  entered  to  the  file  and
+     checked to insure that the description is correct and the balance
+     equal to zero, the entry may be updated to the  check  data  file
+     for  any  specified  month,  thus getting the adjustment into the
+     general ledger.
+
+          Note that Journal Entries remain in  this  file  even  after
+     update  to  a  check  data  file  so that a full year's adjusting
+     journal entry register may be obtained.   Once  a  given  Journal
+     Entry  has  been  updated,  the  month to which it was updated is
+     entered into the file, and the Journal Entry is  "locked  in"  to
+     prevent any further entries, changes, or deletions involving this
+     Journal Entry number.  Hence, be sure Journal Entries are correct
+     before updating them in order to avoid writing Journal Entries to
+     adjust other Journal Entries.
+
+          The ENTER option automatically assigns Journal Entry numbers
+     consecutively  by  default if <RETURN> is entered at the "#".  It
+     is recommended that the default  be  used  except  when  entering
+     additional records to a Journal Entry already in the file but not
+     yet updated.  All fields in the ADJENT file are the  same  as  in
+     the  check  data  file  with  the exceptions of the Journal Entry
+     number, ADJENT description, and update month fields, which do not
+     exist  in  CKDATA.  The CKDATA description field in ADJENT always
+     starts with  "JE  #  ??-".  Thus  there  are  normally  about  22
+     characters  of  description  space  in  this  field available for
+     manipulation.  The ADJENT description field is 58 characters  for
+     each  record  in  a Journal Entry.  This field is totally open to
+     user manipulation and should be  used  to  describe  the  journal
+     entry  in  complete  detail.   This  description is never sent to
+     other files.
+
+          On the following page is a table listing each item you  will
+     be  asked  for  when  entering  Journal entries, and the possible
+     responses for each.  . .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                 Page 8
+The program ADJENT
+
+
+    Item        !        Option         !    Meaning
+-----------------------------------------------------------------------
+                !                       !
+   "#"          !       <RETURN>        !      Entering a <RETURN> will
+                !                       !   cause the computer to assign
+                !                       !   the next sequential JE  number
+                !                       !   based on the entries  already
+                !                       !   in the file.
+                !                       !
+                !       A JE number     !      Enter the journal entry
+                !                       !   number if you do not wish to
+                !                       !   use the next sequential number.
+                !                       !
+                !       "."             !      A "." will end the option
+                !                       !   and return to "SELECTION ? ".
+                !                       !
+                !                       !
+                !                       !
+  CHECK #       !       A check number  !      Enter the check number of
+                !                       !   of the journal entry.
+                !                       !
+                !       <RETURN>        !      A <RETURN> will repeat the
+                !                       !   previous check number entered.
+                !                       !
+                !       "."             !      A "." will return you to the
+                !                       !   "#" for the next JE #.
+                !                       !
+                !                       !
+                !                       !
+  ACCT #        !       Account number  !      Enter the general ledger
+                !                       !   account number.
+                !                       !
+                !       <RETURN>        !      Again a <RETURN> will repeat
+                !                       !   the previous entry.
+                !                       !
+                !       "-"             !       A 'dash' will abort the
+                !                       !   entry and return to CHECK #.
+                !                       !
+                !                       !
+                !                       !
+   SRC          !       A two-letter    !      Enter the source code.
+                !       code            !
+                !                       !
+                !       <RETURN>        !      Repeat previous code.
+                !                       !
+                !       "-"             !      Abort the entry.
+                !                       !
+                !                       !
+                !                       !
+---------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                 Page 9
+The program ADJENT
+
+
+        Item    !       Option          !       Meaning
+---------------------------------------------------------------------
+   JOB #        !       Job number      !      Enter the job number.
+                !                       !
+                !       <RETURN>        !      Repeat the previous entry.
+                !                       !
+                !       "-"             !      Abort the entry.
+                !                       !
+                !                       !
+                !                       !
+   DATE         !       Date,<RETURN>,  !      Same as above.
+                !                       !
+  AMOUNT        !       The amount      !      Enter the amount. DO NOT
+                !                       !   enter the decimal point; it
+                !                       !   will be placed automatically.
+                !       <RETURN>        !      Repeat previous entry.
+                !                       !
+                !       "-"             !      Abort the entry.
+                !                       !
+                !                       !
+                !                       !
+ CKDATA DESC    !       Description     !      Enter the description to
+                !                       !   be updated to CKDATA. You are
+                !                       !   limited to 21 characters and
+                !                       !   will be told if you exceed
+                !                       !   this limit. You will be
+                !                       !   allowed to re-enter a shorter
+                !                       !   description if you wish. (Your
+                !                       !   description will automatically
+                !                       !   be preceded by "JE#??-" )
+                !                       !
+                !                       !
+                !       "-"             !      Again a "-" will abort the
+                !                       !   entry.
+                !                       !
+                !                       !
+  ADJENT DESC   !       Description     !       Enter the description for
+                !                       !   the ADJENT file. You are limited
+                !                       !   to 58 characters and will be
+                !                       !   told if you exceed this limit.
+                !                       !   You will be allowed to re-enter
+                !                       !   a shorter description if you wish.
+                !                       !
+---------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                Page 10
+The Program CHART
+
+
+IV. CHART
+ 
+ This program maintains a file containing your chart of accounts, and
+account history for each. For each account will be stored the following:
+ 
+ 
+ACCOUNT NUMBER             The Number of the account.
+ 
+DESCRIPTION                A description of the account. This can be
+                        up to 40 characters long.
+ 
+ACCOUNT TYPE               What type of account this is, such as
+                        such as assets, liabilities, etc. Following
+                        are the standard codes:
+ 
+                                AC      Current Assets
+                                AL      Long Term Assets
+                                LC      Current Liabilities
+                                LL      Long Term Liabilities
+                                OE      Owner's Equity
+                                OR      Current Profit or Loss
+ 
+                                RE      Revenue From Sales
+                                EC      Expense From Sales
+                                EE      Other Expenses
+ 
+OVERHEAD ALLOCATION        A percentage overhead allocation.
+ 
+MONTHLY BUDGET            Budgeted amount for the current month.
+ 
+YEARLY BUDGET              Budgeted amount for the year.
+ 
+HISTORY                    A fifteen-month account history, for
+                        use in printing financial statements.
+
+          The program has the following options:
+ 
+   A.ENTER - enter new accounts.  You have the option of entering  the
+     account history ( for initially entering accounts ), or of having
+     it automatically set to zero.
+ 
+   B. CHANGE - Change any of the stored data for an existing  account.
+ 
+   C. DELETE - Delete an account form the file.
+ 
+   D. EXAMINE-  Examine  a  range  of accounts.  You will be asked for
+     starting account  number  and  ending  account  number,  and  all
+     accounts there between will be printed.
+ 
+   E. Print - Similar to EXAMINE except will print all accounts.
+ 
+   F. HISTORY - Print the account history for each account.
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                Page 11
+The Program CHART
+
+
+   G. BUDGET  - Enter or change budget amounts.  Faster than using the
+     change option when you have several accounts to change  at  once,
+     such  as  at  the  start  of a new month when many of the monthly
+     budgets moght change.
+ 
+   H. RESET - Reverse a LEDGER update.  It is the LEDGER program  that
+     updates  the account balances in CHART.  Should you find you need
+     to reverse an update for some reason, this option will allow  you
+     to do it.  You cannot RESET further back than one month, however,
+     because in doing so you would loose some of your account history.
+ 
+   I. ZZZ  -  Also  stored in the file is the month number of the last
+     month updated, to insure that a month is not  updated  twice  and
+     that  months are not updated out of order.  The ZZZ option allows
+     you to enter this month number ,and to change  it  if  necessary.
+     Note that changing this number can be rather dangerous because it
+     can cause an update of the wrong month or destroy the accuracy of
+     the  account  history.   Normally  you only need runn this option
+     once when  you  set  up  your  file.   The  LEDGER  program  will
+     automatically  change it after that, and insure that your updates
+     are done correctly.
+ 
+   J. END - End the program.  This option will automatically sort  the
+     CHART file if necessary.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                Page 12
+The Program LEDGER
+
+
+V. LEDGER
+ 
+
+          The LEDGER program performs three main functions.  First  of
+     all,  it  makes from the CKDATA file another file that has all of
+     the information grouped by account  number.   This  is  necessary
+     before  either  of  the  other  options  can be used.  The second
+     option is to print the ledger for thie current month basedon  the
+     information  in  this  file.  The third function is to update the
+     account balances and history in the CHART file for each  account.
+     Since  an  update  is only done once for a month, it is important
+     that all of a month's activity be in the CKDATA file beofre  this
+     update is done.
+
+          Upon running the program the first thing you will  be  asked
+     is  if a new ledger file should be created.  Initially you should
+     answer YES, enter the month of the  check  data  file,  and  wait
+     while  this file is created.  After a file has once been created,
+     however, it is not necessary to create it again  until  the  next
+     month.  By answering no you will immediately go to the next part,
+     the  SELECTION ?  question.   The   LEDGER   program   has   four
+     selections,  PRINT,  WORKSHEET, UPDATE, FIND, and END.  The PRINT
+     option prints the General Ledger.Note that it needs the wide  (14
+     1/2  inch)  paper.   The  WORK  SHEET option prints a similar but
+     shorter worksheet for you to use.  The  find  option  will  check
+     through  the  LEDGER file for any account numbers that are not in
+     the CHART file, and print them.  You should change  them  in  the
+     CKDATA file and re-create the LEDGER file if and are found, sinch
+     they cannot be updated until they match a valid account.  After a
+     FIND  has  been  run that showes no undefined accounts, and AFTER
+     the ledger has been printed, the UPDATE should be done, to update
+     this  month's activity into the CHART file.  You will not allowed
+     to update if there are any undefined accounts, or if you are  not
+     updating the next sequential month from the last month updated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
+The General Ledger System                                                Page 13
+The Program FINSTA
+
+
+IV. FINSTA
+ 
+
+          The FINSTA program is used to print financial statements for
+     your  company.   Since  financial  statements are specialized and
+     vary from company to company, we do not have  a  standard  FINSTA
+     program.  You should consult the individual FINSTA documentation,
+     if there is one for your  account,  for  a  description  of  your
+     financial statement printer.   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

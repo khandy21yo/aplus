@@ -1,0 +1,66 @@
+
+
+
+
+
+           Work in process closed job file
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : WIPCJF
+
+    KEY FILE NAME : WIPCJF.DAT              KEY = 8 + 2   DATA = 64
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _Job number______________  __6A/1____  __F$( 1)_ : 
+
+      2 _Date of closing_________  __2D/7____  __F$( 2)_ : 
+
+      3 _Purge flag______________  __2A/9____  __F$( 3)_ : 
+
+      4 _Revenue recognized______  __8F/11___  ___F( 4)_ : 
+
+      5 _Labor costs_____________  __8F/19___  ___F( 5)_ : 
+
+      6 _Material costs__________  __8F/27___  ___F( 6)_ : 
+
+      7 _Subcontractor costs_____  __8F/35___  ___F( 7)_ : 
+
+      8 _Misc. costs_____________  __8F/43___  ___F( 8)_ : 
+
+      9 _Current year____________  __2I/51___  YEAR%_____ : 
+
+     10 _Record count 1st ststus_  __2I/53___  __R%( 3)_ : 
+
+     11 _Record count 2nd ststus_  __2I/55___  __R%( 4)_ : 
+
+     12 _Record count 3rd ststus_  __2I/57___  __R%( 5)_ : 
+
+     13 _Update status___________  __2I/59___  UPDATE%_____ : 
+
+     14 _________________________  __________  _________ : 
+
+     15 _Update counter start____  __2I/61___  EACMON%_____ : 
+
+     16 _Update counter finish___  __2I/63___  EACREC%_____ : 
+
+     17 _________________________  __________  _________ : 
+
+     18 _________________________  __________  _________ : 
+
+     19 _________________________  __________  _________ : 
+
+     20 _________________________  __________  _________ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 64, FROM  64, FREE =   
+
+
+
+
+
+
+
+
+
+

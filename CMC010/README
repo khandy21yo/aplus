@@ -16,5 +16,9 @@ dates were not stored in a Y2K complient format.
 The data files were limited to 32K records.
 Designed to be used on lA35 terminals, as both a printer and a scope
 were too expensive for most users $2K each)
-data files were sorted after leaving the programs, not immediately.
+data files were sorted after leaving Uthe programs, not immediately.
+
+these files were transfered from a PDP-11 in binary mode, and where
+it made sense they were converted to nix line format to make them
+readable.
 

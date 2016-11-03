@@ -1,0 +1,15 @@
+! Submit example: "SUBMIT BCWORK/PAR=(JUN,87)"
+! P1 = Month for billing
+! P2 = Year  for billing
+!
+$ SET NOON 
+$ SET TERM/WIDTH=180
+$ RENAME BCWORK.LOG BC'P1'.DAT
+$ OPEN/WRITE/REPLACE 2 BCTEMP.COM
+$ WRITE 2 "$ RUN $BCWORK"
+$ WRITE 2 "''P1'"
+$ WRITE 2 "''P2'"
+$ WRITE 2 ""
+$ CLOSE 2
+$ SET LOG_FILE/NOTIME_STAMP
+$ @BCTEMP
