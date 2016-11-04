@@ -1,0 +1,135 @@
+10	!
+	!	Program name - EDITUQ.B2S
+	!	               This program is a front-end driver which
+	!		       will load a UNIQUE file into an ascii
+	!		       text file and then chain to EDT to
+	!		       allow the file to be edited.
+	!
+	!	Author       - Rick Owen
+	!
+	!	Date         - October 5, 1984
+	!
+	!	Edit level   - V1.0
+	!
+	!	Language     - BASIC-PLUS-2 V2.2
+	!
+	!
+	!	07/11/91 - Kevin Handy
+	!		Eased up on I/O bandwidth.
+	!		Changed floating constants to integer
+
+	!
+	!	Declare variables
+	!
+	DECLARE STRING LINE.NUMBER, WHICH.FILE, JUNK, CLEAR.SCREEN, &
+		ACC_TO_SCAN,FILE_NAME,DEVICE_SPEC
+	DECLARE WORD LINE.COUNTER,FSS_RESULT(30),FILE_SIZE,NUM_LINES
+	!
+	!	Dimension array for virtual UNIQUE file
+	!
+	DIM #1%, STRING UNIQUE(32767%) = 64%
+
+	!
+	!	Now open the kb: and set error processing
+	!
+	OPEN "KB:" AS FILE 6%
+	ON ERROR GOTO 19000
+	CLEAR.SCREEN = '155'C + "[0;0H" + '155'C + "[2J"
+
+50	!
+	!	And determine which file to edit
+	!
+	PRINT #6%,CLEAR.SCREEN
+	PRINT #6%,"EDITUQ - MENU FILE editor V1.0"
+	PRINT #6%
+	PRINT #6%,"Please enter file spec: ";
+	INPUT LINE #6%,WHICH.FILE
+	WHICH.FILE = EDIT$(WHICH.FILE,-1%)
+	IF WHICH.FILE = "?"
+	THEN
+		PRINT #6%,CLEAR.SCREEN
+		PRINT #6%,"Please enter the file spec as:"
+		PRINT #6%,"dev:[p,pn]file.ext"
+		PRINT #6%,"Where:"
+		PRINT #6%,"     dev:   - device (defaults to SY:)"
+		PRINT #6%,"     [p,pn] - account in which unique file resides"
+		PRINT #6%,"     file   - file name (defaults to 'MENU')"
+		PRINT #6%,"     ext    - extension (defaults to 'FIL')"
+		PRINT #6%
+		INPUT #6%,"Press RETURN to continue ",JUNK
+		GOTO 50
+	END IF
+
+	IF WHICH.FILE = ""
+	THEN
+		WHICH.FILE = "_SY:MENU.FIL"
+	END IF
+
+	JUNK = FSS$(WHICH.FILE,1%)
+	CHANGE JUNK TO FSS_RESULT
+	ACC_TO_SCAN = MID$(JUNK,5%,2%) + ''
+	FILE_NAME   = MID$(JUNK,7%,6%) + ''
+	DEVICE_SPEC = MID$(JUNK,23%,3%) + ''
+	JUNK = SYS('6'c + '17'c + '255'c + &
+		'255'c + ACC_TO_SCAN + FILE_NAME + STRING$(10%,0%) + &
+		DEVICE_SPEC)
+	CHANGE JUNK TO FSS_RESULT
+	FILE_SIZE = FSS_RESULT(16%) * 65536.0 + FSS_RESULT(13%) + &
+		SWAP%(FSS_RESULT(14))
+	NUM_LINES = 8 * FILE_SIZE
+
+	OPEN WHICH.FILE FOR INPUT AS FILE 1%, &
+		ORGANIZATION VIRTUAL, &
+		BUFFER 32%
+
+	!
+	!	Open the temporary edit file
+	!
+	OPEN "TEMPUQ.TMP" FOR OUTPUT AS FILE 2%
+	PRINT #6%,"Loading ";WHICH.FILE
+
+60	!
+	!	Begin processing the UNIQUE file
+	!
+	WHILE LINE.COUNTER < NUM_LINES
+		LINE.NUMBER = format$(LINE.COUNTER, "<0>####")
+		PRINT #6,LINE.NUMBER;CR; if (LINE.COUNTER / 10%) * 10% = line.COUNTER
+		LINE.NUMBER = "<" + LINE.NUMBER + ">"
+		PRINT #2,LINE.NUMBER + MID(UNIQUE(LINE.COUNTER),2%,60%)
+		LINE.COUNTER = LINE.COUNTER + 1%
+	NEXT
+
+70	CLOSE 1%,2%,6%
+	JUNK = SYS(CHR$(14%) + 'EDT TEMPUQ.TMP /CHAIN="ISM:BLDUNQ.TSK;0;"')
+
+19000	!
+	!	Error processing
+	!
+	SELECT ERR
+		CASE 5%
+			PRINT "?Can't find UNIQUE file : ";WHICH.FILE
+			INPUT "Press RETURN to continue ";JUNK
+			RESUME 50
+		CASE 11%
+			SELECT ERL
+				CASE 60%
+					RESUME 70
+				CASE ELSE
+					PRINT CLEAR.SCREEN
+					PRINT "[--Exit--]"
+					CLOSE 6%
+					RESUME 32767
+			END SELECT
+		CASE 55%
+			PRINT CLEAR.SCREEN
+			PRINT "?Array bounds exceeded.  Pointer ="; &
+				LINE.COUNTER
+			PRINT "Terminating program"
+			KILL "TEMPUQ.TMP"
+			CLOSE 1%,2%,6%
+			RESUME 32767
+		CASE ELSE
+			ON ERROR GOTO 0
+	END SELECT
+
+32767	END

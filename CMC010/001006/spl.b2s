@@ -1,0 +1,76 @@
+10 	! REPORT SPOOLING &
+	dim spl%(54%) &
+\	chain.flag% = -1%	&
+\	temp$	= SYS(CHR$(6%)+CHR$(9%)) 		!GET JOB NUMBER &
+\	jj%	= ASCII(LEFT(TEMP$,1%))/2% &
+\	jj$	= RIGHT(NUM1$(JJ%+100%),2%) &
+\	file.name$ = "temp"+jj$+".spl" &
+  	
+50  	! 			&
+	! Data field layout	&
+	!			&
+	change sys(chr$(6%)+chr$(-10%)+file.name$) to spl% &
+\	spl%(41%) =   129% &
+\	spl%(42%) =   0% &
+\	spl%(43%) =   0% &
+\	spl%(44%) =   0% &
+\	spl%(45%) =   spl%(7%) &
+\	spl%(46%) =   spl%(8%) &
+\	spl%(47%) =   spl%(9%) &
+\	spl%(48%) =   spl%(10%) &
+\	spl%(49%) =   spl%(11%) &
+\	spl%(50%) =   spl%(12%) &
+\	spl%(51%) =   0% &
+\	spl%(52%) =   0% &
+\	spl%(53%) =   0% &
+\	spl%(54%) =   0% &
+
+60	spl%(0%)  =  54% &
+\	spl%(1%)  =   6%		! FIP call &
+\	spl%(2%)  =   22%		! Spool request code &
+\	spl%(3%)  =   -11%		! reserved &
+\	spl%(4%)  =   128%+5%		! reserved &
+\	spl%(5%) =   0%			! reserved &
+\	spl%(6%) =   0%			! reserved &
+\	spl%(7%) =   0%			! reserved &
+\	spl%(8%) =   0%			! reserved &
+\	spl%(9%) =   0%			! reserved &
+\	spl%(10%) =   0%		! reserved &
+\	spl%(11%) =   0%		! reserved &
+\	spl%(12%) =   0%		! spooling.. &
+\	spl%(13%) =   0%		! spooling.. &
+\	spl%(14%) =   0%		! ..PBS..... &
+\	spl%(15%) =   0%		! ..unit 0 &
+\	spl%(16%) =   0%		! unit real flag &
+\	spl%(17%) =   0%		! reserved &
+\	spl%(18%) =   0%		! reserved &
+\	spl%(19%) =   0%		! reserved &
+\	spl%(20%) =   0%		! reserved &
+\	spl%(21%) =   0%		! reserved &
+\	spl%(22%) =   0%		! reserved &
+\	spl%(23%) =   0%		! reserved &
+\	spl%(24%) =   0%		! reserved &
+\	spl%(25%) =   0%		! reserved &
+\	spl%(26%) =   0%		! reserved &
+\	spl%(27%) =   0%		! reserved &
+\	spl%(28%) =   0%		! reserved &
+\	spl%(29%) =   1%		! print que &
+\	spl%(30%) =   0%		!  "     " &
+\	spl%(31%) =   ascii("Q")	! reserved &
+\	spl%(32%) =   ascii("M")		! reserved &
+\	spl%(33%) =   ascii("$")		! reserved &
+\	spl%(34%) =   ascii("U")		! reserved &
+\	spl%(35%) =   ascii("R")		! reserved &
+\	spl%(36%) =   ascii("P")		! reserved &
+\	spl%(37%) =   0%		! reserved &
+\	spl%(38%) =   0%		! reserved &
+\	spl%(39%) =   0%		! reserved &
+\	spl%(40%) =   0%		! reserved &
+\	change spl% to spl$ &
+\	v$ = sys(spl$) &
+\	chain "ISM:MENU" &
+
+31000	goto 10 if chain.flag% = 0% &
+
+32767	end &
+

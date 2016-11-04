@@ -1,0 +1,746 @@
+1	! System initialization PROGRAM &
+
+10	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		Copyright (c) 1984 by &
+	!		Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used and &
+	! copied only in accordance with the terms of such license and with &
+	! the inclusion of the above copyright notice.  This software or any &
+	! other copies therof may not be provided or otherwise made avail- &
+	! able to any other person.  No title to and ownership of the soft- &
+	! ware is hereby transferred. &
+	! &
+	! The information in this software is subject to change without no- &
+	! tice and should not be construed as a committment by Computer &
+	! Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!----------------------------------------------------------------- &
+	&
+	! Edit History: &
+	&
+	! V 1.0  by Robert Peterson		January, 1986 &
+	! 	 Original program. &
+
+20	DIM STACK%(128%), STACK1%(128%) &
+\	DIM #2%, CMD$(32767%)=64% &
+\	DIM #3%, CMD2$(32767%)=64% &
+
+30	ON ERROR GOTO 19000 &
+\	DIM SYS.CALL%(30%), FIL.NAM%(30%), Y%(32%), Y1%(32%),NAM$(100%) &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(9%)) &
+\	JJ%  = ASCII(LEFT(JUNK$,1%))/2% &
+\	JJ$  = RIGHT(NUM1$(JJ%+100%),2%) &
+
+60	CH%=1% &
+\	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+
+70	ESC$=CHR$(155%) &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J' &
+\	CLRLIN$=ESC$+'[2K' &
+\	SCROLL.REGION$=ESC$+'[3;19r' &
+\	SCROLL.OFF$=ESC$+'[1;24r' &
+\	CLREL$=ESC$+'[K' &
+\	G.OFF$=ESC$+'[m' &
+\	B.ON$=ESC$+'[1m' &
+\	COLM.OFF$=ESC$+"[?3l" &
+\	BLINK.ON$=ESC$+'[5m' &
+\	R.ON$=ESC$+'[7m' &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J' &
+\	ENTER.COPY$=ESC$+'[5i' &
+\	EXIT.COPY$=ESC$+'[4i' &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+\	PRINT #CH%, CLSCN$; &
+
+100	! Set channel numbers &
+	MENU.CH%	= 2%		! Users menu file &
+\	UNEM.CH%	= 6% 		! Menu .MNU file &
+\	MENU2.CH%	= 3%		! 2nd menu file &
+\	PRINT.CH%	= 8%		! Print file &
+\	SYSPRT.CH%	= 10%		! Print file on system account &
+\	LEAVE.BLANK%	= 6%		! # lines blank between groups + 1 &
+
+200	V% = FNO%(PRINT.CH%,'PPRINT.DAT','/RW','') &
+\	V% = FNO%(PRINT.CH%,'PPRINT.DAT','/CR:8,512','') IF FNS% = 5% &
+\	IF 	FNS% &
+	THEN	V$ = FNMESS$(CH%,FNS%,' PRINT.DAT ',0%,-1%) &
+\		V% = FNX%('',0%,'') &
+
+210	V% = FNO%(SYSPRT.CH%,'ISM:PPRINT.DAT','/RO','') &
+
+250	KILL "MENU"+JJ$+".TMP" &
+
+300	OPEN 'MENU.FIL' FOR INPUT AS FILE MENU.CH% &
+\	GOTO 400 &
+
+310	OPEN 'MENU.FIL' FOR OUTPUT AS FILE MENU.CH% &
+
+320	PRINT #CH%, CLSCN$;FNP$('1;1');'INITIALIZING THE MENU'; &
+\	CMD$(100%)=SPACE$(64%) &
+\	CMD$(LOOP%)=''  FOR LOOP%=0% TO 100% &
+\	PRINT #CH%, FNP$('3;5');'MENU BANNER NAME '; &
+\	INP$=FNINP$(CH%,0%,' ',40%) &
+\	CMD$(0%)=CHR$(255%)+'SEPRTR="LABEL='+INP$ &
+\	PRINT #CH%, FNP$('4;5');'COMPANY NAME     '; &
+\	INP$=FNINP$(CH%,0%,' ',40%) &
+\	CMD$(1%)=CHR$(255%)+INP$ &
+\	PRINT #CH%, FNP$('5;5');'ADDRESS          '; &
+\	INP$=FNINP$(CH%,0%,' ',40%) &
+\	CMD$(2%)=CHR$(255%)+INP$ &
+\	PRINT #CH%, FNP$('6;5');'CITY, STATE      '; &
+\	INP$=FNINP$(CH%,0%,' ',40%) &
+\	CMD$(3%)=CHR$(255%)+INP$ &
+\	PRINT #CH%, FNP$('7;5');'ZIP              '; &
+\	INP$=FNINP$(CH%,0%,' ',40%) &
+\	CMD$(4%)=CHR$(255%)+INP$ &
+
+330	PRINT #CH%, FNP$('8;5');'PHONE #          '; &
+\	INP$=FNINP$(CH%,0%,' ',40%) &
+\	CMD$(5%)=CHR$(255%)+INP$ &
+\	CLOSE MENU.CH% &
+\	GOTO 300 &
+
+400	COMPANY$=CVT$$(RIGHT(CMD$(1%),2%),128%) &
+\	TEMP$=CVT$$(RIGHT(CMD$(0%),2%),128%) &
+\	TEMP%=INSTR(1%,TEMP$,'LABEL=') &
+\	LEADER$=CHR$(255%)+'SEPRTR="LABEL=' &
+\	LEADER$=CHR$(255%)+LEFT(TEMP$,TEMP%+5%) IF TEMP% &
+\	TEMP%=INSTR(1%,LEADER$,'"') &
+\	SEPRTR$=MID(LEADER$,TEMP%,1%) &
+
+500	FRAME$ = FRAME$ + FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+
+1010	GOSUB 1060 &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Add a system  Remove a system  Shorten file  '; &
+			'Change the company name';FNP$('22;10');'Quit '; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%),32%) &
+
+1040	IF OPT$='Q' &
+	THEN	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+\		CLOSE MENU.CH% &
+\		V% = FNX%('',0%,'') &
+
+1050	GOTO 2000 	IF OPT$='A' 		! Add &
+\	GOTO 3000 	IF OPT$='C' 		! Change &
+\	GOTO 4000 	IF OPT$='R' 		! Remove &
+\	GOTO 5000	IF OPT$='S'		! Shorten &
+\	GOTO 1030 &
+
+1060	TEMP$     = 'System Initialization' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+			FRAME$; FNP$('20;1');SPACE$(80%);G.OFF$; &
+\	RETURN &
+
+2000	!=============================================================== &
+	! ADD A NEW SYSTEM &
+	!=============================================================== &
+	!-------------------------Setting up screen----------- &
+	COUNTER%=0% &
+\	TEMP$='ADD A NEW SYSTEM' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,40%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(41%-LEN(COMPANY$));COMPANY$;FRAME$; &
+		FNP$('20;1');SPACE$(80%);SCROLL.REGION$; &
+	G.OFF$;FNP$('2;3');"NUMBER";FNP$('2;13');"SYSTEM NAMES" ; &
+	LDS.ON$;FNP$('3;2');STRING$(78%,113%); &
+		FNP$('3;10');CHR$(110%); &
+		FNP$('2;10');CHR$(120%); &
+		USASCII$;G.OFF$;FNSR$('4;19'); &
+\	DISPLAY.LINE%=0% &
+\	PRINT.LINE%=4% &
+	!-------------Work over the WILD file--- &
+\	WLDCRD.FLAG%=0% &
+\	FILE.NAME$='ISM:??????.MNU' &
+
+2010	!---------------WILD CARD LOOKUP--------------------- &
+	CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.NAME$) TO SYS.CALL% &
+\	SYS.CALL%(0%)=30% &
+\	SYS.CALL%(1%)=6% &
+\	SYS.CALL%(2%)=17% &
+\	SYS.CALL%(3%)=WLDCRD.FLAG% ! JUMP &
+\	SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\	WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\	CHANGE SYS.CALL% TO SYS.CALL$ &
+\	CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\	FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\	FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\	WILD.FILE$=RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+		RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%))) &
+\	COUNTER%=COUNTER%+1% &
+\	NAM$(COUNTER%)=WILD.FILE$ &
+	!-------------Printing wild file--------------- &
+\	PRINT #CH%,FNP$(NUM1$(PRINT.LINE%)+';3'); &
+		RIGHT(NUM1$(COUNTER%+100%),2%); &
+		FNP$(NUM1$(PRINT.LINE%)+';13');CVT$$(NAM$(COUNTER%),-1%); &
+\	I%=PRINT.LINE% &
+\	PRINT #CH%, LDS.ON$;FNP$(NUM1$(I%)+';10');CHR$(120%); &
+			USASCII$;G.OFF$; &
+\	PRINT.LINE%=PRINT.LINE%+1% IF PRINT.LINE%<19% &
+\	NEXT.SCREEN$='' &
+\	IF DISPLAY.LINE% > 14% &
+	THEN	NEXT.SCREEN$='Next-screen ' &
+\		GOTO 2040 &
+
+2020	PRINT #CH% &
+\	DISPLAY.LINE%=DISPLAY.LINE%+1% &
+\	PRINT #CH%, FNP$(NUM1$(PRINT.LINE%)+';1');R.ON$;" "; &
+		FNP$(NUM1$(PRINT.LINE%)+';80');" ";G.OFF$; &
+			IF PRINT.LINE%=19% &
+\	GOTO 2010 &
+
+2040	!-----------------Program restart point---------------- &
+	PRINT #CH%, CLRBOT$;"COMMAND: Select ";NEXT.SCREEN$; &
+		"Restore Quit "; &
+\	INP$=CVT$$(FNINP$(CH%,128%,'_',1%),32%) &
+\	GOTO 1000 IF INP$='' OR INP$='Q' &
+\	GOTO 2000 IF INP$='R' &
+\	GOTO 2050 IF INP$="S" &
+\	IF INP$="N" AND NEXT.SCREEN$<>'' &
+	THEN	DISPLAY.LINE%=1% &
+\		PRINT.LINE%=19% &
+\		PRINT #CH%, FNP$('19;80') &
+\		PRINT #CH%, FNP$(NUM1$(PRINT.LINE%)+';1');R.ON$;" "; &
+			FNP$(NUM1$(PRINT.LINE%)+';80');" ";G.OFF$; &
+\		NEXT.SCREEN$='' &
+\		GOTO 2010 &
+
+2045	GOTO 2040 &
+
+2050	PRINT #CH%, CLRBOT$;'Select system '; &
+\	INP$=CVT$$(FNINP$(CH%,128%,'_',2%),-1%) &
+\	GOTO 2040 IF INP$='' OR INP$='%^C' &
+\	ITEM%=VAL(INP$) &
+\	GOTO 2050 IF ITEM%>COUNTER% &
+
+2055	FOR LOOP%=80% TO 99% &
+\		TEMP%=INSTR(1%,CMD$(LOOP%),'-') &
+\		TEMP$=MID(CMD$(LOOP%),2%,TEMP%-2%) &
+\		GOTO 2060 IF NAM$(ITEM%)=TEMP$ &
+\	NEXT LOOP% &
+\	GOTO 2100 &
+
+2060	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+		'That system is in the menu'; &
+		FNP$('24;52');'Type any character to exit '; &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',1%),-1%) &
+\	GOTO 1000 &
+
+2100	! &
+	! Determine how many items are in the menu file, then search &
+	! for the last item allocated &
+	! &
+	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+		'Loading system.  Please wait';FNP$('24;80'); &
+
+2110	FILE.NAME$ = "MENU.FIL" &
+\	CHANGE SYS(CHR$(6%) + CHR$(-10%) + FILE.NAME$) TO SYS.CALL% &
+\	SYS.CALL%(1%) = 6% &
+\	SYS.CALL%(2%) = 17% &
+\	SYS.CALL%(3%), SYS.CALL%(4%) = 255% &
+\	CHANGE SYS.CALL% TO JUNK$ &
+\	JUNK$ = SYS(JUNK$) &
+\	CHANGE JUNK$ TO SYS.CALL% &
+\	FILE.SIZE% = SYS.CALL%(16%) * 65536 + SYS.CALL%(13%) + &
+		SWAP%(SYS.CALL%(14%)) &
+\	NUM.LINES% = 8% * FILE.SIZE% &
+
+2115	FOR LAST.LINE% = NUM.LINES% TO 1% STEP -1% &
+\		GOTO 2120 IF ASCII(CMD$(LAST.LINE%)) = 255% &
+\	NEXT LAST.LINE% &
+\	PRINT #CH%, FNP$('24;1'); CLRLIN$; "Unable to find last record"; &
+		FNP$('24;52');'Type any character to exit '; &
+\	INP$ = FNINP$(CH%, 128%, ' ', 1%) &
+\	GOTO 1000 &
+
+2120	IF LAST.LINE% >= 100% &
+	THEN &
+		LINE.OFFSET% = LAST.LINE% - 100% + LEAVE.BLANK% &
+	ELSE &
+		LINE.OFFSET% = 0% &
+	! &
+	! The first line in the source file must be a header record, &
+	! so read it in and parse it out.  Load it at first location &
+	! available after 80. &
+	! &
+
+2125	OPEN "ISM:" + NAM$(ITEM%) + ".MNU" FOR INPUT AS FILE UNEM.CH% &
+\	UNEM.EOF% = 0% &
+\	GOSUB 18000		! Parse the line &
+\	FOR I% = 80% TO NUM.LINES% &
+\		GOTO 2130 IF ASCII(CMD$(I%)) = 0% &
+\	NEXT I% &
+\	STOP &
+
+2130	INLINE.EXE$ = NUM1$(INLINE.VAL% + LINE.OFFSET%) IF INLINE.VAL% &
+\	CMD$(I%) = CHR$(255%) + INLINE.CMD$ + "-" + &
+		INLINE.EXE$ + '"' + INLINE.DSC$ &
+
+2140	! &
+	! Now handle all of the sub-items in the file.  Load them &
+	! starting at 100 + LINE.OFFSET.  (note that line items in &
+	! .MNU file already have the offset of 100). &
+	! &
+
+2150	GOSUB 18000 &
+\	GOTO 2170 IF UNEM.EOF% &
+\	IF INLINE.NUM% + LINE.OFFSET% >= NUM.LINES% &
+	THEN &
+		CMD$(I%) = CHR$(0%) FOR I% = NUM.LINES% + 1% &
+			TO INLINE.NUM% + LINE.OFFSET% + 1% &
+\		NUM.LINES% = INLINE.NUM% + LINE.OFFSET% + 1% &
+
+2155	INLINE.EXE$ = NUM1$(INLINE.VAL% + LINE.OFFSET%) IF INLINE.VAL% &
+\	CMD$(INLINE.NUM% + LINE.OFFSET%) = CHR$(255%) + &
+		INLINE.CMD$ + "-" + INLINE.EXE$ + '"' + INLINE.DSC$ &
+
+2160	GOTO 2150 &
+
+2170	IF (NUM.LINES% AND 7%) <> 7% &
+	THEN &
+		NUM.LINES% = NUM.LINES% + 1% &
+\		CMD$(NUM.LINES%) = CHR$(0%) &
+\		GOTO 2170 &
+
+2200	! Add reports from system print file &
+	GOTO 1000 IF FNG%(SYSPRT.CH%,'') &
+\	WORK.NAME$ = CVT$$(NAM$(ITEM%),-1%) &
+
+2230	BUF$ = FNL$+'' &
+\	REPORT.NUM$ = LEFT(BUF$,6%) &
+\	IF WORK.NAME$=CVT$$(MID(BUF$,462%,6%),-1%) &
+	THEN	IF FNG%(PRINT.CH%,REPORT.NUM$) &
+		THEN	IF FNA%(PRINT.CH%,BUF$) &
+			THEN	V$ = FNMESS$(CH%,FNS%,' PRINT.DAT ',0%,-1%) &
+\				V% = FNX%('',0%,'') &
+
+2240	IF FNN%(SYSPRT.CH%)=0% &
+	THEN	2230 &
+
+2290	GOTO 1000 &
+
+3000	!=============================================================== &
+	! CHANGE THE COMPANY DATA &
+	!=============================================================== &
+	PRINT #CH%, CLRBOT$; &
+\	LABEL$='' &
+\	TEMP%=INSTR(1%,CMD$(0%),"LABEL=") &
+\	IF TEMP% &
+	THEN	LABEL$=CVT$$(MID(CMD$(0%),TEMP%+6%,40%),4%+128%) &
+
+3010	PRINT #CH%, 	FNP$('3;5');'(01) MENU BANNER NAME '; &
+				B.ON$;LABEL$;G.OFF$; &
+			FNP$('4;5');'(02) COMPANY NAME     '; &
+				B.ON$;CVT$$(RIGHT(CMD$(1%),2%),128%);G.OFF$; &
+			FNP$('5;5');'(03) ADDRESS          '; &
+				B.ON$;CVT$$(RIGHT(CMD$(2%),2%),128%);G.OFF$; &
+			FNP$('6;5');'(04) CITY, STATE      '; &
+				B.ON$;CVT$$(RIGHT(CMD$(3%),2%),128%);G.OFF$; &
+			FNP$('7;5');'(05) ZIP              '; &
+				B.ON$;CVT$$(RIGHT(CMD$(4%),2%),128%);G.OFF$; &
+			FNP$('8;5');'(06) PHONE #          '; &
+				B.ON$;CVT$$(RIGHT(CMD$(5%),2%),128%);G.OFF$; &
+
+3020	PRINT #CH%, CLRBOT$; 'ITEM TO CHANGE'+':'; &
+\	INP$=CVT$$(FNINP$(CH%,128%,'_',2%),32%) &
+\	GOTO 1000 IF INP$='' &
+\	LOOP%=(INSTR(1%,' 01 02 03 04 05 06 ',' '+INP$+' ')+2%)/3% &
+\	GOTO 3020 IF LOOP%=0% &
+
+3030	IF LOOP%=1% &
+	THEN	PRINT #CH%, FNP$('3;27');R.ON$; &
+			LABEL$;SPACE$(40%-LEN(LABEL$));G.OFF$;CLRBOT$; &
+			'Change '; &
+\		INP$=FNINP$(CH%,0%,'_',40%) &
+\		LABEL$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		CMD$(0%)=LEADER$+LABEL$ &
+\		PRINT #CH%, FNP$('3;27'); &
+			B.ON$;LABEL$;SPACE$(40%-LEN(LABEL$));G.OFF$; &
+
+3040	IF LOOP%>1% AND LOOP%<7% &
+	THEN	TEMP$ =	CVT$$(RIGHT(CMD$(LOOP%-1%),2%),128%) &
+\		PRINT #CH%, FNP$(NUM1$(LOOP%+2%)+';27');R.ON$; &
+			TEMP$;SPACE$(40%-LEN(TEMP$));G.OFF$;CLRBOT$; &
+			'Change '; &
+\		INP$=FNINP$(CH%,0%,'_',40%) &
+\		TEMP$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		CMD$(LOOP%-1%)=CHR$(255%)+TEMP$ &
+\		PRINT #CH%, FNP$(NUM1$(LOOP%+2%)+';27'); &
+			B.ON$;TEMP$;SPACE$(40%-LEN(TEMP$));G.OFF$; &
+
+3050	GOTO 3020 &
+
+4000	!*************************************************************** &
+	! Remove a system &
+	!*************************************************************** &
+	MENU.LINE% = 80% &
+
+4010	TEMP$ = "Remove a system" &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,40%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(41%-LEN(COMPANY$));COMPANY$;FRAME$; &
+		FNP$('20;1');SPACE$(80%);SCROLL.REGION$; &
+		G.OFF$;FNP$('2;3');"NUMBER";FNP$('2;13');"SYSTEM NAMES" ; &
+		LDS.ON$;FNP$('3;2');STRING$(78%,113%); &
+		FNP$('3;10');CHR$(110%); &
+		FNP$('2;10');CHR$(120%); &
+		USASCII$;G.OFF$; &
+	&
+
+4015	DISPLAY.LINE% = 0% &
+\	MENU1.LINE% = MENU.LINE% &
+
+4020	DISPLAY.LINE$ = NUM1$(DISPLAY.LINE% + 4%) + ";" &
+\	PRINT #CH%, FNP$(DISPLAY.LINE$ + "3"); &
+\	PRINT #CH%, USING "###", MENU1.LINE%; &
+\	PRINT #CH%, FNP$(DISPLAY.LINE$+ '12'); &
+		RIGHT(CMD$(MENU1.LINE%), INSTR(2%, CMD$(MENU1.LINE%), '"') + 1%); &
+		LDS.ON$; FNP$(DISPLAY.LINE$ + '10'); CHR$(120%); USASCII$; &
+\	DISPLAY.LINE% = DISPLAY.LINE% + 1% &
+\	MENU1.LINE% = MENU1.LINE% + 1% &
+\	GOTO 4020 IF ASCII(CMD$(MENU1.LINE%)) = 255% &
+
+4050	! &
+	! Enter sub-option &
+	! &
+
+4060	PRINT #CH%, CLRBOT$; "COMMAND: Subgroup Remove Quit"; &
+\	INP$ = CVT$$(FNINP$(CH%,128%,'_',1%),32%) &
+\	GOTO 4200 IF INP$ = "S" &
+\	GOTO 4300 IF INP$ = "R" &
+\	GOTO 1000 IF INP$ = "Q" &
+\	GOTO 4060 &
+
+4200	! &
+	! Select sub-group of an item &
+	! &
+
+4210	PRINT #CH%, CLRBOT$; "Subgroup: "; &
+\	INP$ = FNINP$(CH%, 128%, "_", 3%) &
+\	INP% = VAL(INP$) &
+\	I% = INSTR(1%, CMD$(INP%), "-") &
+\	GOTO 4290 IF I% = 0% &
+\	J% = INSTR(1%, CMD$(INP%), '"') &
+\	GOTO 4290 IF J% = 0% &
+\	TEMP% = VAL(MID(CMD$(INP%),I%+1%, J%-I%-1%)) &
+\	GOTO 4290 IF TEMP% < 80% OR TEMP% > 999% &
+
+4220	GOTO 4290 IF ASCII(CMD$(TEMP%)) <> 255% &
+\	MENU.LINE% = TEMP% &
+\	GOTO 4010 &
+
+4290	PRINT #CH%, CLRBOT$; "Invalid subgroup!" &
+\	GOTO 4060 &
+
+4300	! &
+	! Delete an entire group from the file &
+	! &
+
+4310	PRINT #CH%, CLRBOT$; "Subgroup: "; &
+\	INP$ = FNINP$(CH%, 128%, "_", 3%) &
+\	MENU1.LINE% = VAL(INP$) &
+
+4320	GOTO 4290 IF ASCII(CMD$(MENU1.LINE%)) = 0% &
+\	PRINT #CH%, FNP$('24;1');CLRLIN$;'Deleting subgroup.  Please wait'; &
+			FNP$('24;80'); &
+\	STACK% = 0% &
+\	GOSUB 4400 &
+\	WORK.NAME$ = '' &
+\	SYSNAM$ = 'ROOT' &
+\	SYSNAM$ = 'SUBSYS' IF MENU1.LINE%>100% &
+\	I% = INSTR(1%, CMD$(MENU1.LINE%), "-") &
+\	IF I% &
+	THEN	WORK.NAME$ = CVT$$(MID(CMD$(MENU1.LINE%),2%,I%-2%),-1%) &
+
+4330	! &
+	! Delete head item &
+	! &
+	CMD$(MENU1.LINE%) = CMD$(MENU1.LINE% + 1%) &
+\	MENU1.LINE% = MENU1.LINE% + 1% &
+\	GOTO 4330 IF ASCII(CMD$(MENU1.LINE%)) = 255% &
+
+4340	GOTO 4700 IF STACK% = 0% &
+\	MENU1.LINE% = STACK%(STACK%) &
+\	STACK% = STACK% - 1% &
+
+4350	GOTO 4340 IF ASCII(CMD$(MENU1.LINE%)) = 0% &
+\	GOSUB 4400 &
+\	CMD$(MENU1.LINE%) = CHR$(0%) &
+\	MENU1.LINE% = MENU1.LINE% + 1% &
+\	GOTO 4350 &
+
+4400	! &
+	! If there is a reference to a lower line number in the &
+	! menu command line CMD$(MENU1.LINE%), then this routine &
+	! adds that line to the stack &
+	! &
+	I% = INSTR(1%, CMD$(MENU1.LINE%), "-") &
+\	RETURN IF I% = 0% &
+\	J% = INSTR(1%, CMD$(MENU1.LINE%), '"') &
+\	RETURN IF J% = 0% &
+\	TEMP% = VAL(MID(CMD$(MENU1.LINE%), I%+1%, J%-I%-1%)) &
+\	RETURN IF TEMP% < 80% OR TEMP% > 999% &
+\	RETURN IF ASCII(CMD$(TEMP%)) <> 255% &
+\	STACK% = STACK% + 1% &
+\	STACK%(STACK%) = TEMP% &
+
+4410	RETURN &
+
+4700	! Delete reports from print file &
+	GOTO 4000 IF FNG%(PRINT.CH%,'') &
+
+4730	BUF$ = FNL$+'' &
+\	TEST% = 0% &
+\	TEST% = -1% IF WORK.NAME$ = CVT$$(MID(BUF$,442%,6%),-1%) &
+			AND SYSNAM$='SUBSYS' &
+\	TEST% = -1% IF WORK.NAME$ = CVT$$(MID(BUF$,462%,6%),-1%) &
+			AND SYSNAM$='ROOT' &
+\	IF TEST% &
+	THEN	IF FND%(PRINT.CH%,'') &
+		THEN	V$ = FNMESS$(CH%,FNS%,' PRINT.DAT ',0%,-1%) &
+\			V% = FNX%('',0%,'') &
+
+4740	IF FNN%(PRINT.CH%)=0% &
+	THEN	4730 &
+
+4790	GOTO 4000 &
+
+5000	! &
+	! Clean menu file (compact it down) &
+	! &
+	! Calculate number of line items in file &
+	! &
+	FILE.NAME$ = "MENU.FIL" &
+\	CHANGE SYS(CHR$(6%) + CHR$(-10%) + FILE.NAME$) TO SYS.CALL% &
+\	SYS.CALL%(1%) = 6% &
+\	SYS.CALL%(2%) = 17% &
+\	SYS.CALL%(3%), SYS.CALL%(4%) = 255% &
+\	CHANGE SYS.CALL% TO JUNK$ &
+\	JUNK$ = SYS(JUNK$) &
+\	CHANGE JUNK$ TO SYS.CALL% &
+\	FILE.SIZE% = SYS.CALL%(16%) * 65536 + SYS.CALL%(13%) + &
+		SWAP%(SYS.CALL%(14%)) &
+\	NUM.LINES% = 8% * FILE.SIZE% &
+
+5010	! &
+	! Pass 1, calculate the new locations to store items into. &
+	! Scans through the file finding all groups (starting at 100). &
+	! &
+	LINE.OFFSET% = 80% &
+\	STACK% = 0% &
+\	ITEM% = 79% &
+
+5020	ITEM% = ITEM% + 1%			! Search for a block &
+\	GOTO 5060 IF ITEM% >= NUM.LINES% &
+\	GOTO 5030 IF ASCII(CMD$(ITEM%)) = 255% &
+\	GOTO 5020 &
+
+5030	STACK% = STACK% + 1%			! Set up block &
+\	STACK%(STACK%) = ITEM% &
+\	STACK1%(STACK%) = LINE.OFFSET% &
+
+5035	ITEM% = ITEM% + 1%			! Scan for end of group &
+\	LINE.OFFSET% = LINE.OFFSET% + 1% &
+\	GOTO 5035 IF ASCII(CMD$(ITEM%)) <> 0% &
+
+5040	IF LINE.OFFSET% > 100% &
+	THEN &
+		LINE.OFFSET% = LINE.OFFSET% + LEAVE.BLANK% &
+	ELSE &
+		LINE.OFFSET% = 100% IF LINE.OFFSET% < 99% &
+
+5045	GOTO 5020 &
+
+5060	STACK%(STACK%+1%) = ITEM% &
+\	STACK1%(STACK%+1%) = LINE.OFFSET% + 2% &
+
+5100	! &
+	! Pass 2, create a new menu file and transfer header &
+	! information into it. &
+	! &
+
+5110	OPEN "MENU.TMP" FOR OUTPUT AS FILE MENU2.CH% &
+\	CMD2$(ITEM%) = CMD$(ITEM%) FOR ITEM%=0% TO 79% &
+
+5200	! &
+	! Transfer menu file across, one group at a time &
+	! &
+	FOR LOOP% = 1% TO STACK% &
+
+5210		ITEM% = STACK%(LOOP%) &
+\		ITEM1% = STACK1%(LOOP%) &
+
+5220		GOSUB 18100 &
+\		GOTO 5240 UNLESS INLINE.VAL% &
+\		GOTO 5230 IF INLINE.VAL% >= STACK%(I%) &
+			FOR I%=STACK% TO 1% STEP -1% &
+\		STOP &
+
+5230		INLINE.EXE$ = NUM1$(STACK1%(I%) + INLINE.VAL% - STACK%(I%)) &
+
+5240		CMD2$(ITEM1%) = INLINE.CMD$ + "-" + INLINE.EXE$ + SEPRTR$ + &
+			INLINE.DSC$ &
+\		ITEM% = ITEM% + 1% &
+\		ITEM1% = ITEM1% + 1% &
+\		GOTO 5220 IF ASCII(CMD$(ITEM%)) <> 0% &
+
+5245		CMD2$(ITEM%) = CHR$(0%) &
+			FOR ITEM% = ITEM1% TO STACK1%(LOOP%+1%) &
+
+5250	NEXT LOOP% &
+
+5260	IF (STACK1%(STACK%+1%) AND 7%) <> 7% &
+	THEN &
+		ITEM%, STACK1%(STACK%+1%) = STACK1%(STACK%+1%) + 1% &
+\		CMD$(ITEM%) = CHR$(0%) &
+\		GOTO 5260 &
+
+5300	! &
+	! Now rename the files &
+	! &
+
+5310	KILL "MENU.OLD" &
+
+5320	NAME "MENU.FIL" AS "MENU.OLD" &
+
+5330	NAME "MENU.TMP" AS "MENU.FIL" &
+
+5390	GOTO 1000 &
+
+18000	! &
+	! This subroutine enters and mungs one line from the .MNU file. &
+	! It splits the line up into it's compontent parts and returns &
+	! just those parts for easier use by the main program. &
+	! &
+
+18010	INPUT LINE #UNEM.CH%, INLINE$ &
+\	INLINE$ = CVT$$(INLINE$, 4% + 128%) &
+\	GOTO 18010 IF INLINE$ = "" &
+
+18020	INLINE.VAL% = 0%		! Assume not val'able &
+	&
+\	QA% = INSTR(1%, INLINE$, ">") &
+\	INLINE.NUM% = VAL(MID(INLINE$, 2%, QA% - 2%)) &
+\	GOTO 18010 IF RIGHT(INLINE$, QA%+1%) = "" &
+\	QB% = INSTR(1%, INLINE$, "-") &
+\	GOTO 18010 IF QB% = 0% &
+\	INLINE.CMD$ = MID(INLINE$, QA%+1%, QB%-QA%-1%) &
+\	QA% = INSTR(QB%, INLINE$, SEPRTR$) &
+\	GOTO 18010 IF QA% = 0% &
+\	INLINE.EXE$ = MID(INLINE$, QB%+1%, QA%-QB%-1%) &
+\	INLINE.DSC$ = RIGHT(INLINE$, QA%+1%) &
+
+18030	QA% = VAL(INLINE.EXE$) &
+\	INLINE.VAL% = QA% &
+
+18040	RETURN &
+
+18100	! &
+	! This subroutine enters and mungs one line from the .MNU file. &
+	! It splits the line up into it's compontent parts and returns &
+	! just those parts for easier use by the main program. &
+	! &
+
+18110	INLINE$ = CVT$$(LEFT(CMD$(ITEM%),63%),128%) &
+
+18120	INLINE.VAL% = 0%		! Assume not val'able &
+	&
+\	QB% = INSTR(1%, INLINE$, "-") &
+\	STOP UNLESS QB% &
+\	INLINE.CMD$ = MID(INLINE$, 1%, QB% - 1%) &
+\	QA% = INSTR(QB%, INLINE$, SEPRTR$) &
+\	STOP UNLESS QA% &
+\	INLINE.EXE$ = MID(INLINE$, QB%+1%, QA%-QB%-1%) &
+\	INLINE.DSC$ = RIGHT(INLINE$, QA%+1%) &
+
+18130	QA% = VAL(INLINE.EXE$) &
+\	INLINE.VAL% = QA% &
+
+18140	RETURN &
+
+19000	!=============================================================== &
+	! ERROR TRAPPING &
+	!=============================================================== &
+	RESUME 300 IF ERL=250% &
+\	RESUME 2040 IF ERR=5% AND ERL = 2010% &
+\	RESUME 2050 IF ERL=2050% &
+
+19010	IF ERL=300% AND ERR=5% &
+	THEN	RESUME 310 &
+
+19020	IF ERL=4400% &
+	THEN	RESUME 4410 &
+
+19030	IF ERL=4210% &
+	THEN	RESUME 4290 &
+
+19032	IF ERL=5310% AND ERR=5% &
+	THEN	RESUME 5320 &
+
+19035	IF ERL=18010% AND ERR=11% &
+	THEN	UNEM.EOF% = -1% &
+\		RESUME 18040 &
+
+19040	IF ERL=18030% &
+	THEN	RESUME 18040 &
+
+19050	IF ERL=18130% &
+	THEN	RESUME 18140 &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!=============================================================== &
+	! INPUT FUNCTION &
+	!=============================================================== &
+	&
+	&
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$='%END' IF MID(BUFFER$,2%,4%)='[21~' &
+				OR ASCII(BUFFER$)=8% &
+\			BUFFER$='%ABORT' IF MID(BUFFER$,2%,4%)='[19~' &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!=============================================================== &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!=============================================================== &
+	DEF*FNP$(DCA$)=ESC$+'['+DCA$+'H' &
+
+30250	!---------------------------------------MESSAGE HANDLER		&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),		&
+			3%,30%)+DESC$					&
+\		MESG$=DESC$+'' IF ERRNUM%<1%				&
+\		IF 	PRINT.TEST%					&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+				FNP$('24;55');'Hit any key to continue';&
+\			NW$=FNINP$(CHN%,128%,' ',1%)			&
+\			PRINT #CH%,CLRBOT$;				&
+
+30260	FNMESS$=MESG$							&
+\	FNEND 								&
+
+30280	DEF*FNSR$(BEGEND$)=ESC$+'['+BEGEND$+'r'	!SCROLL CONTROL		&
+
+32757	END

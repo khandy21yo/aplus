@@ -1,0 +1,4 @@
+$ sw basic
+old ism:ismcln.b2s
+compile ism:<104>
+$ sw

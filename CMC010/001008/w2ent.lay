@@ -1,0 +1,20 @@
+1	6	a$(1)	code
+7	30	a$(2)	name
+37	30	a$(3)	address 1
+67	30	a$(4)	address 2
+97	30	a$(5)	address 3
+127	11	a$(6)	ssn
+138	1	a$(7)	pension
+139	2	a$(8)	state
+141	8	a(1)	fed wages
+149	8	a(2)	fed tax
+157	8	a(3)	fica wages
+165	8	a(4)	fica tips
+173	8	a(5)	fica tax
+181	8	a(6)	state wage
+189	8	a(7)	state with
+197	8	a(8)	advance eic payment
+205	8	a(9)	allocated tips
+
+213	8	a(10)	Medicare Wages
+221	8	a(11)	medicare taxes

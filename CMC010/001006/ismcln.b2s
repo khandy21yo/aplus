@@ -1,0 +1,538 @@
+10	  ! &
+	  ! Program name: ISM:ISMCLN		Compiled with SCALE 0 on V07.0 &
+	  ! Decompiled on 27-Aug-85 at 09:45 PM by UNBAC Version 1 &
+	! &
+	!	03/11/92 - Kevin Handy &
+	!		Modified to chain to ISM:MENU instead of [1,3]MENU.
+35	  !
+50	  PRIV%=0% &
+	\ Y1$=SYS(CHR$(6%)+CHR$(26%)+CHR$(0%)+CHR$(0%)) &
+	\ CHANGE Y1$ TO Y% &
+	\ IF Y%(22%)>1% THEN &
+		  GOTO 1000 &
+	  ELSE &
+		  PRINT  &
+			"Process files without changing the file statistics <Y> "; &
+		\ INPUT LINE K$ &
+		\ IF CVT$$(LEFT(K$,1%),-1%)="N" THEN &
+			  GOTO 1000 &
+		  ELSE &
+			  P$=FNPROG$ &
+			\ L%=31000% &
+			\ PRIV%=-1%
+1000	  !
+1020	  PRINT "Options: RD  - to remove deleted records from a normal"; &
+		" isam file" &
+	\ PRINT "         SD  - to remove deleted records from a single file" &
+	\ PRINT "         RR  - to remove deleted records and reorganize"; &
+		" normal isam file" &
+	\ PRINT "         SN  - to remove deleted records from a single file (No sort)" &
+	\ PRINT "         END - return to menu" &
+	\ PRINT "Selection "; &
+	\ INPUT LINE K$
+1030	  K$=CVT$$(LEFT(K$,3%),-1%) &
+	\ IF K$="" THEN &
+		  GOTO 32767 &
+	  ELSE &
+		  IF K$="RD" THEN &
+			  GOTO 6100 &
+		  ELSE &
+			  IF K$="SD" THEN &
+				  GOTO 6200 &
+			  ELSE &
+				  IF K$="RR" THEN &
+					  GOTO 6000 &
+				  ELSE &
+					  IF K$="END" THEN &
+						  V%=FNX%("",0%,"") &
+					  ELSE &
+						  IF K$="SN" THEN &
+							  GOTO 6400 &
+						  ELSE &
+							  GOTO 1020
+1040	  K$=FNX$ &
+	\ OPTION%=-1% IF K$<>"" &
+	\ GOTO 10
+6000	  !
+6010	  PRINT "Name of KEY FILE: "; &
+	\ INPUT LINE A$ &
+	\ A$=CVT$$(A$,4%) &
+	\ IF A$="" THEN  &
+		  GOTO 1000
+6020	  GOSUB 21999 &
+	\ Q%=0% &
+	\ A%=INSTR(1%,A$,".")-1% &
+	\ A%=LEN(A$) IF A%=-1% &
+	\ D1$=FNDIR$(A$) &
+	\ FILE.STAT$=Y1$ &
+	\ D2$=FNDIR$(LEFT(A$,LEN(A$)-1%)+"1") &
+	\ FILE.STAT$=FILE.STAT$+Y1$ &
+	\ CORE.COM$=FILE.STAT$ IF PRIV%=-1% &
+	\ A%=INSTR(1%,D1$,".")-1% &
+	\ D3$=LEFT(D1$,A%)+".BKP" &
+	\ D4$=LEFT(D2$,A%)+".BK1" &
+	\ OPEN D1$ FOR INPUT AS FILE 1% &
+	\ A%=FNH%(1%) &
+	\ IF CHR$(K3%(1%))<>"S" THEN  &
+		  PRINT  &
+			"Key file is not in sorted order!  Please sort.  Aborting. . ." &
+		\ IF PRIV%=-1% THEN &
+			  GOTO 31020 &
+		  ELSE &
+			  V%=FNX%("",0%,"")
+6050	  CLOSE 1% &
+	\ OPEN D1$ FOR INPUT AS FILE 3%, RECORDSIZE 512% &
+	\ OPEN D2$ FOR INPUT AS FILE 4%, RECORDSIZE 512% &
+	\ GOTO 6300 IF STATUS AND 1024% &
+	\ PRINT "File to be reorganized is ";A$;".  Backup file is ";D3$ &
+	\ PRINT "Please wait.  "; &
+	\ NAME D1$ AS D3$ &
+	\ NAME D2$ AS D4$ &
+	\ A%=FNH%(3%)+FNH%(4%) &
+	\ OPEN D1$ FOR OUTPUT AS FILE 1%, RECORDSIZE 512% &
+	\ OPEN D2$ FOR OUTPUT AS FILE 2%, RECORDSIZE 512% &
+	\ NAME D1$ AS D1$ &
+	\ NAME D2$ AS D2$ &
+	\ Y%=K4%(4%) &
+	\ Y1%=K4%(3%) &
+	\ K1%=512%/K5%(3%) &
+	\ K3%=512%/K5%(4%) &
+	\ T=TIME(0%) &
+	\ T9=TIME(1%) &
+	\ PRINT "Starting to work. . .  ";
+6080	  FOR X%=K4%(3%)+1% TO K1%(3%)+K4%(3%) &
+		\ XX.OFFSET% = FNC%(K1%,3%,X%,0%) &
+		\ FIELD #3%, XX.OFFSET% AS E$,K2%(3%)-2% AS L$,2% AS  &
+			I$ &
+		\ IF CVT$%(I$)=-1% THEN &
+			  Q%=Q%+1% &
+		  ELSE &
+			  XX.OFFSET% = FNC%(K3%,4%,CVT$%(I$),0%) &
+			\ FIELD #4%,  XX.OFFSET% AS E$,K2%(4%) AS L1$ &
+			\ Y%=Y%+1% &
+			\ Y1%=Y1%+1% &
+			\ XX.OFFSET% = FNC%(K1%,1%,Y1%,-1%) &
+			\ FIELD #1%, XX.OFFSET% AS E$,K2%(3%) AS L2$ &
+			\ XX.OFFSET% = FNC%(K3%,2%,Y%,-1%) &
+			\ FIELD #2%, XX.OFFSET% AS E$,K2%(4%) AS E$ &
+			\ LSET L2$=L$+CVT%$(Y%) &
+			\ LSET E$=L1$
+6090	  NEXT X% &
+	\ PUT #1%, RECORD B%(1%) &
+	\ PUT #2%, RECORD B%(2%) &
+	\ K1%=(K4%(3%)+1%)*K5%(3%) &
+	\ K3%=(K4%(4%)+1%)*K5%(4%) &
+	\ GET #3%, RECORD 1% &
+	\ FIELD #3%, K1% AS L$ &
+	\ GET #4%, RECORD 1% &
+	\ FIELD #4%, K3% AS L1$ &
+	\ GET #1%, RECORD 1% &
+	\ FIELD #1%, K1% AS L2$ &
+	\ GET #2%, RECORD 1% &
+	\ FIELD #2%, K3% AS E$ &
+	\ LSET L2$=CVT%$(K1%(3%)-Q%)+MID(L$,3%,2%)+"U"+RIGHT(L$,6%) &
+	\ LSET E$=CVT%$(K1%(3%)-Q%)+RIGHT(L1$,3%) &
+	\ PUT #1%, RECORD 1% &
+	\ PUT #2%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 2% &
+	\ CLOSE 3% &
+	\ CLOSE 4% &
+	\ PRINT "Finished" &
+	\ PRINT "Elapse time in seconds ";TIME(0%)-T &
+	\ PRINT "CPU time in seconds ";(TIME(1%)-T9)/10. &
+	\ PRINT "Deleted records removed =";Q% &
+	\ PRINT "Reorganized records =";K1%(3%)-Q% &
+	\ PRINT "Removing BACKUP files. . . "; &
+	\ KILL D3$ &
+	\ KILL D4$ &
+	\ PRINT "Deleted." &
+	\ Q9$=CHR$(13%)+D1$ &
+	\ V%=FNX%(P$,L%,CORE.COM$)
+6100	  !
+6110	  PRINT "Name of key file: "; &
+	\ INPUT LINE A$ &
+	\ A$=CVT$$(A$,4%) &
+	\ IF A$="" THEN  &
+		  GOTO 1000
+6120	  GOSUB 21999 &
+	\ Q%=0% &
+	\ A%=INSTR(1%,A$,".")-1% &
+	\ A%=LEN(A$) IF A%=-1% &
+	\ D1$=FNDIR$(A$) &
+	\ FILE.STAT$=Y1$ &
+	\ D2$=FNDIR$(LEFT(A$,LEN(A$)-1%)+"1") &
+	\ FILE.STAT$=FILE.STAT$+Y1$ &
+	\ CORE.COM$=FILE.STAT$ IF PRIV%=-1% &
+	\ A%=INSTR(1%,D1$,".")-1% &
+	\ D3$=LEFT(D1$,A%)+".BKP" &
+	\ D4$=LEFT(D2$,A%)+".BK1" &
+	\ OPEN D1$ FOR INPUT AS FILE 3%, RECORDSIZE 512% &
+	\ OPEN D2$ FOR INPUT AS FILE 4%, RECORDSIZE 512% &
+	\ GOTO 6300 IF STATUS AND 1024% &
+	\ PRINT "Deleted records will be removed from ";A$;"." &
+	\ PRINT "Backup file is ";D3$;"." &
+	\ PRINT "Please wait.  "; &
+	\ NAME D1$ AS D3$ &
+	\ NAME D2$ AS D4$ &
+	\ A%=FNH%(3%)+FNH%(4%) &
+	\ OPEN D1$ FOR OUTPUT AS FILE 1%, RECORDSIZE 512% &
+	\ OPEN D2$ FOR OUTPUT AS FILE 2%, RECORDSIZE 512% &
+	\ NAME D1$ AS D1$ &
+	\ NAME D2$ AS D2$ &
+	\ Y%=K4%(4%) &
+	\ Y1%=K4%(3%) &
+	\ K1%=512%/K5%(3%) &
+	\ K3%=512%/K5%(4%) &
+	\ T=TIME(0%) &
+	\ T9=TIME(1%) &
+	\ PRINT "Starting to work. . .  ";
+6180	  FOR X%=K4%(4%)+1% TO K1%(4%)+K4%(4%) &
+		\ XX.OFFSET% = FNC%(K3%,4%,X%,0%) &
+		\ FIELD #4%, XX.OFFSET% AS E$,K2%(3%)-2% AS L$, &
+			K2%(4%)-(K2%(3%)-2%) AS L1$ &
+		\ IF L$=STRING$(K2%(3%)-2%,68%) THEN &
+			  Q%=Q%+1% &
+		  ELSE &
+			  Y%=Y%+1% &
+			\ Y1%=Y1%+1% &
+			\ XX.OFFSET% = FNC%(K1%,1%,Y1%,-1%) &
+			\ FIELD #1%, XX.OFFSET% AS E$,K2%(3%) AS E0$ &
+			\ XX.OFFSET% = FNC%(K3%,2%,Y%,-1%) &
+			\ FIELD #2%, XX.OFFSET% AS E$,K2%(4%) AS E1$ &
+			\ LSET E0$=L$+CVT%$(Y%) &
+			\ LSET E1$=L$+L1$
+6190	  NEXT X% &
+	\ PUT #1%, RECORD B%(1%) &
+	\ PUT #2%, RECORD B%(2%) &
+	\ K1%=(K4%(3%)+1%)*K5%(3%) &
+	\ K3%=(K4%(4%)+1%)*K5%(4%) &
+	\ GET #3%, RECORD 1% &
+	\ FIELD #3%, K1% AS L$ &
+	\ GET #4%, RECORD 1% &
+	\ FIELD #4%, K3% AS L1$ &
+	\ GET #1%, RECORD 1% &
+	\ FIELD #1%, K1% AS L2$ &
+	\ GET #2%, RECORD 1% &
+	\ FIELD #2%, K3% AS E$ &
+	\ LSET L2$=CVT%$(K1%(3%)-Q%)+MID(L$,3%,2%)+"U"+RIGHT(L$,6%) &
+	\ LSET E$=CVT%$(K1%(3%)-Q%)+RIGHT(L1$,3%) &
+	\ PUT #1%, RECORD 1% &
+	\ PUT #2%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 2% &
+	\ CLOSE 3% &
+	\ CLOSE 4% &
+	\ PRINT "Finished." &
+	\ PRINT "Elapse time in seconds ";TIME(0%)-T &
+	\ PRINT "CPU time in seconds ";(TIME(1%)-T9)/10. &
+	\ PRINT "Deleted records removed =";Q% &
+	\ PRINT "Number of records in file =";K1%(3%)-Q% &
+	\ PRINT "Removing BACKUP files. . . "; &
+	\ KILL D3$ &
+	\ KILL D4$ &
+	\ PRINT "Deleting." &
+	\ Q9$=CHR$(13%)+D1$ &
+	\ V%=FNX%(P$,L%,CORE.COM$)
+6200	  !
+6210	  PRINT "Name of single file: "; &
+	\ INPUT LINE A$ &
+	\ A$=CVT$$(A$,4%) &
+	\ IF A$="" THEN  &
+		  GOTO 1000
+6220	  GOSUB 21999 &
+	\ Q%=0% &
+	\ A%=INSTR(1%,A$,".")-1% &
+	\ A%=LEN(A$) IF A%=-1% &
+	\ D1$=FNDIR$(A$) &
+	\ CORE.COM$=Y1$ IF PRIV%=-1% &
+	\ A%=INSTR(1%,D1$,".")-1% &
+	\ D3$=LEFT(D1$,A%)+".BKP" &
+	\ OPEN D1$ FOR INPUT AS FILE 3%, RECORDSIZE 512% &
+	\ GOTO 6300 IF STATUS AND 1024% &
+	\ PRINT "Deleted records will be removed from ";A$;"." &
+	\ PRINT "Backup file is ";D3$;"." &
+	\ PRINT "Please wait.  "; &
+	\ NAME D1$ AS D3$ &
+	\ A%=FNH%(3%) &
+	\ OPEN D1$ FOR OUTPUT AS FILE 1%, RECORDSIZE 512% &
+	\ NAME D1$ AS D1$ &
+	\ Y1%=K4%(3%) &
+	\ K1%=512%/K5%(3%) &
+	\ T=TIME(0%) &
+	\ T9=TIME(1%) &
+	\ PRINT "Starting to work. . .  ";
+6280	  FOR X%=K4%(3%)+1% TO K1%(3%)+K4%(3%) &
+		\ XX.OFFSET% = FNC%(K1%,3%,X%,0%) &
+		\ FIELD #3%, XX.OFFSET% AS E$,K2%(3%) AS L$ &
+		\ IF LEFT(L$,K2%(3%)-2%)=STRING$(K2%(3%)-2%,68%) OR CVT$%( &
+			RIGHT(L$,K2%(3%)-1%))=-1% THEN &
+			  Q%=Q%+1% &
+		  ELSE &
+			  Y1%=Y1%+1% &
+			\ XX.OFFSET% = FNC%(K1%,1%,Y1%,-1%) &
+			\ FIELD #1%, XX.OFFSET% AS E$,K2%(3%) AS E0$ &
+			\ LSET E0$=L$ &
+			\ Z%(1%)=-1%
+6290	  NEXT X% &
+	\ PUT #1%, RECORD B%(1%) &
+	\ K1%=(K4%(3%)+1%)*K5%(3%) &
+	\ GET #3%, RECORD 1% &
+	\ FIELD #3%, K1% AS L$ &
+	\ GET #1%, RECORD 1% &
+	\ FIELD #1%, K1% AS L2$ &
+	\ LSET L2$=CVT%$(K1%(3%)-Q%)+MID(L$,3%,2%)+"U"+RIGHT(L$,6%) &
+	\ PUT #1%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 3% &
+	\ PRINT "Finished." &
+	\ PRINT "Elapse time in seconds ";TIME(0%)-T &
+	\ PRINT "CPU time in seconds ";(TIME(1%)-T9)/10. &
+	\ PRINT "Deleted records removed =";Q% &
+	\ PRINT "Number of records in file =";K1%(3%)-Q% &
+	\ PRINT "Removing BACKUP files. . . ";"" &
+	\ KILL D3$ &
+	\ PRINT "Deleted." &
+	\ Q9$=CHR$(13%)+D1$ &
+	\ V%=FNX%(P$,L%,CORE.COM$)
+6300	  !
+6310	  PRINT  &
+	\ PRINT STRING$(3%,7%) &
+	\ PRINT "Write privileges are not established for ";D1$ &
+	\ PRINT "Try again later.  Aborting. . ." &
+	\ V%=FNX%("",0%,"")
+6400	  !
+6410	  PRINT "Name of single file: "; &
+	\ INPUT LINE A$ &
+	\ A$=CVT$$(A$,4%) &
+	\ IF A$="" THEN  &
+		  GOTO 1000
+6420	  GOSUB 21999 &
+	\ Q%=0% &
+	\ A%=INSTR(1%,A$,".")-1% &
+	\ A%=LEN(A$) IF A%=-1% &
+	\ D1$=FNDIR$(A$) &
+	\ CORE.COM$=Y1$ IF PRIV%=-1% &
+	\ A%=INSTR(1%,D1$,".")-1% &
+	\ D3$=LEFT(D1$,A%)+".BKP" &
+	\ OPEN D1$ FOR INPUT AS FILE 3%, RECORDSIZE 512% &
+	\ GOTO 6500 IF STATUS AND 1024% &
+	\ PRINT "Deleted records will be removed from ";A$;"." &
+	\ PRINT "Backup file is ";D3$;"." &
+	\ PRINT "Please wait.  "; &
+	\ NAME D1$ AS D3$ &
+	\ A%=FNH%(3%) &
+	\ OPEN D1$ FOR OUTPUT AS FILE 1%, RECORDSIZE 512% &
+	\ NAME D1$ AS D1$ &
+	\ Y1%=K4%(3%) &
+	\ K1%=512%/K5%(3%) &
+	\ T=TIME(0%) &
+	\ T9=TIME(1%) &
+	\ PRINT "Starting to work. . .  ";
+6480	  FOR X%=K4%(3%)+1% TO K1%(3%)+K4%(3%) &
+		\ XX.OFFSET% = FNC%(K1%,3%,X%,0%) &
+		\ FIELD #3%, XX.OFFSET% AS E$,K2%(3%) AS L$ &
+		\ IF LEFT(L$,K2%(3%)-2%)=STRING$(K2%(3%)-2%,68%) OR CVT$%( &
+			RIGHT(L$,K2%(3%)-1%))=-1% THEN &
+			  Q%=Q%+1% &
+		  ELSE &
+			  Y1%=Y1%+1% &
+			\ XX.OFFSET% = FNC%(K1%,1%,Y1%,-1%) &
+			\ FIELD #1%, XX.OFFSET% AS E$,K2%(3%) AS E0$ &
+			\ LSET E0$=L$ &
+			\ Z%(1%)=-1%
+6490	  NEXT X% &
+	\ PUT #1%, RECORD B%(1%) &
+	\ K1%=(K4%(3%)+1%)*K5%(3%) &
+	\ GET #3%, RECORD 1% &
+	\ FIELD #3%, K1% AS L$ &
+	\ GET #1%, RECORD 1% &
+	\ FIELD #1%, K1% AS L2$ &
+	\ LSET L2$=CVT%$(K1%(3%)-Q%)+MID(L$,3%,2%)+"U"+RIGHT(L$,6%) &
+	\ PUT #1%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 3% &
+	\ PRINT "Finished." &
+	\ PRINT "Elapse time in seconds ";TIME(0%)-T &
+	\ PRINT "CPU time in seconds ";(TIME(1%)-T9)/10. &
+	\ PRINT "Deleted records removed =";Q% &
+	\ PRINT "Number of records in file =";K1%(3%)-Q% &
+	\ PRINT "Removing BACKUP files. . . ";"" &
+	\ KILL D3$ &
+	\ PRINT "Deleted." &
+	\ V%=FNX%(P$,L%,CORE.COM$)
+6500	  !
+6510	  PRINT  &
+	\ PRINT STRING$(3%,7%) &
+	\ PRINT "Write privileges are not established for ";D1$ &
+	\ PRINT "Try again later.  Aborting. . ." &
+	\ V%=FNX%("",0%,"")
+10000	  !
+10030	  V%=FNX%("",0%,"")
+14000	  !
+14010	  DEF FNC%(A%,X%,A1%,Z%) &
+	\ B5%=A1%/A%+1% &
+	\ PUT #X%, RECORD B%(X%) IF Z% AND B5%<>B%(X%) &
+	\ GET #X%, RECORD B5% IF B5%<>B%(X%)
+14015	  B%(X%)=B5% &
+	\ FNC%=(A1%-(B5%-1%)*A%)*(512%/A%) &
+	\ FNEND
+14020	  DEF FNB1%(X%) &
+	\ FNB1%=2%^(INT(LOG10(X%)/.30103)+1%) &
+	\ FNEND
+14030	  DEF FNH%(A%) &
+	\ GET #A%, RECORD 1% &
+	\ FIELD #A%, 2% AS E0$,2% AS E1$,1% AS E3$,1% AS E4$ &
+	\ K1%(A%)=CVT$%(E0$) &
+	\ K2%(A%)=CVT$%(E1$) &
+	\ K3%(A%)=ASCII(E3$) &
+	\ K4%(A%)=ASCII(E4$) AND (NOT 128%) &
+	\ K5%(A%)=FNB1%(K2%(A%)) &
+	\ FNEND
+14040	  DEF FNE$ &
+	\ FNE$=CVT$$(RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),3%),4%) &
+	\ FNEND
+14100	  !
+14110	  DEF FNDIR$(Y$) &
+	\ Y1$=SYS(CHR$(6%)+CHR$(-23%)+Y$) &
+	\ Y1$=MID(Y1$,5.,8%)+STRING$(10%,0%)+MID(Y1$,23%,4%)+STRING$(4%,0%) &
+	\ Y1$=SYS(CHR$(6%)+CHR$(17%)+CHR$(255%)+CHR$(255%)+Y1$) &
+	\ CHANGE Y1$ TO Y% &
+	\ FNDIR$=CHR$(Y%(23%))+CHR$(Y%(24%))+NUM1$(Y%(25%))+":"+"["+NUM1$(Y%( &
+		6%))+","+NUM1$(Y%(5%))+"]"+RAD$(Y%(7%)+SWAP%(Y%(8%)))+RAD$( &
+		Y%(9%)+SWAP%(Y%(10%)))+"."+RAD$(Y%(11%)+SWAP%(Y%(12%)))+"<"+ &
+		NUM1$(Y%(15%))+">" &
+	\ FNEND
+14190	  DIM Y%(30%)
+14200	  !
+14210	  DEF FNX%(C$,C%,C1$) &
+	\ Q0$=SYS(CHR$(7%)) &
+	\ Q5%=INSTR(1%,Q0$,CHR$(255%)) &
+	\ Q2%=INSTR(1%,Q0$,CHR$(14%)) &
+	\ Q2%=Q5%+12% IF Q2%=0% &
+	\ Q0$=MID(Q0$+SPACE$(12%),Q5%,Q2%-Q5%) IF Q5% &
+	\ Q0$="" IF Q5%=0% &
+	\ CLOSE Q1% FOR Q1%=1% TO 12% &
+	\ IF C%>=0% THEN  &
+		  IF Q9$<>"" THEN  &
+			  Q3$=CVT%$(C%)+C$ IF C$<>"" &
+			\ Q3$=CVT%$(8100%)+"[1,6]MENU" IF C$="" AND Q5% &
+			\ Q3$=Q3$+"  " &
+			\ Q9$=Q9$+CHR$(13%)+CHR$(13%)+Q0$ &
+			\ Q9$=Q9$+CHR$(14%)+C1$ IF C1$<>"" &
+			\ Q$=LEFT(CHR$(LEN(Q3$))+Q3$+Q9$,127%) &
+			\ Q$=SYS(CHR$(8%)+Q$) &
+			\ PRINT "<->FILES SECURED<->" &
+			\ CHAIN "[1,6]FSTSRS.TSK" LINE 0%
+14220	  ON ERROR GOTO 19000 &
+	\ CLOSE Q1% FOR Q1%=1% TO 12% IF C%<0% &
+	\ C%=-C% IF C%<0% &
+	\ CHAIN "[1,6]MENU" LINE 8100% IF Q5% AND C$="" &
+	\ V$=SYS(CHR$(8%)+Q0$+"   "+CHR$(14%)+C1$) &
+	\ CHAIN C$ LINE C% IF C$<>"" &
+	\ GOTO 32767 &
+	\ FNEND
+14230	  DEF FNX$ &
+	\ Q$=SYS(CHR$(7%)) &
+	\ Q1%=INSTR(4%,Q$,CHR$(14%)) &
+	\ Q$=RIGHT(Q$,Q1%+1%) &
+	\ FNX$=Q$ &
+	\ FNEND
+14400	  !
+14410	  DEF FNPROG$ &
+	\ Y$=SYS(CHR$(12%)) &
+	\ CHANGE Y$ TO Y% &
+	\ FNPROG$=CHR$(Y%(23%))+CHR$(Y%(24%))+NUM1$(Y%(25%))+":"+"["+NUM1$( &
+		Y%(6%))+","+NUM1$(Y%(5%))+"]"+RAD$(Y%(7%)+SWAP%(Y%(8%)))+ &
+		RAD$(Y%(9%)+SWAP%(Y%(10%)))+"."+RAD$(Y%(11%)+SWAP%(Y%(12%))) &
+	\ FNEND
+19000	  !
+19010	  IF ERR=11% AND ERL=14010% THEN  &
+		  RESUME 14015
+19020	  IF ERR=16% THEN  &
+		  PRINT  &
+		\ PRINT "Backup files exist for ";A$; &
+			"  Please determine why these" &
+		\ PRINT  &
+			"backup files are being stored and take appropriate action." &
+		\ V$=SYS(CHR$(11%)) &
+		\ INPUT "Aborting.  Type a 'cr' to continue. . . ";K$ &
+		\ V%=FNX%("",-1%,"")
+19030	  IF ERR=50% THEN  &
+		  PRINT CHR$(7%) &
+		\ RESUME 
+19040	  IF ERR=5% AND ERL=14110% THEN  &
+		  PRINT FNE$;" ";Y$ &
+		\ PRINT "Please check input.  Aborting. " &
+		\ V$=SYS(CHR$(11%)) &
+		\ INPUT "Type a 'cr' to continue. . . ";K$ &
+		\ V%=FNX%("",-1%,"")
+19100	  PRINT "Error - ";FNE$;" at line ";ERL &
+	\ V$=SYS(CHR$(11%)) &
+	\ INPUT "Type a 'cr' continue. . . ";K$ &
+	\ V%=FNX%("",0%,"")
+21999	  ON ERROR GOTO 19000 \ RETURN
+30000	  !
+30010	  F$=LEFT(FNX$,1%) &
+	\ IF F$<>"R" AND F$<>"S" AND F$<>"D" THEN  &
+		  PRINT "Error - Unable to determine task to be performed." &
+		\ V$=SYS(CHR$(11%)) &
+		\ INPUT "Aborting.  Type a 'cr' continue. . . ";K$ &
+		\ V%=FNX%("",0%,"")
+30020	  A1$=RIGHT(FNX$,2%) &
+	\ A%=INSTR(1%,A1$,"/")-1% &
+	\ A%=LEN(A1$) IF A%=-1% &
+	\ A$=LEFT(A1$,A%) &
+	\ IF A$="" THEN  &
+		  PRINT "Error - Unable to determine the file name "+ &
+			"to be reorganized.  Aborting." &
+		\ V$=SYS(CHR$(11%)) &
+		\ INPUT "Type a 'cr' to continue. . . ";K$ &
+		\ V%=FNX%("",0%,"")
+30030	  A1$=RIGHT(A1$,A%+2%) &
+	\ IF A1$<>"" THEN  &
+		  A%=INSTR(1%,A1$,"+")-1% &
+		\ A%=LEN(A1$) IF A%=-1% &
+		\ P$=LEFT(A1$,A%)
+30040	  A1$=RIGHT(A1$,A%+2%) &
+	\ IF A1$<>"" THEN  &
+		  A%=INSTR(1%,A1$,"*")-1% &
+		\ A%=LEN(A1$) IF A%=-1% &
+		\ L%=VAL(LEFT(A1$,A%)) &
+		\ CORE.COM$=RIGHT(A1$,A%+2%)
+30050	  IF F$="R" THEN &
+		  GOTO 6020 &
+	  ELSE &
+		  IF F$="D" THEN &
+			  GOTO 6120 &
+		  ELSE &
+			  IF F$="S" THEN &
+				  GOTO 6220 &
+			  ELSE &
+				  PRINT "Error -"+ &
+					" Unable to determine task to be performed." &
+				\ V$=SYS(CHR$(11%)) &
+				\ INPUT  &
+					"Aborting.  Type a 'cr' to continue. . . "; &
+					K$ &
+				\ V%=FNX%("",0%,"")
+31000	  !
+31010	  CORE.COM$=FNX$ &
+	\ P$=FNPROG$ &
+	\ L%=31000% &
+	\ PRIV%=-1%
+31020	  GOSUB 21999 &
+	\ IF CORE.COM$="" THEN &
+		  GOTO 1000 &
+	  ELSE &
+		  Y1$=LEFT(CORE.COM$,30%) &
+		\ CORE.COM$=RIGHT(CORE.COM$,31%) &
+		\ CHANGE Y1$ TO Y% &
+		\ FILE.NAME$="["+NUM1$(Y%(6%))+","+NUM1$(Y%(5%))+"]"+RAD$(Y%( &
+			7%)+SWAP%(Y%(8%)))+RAD$(Y%(9%)+SWAP%(Y%(10%)))+"."+ &
+			RAD$(Y%(11%)+SWAP%(Y%(12%)))
+31030	  OPEN FILE.NAME$ FOR INPUT AS FILE 1% &
+	\ V$=SYS(CHR$(6%)+CHR$(-11%)+CHR$(1%)+MID(Y1$,17%,6%)) &
+	\ CLOSE 1% &
+	\ GOTO 31020
+32767	  END

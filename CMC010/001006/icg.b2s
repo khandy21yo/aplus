@@ -1,0 +1,655 @@
+10	!	04/19/91 - Kevin Handy &
+	!		Fixed bug that caused error on open to jump &
+	!		to field option. &
+	!		Fixed bug that only allowed search to work with &
+	!		strings. &
+
+20	DIM #12%, M1$(55%)=8%, M2$(55%)=64% &
+
+23	! &
+	!	Determine account number that user is on &
+	! &
+	GOSUB 21200 &
+\	MMODE% = 0% &
+	!\	IF PROJECT% = 253% &
+	!	THEN	MMODE% = 8192% &
+	!\		IF CVT$$(C$,-1%) = "OK" &
+	!		THEN	MMODE% = 0% &
+	!\			C$ = ""
+25	Z9%=0% &
+\	ON ERROR GOTO 50 &
+\	OPEN "DD0:MACRO.ICG" FOR INPUT AS FILE 12% &
+
+30	Z9%=-1% &
+\	GOTO 1000 &
+
+50	RESUME 60 &
+
+60	ON ERROR GOTO 0 &
+
+1000	DIM A$(49%),FSS.RESULT%(30%), LOOKUP%(30%), FIL.LOOK%(30%) &
+\	OPEN "KB:" AS FILE 2% &
+\	U$=SYS(CHR$(6%)+CHR$(-7%)) &
+\	Z$="Illegal option!" &
+\	PRINTIT% = -1% &
+\	ON ERROR GOTO 1480 &
+\	GOTO 1015 IF C$<>"" &
+
+1010	PRINT #2%, "Type '?' for help." &
+\	PRINT #2% &
+\	PRINT #2%, "File: "; &
+\	INPUT LINE #2%, C$ &
+
+1015	C$=CVT$$(C$,38%) &
+\	NO.HDR%=INSTR(1%,C$,"/NH") &
+\	DIR%=INSTR(1%,C$,"/DI") &
+\	IF DIR% &
+	THEN	GOSUB 22000 &
+\		GOTO 1010 &
+
+1017	C$=LEFT(C$,NO.HDR%-1%) IF NO.HDR% &
+\	IF C$="" &
+	THEN	GOTO 32000 &
+	ELSE	IF C$="?" &
+		THEN	GOTO 20000 &
+
+1120	IF NO.HDR% AND INSTR(1%,C$,"-")=0% &
+	THEN	PRINT "?Field length error!" &
+\		PRINT "You must specify the field length when using '/NH'." &
+\		GOTO 1010 &
+
+1130	L1%=0% &
+\	N1%=INSTR(1%,C$,"-") &
+\	IF N1% &
+	THEN	L1%=VAL(RIGHT(C$,N1%+1%)) &
+\		C$=LEFT(C$,N1%-1%) &
+\		IF L1%>512% OR L1%<1% &
+		THEN	PRINT #2%, Z$ &
+\			GOTO 1010 &
+
+1150	C$=C$+".DAT" IF INSTR(1%,C$,".")=0% &
+\	PRINT "Opening "+C$+" ..."; &
+\	OPEN C$ FOR INPUT AS FILE 1%,MODE MMODE% &
+\	OPEN.STATUS% = STATUS &
+\	IF (OPEN.STATUS% AND 1024%) = 0% &
+	THEN	PRINT " in R/W mode." &
+	ELSE	PRINT " in R/O mode." &
+
+1160	IF NO.HDR%=0% &
+	THEN	FIELD #1%, 6% AS H$ &
+\		GET #1%, RECORD 1% &
+\		PRINT CVT$%(LEFT(H$,2%));"records of";CVT$%(MID(H$,3%,2%)); &
+			"characters   ( ";MID(H$,5%,1%);","; &
+			NUM1$(ASCII(RIGHT(H$,6%)));" )" &
+
+1170	IF L1%=0% &
+	THEN	L1%=CVT$%(MID(H$,3%,2%)) &
+\		L1%=2%^(INT(LOG10(L1%)/0.30103)+1%) &
+
+1180	L6%=512%/L1% &
+
+1190	PRINT &
+\	PRINT #2%, "Field: "; &
+\	INPUT LINE #2%, B$ &
+\	B$=CVT$$(B$,38%) &
+\	IF B$="" &
+	THEN	CLOSE 1% &
+\		GOTO 1010 &
+
+1200	GOTO 3000 IF INSTR(1%,B$,"MACRO") &
+\	B%=1% &
+\	B$=B$+"," &
+\	FOR A%=1% TO 10% &
+\		C%=INSTR(B%,B$,",") &
+\		GOTO 1240 IF C%=0% &
+\		A$=MID(B$,B%,C%-B%) &
+\		B%=C%+1% &
+\		P1%=INSTR(1%,A$,"/") &
+\		P2%=INSTR(1%,A$,"-") &
+\		IF P1%=0% &
+		THEN	PRINT #2%, Z$;" - field #";A% &
+\			GOTO 1190 &
+
+1210		RESTORE &
+\		READ X$(A%), C2%(A%) UNTIL X$(A%)=RIGHT(A$,P1%+1%) &
+\		IF P2%=0% &
+		THEN	C1%(A%)=VAL(LEFT(A$,P1%-1%)) &
+		ELSE	C1%(A%)=VAL(LEFT(A$,P2%-1%)) &
+\			C2%(A%)=VAL(MID(A$,P2%+1%,P1%-P2%-1%)) &
+
+1220		IF L1%<C1%(A%)+C2%(A%)-1% OR C1%(A%)<1% OR C2%(A%)<1% &
+		THEN	PRINT #2%, Z$;" - field #";A% &
+\			GOTO 1190 &
+
+1230	NEXT A% &
+
+1240	A%=A%-1% &
+\	C1%=C1%(1%) &
+\	C2%=C2%(1%) &
+\	X$=X$(1%) &
+
+1250	PRINT &
+\	PRINT #2%, "Option: "; &
+\	INPUT LINE #2%, V$ &
+\	IF LEFT(V$,3%) = "SET" &
+	THEN	GOSUB 15000 &
+\		GOTO 1250 &
+
+1255	V1$=RIGHT(V$,LEN(V$)) &
+\	GOTO 32000 IF CVT$$(V$,36%)="END" &
+\	GOTO 32000 IF CVT$$(V$,36%)="QUIT" &
+\	GOTO 32000 IF CVT$$(V$,36%)="EXIT" &
+\	GOTO 32000 IF CVT$$(V$,36%)="LEAVE" &
+\	GOTO 32000 IF CVT$$(V$,36%)="STOP" &
+\	GOTO 32000 IF CVT$$(V$,36%)="SCRAM" &
+\	GOTO 32000 IF CVT$$(V$,36%)="VAMOOSE" &
+\	C0%=0% &
+\	X1%=2% &
+\	X1%=3% IF V1$=CHR$(0%) &
+\	X1%=1% IF V1$<>CHR$(10%) &
+\	V$=LEFT(V$,LEN(V$)-X1%) &
+
+1260	Q1%=INSTR(1%,V$,">") &
+\	Q2%=INSTR(1%,V$,"/") &
+\	Y$=LEFT(V$,Q1%-1%) &
+\	D$=CVT$$(RIGHT(V$,Q2%+1%),32%) &
+\	V$=MID(V$,Q1%+1%,Q2%-Q1%-1%) &
+\	L%=0% &
+\	IF D$="" &
+	THEN	GOTO 1190 &
+	ELSE	IF D$="P" ! OR D$ = "S" &
+		THEN	GOTO 1300 &
+
+1265	F%=0% &
+\	IF D$="F" &
+	THEN	D$="C" &
+\		F%=-1% &
+
+1270	IF D$<>"S" AND D$<>"C" &
+	THEN	PRINT #2%, Z$ &
+\		GOTO 1250 &
+
+1280	IF Y$=="" &
+	THEN	PRINT #2%, "  ?" &
+\		GOTO 1250 &
+
+1290	Y$=LEFT(Y$+SPACE$(C2%-LEN(Y$)),C2%) IF X$="$" &
+\	Y$=CVT%$(VAL(Y$)) IF X$="%" &
+\	Y$=CVTF$(VAL(Y$)) IF X$="F" OR X$="L" &
+\	Y$=CHR$(VAL(Y$)) IF X$="C" &
+\	Y$=CVT%$(FND6%(FND7$(Y$))) IF X$="D" &
+\	Y$=FNN3$(VAL(Y$)) IF X$="3" &
+\	Y$=FNN4$(VAL(Y$)) IF X$="4" &
+\	Y$=FNA8$(Y$) IF X$="G" &
+\	IF F%=-1% &
+	THEN	IF X$="$" &
+		THEN	Y$=LEFT(Y$,1%) &
+		ELSE	PRINT #2%, Z$ &
+\			GOTO 1250 &
+
+1300    IF D$ = "S" &
+	THEN	PRINT "Output file: "; &
+\		INPUT LINE #2%,OUT.FILE$ &
+\		OUT.FILE$ = CVT$$(OUT.FILE$,4%) &
+
+1302	IF D$ = "P" &
+	THEN	OUT.FILE$ = Y$ &
+
+1305	OPEN OUT.FILE$ FOR OUTPUT AS FILE 2% IF LEN(OUT.FILE$)>0% AND &
+		(D$="P" OR D$="S") &
+\	Q4%=INSTR(Q3%+1%,V$,",") &
+\	IF Q4%=0% &
+	THEN	A$(L%)=RIGHT(V$,Q3%+1%) &
+\		Q3%,L4%,L5%=0% &
+\		GOTO 1320 &
+
+1310	A$(L%)=MID(V$,Q3%+1%,Q4%-Q3%-1%) &
+\	L%=L%+1% &
+\	Q3%=Q4% &
+\	GOTO 1300 &
+
+1320	FOR M%=0% TO L% &
+\		S2%=INSTR(1%,A$(M%),"-") &
+\		R3%=1% &
+\		S3%=INSTR(S2%+1%,A$(M%),"-") &
+\		GOTO 1360 IF S2%=1% OR S2%=LEN(A$(M%)) OR S2%=S3%-1% &
+
+1330		IF S2%<>0% &
+		THEN	R1%=VAL(LEFT(A$(M%),S2%-1%)) &
+		ELSE	R1%,R2%=VAL(A$(M%)) &
+\			GOTO 1370 &
+
+1340		IF S3%=0% &
+		THEN	R2%=VAL(RIGHT(A$(M%),S2%+1%)) &
+		ELSE	R2%=VAL(MID(A$(M%),S2%+1%,S3%-S2%-1%)) &
+\			R3%=VAL(RIGHT(A$(M%),S3%+1%)) &
+\			GOTO 1370 &
+
+1350		GOTO 1370 &
+
+1360		R1%=R2%+1% &
+\		R3%=1% &
+\		PRINT Z$ &
+
+1370		FOR K%=R1% TO R2% STEP R3% &
+\			L2%=K%/L6%+1% &
+\			GOTO 1390 IF L2%=L5% &
+
+1380			PUT #1%, RECORD L5% IF L5%>0% AND D$="C" &
+\			GET #1%, RECORD L2% &
+\			L5%=L2% &
+
+1390			FIELD #1%, (K%-(L2%-1%)*L6%)*L1%+C1%(B%)-1% AS I$, &
+				C2%(B%) AS J$(B%) FOR B%=1% TO A% &
+\			J$=J$(1%) &
+
+1400			IF D$="S" &
+			THEN	GOTO 1460 &
+			ELSE	IF D$="C" &
+				THEN	LSET J$(1%)=Y$ &
+\					LSET J$(1%)=STRING$(LEN(J$(1%)), &
+						ASCII(Y$)) IF F% &
+\					GOTO 1470 &
+
+1410			PRINT #2% USING "#####.", K%; &
+\			FOR E%=1% TO A% &
+\				PRINT #2%, "  "; &
+
+1420				IF X$(E%)="$" &
+				THEN IF C2%(E%)<2% &
+				THEN PRINT #2% USING "!", J$(E%); &
+				ELSE PRINT #2% USING "\"+ &
+						SPACE$(C2%(E%)-2%)+"\", J$(E%); &
+					ELSE	IF X$(E%)="C" &
+						THEN	PRINT #2% &
+								USING " ###", &
+								ASCII(J$(E%)); &
+
+1430				IF X$(E%)="%" &
+				THEN	PRINT #2% USING "######", &
+						CVT$%(J$(E%)); &
+				ELSE	IF X$(E%)="L" &
+					THEN	C=CVT$F(J$(E%)) &
+\						PRINT #2% USING "##########.## ", &
+							C; &
+
+1440				IF X$(E%)="D" &
+				THEN	PRINT #2%, FND6$(CVT$%(J$(E%))); &
+				ELSE	IF X$(E%)="G" &
+					THEN	PRINT #2%, FNA7$(J$(E%)); &
+					ELSE	IF X$(E%)="3" &
+						THEN	PRINT #2% &
+								USING "######.##", FNN3(J$(E%)); &
+						ELSE	IF X$(E%)="4" &
+							THEN	PRINT #2% &
+									USING"########.##", FNN4(J$(E%)); &
+							ELSE	IF X$(E%)="F" &
+								THEN	C=CVT$F(J$(E%)) &
+\									IF ABS(C)<100000. &
+									THEN	PRINT #2% USING"######.##",C; &
+									ELSE	PRINT #2% USING"#.##^^^^", C; &
+
+1445				IF X$(E%)="I" &
+				THEN	PRINT #2% USING "###########", &
+						FNI4(J$(E%)); &
+
+1450			NEXT E% &
+\			PRINT #2% &
+\			GOTO 1470 &
+
+1460			IF Y$=J$(1%) &
+			THEN	L4%=1% &
+\				GOTO 1410 &
+
+1470		NEXT K% &
+\	NEXT M% &
+\	CLOSE 2% &
+\	OPEN "KB:" AS FILE 2% &
+\	PUT #1%, RECORD L5% IF D$="C" AND L5%>0% &
+\	PRINT #2%, "Can't find field!!" IF D$="S" AND L4%=0% &
+\	IF D$<>"C" &
+	THEN	GOTO 1250 &
+	ELSE	IF D$="C" AND NOT(PRINTIT%) &
+		THEN	PRINT #2%,"Changes complete." &
+\			goto 1250 &
+
+1475	! &
+	!	CHANGES ARE MADE - LET'S PRINT THEM &
+	! &
+	D$="" &
+\	GOTO 1320 &
+
+1480	!******************************************************************* &
+	! Error Trapping &
+	!******************************************************************* &
+	IF ERR<>28% &
+	THEN	GOTO 1500 &
+	ELSE	U$=SYS(CHR$(0%))+SYS(CHR$(6%)+CHR$(-7%)) &
+
+1490	IF LINE<1260% OR LINE>1470% &
+	THEN	GOTO 32000 &
+	ELSE	GOTO 2000 &
+
+1500	IF ERL=1140% &
+	THEN	PRINT #2%, Z$ &
+\		RESUME 1010 &
+
+1505	IF ERL=1150% &
+	THEN	PRINT C$; " Invalid file name." &
+\		RESUME 1010 &
+
+1510	IF ERL=1210% &
+	THEN	PRINT #2%, Z$;" - FIELD #";A% &
+\		RESUME 1190 &
+
+1520	IF ERL=1290% &
+	THEN	PRINT #2%, Z$ &
+\		RESUME 1250 &
+
+1530	IF ERL=1330% OR ERL=1340% &
+	THEN	R1%=1% &
+\		R2%=0% &
+\		R3%=1% &
+\		RESUME 1370 &
+
+1540	IF ERR<>11% &
+	THEN	GOTO 1560 &
+	ELSE	IF D$="C" &
+		THEN	L5%=0% &
+
+1550	IF R3%<0% &
+	THEN	RESUME 1470 &
+	ELSE	R3%=1% &
+\		R1%=R2%+1% &
+\		RESUME 1370 &
+
+1560	IF ERR=5% &
+	THEN	PRINT #2%, "Can't find ";C$;"!!" &
+\		RESUME 1010 &
+
+1570	IF ERR=10% &
+	THEN	PRINT #2%, "Protection violation!!" &
+\		RESUME 1010 &
+
+1580	DATA	$,,C,1,%,2,F,8,D,2,G,3,3,3,4,4,L,8,I,4 &
+
+2000	! &
+
+2010	CLOSE 2% &
+\	OPEN "KB:" AS FILE 2% &
+\	RESUME 1250 &
+
+3000	! &
+
+3005	GOTO 3010 IF Z9% &
+\	PRINT #2%, "Please wait, creating 'MACRO.ICG'." &
+\	OPEN "DD0:MACRO.ICG" FOR OUTPUT AS FILE 12% &
+\	M1$(I%),M2$(I%)="" FOR I%=55% TO 0% STEP -1% &
+\	Z9%=-1% &
+
+3010	GOTO 3300 IF INSTR(1%,B$,"FIX") &
+\	M1%=INSTR(1%,B$,"\") &
+\	M2%=INSTR(1%,B$,"=") &
+\	GOTO 3020 IF M1% OR M2% &
+\	PRINT #2., "Illegal macro reference!" &
+\	GOTO 1190 &
+
+3020	GOTO 3030 UNLESS M1% AND M2% &
+
+3025	PRINT #2%, "Illegal macro reference!" &
+\	GOTO 1190 &
+
+3030	GOTO 3100 IF M1% &
+\	GOTO 3050 IF RIGHT(B$,M2%+1%)<>"?" &
+\	FOR I%=0% TO 55% &
+\		IF LEFT(M1$(I%),1%)=CHR$(255%) &
+		THEN	PRINT #2%, I%+1%;" ";M1$(I%),M2$(I%) &
+
+3040	NEXT I% &
+\	PRINT #2%, "Macro listing finished." &
+\	GOTO 1190 &
+
+3050	B$=RIGHT(B$,M2%+1%) &
+\	M2%=INSTR(1%,B$,">") &
+\	GOTO 3025 UNLESS M2% &
+\	FOR I%=0% TO 55% &
+\		GOTO 3060 IF LEFT(M1$(I%),1%)<>CHR$(255%) &
+\	NEXT I% &
+\	INPUT #2%, "Macro file full.  Number to over-write ?"; &
+		I% UNTIL I%>=0% AND I%<=10% &
+\	GOTO 1190 UNLESS I% &
+\	I%=I%-1% &
+
+3060	M1$(I%)=CHR$(255%)+LEFT(B$,M2%-1%) &
+\	M2$(I%)=RIGHT(B$,M2%+1%) &
+\	GOTO 1190 &
+
+3100	! &
+
+3120	M3$=RIGHT(B$,M1%+1%) &
+\	GOTO 3130 IF CVT$$(RIGHT(M1$(I%),2%),128%)=M3$ FOR I%=0% TO 55% &
+\	PRINT #2%, "Macro name not in macro file." &
+\	GOTO 1190 &
+
+3130	B$=M2$(I%) &
+\	GOTO 1200 &
+
+3300	! &
+
+3310	INPUT #2%, "Definition number to redefine ?";X% &
+\	GOTO 1190 UNLESS X% &
+\	GOTO 3310 IF X%>56% &
+\	X%=X%-1% &
+
+3320	INPUT #2%, "New macro name ('RETURN' to keep old) ";V$ &
+\	GOTO 3330 UNLESS LEN(V$) &
+\	M1$(X%)=V$+"" &
+
+3330	PRINT #2%, "New macro definition ?"; &
+\	INPUT LINE #2%, V$ &
+\	V$=CVT$$(V$,4%) &
+\	IF V$="" &
+	THEN	PRINT #2%, "Not changed." &
+\		GOTO 1190 &
+
+3340	M2$(X%)=V$+"" &
+\	GOTO 1190 &
+
+14035	! &
+
+14040	DEF FND6%(D9$)=VAL(MID(D9$,4%,2%))+VAL(LEFT(D9$,2%))*32%+ &
+		FND8%(VAL(RIGHT(D9$,7%)))*512% &
+\	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%)+"."+ &
+		RIGHT(NUM1$((D9% AND 31%)+100%),2%)+"."+ &
+		RIGHT(NUM1$((SWAP%(D9%) AND 254%)/2%+100%),2%) &
+\	DEF FND5%(D5%)=FND6%(FND9$(D5%)) &
+\	DEF FNA8$(X$)=CVT%$(VAL(LEFT(X$,3%)))+CHR$(VAL(RIGHT(X$,5%))) &
+\	DEF FNA7$(X$)=RIGHT(NUM1$(1000%+CVT$%(X$)),2%)+"."+RIGHT(NUM1$(100%+ &
+		ASCII(RIGHT(X$,3%))),2%) &
+\	DEF FND8%(D8)=D8 &
+
+14260	DEF FND7$(D7$) &
+\		D7$=D7$+"."+RIGHT(DATE$(0%),8%) IF LEN(D7$)<6% &
+\		D7$="0"+D7$ IF INSTR(1%,D7$,".")=2% &
+\		D7$=LEFT(D7$,3%)+"0"+RIGHT(D7$,4%) IF INSTR(4%,D7$,".")=5% &
+\		FND7$=D7$ &
+\	FNEND &
+
+14270	DEF FNN3$(N3)=CVT%$(INT(N3))+CHR$((N3-INT(N3))*100.+.51) &
+\	DEF FNN3(N3$)=CVT$%(LEFT(N3$,2%))+ASCII(MID(N3$,3%,1%))/100. &
+\	DEF FNI4(I4$) &
+\		I4=0. &
+\		I4=I4*256.+ASCII(MID(I4$,I4%,1%)) FOR I4%=1% TO 4% &
+\		I4=I4-2.^32% IF I4>=2.^31% &
+\		FNI4=FIX(I4) &
+\	FNEND &
+
+14410	DEF FNN4$(N4)=CVT%$(INT(N4/2.^8.))+CHR$(N4-INT(N4/2.^8.)*2.^8.)+CHR$((N4- &
+		INT(N4))*100.+.51) &
+\	DEF FNN4(N4$)=CVT$%(LEFT(N4$,2%))*2.^8%+ASCII(MID(N4$,3%,1%))+ASCII(MID(N4$, &
+		4%,1%))/100. &
+
+14420	DEF FND9%(D9$) &
+\		D9$="0"+D9$ IF INSTR(1%,D9$,".")=2% &
+\		D9$=LEFT(D9$,3%)+"0"+RIGHT(D9$,4%) IF INSTR(4%,D9$,".")=5% &
+\		FND9%=VAL(LEFT(D9$,2%))+VAL(MID(D9$,4%,2%))*16%+ &
+			FND8%(VAL(RIGHT(D9$,7%)))*512% &
+\	FNEND &
+
+14020	DEF FND9$(D9%)=RIGHT(NUM1$((D9% AND 15%)+100%),2%)+ &
+		"."+RIGHT(NUM1$((D9% AND 31%*16%)/16%+100%),2%)+ &
+		"."+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+15000	! &
+	!	Process SET option &
+	! &
+	SET.OPTION$ = RIGHT(CVT$$(V$,4%),5%) &
+\	IF SET.OPTION$ = "NOPRINT" &
+	THEN	PRINT "Changes will not be printed." &
+\		PRINTIT% = 0% &
+\		RETURN &
+
+15001	IF SET.OPTION$ = "PRINT" &
+	THEN	PRINT "Changes will be printed." &
+\		PRINTIT%  = -1% &
+\		RETURN &
+
+15099	PRINT "Unknown SET option.  No action taken." &
+\	RETURN &
+
+20000	! &
+	!	Print help file &
+	! &
+	ON ERROR GOTO 21000 &
+\	OPEN "SY:[1,2]ICG.HLP" FOR INPUT AS FILE 4% &
+
+20010	INPUT LINE #4%,V$ &
+\	PRINT CVT$$(V$,4%) &
+\	GOTO 20010 &
+
+21000	! &
+	!	Error processing for help option &
+	! &
+	IF ERR=11% &
+	THEN	PRINT &
+\		PRINT "End of <ICG.HLP>" &
+\		CLOSE 4% &
+\		RESUME 21030 &
+
+21010	IF ERR=5% &
+	THEN	PRINT &
+\		PRINT "?Can't find file 'SY:[1,2]ICG.HLP'." &
+\		RESUME 21030 &
+
+21020	PRINT RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),2%)+ &
+		" at line";ERL &
+\	RESUME 21030 &
+
+21030	ON ERROR GOTO 1480 &
+\	GOTO 1010 &
+
+21200	! &
+	!	Determine account number &
+	! &
+	V$=SYS(CHR$(6%)+CHR$(14%)) &
+\	PROJECT% = ASCII(MID(V$,8%,1%)) &
+\	PPN%     = ASCII(MID(V$,7%,1%)) &
+\	RETURN &
+
+22000	! &
+	!	Perform directory lookup &
+	! &
+	ON ERROR GOTO 23000 &
+\	ACCOUNT$ = C$ &
+\	FSS.STRING$ = FSS$(ACCOUNT$,1%) &
+\	CHANGE FSS.STRING$ TO FSS.RESULT% &
+\	ACC.TO.SCAN$ = MID$(FSS.STRING$,5,2) + '' &
+\	FILE.NAME$   = MID$(FSS.STRING$,7,6) + '' &
+\	DEVICE.SPEC$ = MID$(FSS.STRING$,23,3) + '' &
+\	ACCOUNT.INDEX% = 0% &
+\	FILE.INDEX%    = 0% &
+
+22010		! &
+		!	Now begin the account loop &
+		! &
+		!	Return the next account number &
+		!	using the sys call for wildcard PPN lookup &
+		! &
+		CHANGE SYS(CHR$(6%) + CHR$(25%) + CHR$(ACCOUNT.INDEX%) + &
+			CHR$(SWAP%(ACCOUNT.INDEX%)) + ACC.TO.SCAN$ + &
+			STRING$(10%,0%) + DEVICE.SPEC$) TO LOOKUP% &
+\		JUNK1$ = EDIT$(NUM1$(LOOKUP%(6%)),128%) &
+\		JUNK2$ = EDIT$(NUM1$(LOOKUP%(5%)),128%) &
+\		JUNK1$ = " " + JUNK1$ UNTIL LEN(JUNK1$) >= 3 &
+\		JUNK2$ = " " + JUNK2$ UNTIL LEN(JUNK2$) >= 3 &
+\		ACCOUNT$ = "[" + JUNK1$ + "," + JUNK2$ + "] " &
+\		FILE.INDEX% = 0% &
+\		CURRENT.ACCOUNT$ = MID$(FSS$(ACCOUNT$,1%),5%,2%) &
+\		PRINT.BLANK% = -1% &
+
+22020		!	Get account name using wild card sys call &
+		!	for file lookup &
+		! &
+		FSS.STRING$ = SYS(CHR$(6%) + CHR$(17%) + CHR$(FILE.INDEX%) + &
+			CHR$(SWAP%(FILE.INDEX%)) + CURRENT.ACCOUNT$ + &
+			FILE.NAME$ + '' ) &
+\		CHANGE FSS.STRING$ TO FIL.LOOK% &
+\		FILE.OF.INTEREST$ = ACCOUNT$ + &
+			RAD$(FIL.LOOK%(7%) + SWAP%(FIL.LOOK%(8%))) + &
+		   	RAD$(FIL.LOOK%(9%) + SWAP%(FIL.LOOK%(10%))) + &
+		   	"." + RAD$(FIL.LOOK%(11%) + SWAP%(FIL.LOOK%(12%))) &
+\		FILE.OF.INTEREST$ = DEVICE.SPEC$ + FILE.OF.INTEREST$ &
+\		FILE.SIZE% = FIL.LOOK%(13%) + SWAP%(FIL.LOOK%(14%)) &
+\		PROT.CODE% = FIL.LOOK%(15%) &
+\		ACCESS.DATE$ = DATE$(FIL.LOOK%(17%) + SWAP%(FIL.LOOK%(18%))) &
+\		CREATE.DATE$ = DATE$(FIL.LOOK%(19%) + SWAP%(FIL.LOOK%(20%))) &
+\		CREATE.TIME$ = TIME$(FIL.LOOK%(21%) + SWAP%(FIL.LOOK%(22%))) &
+\		IF PRINT.BLANK% &
+		THEN	PRINT &
+\			PRINT.BLANK% = 0% &
+
+22030		PRINT USING "\                         \   #####  <###>  " + &
+			    "\       \ \       \ \       \", &
+			FILE.OF.INTEREST$,FILE.SIZE%,PROT.CODE%,ACCESS.DATE$, &
+			CREATE.DATE$,CREATE.TIME$ &
+\	FILE.INDEX% = FILE.INDEX% + 1% &
+\	GOTO 22020 &
+
+23000	! &
+	!	Error processing for file lookup &
+	! &
+	IF ERR = 2% OR ERR = 6% OR ERR = 8% OR ERR = 21% &
+	THEN	PRINT "?Something wrong with device/account/file "; &
+			"specification - ";ACCOUNT$ &
+\		RESUME 23999 &
+
+23010	IF ERR = 5% AND ERL = 22020 &
+	THEN	ACCOUNT.INDEX% = ACCOUNT.INDEX% + 1% &
+\		RESUME 22010 &
+
+23020	IF ERR = 5% AND ERL = 22010 &
+	THEN	PRINT "[-- End of list --]" &
+\		PRINT &
+\		RESUME 23999 &
+
+23030	PRINT RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),3%) &
+\	RESUME 23999 &
+
+23999	ON ERROR GOTO 1480 &
+\	GOTO 1010 &
+
+30000	! &
+	!	Process ccl command line &
+	! &
+	V$=SYS(CHR$(7%)) &
+\	C$=RIGHT(V$,4%) &
+\	C$=CVT$$(C$,2%) &
+\	GOTO 10 &
+
+32000	! &
+	!	Close files and exit &
+	! &
+	CLOSE I% FOR I% = 1% TO 12% &
+\	V$ = SYS(CHR$(9%)) &
+
+32767	END

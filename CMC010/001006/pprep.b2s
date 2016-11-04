@@ -1,0 +1,642 @@
+10	  EXTEND &
+	&
+	  ! Program name: [1,6]PPREP		Compiled with SCALE 0 on V08.0 &
+	  ! Decompiled on 17-May-87 at 05:59 PM by UNBAC Version 1
+20	  PRINT "?Please run REPORT" &
+	\ M$=SYS(CHR$(9%))
+30	  ON ERROR GOTO 19000 &
+	\ JUNK$=SYS(CHR$(6%)+CHR$(-7%)) &
+	\ JUNK$=SYS(CHR$(6%)+CHR$(9%)) &
+	\ KBN%=ASCII(MID(JUNK$,2%,1%))/2%
+60	  OPEN "KB:" AS FILE 1%, MODE 8%+256% &
+	\ CH%=1% &
+	\ ESC$=CHR$(155%) &
+	\ CLSCN$=ESC$+"[H"+ESC$+"[J" &
+	\ SCROLL.REGION$=ESC$+"[3;19r" &
+	\ COLM.ON$=ESC$+"[?3h" &
+	\ COLM.OFF$=ESC$+"[?3l" &
+	\ CLRLIN$=ESC$+"[2K" &
+	\ ENTER.COPY$=ESC$+"[5i" &
+	\ EXIT.COPY$=ESC$+"[4i" &
+	\ PRINT #CH%, ESC$;"<";
+100	  FILE.CH%=2% &
+	\ PPRINT.CH%=8% &
+	\ MENU.CH%=12%
+180	  IF FNO%(PPRINT.CH%,"PPRINT.DAT","/RO","") THEN &
+		  PRINT #CH%, "Error";FNS%;"while opening ";"PPRINT.DAT"; &
+		\ M%=FNX%("",0%,"")
+190	  IF FNG%(PPRINT.CH%,REP.NUM$) THEN &
+		  PRINT #CH%, "Can't find report # ";REP.NUM$;"in PPRINT.DAT" &
+		\ M%=FNX%("",0%,"")
+195	  OPEN "NL:" AS FILE 12%, RECORDSIZE 512% &
+	\ FIELD #12%, 512% AS PBUF$ &
+	\ FIELD #12%, 6% AS MUNG$,20% AS PPRINT.REPDES$,30% AS MUNG$,1% AS &
+		PPRINT.HPIT$,1% AS PPRINT.VPIT$,1% AS PPRINT.LPAGE$,20% AS &
+		PPRINT.OUTDEV$,6% AS PPRINT.SPOOLR$,2% AS PPRINT.SPAGE$,2% &
+		 AS PPRINT.EPAGE$,2% AS PPRINT.COPIES$,20% AS PPRINT.REPDATE$, &
+		44% AS MUNG$,20% AS PPRINT.FROM.REPNO$,44% AS MUNG$,20% AS &
+		PPRINT.TO.REPNO$ &
+	\ FIELD #12%, 441% AS MUNG$,3% AS PPRINT.SYSNAM$,8% AS MUNG$,1% AS &
+		PPRINT.DISPLAY$ &
+	\ LSET PBUF$=FNL$ &
+	\ REPDES$=PPRINT.REPDES$+"" &
+	\ HPIT%=ASCII(PPRINT.HPIT$) &
+	\ VPIT%=ASCII(PPRINT.VPIT$) &
+	\ LIN.PER.PAGE%=ASCII(PPRINT.LPAGE$) &
+	\ OUTDEV$=PPRINT.OUTDEV$+"" &
+	\ SPOOLR$=PPRINT.SPOOLR$+"" &
+	\ SPAGE%=CVT$%(PPRINT.SPAGE$) &
+	\ EPAGE%=CVT$%(PPRINT.EPAGE$) &
+	\ COPIES%=CVT$%(PPRINT.COPIES$) &
+	\ REPDATE$=PPRINT.REPDATE$+"" &
+	\ FROM.REPNO$="AL" &
+	\ FROM.REPNO$=PPRINT.FROM.REPNO$+"" IF PPRINT.FROM.REPNO$<>"" &
+	\ TO.REPNO$=CVT$$(PPRINT.TO.REPNO$,132%) &
+	\ TO.REPNO$="" IF FROM.REPNO$="AL" &
+	\ DISPLAY$=PPRINT.DISPLAY$+"" &
+	\ CLOSE 12% &
+	\ V%=FNC%(PPRINT.CH%)
+200	  PPRINT.DEVICE$="SY:" &
+	\ IF FNO%(FILE.CH%,"DEVICE.DAT","/RO","")=0% THEN &
+		  PPRINT.DEVICE$=MID(FNL$,7%,20%)+"" IF FNG%(FILE.CH%, &
+			"PPRINT")=0% &
+		\ V%=FNC%(FILE.CH%)
+300	  V%=FNO%(FILE.CH%,PPRINT.DEVICE$+"PPRINT.DAT","/RO","") &
+	\ IF FNS% THEN &
+		  PRINT #CH%, "Error";FNS%;"While opening PPRINT.DAT"; &
+			"Hit any key to continue"; &
+		\ V%=FNX%("",0%,"")
+400	  OPEN "SS0:MENU.FIL/RO" FOR INPUT AS FILE MENU.CH% &
+	\ DIM #12%, A0$(1%)=64% &
+	\ COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+	\ CLOSE MENU.CH%
+450	  OPEN "NL:" AS FILE 12%, RECORDSIZE 512% &
+	\ FIELD #12%, 6% AS PPRINT.REPNO$,20% AS PPRINT.REPDESC$,30% AS &
+		PPRINT.PRGNAM$,55% AS JUNK$,330% AS MUNG$,6% AS &
+		PPRINT.SYS.NAME$ &
+	\ FIELD #12%, 111%+(LOOP%-1%)*64% AS SLIME$,2% AS UDC$(LOOP%),14% AS &
+		UDD$(LOOP%),1% AS UDT$(LOOP%),1% AS UDL$(LOOP%),46% AS GARP$ &
+		FOR LOOP%=1% TO 5% &
+	\ FIELD #12%, 512% AS PPRINTBUF$
+510	  TITLE$="REPORT LISTING" &
+	\ PAGE.TOP$=STRING$(3%,10%)+CHR$(13%)+"Date: "+DATE$(0%)+SPACE$(27%- &
+		LEN(COMPANY$)/2%)+COMPANY$+SPACE$(29%-LEN(COMPANY$)/2%)+ &
+		"Page <<###>>"+CHR$(10%)+CHR$(13%)+"Time: "+TIME$(0%)+SPACE$( &
+		28%-LEN(TITLE$)/2%)+TITLE$+SPACE$(28%-LEN(TITLE$)/2%)+"V1.0"+ &
+		CHR$(10%)+CHR$(13%)+SPACE$(44%-LEN(REPDATE$)/2%)+REPDATE$+ &
+		STRING$(2%,10%)+CHR$(13%)+STRING$(79%,61%)+CHR$(10%)+CHR$(13%) &
+	\ PAGE.TOP1$="REPORT NUMBER     "+" PRODUCT NUMBER     "+ &
+		" BREIF DESCRIPTION              "+"SYS NAME "+CHR$(10%)+ &
+		CHR$(13%) &
+	\ USE.1$="   \    \         "+"\             \     "+ &
+		" \                             \"+"  \    \ " &
+	\ USE.2$="        \\       \            \      !    ##" &
+	\ PAGE.BOT$=STRING$(6%,10%) &
+	\ BOT.MARGIN%=7%
+10000	  REP.NUM$="000000" IF REP.NUM$="" &
+	\ IF DISPLAY$<>"Y" THEN &
+		  OUTDEV$=REP.NUM$+".SPL" IF LEFT(SPOOLR$,1%)<>"*" AND &
+			SPOOLR$<>"" &
+		\ OUTPUT.CH%=11% &
+		\ OPEN OUTDEV$ AS FILE OUTPUT.CH%, MODE 2%
+17000	  OPEN.FLAG%,EOF%=0% &
+	\ PAGE.BREAK%=LIN.PER.PAGE%-BOT.MARGIN% &
+	\ START.TEMP$="" &
+	\ START.TEMP$=CVT$$(FROM.REPNO$,132%) IF FROM.REPNO$<>"AL" &
+	\ V%=FNG%(FILE.CH%,START.TEMP$) &
+	\ IF DISPLAY$="Y" THEN &
+		  OUTPUT.CH%=CH% &
+		\ PRINT #OUTPUT.CH%, CLSCN$;PAGE.TOP1$;SCROLL.REGION$;FNP$(3% &
+			,1%); &
+		\ GOTO 17030
+17020	  CLOSE CH% &
+	\ PRINT #OUTPUT.CH%, ENTER.COPY$; IF OUTDEV$="KB:" OR OUTDEV$="KB"+ &
+		NUM1$(KBN%)+":" &
+	\ PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,0%,1%,PAGE.TOP$+PAGE.TOP1$ &
+		,""); &
+	\ LINE.COUNT%=FNLINE%
+17030	  LSET PPRINTBUF$=FNL$+"" &
+	\ GOTO 17500 IF TO.REPNO$<PPRINT.REPNO$ AND TO.REPNO$<>""
+17040	  PRINT #OUTPUT.CH% &
+	\ LINE.COUNT%=LINE.COUNT%+1% &
+	\ GOSUB 17990
+17100	  PRINT #OUTPUT.CH%, USING USE.1$, PPRINT.REPNO$,PPRINT.PRGNAM$, &
+		PPRINT.REPDESC$,PPRINT.SYS.NAME$ &
+	\ LINE.COUNT%=LINE.COUNT%+1% &
+	\ GOSUB 17990
+17102	  FOR LOOP%=1% TO 5%
+17103		  GOTO 17111 IF UDC$(LOOP%)=""
+17104		  PRINT #OUTPUT.CH%, USING USE.2$, UDC$(LOOP%),UDD$(LOOP%), &
+			UDT$(LOOP%),ASCII(UDL$(LOOP%))
+17110		  LINE.COUNT%=LINE.COUNT%+1% &
+		\ GOSUB 17990
+17111	  NEXT LOOP%
+17200	  IF FNN%(FILE.CH%)=0% THEN &
+		  GOTO 17030
+17500	  IF DISPLAY$<>"Y" THEN &
+		  PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPAGE%,"",PAGE.BOT$);
+17510	  IF DISPLAY$="Y" THEN &
+		  PRINT #OUTPUT.CH%, FNP$(24%,1%);"End of report";FNP$(24%, &
+			56%);"Hit any key to continue"; &
+		\ INP$=FNINP$(CH%,128%," ",1%) &
+		\ PRINT #OUTPUT.CH%, COLM.OFF$;
+17530	  IF SPOOLR$<>"" AND SPOOLR$<>"*NONE*" THEN &
+		  M$=FNQUE$(OUTDEV$,SPOOLR$,COPIES%)
+17540	  PRINT #OUTPUT.CH%, EXIT.COPY$; IF OUTDEV$="KB:" OR OUTDEV$="KB"+ &
+		NUM1$(KBN%)+":" &
+	\ CLOSE OUTPUT.CH% &
+	\ V%=FNX%("ISM:REPORT",0%,"")
+17990	  IF DISPLAY$<>"Y" AND LINE.COUNT%+1%>PAGE.BREAK% THEN &
+		  PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPAGE%,PAGE.TOP$+PAGE.TOP1$,PAGE.BOT$); &
+		\ LINE.COUNT%=FNLINE%
+17995	  IF DISPLAY$="Y" AND LINE.COUNT%>15% THEN &
+		  PRINT #OUTPUT.CH%, FNP$(24%,56%);"Hit any key to continue"; &
+		\ INP$=FNINP$(CH%,128%," ",1%) &
+		\ GOTO 17540 IF INP$="%^C" &
+		\ LINE.COUNT%=0% &
+		\ PRINT #OUTPUT.CH%, FNP$(24%,1%);CLRLIN$;FNP$(19%,1%);
+17997	  RETURN
+19000	  IF ERR=28% THEN &
+		  JUNK$=SYS(CHR$(6%)+CHR$(-7%)) &
+		\ RESUME 17500 IF OUTPUT.CH%=CH% &
+		\ RESUME 17540
+19020	  IF ERR=52% THEN &
+		  RESUME
+19035	  IF ERL=400% THEN &
+		  RESUME 450
+19040	  PRINT #CH% &
+	\ PRINT #CH%, "Error";ERR;"at line";ERL;"trying to spool ";OUTDEV$; &
+		" to ";SPOOLR$ &
+	\ PRINT #CH%, "Program aborted...";STRING$(7%,7%) &
+	\ RESUME 17540
+19900	  ON ERROR GOTO 0
+21000	  !
+21005	  DIM Q$(12%), Q%(12%,11%)
+21010	  DEF FNO%(C%,C$,C1$,C2$) &
+	\ ON ERROR GOTO 21900 &
+	\ Q9%=0% &
+	\ Q1%=INSTR(1%,C$,"<") &
+	\ Q1$="" &
+	\ Q1$=RIGHT(C$,Q1%) IF Q1% &
+	\ C$=LEFT(C$,Q1%-1%) IF Q1% &
+	\ IF INSTR(1%,C1$,"/CR") THEN &
+		  Q1%=INSTR(1%,C1$,"/CR") &
+		\ Q2%=INSTR(Q1%,C1$,",") &
+		\ Q2%=LEN(C1$)+1% UNLESS Q2% &
+		\ Q3%=INSTR(Q1%+1%,C1$,"/") &
+		\ Q3%=LEN(C1$)+1% UNLESS Q3% &
+		\ Q2%=Q3% IF Q3%<Q2% &
+		\ Q4%=VAL(MID(C1$,Q1%+4%,Q2%-Q1%-4%)) &
+		\ GOSUB 21070 &
+		\ OPEN C$+Q1$ FOR OUTPUT AS FILE C%, CLUSTERSIZE Q6%, &
+			FILESIZE Q7% &
+		\ PRINT #C%, CVT%$(0%)+CVT%$(Q4%)+"S"+CHR$(128%-(Q4%<=4%)); &
+		\ CLOSE C% &
+		\ UNLESS INSTR(1%,C1$,"/SF") THEN &
+			  Q9%=Q2%=Q3% AND 59% &
+			\ UNLESS Q9% THEN &
+				  Q4%=VAL(MID(C1$,Q2%+1%,Q3%-Q2%-1%)) &
+				\ GOSUB 21070 &
+				\ OPEN LEFT(C$,LEN(C$)-1%)+"1"+Q1$ &
+					 FOR OUTPUT AS FILE C%+1%, &
+					CLUSTERSIZE Q6%, FILESIZE Q7% &
+				\ PRINT #C%+1%, CVT%$(0%)+CVT%$(Q4%)+"S"+ &
+					CHR$(128%-(Q4%<=4%)); &
+				\ CLOSE C%+1%
+21020	  Q9%=46% IF C%<1% OR C%>11% &
+	\ UNLESS Q9% THEN &
+		  Q8%=INSTR(1%,C1$,"/SF")<>0% &
+		\ Q9%=7% IF Q%(C%+1%,0%) AND (NOT Q8%) OR Q%(C%,0%) &
+		\ UNLESS Q9% THEN &
+			  Q%=-8192%*(INSTR(1%,C1$,"/RO")<>0%) &
+			\ Q%(C%,0%)=Q%(C%,0%) OR 16% IF INSTR(1%,C1$,"/NS") &
+			\ Q$=C$ &
+			\ Q0%,Q6%=C% &
+			\ GOSUB 21040 &
+			\ CLOSE C% IF Q9% &
+			\ UNLESS Q9% THEN &
+				  Q%(C%,0%)=Q%(C%,0%) OR 1% &
+				\ IF Q8% THEN &
+					  Q%(Q0%,0%)=Q%(Q0%,0%) OR 2% &
+				  ELSE &
+					  Q$=LEFT(C$,LEN(C$)-1%)+"1" &
+					\ Q0%=C%+1% &
+					\ GOSUB 21040 &
+					\ Q9%=Q9% OR (Q%(C%,1%)<>Q%(Q0%,1%) &
+						 AND Q9%=0%)*-29% &
+					\ UNLESS Q9%=10% THEN &
+						  GOTO 21899 IF Q9% AND Q9%<> &
+							29% &
+						\ Q%(Q0%,0%)=Q%(Q0%,0%) OR 2%
+21030	  GOSUB 21999 &
+	\ FNO%=Q9% &
+	\ FNEND
+21040	  OPEN Q$ FOR INPUT AS FILE Q0%, MODE Q% &
+	\ IF STATUS AND 1024% THEN &
+		  IF INSTR(1%,C1$,"/RW") THEN &
+			  Q9%=10% &
+			\ RETURN
+21045	  IF STATUS AND 1024% THEN &
+		  PRINT "WARNING: WRITE PRIVILEGES ARE NOT ESTABLISHED FOR "; &
+			Q$ IF Q%<>8192% AND C%=Q0% &
+		\ Q%(Q0%,0%)=Q%(Q0%,0%) OR 4%
+21050	  GET #Q0%, RECORD 1% &
+	\ Q$(Q0%)=Q$ &
+	\ Q%(Q0%,6%)=1% &
+	\ Q%(Q0%,7%)=0% &
+	\ FIELD #Q0%, 2% AS Q0$,2% AS Q1$,1% AS Q2$,1% AS Q3$ &
+	\ Q%(Q0%,1%),Q%(Q0%,5%)=CVT$%(Q0$) &
+	\ GOTO 21899 IF Q2$<>"U" AND Q2$<>"S" AND Q2$<>"X" &
+	\ Q9%=8% IF Q2$="X" &
+	\ Q%(Q0%,2%)=CVT$%(Q1$) &
+	\ Q%(Q0%,3%)=Q2$="U" &
+	\ Q%(Q0%,4%)=ASCII(Q3$) AND 127% &
+	\ Q3%=1% &
+	\ Q3%=Q3%*2% UNLESS Q3%>=Q%(Q0%,2%) &
+	\ Q%(Q0%,8%)=Q3% &
+	\ Q%(Q0%,9%)=512%/Q%(Q0%,8%) &
+	\ IF Q%(Q0%,3%) THEN &
+		  UNLESS C%<>Q0% OR INSTR(1%,Q9$,Q$) THEN &
+			  PRINT "File ";Q$;" is not sorted"; UNLESS INSTR(1%, &
+				C1$,"/NS") &
+			\ PRINT " -- will sort on end."; UNLESS INSTR(1%,C1$, &
+				"/RO") OR INSTR(1%,C1$,"/NS") &
+			\ PRINT  UNLESS INSTR(1%,C1$,"/NS") &
+			\ Q9$=Q9$+CHR$(13%)+Q$ UNLESS INSTR(1%,C1$,"/RO") OR &
+				INSTR(1%,C1$,"/NS") &
+			\ Q%(0%,5%)=Q%(0%,1%)/10%*9%
+21060	  RETURN
+21070	  Q6%=-1% &
+	\ Q7%=0% &
+	\ Q8%=INSTR(1%,C1$,"/EX:") &
+	\ RETURN UNLESS Q8% &
+	\ Q9%=INSTR(Q8%+1%,C1$,"/") &
+	\ Q9%=LEN(C1$)+1% UNLESS Q9% &
+	\ Q7%=VAL(MID(C1$,Q8%+4%,Q9%-Q8%-4%)) &
+	\ Q9%=2%^(INT(LOG10(Q4%)/.30103)+1%) &
+	\ Q7%=Q7%/(512%/Q9%) &
+	\ Q8%=(Q7%+6%)/7% &
+	\ Q8%=1% IF Q8%=0% &
+	\ Q6%=-(2%^(1%+INT(LOG10(Q8%)/.30103))) &
+	\ Q6%=-256% IF Q6%<-256% &
+	\ Q9%=0% &
+	\ RETURN
+21200	  DEF FNC%(C%) &
+	\ STOP IF FNX%("",0%,"") IF C%=0% &
+	\ Q0%=C% &
+	\ GOSUB 21440 &
+	\ UNLESS Q9% THEN &
+		  GOSUB 21430 IF Q%(C%,11%) &
+		\ PUT #C%, RECORD Q%(C%,6%) IF Q%(C%,7%) &
+		\ CLOSE C% &
+		\ Q%(C%,0%)=0% &
+		\ Q0%=C%+1% &
+		\ UNLESS (Q%(Q0%,0%) AND 3%)<>2% THEN &
+			  GOSUB 21430 IF Q%(Q0%,11%) &
+			\ PUT #Q0%, RECORD Q%(Q0%,6%) IF Q%(Q0%,7%) &
+			\ CLOSE Q0% &
+			\ Q%(Q0%,0%)=0%
+21210	  GOSUB 21999 &
+	\ FNC%=Q9% &
+	\ FNEND
+21220	  DEF FNN%(C%) &
+	\ Q0%=C%*((C%<0%)-(C%>0%)) &
+	\ GOSUB 21440 &
+	\ GOTO 21250 IF Q9%
+21230	  Q%,Q%(Q0%,10%)=Q%(Q0%,10%)+(C%<0%)-(C%>0%) &
+	\ IF Q%<=0% OR Q%>Q%(Q0%,1%) THEN &
+		  Q%(Q0%,10%),Q%=Q%-(C%<0%)+(C%>0%) &
+		\ Q9%=11% &
+		\ FIELD #Q0%, FNQ%(Q0%,Q%)+Q%(Q0%,2%)-2% AS Q$,2% AS Q$ &
+		\ Q%(Q0%+1%,10%)=CVT$%(Q$) IF CVT$%(Q$) UNLESS Q%(Q0%,0%) &
+			 AND 2% &
+		\ GOTO 21250
+21240	  FIELD #Q0%, FNQ%(Q0%,Q%)+Q%(Q0%,2%)-2% AS Q$,2% AS Q$ &
+	\ Q1%=CVT$%(Q$) &
+	\ GOTO 21230 IF Q1%=-1% &
+	\ Q%(Q0%+1%,10%)=Q1% UNLESS Q%(Q0%,0%) AND 2%
+21250	  GOSUB 21999 &
+	\ FNN%=Q9% &
+	\ FNEND
+21260	  DEF FNG%(C%,C$) &
+	\ Q0%=C%*((C%<0%)-(C%>0%)) &
+	\ GOSUB 21440 &
+	\ GOTO 21360 IF Q9% &
+	\ UNLESS C%<0% THEN &
+		  Q9%=31% IF LEN(C$)>Q%(C%,2%)-2% &
+		\ GOTO 21360 IF Q9% &
+		\ GOTO 21350 IF C$=="" &
+		\ Q4%=LEN(C$) &
+		\ Q2%=Q%(C%,5%) &
+		\ GOTO 21330 IF Q2%=0% &
+		\ Q1%=1% &
+		\ GOTO 21280
+21270	  Q%(Q0%,10%)=VAL(C$) &
+	\ Q9%=88% IF Q%(Q0%,10%)<1% OR Q%(Q0%,10%)>Q%(Q0%,1%) &
+	\ GOTO 21360
+21280	  Q3%=(Q%(C%,6%)-1%)*Q%(C%,9%)-Q%(C%,4%) &
+	\ UNLESS Q3%<=Q1% THEN &
+		  IF Q3%<=Q2% THEN &
+			  FIELD #C%, FNQ%(C%,Q3%) AS Q$,Q4% AS Q$ &
+			\ IF Q$<C$ THEN &
+				  Q1%=Q3% &
+			  ELSE &
+				  Q2%=Q3%-1%
+21290	  Q3%=Q3%+Q%(C%,9%)-1% &
+	\ IF Q3%>=Q1% AND Q3%<=Q2% THEN &
+		  FIELD #C%, FNQ%(C%,Q3%) AS Q$,Q4% AS Q$ &
+		\ IF Q$<C$ THEN &
+			  Q1%=Q3% &
+		  ELSE &
+			  Q2%=Q3%-1%
+21300	  Q3%=Q1%/2%+Q2%/2%+((Q1% OR Q2%) AND 1%) &
+	\ FIELD #C%, FNQ%(C%,Q3%) AS Q$,Q4% AS Q$ &
+	\ IF Q$>=C$ THEN &
+		  Q2%=Q3%-1% &
+	  ELSE &
+		  Q1%=Q3%
+21310	  GOTO 21280 IF Q2%>Q1% &
+	\ Q3%,Q%(C%,10%)=Q2% &
+	\ IF Q3%=1% THEN &
+		  FIELD #C%, FNQ%(C%,Q3%) AS Q$,Q4% AS Q$,Q%(C%,2%)-Q4%-2% &
+			 AS Q1$,2% AS Q1$ &
+		\ IF Q$>=C$ AND CVT$%(Q1$)<>-1% THEN &
+			  Q%(C%+1%,10%)=CVT$%(Q1$) IF (Q%(C%,0%) AND 2%)=0% &
+			\ Q9%=0% &
+			\ IF Q$<>C$ THEN &
+				  GOTO 21330 &
+			  ELSE &
+				  GOTO 21360
+21320	  Q9%=FNN%(C%) &
+	\ IF Q9%=0% THEN &
+		  FIELD #C%, FNQ%(C%,Q%(C%,10%)) AS Q$,Q4% AS Q$ &
+		\ GOTO 21360 IF Q$==C$
+21330	  FOR Q3%=Q%(C%,5%)+1% TO Q%(C%,1%) &
+		\ FIELD #C%, FNQ%(C%,Q3%) AS Q$,Q4% AS Q$,Q%(C%,2%)-Q4%-2% &
+			 AS Q1$,2% AS Q1$ &
+		\ GOTO 21340 IF Q$==C$ AND CVT$%(Q1$)<>-1% &
+	\ NEXT Q3% &
+	\ Q9%=88% &
+	\ GOTO 21360
+21340	  Q%(C%,10%)=Q3% &
+	\ Q%(C%+1%,10%)=CVT$%(Q1$) UNLESS Q%(C%,0%) AND 2% &
+	\ Q9%=0% &
+	\ GOTO 21360
+21350	  Q%(C%,10%)=0% &
+	\ Q9%=FNN%(C%)
+21360	  Q9%=88% IF Q9%=11% &
+	\ GOSUB 21999 &
+	\ FNG%=Q9% &
+	\ FNEND
+21370	  DEF FNA%(C%,C$) &
+	\ Q0%=C%*((C%<0%)-(C%>0%)) &
+	\ Q%(Q0%,0%)=Q%(Q0%,0%) AND (NOT 8%) &
+	\ Q%(Q0%,0%)=Q%(Q0%,0%) OR 8% IF C%<0% &
+	\ C%=Q0% &
+	\ GOSUB 21440 &
+	\ UNLESS Q9% THEN &
+		  Q9%=10% IF Q%(C%,0%) AND 4% &
+		\ UNLESS Q9% THEN &
+			  Q3%,Q%(C%,1%)=Q%(C%,1%)+1% &
+			\ Q%(C%,10%)=Q3% &
+			\ FIELD #C%, FNQ%(C%,Q3%) AS Q$,Q%(C%,2%)-2% AS Q$,2% &
+				 AS Q1$ &
+			\ Q9%=0% IF Q9%=11% &
+			\ LSET Q$=C$ &
+			\ LSET Q1$=CVT%$(Q3%) &
+			\ Q9$=Q9$+CHR$(13%)+Q$(C%) IF Q%(C%,3%)=0% UNLESS Q%( &
+				C%,0%) AND 16% &
+			\ Q%(C%,7%),Q%(C%,3%),Q%(C%,11%)=-1% &
+			\ GOSUB 21430 IF (Q%(C%,0%) AND 8%)<>0% &
+			\ UNLESS Q%(C%,0%) AND 2% THEN &
+				  Q0%=C%+1% &
+				\ Q%(Q0%,10%)=Q3% &
+				\ Q%(Q0%,1%)=Q3% &
+				\ FIELD #Q0%, FNQ%(Q0%,Q3%) AS Q$,Q%(Q0%,2%) &
+					 AS Q$ &
+				\ Q9%=0% IF Q9%=11% &
+				\ LSET Q$=C$ &
+				\ Q%(Q0%,7%),Q%(Q0%,11%)=-1% &
+				\ GOSUB 21430 IF (Q%(Q0%,0%) AND 8%)<>0%
+21380	  GOSUB 21999 &
+	\ FNA%=Q9% &
+	\ FNEND
+21390	  DEF FNU%(C%,C$) &
+	\ Q0%=C%*((C%<0%)-(C%>0%)) &
+	\ GOSUB 21440 &
+	\ UNLESS Q9% THEN &
+		  Q9%=10% IF Q%(Q0%,0%) AND 4% &
+		\ UNLESS Q9% THEN &
+			  FIELD #Q0%, FNQ%(Q0%,Q%(Q0%,10%)) AS Q$,Q%(Q0%,2%)- &
+				2% AS Q$,2% AS Q1$ &
+			\ Q9%=50% IF Q$<>LEFT(C$,Q%(Q0%,2%)-2%) AND C%>0% OR &
+				CVT$%(Q1$)=-1% &
+			\ LSET Q$=C$ IF C%<0% &
+			\ Q9$=Q9$+CHR$(13%)+Q$(Q0%) IF Q%(Q0%,3%)=0% AND C%< &
+				0% UNLESS Q%(Q0%,0%) AND 16% &
+			\ Q%(Q0%,7%),Q%(Q0%,3%)=-1% IF C%<0% &
+			\ Q%(Q0%,5%)=Q%(Q0%,10%)-1% IF C%<0% &
+			\ UNLESS Q9% THEN &
+				  UNLESS Q%(Q0%,0%) AND 2% THEN &
+					  Q0%=Q0%+1% &
+					\ FIELD #Q0%, FNQ%(Q0%,Q%(Q0%,10%)) &
+						 AS Q$,Q%(Q0%,2%) AS Q$ &
+					\ LSET Q$=C$ &
+					\ Q%(Q0%,7%)=-1%
+21400	  GOSUB 21999 &
+	\ FNU%=Q9% &
+	\ FNEND
+21410	  DEF FND%(C%,C$) &
+	\ Q0%=C% &
+	\ GOSUB 21440 &
+	\ UNLESS Q9% THEN &
+		  Q9%=31% IF LEN(C$)>Q%(C%,2%)-2% &
+		\ Q9%=10% IF Q%(C%,0%) AND 4% &
+		\ Q9%=FNG%(C%,C$) UNLESS C$="" OR Q9% &
+		\ Q9%=11% UNLESS Q%(C%,10%) OR Q9% &
+		\ UNLESS Q9% THEN &
+			  FIELD #C%, FNQ%(C%,Q%(C%,10%)) AS Q$,Q%(C%,2%)-2% &
+				 AS Q$,2% AS Q1$ &
+			\ Q9%=-1% IF CVT$%(Q1$)=-1% &
+			\ UNLESS Q9% THEN &
+				  Q3%=CVT$%(Q1$) &
+				\ LSET Q1$=CVT%$(-1%) &
+				\ Q%(C%,7%)=-1% &
+				\ UNLESS Q%(C%,0%) AND 2% THEN &
+					  FIELD #C%+1%, FNQ%(C%+1%,Q3%) AS Q$, &
+						Q%(C%+1%,2%) AS Q$ &
+					\ LSET Q$=STRING$(Q%(C%+1%,2%),68%) &
+					\ Q%(C%+1%,7%)=-1%
+21420	  GOSUB 21999 &
+	\ FND%=Q9% &
+	\ FNEND
+21430	  FIELD #Q0%, FNQ%(Q0%,0%)+2% AS Q$,2% AS Q1$,1% AS Q1$ &
+	\ LSET Q$=CVT%$(Q%(Q0%,1%)) &
+	\ LSET Q1$=MID("US",Q%(Q0%,3%)+2%,1%) &
+	\ Q%(Q0%,7%)=-1% &
+	\ Q%(Q0%,11%)=0% &
+	\ RETURN
+21440	  Q6%=C%*((C%<0%)-(C%>0%)) &
+	\ Q9%=0% &
+	\ Q9%=46% IF Q0%<1% OR Q0%>11% &
+	\ RETURN IF Q9% &
+	\ Q9%=9% IF (Q%(Q0%,0%) AND 3%)=0% &
+	\ RETURN IF Q9% &
+	\ ON ERROR GOTO 21900 &
+	\ RETURN
+21600	  DEF FNL$ &
+	\ Q0%=Q6% &
+	\ Q0%=Q0%+1% IF (Q%(Q0%,0%) AND 2%)=0% &
+	\ IF Q%(Q0%,0%) THEN &
+		  FIELD #Q0%, FNQ%(Q0%,Q%(Q0%,10%)) AS Q$,Q%(Q0%,2%) AS FNL$
+21610	  FNEND
+21620	  DEF FNL% &
+	\ Q0%=Q6% &
+	\ Q0%=Q0%+1% IF (Q%(Q0%,0%) AND 2%)=0% &
+	\ IF Q%(Q0%,0%) THEN &
+		  FNL%=FNQ%(Q0%,Q%(Q0%,10%))
+21630	  FNEND
+21640	  DEF FNS% &
+	\ FNS%=Q9% &
+	\ FNEND
+21650	  DEF FNT &
+	\ FNT=Q%(Q6%,1%) &
+	\ FNEND
+21660	  DEF FNR(C%) &
+	\ FNR=Q%(C%,10%) &
+	\ FNEND
+21700	  DEF FNX%(C$,C%,C1$) &
+	\ Q0$=SYS(CHR$(7%)) &
+	\ Q5%=INSTR(1%,Q0$,CHR$(255%)) &
+	\ Q2%=INSTR(1%,Q0$,CHR$(14%)) &
+	\ Q2%=Q5%+12% IF Q2%=0% &
+	\ Q0$=MID(Q0$+SPACE$(12%),Q5%,Q2%-Q5%) IF Q5% &
+	\ Q0$="" IF Q5%=0% &
+	\ IF C%>=0% THEN &
+		  Q2%=FNC%(Q1%) IF Q%(Q1%,0%) AND 1% FOR Q1%=1% TO 12% &
+		\ IF Q9$<>"" THEN &
+			  Q3$=CVT%$(C%)+C$ IF C$<>"" &
+			\ Q3$=CVT%$(8100%)+"ISM:MENU" IF C$="" AND Q5% &
+			\ Q3$=Q3$+"  " &
+			\ Q9$=Q9$+CHR$(13%)+CHR$(13%)+Q0$ &
+			\ Q9$=Q9$+CHR$(14%)+C1$ IF C1$<>"" &
+			\ Q$=LEFT(CHR$(LEN(Q3$))+Q3$+Q9$,127%) &
+			\ Q$=SYS(CHR$(8%)+Q$) &
+			\ CHAIN "ISM:FSTSRS.TSK" 0%
+21710	  ON ERROR GOTO 21900 &
+	\ CLOSE Q1% FOR Q1%=1% TO 12% IF C%<0% &
+	\ C%=-C% IF C%<0% &
+	\ CHAIN "ISM:MENU" 8100. IF Q5% AND C$="" &
+	\ V$=SYS(CHR$(8%)+Q0$+"   "+CHR$(14%)+C1$) &
+	\ CHAIN C$ C% IF C$<>"" &
+	\ GOTO 32767 &
+	\ FNEND
+21720	  DEF FNX$ &
+	\ Q$=SYS(CHR$(7%)) &
+	\ Q1%=INSTR(4%,Q$,CHR$(14%)) &
+	\ Q$=RIGHT(Q$,Q1%+1%) &
+	\ Q$="" IF Q1%=0% &
+	\ FNX$=Q$ &
+	\ FNEND
+21800	  DEF FNQ%(C%,R%) &
+	\ R%=R%+Q%(C%,4%) IF R% &
+	\ Q7%=R%/Q%(C%,9%)+1% &
+	\ GOTO 21820 IF Q7%=Q%(C%,6%) &
+	\ PUT #C%, RECORD Q%(C%,6%) IF Q%(C%,7%) &
+	\ Q%(C%,7%)=0%
+21810	  GET #C%, RECORD Q7% &
+	\ Q%(C%,6%)=Q7%
+21820	  FNQ%=R%*Q%(C%,8%) AND 511% &
+	\ FNEND
+21899	  PRINT C$;" HAS A FILE HEADER PROBLEM." &
+	\ PRINT &
+	\ PRINT "DO NOT PROCEED!  CALL CMC IMMEDIATELY."; &
+	\ V$=SYS(CHR$(5%)) &
+	\ STOP
+21900	  IF ERL=21040% THEN &
+		  Q9%=ERR &
+		\ Q%(C%,0%)=0% &
+		\ CLOSE C% &
+		\ RESUME 21060
+21910	  IF ERR=10% AND ERL=21800% THEN &
+		  Q9%=10% &
+		\ RESUME 21810
+21920	  IF ERR=11% AND ERL=21810% THEN &
+		  Q9%=11% &
+		\ Q%(C%,6%)=Q7% &
+		\ RESUME 21820
+21930	  IF (ERR=71% OR ERR=5%) AND ERL=21710% THEN &
+		  PRINT "ERROR";ERR; &
+			"IN MENU CHAIN.  STATEMENT, FILE OR ACCOUNT NOT FOUND." &
+		\ V$=SYS(CHR$(5%)) &
+		\ STOP
+21940	  PRINT "UNTRAPPED ERROR";ERR;"AT LINE";ERL &
+	\ Q9%=ERR &
+	\ PRINT &
+	\ PRINT "DO NOT PROCEED!  CALL CMC IMMEDIATELY."; &
+	\ V$=SYS(CHR$(5%)) &
+	\ STOP
+21999	  ON ERROR GOTO 19000 &
+	\ RETURN
+30000	  DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+	\ PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$));STRING$(INPUTLEN%, &
+		8%); &
+	\ PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+	\ GET #CHN% &
+	\ FIELD #CHN%, RECOUNT AS BUFFER$ &
+	\ IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% OR ASCII(BUFFER$)= &
+			23% THEN &
+		  BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" OR ASCII( &
+			BUFFER$)=8% &
+		\ BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" OR ASCII( &
+			BUFFER$)=23%
+30010	  BUFFER$="%^C" IF INSTR(1%,BUFFER$,CHR$(3%)) &
+	\ FNINP$=CVT$$(BUFFER$,4%) &
+	\ FNEND
+30050	  DEF FNP$(ROW%,COL%) &
+	\ FNP$=ESC$+"["+NUM1$(ROW%)+";"+NUM1$(COL%)+"H" &
+	\ FNEND
+30130	  DEF FNI%(Y) &
+	\ FNI%=Y &
+	\ FNEND
+30135	  DEF FND6$(D9%) &
+	\ FND6$=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%)+"/"+RIGHT(NUM1$(( &
+		D9% AND 31%)+100%),2%)+"/"+RIGHT(NUM1$((SWAP%(D9%) AND 254%)/ &
+		2%+100%),2%) &
+	\ FNEND
+30200	  !
+30210	  DEF FNPAGE$(Y0%,Y1%,Y2%,Y0$,Y1$) &
+	\ Y2$="" &
+	\ Y2$=STRING$(Y0%-(Y1%+LEN(XLATE(Y1$,STRING$(10%,0%)+CHR$(10%)))),10%) &
+		IF Y1$<>"" &
+	\ PAGE.LINE%=LEN(XLATE(Y0$,STRING$(10%,0%)+CHR$(10%))) &
+	\ Y%=INSTR(1%,Y1$+Y0$,"<<#") &
+	\ Y3%=INSTR(1%,Y1$+Y0$,"#>>") &
+	\ Y$=RIGHT(NUM1$(100000.+Y2%),8%-(Y3%-Y%)) &
+	\ Y3%=-3% IF Y%=0% &
+	\ PRINT #OUTPUT.CH%, Y2$;LEFT(Y1$+Y0$,Y%-1%);Y$;RIGHT(Y1$+Y0$,Y3%+3%); &
+	\ PAGE%=Y2% &
+	\ FNEND
+30250	  DEF FNPAGE% &
+	\ FNPAGE%=PAGE%+1% &
+	\ FNEND
+30260	  DEF FNLINE% &
+	\ FNLINE%=PAGE.LINE% &
+	\ FNEND
+30500	  DEF FNQUE$(F0$,S0$,C1%) &
+	\ C0%=0% &
+	\ C0%=M% IF BUFSIZ(M%)=0% FOR M%=1% TO 12% &
+	\ OPEN "NL:" AS FILE C0%, RECORDSIZE 32% &
+	\ FIELD #C0%, 1% AS CO$,1% AS FL$,30% AS FI$ &
+	\ LSET CO$=CHR$(C1%) &
+	\ LSET FL$=CHR$(0%) &
+	\ LSET FI$=F0$+"" &
+	\ FNQUE$=SYS(CHR$(6%)+CHR$(22%)+CHR$(-1%)+CHR$(0%)+S0$+SPACE$(6%-LEN( &
+		S0$))+CHR$(C0%)+CVT%$(SWAP%(32%))) &
+	\ FNEND
+31000	  M$=SYS(CHR$(7%)) &
+	\ REP.NUM$=MID(M$,INSTR(1%,M$,"~")+1%,6%) &
+	\ GOTO 30
+32767	  END

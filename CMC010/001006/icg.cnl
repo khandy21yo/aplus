@@ -1,0 +1,11 @@
+$ be2
+old [1,6]icg
+compile/nowarn/chain
+build
+$ tkb @icg
+$ pip [1,6]<104>=icg.tsk
+$ pip [1,2]<104>=icg.tsk
+$ pip icg.tsk/de/lo
+$ pip icg.obj/de/lo
+$ pip icg.cmd/de/lo
+$ pip icg.odl/de/lo

@@ -1,0 +1,589 @@
+10	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+	! &
+	!	06/20/91 - Kevin Handy &
+	!		Minor changes to allow BE2 to compile. &
+
+15	DIM #3%, POINTER%(8%), FILE$(8%)=32%, SYSTEM$(8%)=8% &
+\	DIM #12%, A0$(32767%)=64% &
+
+20	GOSUB 18000 &
+
+25	GOSUB 18200 &
+
+30	GOSUB 18100 &
+
+300	!=============================================================== &
+	! START MENU SYSTEM &
+	!=============================================================== &
+	!=============================================================== &
+	! PRINT FIRST SCREEN OR NEXT SCREEN OF OPTIONS &
+	!=============================================================== &
+	IF TMPPTR% &
+	THEN	GOSUB 18400 &
+\		GOTO 400 &
+
+310	PRINT FNP$('3;1');"There is a message for you (Type MESSAGE to read)"; &
+			IF MESSAGE% &
+\	CURPTR%=POINTER% &
+\	PRINT FNP$('4;1');CLRBOT$;"Current Pathway "; &
+\	IF POINTER%(0%)=1% &
+	THEN	PRINT "-> None Selected" &
+		ELSE	PRINT " -> ";SYSTEM$(I%); FOR I%=2% TO POINTER%(0%) &
+\			PRINT
+
+320	PRINT &
+\	IF POINTER%(0%)=1% &
+	THEN	PRINT "Systems available are:" &
+		ELSE	PRINT "Options available under ";BOLD$;SYSTEM$; &
+				NORMAL$;" are:" &
+
+330	GOSUB 18400 &
+
+400	!=============================================================== &
+	! WAIT FOR USER TO ENTER OPTIONS &
+	!=============================================================== &
+	PRINT FNP$('24;1');CLRLIN$;SYSTEM$;"> "; &
+\	WAIT AUTOLOGOUT% &
+\	INPUT LINE #1%, S1$ &
+\	WAIT 0% &
+\	S1$=CVT$$(S1$,4%+8%+16%+32%+128%) &
+\	PRINT &
+
+430	GOTO 300 IF S1$="" &
+\	TMPPTR%=0% &
+\	I%=INSTR(1%,S1$+" "," ") &
+\	S$=LEFT(S1$,I%-1%) &
+\	S1$=RIGHT(S1$,I%+1%) &
+\	FLAG%=0% &
+
+440	GOTO 500 IF POINTER%(0%)<>1% &
+\	FOR LOOP%=50% TO 69% &
+\		TMP%=INSTR(2%,A0$(LOOP%),SEPRTR$) &
+\		GOTO 450 IF MID(A0$(LOOP%),2%,TMP%-2%)=S$ &
+\	NEXT LOOP% &
+\	GOTO 500 &
+
+450	PRINT FNP$('24;1');CLRLIN$;CHR$(8%);CHR$(8%);CHR$(8%); &
+\	PASS$=CVT$$(RIGHT(A0$(LOOP%),TMP%+1%),-1%) &
+\	TRY%=0% &
+
+460	IF FNPASS%(PASS$) &
+	THEN	500 &
+		ELSE	TRY%=TRY%+1% &
+\			IF TRY%<3% &
+			THEN	PRINT CHR$(7%);CHR$(7%);CHR$(7%); &
+\				GOTO 460 &
+
+470	GOTO 300 &
+
+500	!=============================================================== &
+	! SPECAIL OPTIONS &
+	!=============================================================== &
+	IF S$="END" OR S$='EXIT' &
+	THEN	TEMP%,POINTER%(0%)=POINTER%(0%)-1% &
+\		POINTER%=POINTER%(TEMP%) &
+\		SYSTEM$=SYSTEM$(TEMP%) &
+\		FLAG%=-1% &
+\		GOTO 10000 IF TEMP%=0% &
+\		GOTO 590 IF FILE$(TEMP%)=FILE$(TEMP%+1%) &
+\		MENU$=FILE$(TEMP%) &
+\		GOSUB 18600 &
+\		GOTO 300 IF FLAG1%=0% &
+\		PRINT "Unable to exit option - menu file missing!" &
+\		GOTO 10000 &
+
+510	IF S$="QUIT" &
+	THEN	V$=SYS(CHR$(8%)) &
+\		GOTO 10000 &
+
+520	IF S$="SYSTEM" OR S$="CHANGE" &
+	THEN	MENU$=FILE$(1%) &
+\		GOSUB 18600 IF MENU$<>FILE$(POINTER%(0%)) &
+\		POINTER%(0%)=1% &
+\		POINTER%=POINTER%(1%) &
+\		SYSTEM$=SYSTEM$(1%) &
+\		FILE$=FILE$(1%) &
+\		FLAG%=-1% &
+\		GOTO 300 &
+
+530	IF LEFT(S$,3%)="BYE" &
+	THEN	PRINT CLEAR$;FNSR$('1;24');"Thank you, and "; &
+\		I%=RND*20.+1. &
+\		PRINT "have a good "; IF I%<15% &
+\		PRINT "enjoy your "; IF I%>=15% AND I%<19% &
+\		PRINT "have a great "; IF I%>=19% &
+\		PRINT "morning "; IF TIME(0%)<43200. &
+\		PRINT "afternoon "; IF TIME(0%)>43199. AND TIME(0%)<63000. &
+\		PRINT "evening "; IF TIME(0%)>62999. AND TIME(0%)<89200. &
+\		PRINT "night "; IF TIME(0%)>89199. &
+\		PRINT ". . ." &
+\		GOSUB 18850 &
+\		V$=SYS(CHR$(8%)+"F") &
+\		CHAIN '$LOGOUT' &
+\		GOTO 32767 &
+!	&
+
+540	IF S$="@BACK" &
+	THEN	I%=INSTR(1%,S1$+" "," ") &
+\		FILE$(0%)=LEFT(S1$,I%-1%) &
+\		S1$=RIGHT(S1$,I%+1%) &
+\		FLAG%=-1% &
+\		GOTO 300 &
+
+542	IF S$="@LINE" &
+	THEN	I%=INSTR(1%,S1$+" "," ") &
+\		S$=LEFT(S1$,I%-1%) &
+\		S1$=RIGHT(S1$,I%+1%) &
+\		I%=VAL(S$) &
+\		TEMP%,POINTER%(0%)=POINTER%(0%)+1% &
+\		POINTER%,POINTER%(TEMP%)=I% &
+\		SYSTEM$(TEMP%)=SYSTEM$(TEMP%-1%) &
+\		FILE$(TEMP%)=FILE$(TEMP%-1%) &
+\		FLAG%=-1% &
+\		GOTO 300 &
+
+544	IF S$="@FRONT" &
+	THEN	TEMP%=POINTER%(0%) &
+\		POINTER%(0%)=1% &
+\		POINTER%(1%)=POINTER%(TEMP%) &
+\		SYSTEM$(1%)=SYSTEM$(TEMP%) &
+\		FILE$(1%)=FILE$(TEMP%) &
+\		FLAG%=-1% &
+\		GOTO 300 &
+
+550	IF S$="MESSAGE" &
+	THEN	GOSUB 18110 &
+\		FLAG%=-1% &
+\		GOTO 300 &
+
+560	IF S$='EDITUQ' &
+	THEN	PROGRAM$='ISM:EDITUQ' &
+\		PLINE%=0% &
+\		GOTO 640 &
+
+570	IF S$='SYSINT' &
+	THEN	PROGRAM$='ISM:SYSINT' &
+\		PLINE%=0% &
+\		GOTO 640 &
+
+580	IF S$='PRTMNT' &
+	THEN	PROGRAM$='ISM:PRINT' &
+\		PLINE%=0% &
+\		GOTO 640 &
+
+590	GOTO 430 IF FLAG% &
+\	GOSUB 18500 &
+\	GOTO 800 IF FLAG%=0% &
+
+600	!=============================================================== &
+	! CHAIN TO PROGRAM &
+	!=============================================================== &
+	TEMP1%=VAL(PROGRAM$) &
+\	TEMP%,POINTER%(0%)=POINTER%(0%)+1% &
+\	POINTER%,POINTER%(TEMP%)=TEMP1% &
+\	SYSTEM$,SYSTEM$(TEMP%)=OPTION$ &
+\	FILE$(TEMP%)=FILE$(TEMP%-1%) &
+\	GOTO 430 &
+
+620	CHAINTO$=PROGRAM$ &
+\	CORE.COMMON$="" &
+\	I%=INSTR(1%,PROGRAM$,"/C") &
+\	IF I% &
+	THEN	I1%=INSTR(I%+1%,PROGRAM$,"/") &
+\		I1%=LEN(PROGRAM$)+1% IF I1%=0% &
+\		CORE.COMMON$=MID(PROGRAM$,I%+2%,I1%-(I%+2%)) &
+\		PROGRAM$=LEFT(PROGRAM$,I%-1%)+RIGHT(PROGRAM$,I1%) &
+
+630	PLINE%=0% &
+\	I%=INSTR(1%,PROGRAM$,"/L") &
+\	IF I% &
+	THEN	I1%=INSTR(I%+1%,PROGRAM$,"/") &
+\		I1%=LEN(PROGRAM$)+1% IF I1%=0% &
+\		PLINE%=VAL(MID(PROGRAM$,I%+2%,I1%-(I%+2%))) &
+\		PROGRAM$=LEFT(PROGRAM$,I%-1%)+RIGHT(PROGRAM$,I1%) &
+
+640	D%=1% &
+\	V$=SYS(CHR$(8%)+CHR$(255%)+SYSTEM$+SPACE$(6%-LEN(SYSTEM$))+ &
+		CORE.COMMON$) &
+\	PRINT FNSR$('1;24');CLEAR$; &
+
+650	CLOSE 1% &
+\	CLOSE 3% &
+\	CLOSE 12% &
+\	CHAIN PROGRAM$ LINE PLINE% &
+
+660	PRINT CLEAR$;FNSR$('1;24'); &
+		"Unable to run program ";PROGRAM$;" "; &
+\	PRINT "because of error";ERR &
+\	PRINT &
+\	PRINT 'Hit return to continue '; &
+\	GET #0% &
+\	GOSUB 18000 &
+\	GOSUB 18300 &
+\	GOSUB 18700 &
+\	GOTO 300 &
+
+800	!=============================================================== &
+	! &
+	!=============================================================== &
+	T0POINTER%,T1POINTER%=POINTER% &
+
+810	A1$=A0$(T1POINTER%) &
+\	GOTO 400 IF ASCII(A1$)<>255% &
+\	I%=INSTR(1%,A0$,"-") &
+\	I1%=INSTR(1%,A0$,SEPRTR$) &
+\	POINTER%=VAL(MID(A1$,II%+1%,II1%-II%-1%)) &
+\	GOSUB 18500 &
+
+820	POINTER%=T0POINTER% &
+
+830	PRINT FNP$('4;1');CLRBOT$;"Unable to find any option '";S$;"'." &
+\	PRINT "The options entered after '";S$;"' are ignored: ";S1$ &
+		IF S1$<>"" &
+\	PRINT FNP$('24;54');"Press <Return> to continue"; &
+\	GET #0% &
+\	GOTO 300 &
+
+8000	! &
+
+8100	! &
+
+8110	GOSUB 18000 &
+\	GOSUB 18300 &
+\	GOSUB 18630 &
+\	GOTO 30 &
+
+10000	!==================================================================== &
+	! END PROGRAM &
+	!==================================================================== &
+	MENU$=FILE$(0%) &
+
+10010	CLOSE 1% &
+\	CLOSE 12% &
+\	GOSUB 18850 &
+\	PRINT CLEAR$;FNSR$('1;24'); &
+\	CHAIN MENU$ IF MENU$<>"" &
+\	GOTO 32767 &
+
+18000	!=============================================================== &
+	! SET UP ESCAPE SEQUENCES &
+	!=============================================================== &
+	RANDOMIZE &
+\	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+\	OPEN "KB:" FOR INPUT AS FILE 1% &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(9%)) &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(12%)) &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(16%) + CHR$(0%) + CHR$(255%) + &
+		STRING$(6%,0%)+CHR$(255%)) &
+\	D%=1% &
+\	A0$=STRING$(4096%,0%) &
+\	A0$="" &
+\	D$(1%)="SY:" &
+\	D$(2%)="PP0:" &
+\	D1$(1%)="SY:" &
+\	D2$(1%)="SY:" &
+\	D2$(2%)="SS0:" &
+\	ESC$=CHR$(155%) &
+\	COLM.OFF$=ESC$+"[?3l" &
+\	EXIT.COPY$=ESC$+'[4i' &
+\	CLEAR$=ESC$+"[H"+ESC$+"[J" &
+\	CLRLIN$=ESC$+"[K" &
+\	CLRBOT$=ESC$+"[J" &
+\	DOUBLE$=ESC$+"#6" &
+\	NORMAL$=ESC$+"[m" &
+\	BOLD$=ESC$+"[1m" &
+\	BLINK$=ESC$+"[5m" &
+\	INVERSE$=ESC$+"[7m" &
+\	SPCLIN$=ESC$+"(0"+CHR$(15%+128%) &
+\	SPCNOR$=ESC$+"(B" &
+\	SAVCUR$=ESC$+"7" &
+\	RESCUR$=ESC$+"8" &
+\	UP.ARROW$=ESC$+"[A" &
+\	DN.ARROW$=ESC$+"[B" &
+\	LT.ARROW$=ESC$+"[D" &
+\	RT.ARROW$=ESC$+"[C" &
+\	GOLD$=ESC$+"OP" &
+\	PRINT #1%, ESC$;'<'; &
+\	RETURN &
+
+18100	!==================================================================== &
+	! OPEN MESSAGE FILE &
+	!==================================================================== &
+
+18105	MESSAGE%=0% &
+\	OPEN "MESSAGE.FIL" FOR INPUT AS FILE 6% &
+\	MESSAGE%=-1% &
+\	CLOSE 6% &
+\	RETURN &
+
+18110	OPEN "MESSAGE.FIL" FOR INPUT AS FILE 6% &
+\	PRINT FNP$('3;1');CLRBOT$;DOUBLE$;"           A MESSAGE FOR YOU"; &
+		NORMAL$ &
+\	PRINT &
+
+18120	INPUT LINE #6%, K$ &
+\	PRINT K$; &
+\	GOTO 18120 &
+
+18130	PRINT FNP$('24;1');"Remove message <N> "; &
+\	INPUT K$ &
+\	KILL "MESSAGE.FIL" IF CVT$$(LEFT(K$,1%),-1%)="Y" &
+\	CLOSE 6% &
+
+18135	GOSUB 18700 &
+\	MESSAGE%=0% &
+
+18140	RETURN &
+
+18200	!==================================================================== &
+	! OPEN MENU FILE &
+	!==================================================================== &
+
+18205	MENU$="MENU.FIL" &
+\	GOSUB 18600 &
+\	IF FLAG1% &
+	THEN	MENU$="UNIQUE.FIL" &
+\		GOSUB 18600 &
+\		IF FLAG1% &
+		THEN	MENU$="#MENU.FIL" &
+\			GOSUB 18600 &
+\			IF FLAG1% &
+			THEN	MENU$="!MENU.FIL" &
+\				GOSUB 18600 &
+\				IF FLAG1% &
+				THEN	PRINT "Menu file not found!" &
+\					PRINT 'Create a menu file (y/N)'; &
+\					INPUT K$ &
+\					IF CVT$$(K$,-1%)<>'Y' &
+					THEN	GOTO 10000 &
+						ELSE	PROGRAM$='ISM:SYSINT' &
+\							PLINE%=0% &
+\							GOTO 640 &
+
+18210	JOBNUM%=ASCII(MID(SYS(CHR$(6%)+CHR$(9%)),1%,1%))/2% &
+\	JOBNUM$=RIGHT(NUM1$(100%+JOBNUM%),2%) &
+\	OPEN "MENU"+JOBNUM$+".TMP" FOR OUTPUT AS FILE 3% &
+\	POINTER%(0%)=1% &
+\	SYSTEM$(0%)="Ready" &
+\	FILE$(0%)="" &
+\	SYSTEM$(1%),SYSTEM$="System" &
+\	POINTER%(1%),POINTER%=80% &
+\	FILE$(1%)=MENU$ &
+
+18290	RETURN &
+
+18300	! &
+
+18310	JOBNUM%=ASCII(MID(SYS(CHR$(6%)+CHR$(9%)),1%,1%))/2% &
+\	JOBNUM$=RIGHT(NUM1$(100%+JOBNUM%),2%) &
+\	OPEN "MENU"+JOBNUM$+".TMP" FOR INPUT AS FILE 3% &
+\	TEMP%=POINTER%(0%) &
+\	POINTER%=POINTER%(TEMP%) &
+\	SYSTEM$=SYSTEM$(TEMP%) &
+
+18320	OPEN FILE$(TEMP%)+"/RO" FOR INPUT AS FILE 12% &
+\	RETURN &
+
+18400	!=============================================================== &
+	! PRINT OPTIONS &
+	!=============================================================== &
+	LINES%=0% &
+\	IF TMPPTR%<>0% &
+	THEN	PRINT FNP$('21;1');CLRBOT$;CHR$(13%); &
+		ELSE	PRINT FNP$('6;1') &
+\			TMPPTR%=CURPTR% &
+
+18420	TMPITM$=A0$(TMPPTR%) &
+\	TMP%=ASCII(TMPITM$) &
+\	IF TMP%<>255% &
+	THEN	PRINT "  END";TAB(9%);"- RETURN TO PRIOR SELECTION" &
+\		PRINT "  BYE";TAB(9%);"- LOG OFF SYSTEM" &
+\		TMPPTR%=0% &
+\		RETURN &
+
+18425	GOTO 18440 IF LINES%>13% &
+\	TMP%=INSTR(2%,TMPITM$,"-") &
+\	TMP1%=INSTR(TMP%,TMPITM$,SEPRTR$) &
+
+18430	PRINT "  ";MID(TMPITM$,2%,TMP%-2%);TAB(9%);"- ";CVT$$(MID(TMPITM$, &
+		TMP1%+1%,62%-TMP1%),4%+128%) &
+\	TMPPTR%=TMPPTR%+1% &
+\	LINES%=LINES%+1% &
+\	GOTO 18420 &
+
+18440	PRINT &
+\	PRINT FNP$('22;1');DOUBLE$;BOLD$; &
+		"  Press <RETURN> for more options.";NORMAL$; &
+\	RETURN &
+
+18500	!=============================================================== &
+	! DETERMINE OPTIONS WITHIN A SYSTEM &
+	!=============================================================== &
+	L%=POINTER% &
+
+18520	A0$=A0$(L%) &
+\	GOTO 18580 IF ASCII(A0$)<>255% &
+\	I%=INSTR(1%,A0$,"-") &
+\	I1%=INSTR(1%,A0$,SEPRTR$) &
+
+18525	OPTION$=MID(A0$,2%,I%-2%) &
+\	IF LEFT(CVT$$(OPTION$,32%),LEN(S$))=S$ &
+	THEN	FLAG%=-1% &
+\		PROGRAM$=MID(A0$,I%+1%,I1%-I%-1%) &
+\		GOTO 18580 &
+
+18570	L%=L%+1% &
+\	GOTO 18520 &
+
+18580	RETURN &
+
+18600	! &
+
+18610	CLOSE 12% &
+\	D%=1% &
+\	FLAG1%=0% &
+
+18615	IF INSTR(1%,MENU$,":") &
+	THEN	OPEN MENU$ FOR INPUT AS FILE 12% &
+\		GOTO 18630 &
+
+18620	OPEN D2$(D%)+MENU$ FOR INPUT AS FILE 12% &
+\	MENU$=D2$(D%)+MENU$ &
+
+18630	LABEL$="CMC Timesharing" &
+\	TEMP%=INSTR(1%,A0$(0%),"LABEL=") &
+\	IF TEMP% &
+	THEN	LABEL$=CVT$$(MID(A0$(0%),TEMP%+6%,40%),4%+128%) &
+
+18640	TEMP%=64% IF TEMP%=0% &
+\	SEPRTR$=":" &
+\	TEMP1%=INSTR(1%,A0$(0%),"SEPRTR=") &
+\	IF TEMP1% &
+	THEN	SEPRTR$=CVT$$(MID(A0$(0%),TEMP1%+7%,1%),4%+128%) &
+
+18650	LABEL$=SPACE$((40%-LEN(LABEL$))/2%)+LABEL$ &
+
+18700	PRINT CLEAR$;EXIT.COPY$;COLM.OFF$;DOUBLE$;LABEL$ &
+\	PRINT DOUBLE$;SPCLIN$;STRING$(40%,113%);SPCNOR$;FNSR$('7;22'); &
+		FNP$('4;1'); &
+
+18710	FOR LOOP%=10% TO 30% &
+\		IF INSTR(1%,A0$(LOOP%),'AUTOLOGOUT') &
+		THEN	AUTOLOGOUT%=VAL(XLATE(A0$(LOOP%),STRING$(48%,0%)+ &
+				'0123456789')) &
+\			GOTO 18790 &
+
+18720	NEXT LOOP% &
+
+18790	AUTOLOGOUT%=15%*60% IF AUTOLOGOUT%=0% &
+\	RETURN &
+
+18800	  !-LOG OFF IF JOB IS DETACHED &
+	GOSUB 18850 &
+\	V$=SYS(CHR$(6%)+CHR$(5%)+CVT%$(SWAP%(0%+2%))) &
+\	GOTO 32767 &
+
+18850	! &
+
+18860	CLOSE 3% &
+\	KILL "MENU"+JOBNUM$+".TMP" &
+
+18870	RETURN &
+
+19000	!=============================================================== &
+	! ERROR TRAPPING &
+	!=============================================================== &
+	IF ERR=28% &
+	THEN	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+\		MENU$ = '' &
+\		RESUME 10010 &
+
+19010	RESUME 18800 IF ERR=27% OR ERL=40% &
+\	RESUME 18140 IF ERR=5% AND ERL=18105% &
+\	RESUME 18130 IF ERR=11% AND ERL=18120% &
+\	RESUME 20 IF ERL=18310% &
+\	RESUME 18870 IF ERL=18860% &
+\	RESUME 620   IF ERL=600% AND ERR=52% &
+\	RESUME 820   IF ERL=810% AND ERR=52% &
+\	RESUME 10010 IF ERL=10000% &
+
+19040	IF ERL=18620% AND D%<2% &
+	THEN	D%=D%+1% &
+\		RESUME 18620 &
+
+19045	IF ERL=18620% &
+	THEN	FLAG1%=-1% &
+\		RESUME 18790 &
+
+19050	IF ERL=650% AND D%=1% &
+	THEN	D%=2% &
+\		RESUME 650 &
+
+19055	IF ERL=650% &
+	THEN	FLAG1%=-1% &
+\		RESUME 660 &
+
+19100	IF ERL=400% AND ERR=15% &
+	THEN	S$="BYE" &
+\		RESUME 530 &
+
+19999	PRINT CLEAR$;FNSR$('1;24'); &
+		"MENU error #";ERR;"has occurred at line";ERL &
+\	PRINT CVT$$(RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),3%),4%) &
+\	PRINT &
+\	PRINT "Hit return to continue "; &
+\	S$="" &
+\	GET #0% &
+\	RESUME 20 &
+
+30000	! &
+
+30010	S1$=SYS(CHR$(7%)) &
+\	S1$=RIGHT(S1$,INSTR(1%,S1$+" "," ")+1%) &
+\	GOSUB 18000 &
+\	GOSUB 18200 &
+\	GOSUB 18100 &
+\	GOTO 430 &
+
+30050	DEF*FNP$(RC$) = CHR$(155%)+"["+RC$+"H" &
+
+30060	DEF*FNSR$(SR$) = CHR$(155%)+'['+SR$+'r' &
+
+30070	!**************************************************************	&
+	!		Password input routine 				&
+	!		Format FNPASS%(<PASSWORD>)			&
+	!		 0% = If invalid				&
+	!		-1% = If valid					&
+	!**************************************************************	&
+	DEF*FNPASS%(Y$) &
+\		Y2$=SYS(CHR$(3%)) &
+\		PRINT "Password "; &
+\		INPUT LINE Y1$ &
+\		PRINT &
+\		Y2$=SYS(CHR$(2%)) &
+\		FNPASS% = (CVT$$(LEFT(Y1$,6%),-1%) = CVT$$(Y$,-1%)) &
+\	FNEND &
+
+32767	END &
+

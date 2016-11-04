@@ -1,0 +1,168 @@
+10	!
+	!	Program name - BLDUNQ.B2S
+	!	               This program is a back-end driver which
+	!		       will build a UNIQUE file from the 
+	!		       text file TEMPUQ.TMP and then exit.
+	!
+	!	Author       - Rick Owen
+	!
+	!	Date         - October 5, 1984
+	!
+	!	Edit level   - V1.0
+	!
+	!	Language     - BASIC-PLUS-2 V2.2
+	!
+	!
+	!	Declare variables
+	!
+	DECLARE STRING CURRENT.LINE, CLEAR.SCREEN, OUTPUT.FILE
+	DECLARE WORD CURRENT.POINTER,LOOP,INPUT.LINE.NUMBER,SLACK,REC.COUNTER
+	!
+	!	Dimension array for virtual UNIQUE file
+	!
+	DIM #1, STRING UNIQUE(32767) = 64
+
+20	!
+	!	Now open the kb: and set error processing
+	!
+	OPEN "KB:" AS FILE 6
+	ON ERROR GOTO 19000
+	CLEAR.SCREEN = CHR$(155) + "[0;0H" + CHR$(155) + "[2J"
+
+30	!
+	!	Tell the user what we are doing
+	!
+	PRINT #6,CLEAR.SCREEN
+	PRINT #6,"Please enter the name of the output file, or press RETURN"; &
+		 " for MENU.FIL"
+	INPUT LINE #6,"Name: ";OUTPUT.FILE
+	OUTPUT.FILE = EDIT$(OUTPUT.FILE,-1)
+	IF OUTPUT.FILE = ""
+	THEN
+		OUTPUT.FILE = "MENU.FIL"
+	END IF
+	PRINT #6,"Saving TEMPUQ.TMP as ";OUTPUT.FILE
+	OPEN OUTPUT.FILE FOR OUTPUT AS FILE 1, &
+		ORGANIZATION VIRTUAL, &
+		BUFFER 32
+	OPEN "TEMPUQ.TMP" FOR INPUT AS FILE 2
+
+	!
+	!	Now begin processing the file
+	!
+ Read.line: 
+60	INPUT LINE #2,CURRENT.LINE
+	CURRENT.LINE = EDIT$(CURRENT.LINE,4)
+	REC.COUNTER = REC.COUNTER + 1
+	PRINT #6,REC.COUNTER;CR; IF (REC.COUNTER / 10%) * 10% = REC.COUNTER
+	IF LEFT(CURRENT.LINE,1) = "<"
+	THEN
+		INPUT.LINE.NUMBER = VAL(MID(CURRENT.LINE,2,5))
+	ELSE
+		INPUT.LINE.NUMBER = 0
+	END IF
+	!
+	!	We check for '<' rather than a value in INPUT.LINE.NUMBER
+	!	because the first line of the virtual array is line 0
+	!
+	IF LEFT(CURRENT.LINE,1) = "<"
+	THEN
+		SELECT INPUT.LINE.NUMBER
+
+		!
+		!	This is a case where the current line number
+		!	corresponds to the current line in the UNIQUE file
+		!
+		CASE = CURRENT.POINTER
+			IF LEN(EDIT$(CURRENT.LINE,-1)) > 7
+			THEN
+				UNIQUE(CURRENT.POINTER) = CHR$(255) + &
+					RIGHT(CURRENT.LINE,8)
+			ELSE
+				UNIQUE(CURRENT.POINTER) = ""
+			END IF
+			CURRENT.POINTER = CURRENT.POINTER + 1
+			GOTO Read.line
+
+		!
+		!	This is a case where the current line number
+		!	is larger than the pointer into the UNIQUE file
+		!	(i.e. there have been some lines entered.)
+		!
+		CASE < CURRENT.POINTER
+			IF LEN(EDIT$(CURRENT.LINE,-1)) = 7
+			THEN
+				GOTO Read.line
+			ELSE
+				SLACK = -1
+				UNIQUE(CURRENT.POINTER) = CHR$(255) + &
+					RIGHT(CURRENT.LINE,8)
+				CURRENT.POINTER = CURRENT.POINTER + 1
+				GOTO Read.line
+			END IF
+		!
+		!
+		!	This is a case where the current line number
+		!	is smaller than the pointer into the UNIQUE file
+		!	(i.e. there have been some lines deleted)
+		!
+		CASE > CURRENT.POINTER
+			IF LEN(EDIT$(CURRENT.LINE,-1)) = 7
+			THEN
+				UNIQUE(LOOP) = "" &
+					FOR LOOP = CURRENT.POINTER TO &
+						INPUT.LINE.NUMBER
+				SLACK = 0
+				CURRENT.POINTER = INPUT.LINE.NUMBER + 1
+				GOTO Read.line
+			ELSE
+				UNIQUE(CURRENT.POINTER) = CHR$(255) + &
+					RIGHT(CURRENT.LINE,8)
+				CURRENT.POINTER = CURRENT.POINTER + 1
+				SLACK = -1
+				GOTO Read.line
+			END IF
+
+		END SELECT
+	ELSE
+		UNIQUE(CURRENT.POINTER) = CHR$(255) + CURRENT.LINE
+		CURRENT.POINTER = CURRENT.POINTER + 1
+		GOTO Read.line
+	END IF
+
+	!
+	!	We come here out of error processing when we have 
+	!	encountered an end of file on 'TEMPUQ.TMP'.
+	!
+ Final.processing: 
+100	IF CURRENT.POINTER <= INPUT.LINE.NUMBER
+	THEN
+		FOR LOOP = CURRENT.POINTER TO INPUT.LINE.NUMBER
+			UNIQUE(LOOP) = ""
+		NEXT LOOP
+	END IF
+	CLOSE 1,2,6
+	GOTO 32767
+
+19000	!
+	!	Error processing
+	!
+	SELECT ERR
+		CASE 2
+			PRINT #6,CLEAR.SCREEN
+			PRINT #6,"?Illegal file name ";OUTPUT.FILE
+			PRINT #6,"Please try again."
+			PRINT #6
+			INPUT #6,"Press RETURN to continue ";OUTPUT.FILE
+			RESUME 30
+		CASE 5
+			PRINT #6
+			PRINT #6,"?Can't find TEMPUQ.TMP - please run 'editUQ'"
+			PRINT #6
+			RESUME 32767
+		CASE 11
+			RESUME 100
+	END SELECT
+
+32767	CHAIN "ISM:MENU" LINE 30000
+	END

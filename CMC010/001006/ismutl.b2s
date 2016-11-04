@@ -1,0 +1,638 @@
+
+10	! &
+	! Program name: ISMUTL		Compiled with SCALE 0 on V07.0 &
+	! Decompiled on 16-Jun-82 at 09:36 AM by UNBAC Version 1 &
+
+20	  DIM S%(512%), S1%(512%), B%(12%), Z%(12%) &
+
+30	  OPEN "KB:" AS FILE 12% &
+	\ C%(1%)=ASCII("C" )+SWAP%(220%) &
+	\ C%(2%)=ASCII("F" )+SWAP%(210%) &
+	\ C%(3%)=ASCII("I" )+SWAP%(200%) &
+	\ C%(4%)=ASCII("A" )+SWAP%(0%) &
+	\ C%(0%)=4% &
+	\ CHANGE C% TO C$ &
+
+1000	! &
+
+1010	  Z%(X%),B%(X%)=0% FOR X%=0% TO 12% &
+	\ ON ERROR GOTO 15000 &
+	\ PRINT &
+	\ PRINT "Quick create, Create, Make, Reorganize, Index, Sort, Print,"; &
+		  " or End: "; &
+	\ INPUT #12%, A$ &
+	\ GOTO 1010 IF A$="" &
+	\ A$ = LEFT(CVT$$(A$,-1%),1%) &
+	\ GOTO 5000 IF A$="Q" &
+	\ GOTO 3000 IF A$="C" &
+	\ GOTO 6000 IF A$="R" &
+	\ GOTO 7000 IF A$="I" &
+	\ GOTO 8000 IF A$="S" &
+	\ GOTO 4000 IF A$="P" &
+	\ GOTO 9000 IF A$="M" &
+	\ GOTO 32767 IF A$="E" &
+	\ GOTO 1010 &
+
+2000	! &
+
+2010	  P7%=0% &
+	\ PRINT #12%, "Output Device: "; &
+	\ INPUT LINE #12%,F9$ &
+	\ F9$ = CVT$$(F9$,-1%) &
+	\ INPUT #12%,"Page Size: ";P9% &
+	\ F9$="KB:" IF F9$=="" &
+	\ P9%=66% IF P9%=0% &
+	\ OPEN F9$ FOR INPUT AS FILE 2% &
+	\ A%=FNH%(1%) &
+	\ Z1%=CVT$%(RIGHT(SYS(CHR$(6%)+CHR$(-10%)+D2$),23%))=19266% &
+	\ IF Z1% &
+	  THEN	  INPUT #12%, "Set page.";A$ &
+		\ PRINT &
+
+2020	  FIELD #1%, 4% AS E2$,1% AS S1$,1% AS E$,1% AS E$ &
+	\ R%=ASCII(E$) &
+	\ FIELD #1%, 7% AS E1$,R% AS S$ &
+	\ CHANGE S$ TO S% &
+	\ S$(X%)="" FOR X%=1% TO R% &
+	\ FIELD #1%, 7%+R%+(X%-1%)*3% AS E1$, &
+		  3% AS S$(X%) FOR X%=1% TO R% IF ASCII(E4$)<128% &
+	\ GOSUB 2070 &
+	\ T1%=1% &
+	\ FOR X%=1% TO R% &
+		\ IF S%(X%)>=220% &
+		  THEN	  N$="CHR$" &
+			\ S%=S%(X%)-220% &
+			\ L%=1% &
+			\ GOTO 2060 &
+
+2030		  IF S%(X%)>=210% &
+		  THEN	  N$="FLOAT" &
+			\ S%=S%(X%)-210% &
+			\ L%=8% &
+			\ GOTO 2060 &
+
+2040		  IF S%(X%)>=200% &
+		  THEN	  N$="INTEGER" &
+			\ S%=S%(X%)-200% &
+			\ L%=2% &
+			\ GOTO 2060 &
+
+2050		  N$="ASCII" &
+		\ S%=0% &
+		\ L%=S%(X%) &
+
+2060		  PRINT #2% USING "###. ! ### ! ###" , X%,"!" ,L%,"!" ,T1%; &
+		\ PRINT #2%, "-";NUM1$(T1%+L%-1%);TAB(21%);"! ";N$;TAB(31%); &
+			  "!  ";S$(X%);TAB(40.);"! ";S%;TAB(47%);"! "; &
+		\ PRINT USING "###. " , X%; IF (NOT Z1%) &
+		\ INPUT #12%, A$ &
+		\ PRINT #2%, A$ UNLESS Z1% &
+		\ GOSUB 2080 &
+		\ PRINT #2%, &
+			  "     !     !         !         !        !      !"; &
+			  STRING$(25%,ASCII("-" )) &
+		\ GOSUB 2080 &
+		\ T1%=T1%+L% &
+	\ NEXT X% &
+	\ PRINT #2%, STRING$(P8%-2%,10%);TAB(38%);"-";P7%+1%;"-";STRING$(5%, &
+		  10%) &
+	\ RETURN &
+
+2070	  PRINT #2% &
+	\ PRINT #2% &
+	\ PRINT #2%, TAB(25%);"FILENAME:  ";D1$ &
+	\ PRINT #2%, TAB(25%);"Record Length: ";NUM1$(K2%(1%)); &
+	\ PRINT #2%, "/";NUM1$(K5%(1%)); IF K5%(1%)<>K2%(1%) &
+	\ PRINT #2%, TAB(47%);"State of file flag:  ";S1$ &
+	\ PRINT #2%, TAB(47%);"Number of records : ";CVT$%(E1$) &
+	\ PRINT #2%, TAB(25%);"LAYOUT OF RECORDS" &
+	\ PRINT #2%, TAB(25%);"------ -- -------" &
+	\ PRINT #2% &
+	\ PRINT #2%, "      No. of           String            Scaler" &
+	\ PRINT #2%, &
+		  "      Char.  Position   Type    Mnemonic Factor  Description" &
+	\ PRINT #2%, STRING$(72%,ASCII("-" )) &
+	\ P8%=P9%-12% &
+	\ RETURN &
+
+2080	  P8%=P8%-1% &
+	\ RETURN IF P8%>3% &
+	\ PRINT #2% &
+	\ P7%=P7%+1% &
+	\ PRINT #2%, TAB(38%);"-";P7%;"-";CHR$(10%) &
+	\ GOSUB 2070 &
+	\ RETURN &
+
+3000	! &
+
+3010	  PRINT &
+	\ INPUT #12%,"K - Key File, D - Data file, B - Both  (K,D, or B): ";A$ &
+	\ PRINT &
+	\ A$="B" IF CVT$$(A$,-1%)="" &
+	\ B3$=A$+"" &
+	\ GOTO 3030 IF A$="D" &
+	\ PRINT #12%,"KEY FILE name: "; &
+	\ INPUT LINE #12%, D1$ &
+	\ D1$ = CVT$$(D1$,-1%) &
+	\ D2$=LEFT(D1$,LEN(D1$)-1%)+"1" &
+	\ PRINT "DATA FILE name will be ";D2$ UNLESS A$<>"B" &
+	\ PRINT "Enter data for KEY FILE: ";D1$ &
+	\ A$=D1$ &
+	\ Z%=-1% &
+	\ GOSUB 3100 &
+	\ GOTO 3010 IF Z%=1% &
+
+3020	  GOTO 1010 IF B3$="K" &
+	\ PRINT "Enter data for DATA FILE: ";D2$ &
+	\ A$=D2$ &
+	\ Z%=0% &
+	\ GOSUB 3100 &
+	\ GOTO 3010 IF Z%=1% &
+	\ GOTO 1010 &
+
+3030	  PRINT #12%,"DATA FILE name: "; &
+	\ INPUT LINE #12%,D2$ &
+	\ D2$ = CVT$$(D2$,-1%) &
+	\ GOTO 3020 &
+
+3100	! &
+
+3110	  OPEN A$ FOR INPUT AS FILE 1% &
+	\ PRINT "File ";A$;" exists.  Do you want to keep it (Yes or No): "; &
+	\ INPUT #12%, S$ &
+	\ IF CVT$$(LEFT(S$,1%),-1%)="Y" &
+	  THEN	  Z%=1% &
+		\ RETURN &
+
+3120	  OPEN A$ FOR OUTPUT AS FILE 1% &
+	\ PRINT &
+	\ IF Z% &
+	  THEN	  PRINT"For key files, logical record length must be 2 characters" &
+		\ PRINT"more than what is needed for the key.  Make SURE these 2" &
+		\ PRINT "characters are included!" &
+
+3130	  INPUT #12%, "Logical record length: ";L% &
+	\ GOTO 3130 IF L%<4% OR L%>512% &
+	\ L1%=FNB1%(L%) &
+	\ PRINT "Record will take";L1%;"characters with a";L%; &
+		  "logical record length." IF L1%<>L% &
+	\ Z1%=0% &
+	\ PRINT "Initial setting for state of file flag" &
+	\ INPUT #12%,"<CR> for default (S), <lf> for blank : ";A$ &
+	\ S$="S" IF A$="" &
+	\ S$=A$ IF A$<>"" &
+	\ PRINT &
+	\ FIELD #1%, 2% AS E$,2% AS E1$,1% AS E2$ &
+	\ LSET E$=CVT%$(0%) &
+	\ LSET E1$=CVT%$(L%) &
+	\ LSET E2$=S$ &
+	\ INPUT #12%,"Do you want optional file layout included (Y or N)" ,A$ &
+	\ IF A$<>"Y" &
+	  THEN	  FIELD #1%, 5% AS E$,1% AS E$ &
+		\ LSET E$=CHR$(128%+8%/L1%) &
+		\ PUT #1%, RECORD 1% &
+		\ CLOSE 1% &
+		\ RETURN &
+
+3140	  PRINT "Do you want mnemonics for the fields (Y or N): "; &
+	\ GOSUB 3300 &
+	\ PRINT &
+	\ Z2%=A$="Y" &
+	\ INPUT #12%, "Number of fields in record: ";S% &
+	\ PRINT &
+	\ PRINT "Input parameters for each field below." &
+	\ PRINT "For field, type:" &
+	\ PRINT "     C - 1-CHAR. FLOATING POINT (0 TO 256)" &
+	\ PRINT "     3 - 3-CHAR. FLOATING POINT (-32767.99 TO 32767.99)" &
+	\ PRINT "     4 - 4-CHAR. FLOATING POINT (-8388607.99 TO 8388607.99)" &
+	\ PRINT "     F - 8-CHAR. FLOATING POINT" &
+	\ PRINT "     I - INTEGER                (-32768 TO 32767)" &
+	\ PRINT "     A - ASCII STRING" &
+	\ PRINT "     D - DATE (STORED AS INTEGER)" &
+	\ PRINT '     G - 3-CHAR. G/L # (INTEGER + "." + CHR$)' &
+	\ PRINT &
+	\ IF L1%<ABS(Z2%=-1%)*3%*S%+S%+6% AND Z1% &
+	  THEN	  PRINT"With field descriptors, HEADER will be MORE than 1 record." &
+		\ GOTO 3200 &
+
+3150	  S%(0%)=0% &
+	\ A$=SYS(CHR$(3%)) &
+	\ FOR Y%=1% TO S% &
+
+3160		  PRINT &
+		\ PRINT "Field #";NUM1$(Y%);CHR$(9%);" Type: "; &
+		\ GOSUB 3300 &
+		\ PRINT A$, &
+		\ A%=INSTR(1%,C$,A$) &
+		\ GOTO 3160 IF A%=0% &
+		\ PRINT "  Length: "; IF A%=4% &
+		\ PRINT "  Scaler: "; IF A%<4% &
+		\ INPUT #12%, A1% &
+		\ PRINT A1%, &
+		\ S%(Y%)=(SWAP%(C%(A%)) AND 255%)+A1% &
+		\ GOTO 3190 IF Z2%=0% &
+		\ PRINT TAB(60%);"  Mnemonic: "; &
+		\ X%=1% &
+		\ WHILE X%<4% &
+			\ GOSUB 3300 &
+			\ IF ASCII(A$)=127% &
+			  THEN	  IF X%-1% &
+				  THEN	  X%=X%-2% &
+					\ PRINT "\"; &
+					\ GOTO 3180 &
+
+3170			  PRINT A$; &
+			\ S1%((Y%-1%)*3%+X%)=ASCII(A$) &
+
+3180			  X%=X%+1% &
+		\ NEXT &
+
+3190	  NEXT Y% &
+	\ A$=SYS(CHR$(2%)) &
+	\ PRINT &
+	\ FIELD #1%, 5% AS E$,1% AS E$,1% AS E1$,S% AS E2$,S%*3% AS E3$ &
+	\ LSET E$=CHR$(128%*ABS((NOT Z2%))+(7%+S%+S%*3%*ABS(Z2%))/L1%) &
+	\ LSET E1$=CHR$(S%) &
+	\ S%(0%)=S% &
+	\ CHANGE S% TO S$ &
+	\ LSET E2$=S$ &
+	\ S1%(0%)=3%*S% &
+	\ CHANGE S1% TO S$ &
+	\ LSET E3$=S$ &
+
+3200	  PUT #1%, RECORD 1% &
+	\ PRINT "Do you want a LAYOUT printed (Y or N): "; &
+	\ GOSUB 3300 &
+	\ PRINT &
+	\ GOSUB 2000 IF A$="Y" &
+	\ CLOSE 1% &
+	\ RETURN &
+
+3300	! &
+
+3310	  K9%=K9%+1% &
+	\ IF K9%<=K8% &
+	  THEN	  A$=CVT$$(MID(B4$,K9%,1%),32%) &
+		\ K7%=0% &
+		\ K7%=1% IF A$=CHR$(13%) &
+		\ K7%=2% IF A$=CHR$(10%) &
+		\ K9%=K9%+K7% &
+		\ RETURN &
+
+3320	  K9%=0% &
+	\ A$=SYS(CHR$(4%)) &
+	\ GET #12% &
+	\ K8%=RECOUNT &
+	\ FIELD #12%, K8% AS B4$ &
+	\ B4$=B4$+"" &
+	\ GOTO 3310 &
+
+4000	! &
+
+4010	  PRINT #12%, "File to print: "; &
+	\ INPUT LINE #12%,D1$ &
+	\ D1$ = CVT$$(D1$,-1%) &
+	\ OPEN D1$ FOR INPUT AS FILE 1% &
+	\ GOSUB 2000 &
+	\ GOTO 1010 &
+
+5000	! &
+
+5010	  PRINT "Name of KEY FILE: "; &
+	\ INPUT LINE #12%, A$ &
+	\ A$=CVT$$(A$,-1%) &
+	\ GOSUB 5030 &
+	\ GOTO 5010 IF Z% &
+	\ B$=A$ &
+	\ A$=LEFT(B$,LEN(B$)-1%)+"1" &
+	\ GOSUB 5030 &
+	\ GOTO 5010 IF Z% &
+	\ OPEN B$ FOR OUTPUT AS FILE 1% &
+	\ OPEN A$ FOR OUTPUT AS FILE 2% &
+	\ N%=1% &
+
+5020	  FIELD #N%, 6% AS E$ &
+	\ PRINT "Logical record length for ";B$;": "; &
+	\ INPUT #12%, L% &
+	\ GOTO 5020 IF L%<4% OR L%>512% &
+	\ LSET E$=CVT%$(0%)+CVT%$(L%)+"S"+CHR$(128%+8%/FNB1%(L%)) &
+	\ PUT #N% &
+	\ CLOSE N% &
+	\ GOTO 1010 IF N%<>1% &
+	\ N%=2% &
+	\ B$=A$ &
+	\ GOTO 5020 &
+
+5030	  Z%=0% &
+	\ OPEN A$ FOR INPUT AS FILE 1% &
+	\ PRINT "File ";A$;" exists. Do you want to keep it (Y or N)"; &
+	\ INPUT #12%,E$ &
+	\ Z%=(NOT CVT$$(LEFT(E$,1%),-1%)="N" ) &
+
+5040	  CLOSE 1% &
+	\ RETURN &
+
+6000	! &
+
+6010	  Q%=0% &
+	\ PRINT #12%, "Name of KEY FILE: "; &
+	\ INPUT LINE #12%,A$ &
+	\ A$ = CVT$$(A$,-1%) &
+	\ PRINT #12%,"Please Wait. . ." &
+	\ A%=INSTR(1%,A$,"." )-1% &
+	\ A%=LEN(A$) IF A%=0% &
+	\ D1$=A$ &
+	\ D2$=LEFT(A$,LEN(A$)-1%)+"1" &
+	\ D3$=LEFT(A$,A%)+".BKP" &
+	\ D4$=LEFT(A$,A%)+".BK1" &
+	\ ON ERROR GOTO 6060 &
+
+6020	  KILL D3$ &
+
+6030	  KILL D4$ &
+
+6040	  OPEN D1$ FOR INPUT AS FILE 1% &
+	\ A%=FNH%(1%) &
+	\ IF CHR$(K3%(1%))<>"S" &
+	  THEN	  PRINT "Key file is not in sorted order!  Please SORT." &
+		\ GOTO 1010 &
+
+6050	  CLOSE 1% &
+	\ NAME D1$ AS D3$ &
+	\ NAME D2$ AS D4$ &
+	\ OPEN D3$ FOR INPUT AS FILE 3% &
+	\ OPEN D4$ FOR INPUT AS FILE 4% &
+	\ GOTO 6070 &
+
+6060	  IF ERR=5% &
+	  THEN	  IF ERL=6030% &
+		  THEN	  IF ERL=6020% &
+			  THEN	  RESUME 6030 &
+			  ELSE	  RESUME 6040 &
+			  ELSE	  GOTO 15100 &
+			  ELSE	  ON ERROR GOTO 0 &
+
+6070	  ON ERROR GOTO 15000 &
+	\ A%=FNH%(3%)+FNH%(4%) &
+	\ OPEN D1$ FOR OUTPUT AS FILE 1% &
+	\ OPEN D2$ FOR OUTPUT AS FILE 2% &
+	\ Y%=K4%(4%) &
+	\ Y1%=K4%(3%) &
+	\ K1%=512%/K5%(3%) &
+	\ K3%=512%/K5%(4%) &
+	\ FOR X%=K4%(3%)+1% TO K1%(3%)+K4%(3%) &
+		\ OFFSET% = FNC%(K1%,3%,X%) &
+		\ FIELD #3%, OFFSET% AS E$,K2%(3%)-2% AS L$,2% AS I$ &
+		\ GOTO 6090 IF CVT$%(I$)=-1% &
+		\ OFFSET% = FNC%(K3%,4%,CVT$%(I$)) &
+		\ FIELD #4%, OFFSET% AS E$,K2%(4%) AS L1$ &
+		\ Y%=Y%+1% &
+		\ Y1%=Y1%+1% &
+		\ OFFSET% = FNC%(K1%,1%,Y1%) &
+		\ FIELD #1%, OFFSET% AS E$,K2%(3%) AS L2$ &
+		\ OFFSET% = FNC%(K3%,2%,Y%) &
+		\ FIELD #2%, OFFSET% AS E$,K2%(4%) AS E$ &
+		\ LSET L2$=L$+CVT%$(Y%) &
+		\ LSET E$=L1$ &
+		\ Z%(1%),Z%(2%)=-1% &
+
+6080	  NEXT X% &
+	\ PUT #1%, RECORD B%(1%) &
+	\ PUT #2%, RECORD B%(2%) &
+	\ GOTO 6100 &
+
+6090	  Q%=Q%+1% &
+	\ GOTO 6080 &
+
+6100	  K1%=(K4%(3%)+1%)*K5%(3%) &
+	\ K3%=(K4%(4%)+1%)*K5%(4%) &
+	\ GET #3%, RECORD 1% &
+	\ FIELD #3%, K1% AS L$ &
+	\ GET #4%, RECORD 1% &
+	\ FIELD #4%, K3% AS L1$ &
+	\ GET #1%, RECORD 1% &
+	\ FIELD #1%, K1% AS L2$ &
+	\ GET #2%, RECORD 1% &
+	\ FIELD #2%, K3% AS E$ &
+	\ LSET L2$=CVT%$(K1%(3%)-Q%)+RIGHT(L$,3%) &
+	\ LSET E$=CVT%$(K1%(3%)-Q%)+RIGHT(L1$,3%) &
+	\ PUT #1%, RECORD 1% &
+	\ PUT #2%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 2% &
+	\ CLOSE 3% &
+	\ CLOSE 4% &
+	\ INPUT #12%,"Would you like to keep the BACKUP files: ";A$ &
+	\ GOTO 1010 IF LEFT(CVT$$(A$,-1%),1%)="Y" &
+	\ KILL D3$ &
+	\ KILL D4$ &
+	\ PRINT "Deleted. . ." &
+	\ GOTO 1010 &
+
+7000	! &
+
+7010	  PRINT #12%, "ENTER DATA FILE'S NAME: "; &
+	\ INPUT LINE #12%,D2$ &
+	\ D2$ = CVT$$(D2$,-1%) &
+	\ IF RIGHT(D2$,LEN(D2$))="1" &
+	  THEN	  INPUT #12%,"Have you BUILT the INDEX FILE (Y or N): ";A$ &
+		\ PRINT &
+		\ GOTO 1010 IF A$<>"Y" &
+		\ PRINT #12%, "NAME of INDEX FILE: "; &
+		\ INPUT LINE #12%,D1$ &
+		\ D1$ = CVT$$(D1$,-1%) &
+		\ ON ERROR GOTO 7030 &
+		\ X%=0% &
+		\ OPEN D1$ FOR INPUT AS FILE 1% &
+		\ X%=-1% &
+		\ OPEN D2$ FOR INPUT AS FILE 2% &
+		\ GOTO 7050 &
+
+7020	  PRINT "DATA FILE NAMES SHOULD END IN 1." &
+	\ GOTO 7010 &
+
+7030	  IF ERR=5% &
+	  THEN	  PRINT "File "; &
+		\ PRINT D1$; IF (NOT X%) &
+		\ PRINT D2$; IF X% &
+		\ PRINT " missing!" &
+		\ RESUME 7010 &
+
+7040	  GOTO 15100 &
+
+7050	  ON ERROR GOTO 15000 &
+	\ A%=FNH%(1%)+FNH%(2%) &
+	\ Y%=K4%(1%) &
+	\ FOR X%=K4%(2%)+1% TO K1%(2%)+K4%(2%) &
+		\ OFFSET% = FNC%(512%/K5%(2%),2%,X%) &
+		\ FIELD #2%, OFFSET% AS E$,K2%(1%)-2% AS E0$ &
+		\ X1%=0% &
+		\ X1%=-1% IF E0$=STRING$(K2%(1%)-2%,68%) &
+		\ Y%=Y%+1% &
+		\ OFFSET% = FNC%(512%/K5%(1%),1%,Y%) &
+		\ FIELD #1%, OFFSET% AS E$,K2%(1%) AS E1$ &
+		\ LSET E1$=E0$+CVT%$(X% OR X1%) &
+		\ Z%(1%)=-1% &
+	\ NEXT X% &
+	\ PUT #1%, RECORD B%(1%) &
+	\ GET #1%, RECORD 1% &
+	\ FIELD #1%, 2% AS E$,2% AS E1$,1% AS E0$ &
+	\ LSET E0$="U" &
+	\ LSET E$=CVT%$(Y%-K4%(1%)) &
+	\ PUT #1%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 2% &
+	\ B2$=CHR$(13%)+D1$ &
+	\ GOTO 8040 &
+
+8000	! &
+
+8010	  PRINT "Enter file names to sort.  Exit with CRTL/Z or <CR>." &
+	\ PRINT "Abort option with ESC." &
+	\ B2$="" &
+	\ ON ERROR GOTO 8050 &
+
+8020	  PRINT "File: "; &
+	\ INPUT LINE #12%, A$ &
+	\ GOTO 1010 IF INSTR(1%,A$,CHR$(27%)) &
+	\ A$=CVT$$(A$,36%) &
+	\ GOTO 8040 IF A$=="" &
+	\ OPEN A$ FOR INPUT AS FILE 1% &
+	\ IF STATUS AND 1024% &
+	  THEN	  PRINT "Write privliges cannot be established for file ";A$; &
+			  " SORT Aborted!" &
+		\ GOTO 8020 &
+
+8030	  CLOSE 1% &
+	\ B2$=B2$+CHR$(13%)+A$ &
+	\ GOTO 8020 &
+
+8040	  PRINT &
+	\ PRINT "Please wait. . ." &
+	\ B2$=SYS(CHR$(8%)+CHR$(0%)+CVT%$(0%)+"!ISMUTL"+B2$) &
+	\ CHAIN "[1,6]FSTSRS.TSK" LINE 0% &
+	\ B2$=SYS(CHR$(9%)) &
+
+8050	  IF ERR=11% &
+	  THEN	  RESUME 8040 &
+	  ELSE	  IF ERR=5% &
+		  THEN	  PRINT "File ";A$;" not found!" &
+			\ RESUME 8020 &
+
+9000	! &
+
+9010	  F%=0% &
+	\ PRINT #12%, "Make what file: "; &
+	\ INPUT LINE #12%,D1$ &
+	\ D1$ = CVT$$(D1$,-1%) &
+	\ PRINT #12%, "From what file: "; &
+	\ INPUT LINE #12%,D3$ &
+	\ D3$ = CVT$$(D3$,-1%) &
+	\ D2$=LEFT(D1$,LEN(D1$)-1%)+"1" &
+	\ D4$=LEFT(D3$,LEN(D3$)-1%)+"1" &
+	\ ON ERROR GOTO 9050 &
+	\ OPEN D3$ FOR INPUT AS FILE 3% &
+	\ F%=-1% &
+	\ OPEN D4$ FOR INPUT AS FILE 4% &
+	\ F%=0% &
+
+9020	  OPEN D1$ FOR OUTPUT AS FILE 1% &
+	\ OPEN D2$ FOR OUTPUT AS FILE 2% UNLESS F% &
+	\ A%=1% &
+	\ GOSUB 9040 &
+	\ IF (NOT F%) &
+	  THEN	  A%=2% &
+		\ GOSUB 9040 &
+
+9030	  PRINT "File"; &
+	\ PRINT "s ";D1$;", ";D2$; IF F%<>0% &
+	\ PRINT " ";D1$; IF F%=0% &
+	\ PRINT " created!!" &
+	\ CLOSE 1% &
+	\ CLOSE 2% &
+	\ CLOSE 3% &
+	\ CLOSE 4% &
+	\ GOTO 1010 &
+
+9040	  B%=A%+2% &
+	\ GET #B% &
+	\ FIELD #B%, 2% AS E$,2% AS E1$,1% AS E$,1% AS E$ &
+	\ B1%=2%^(INT(LOG10(CVT$%(E1$))/.30103)+ &
+		  1%)*((ASCII(E$) AND (NOT 128%))+1%)-2% &
+	\ FIELD #B%, 2% AS E3$,B1% AS E1$ &
+	\ FIELD #A%, 2% AS E4$,B1% AS E2$ &
+	\ LSET E2$=E1$ &
+	\ LSET E4$=CVT%$(0%) &
+	\ PUT #A%, RECORD 1% &
+	\ RETURN &
+
+9050	  IF ERR=5% AND ERL=9010% &
+	  THEN	  IF F%=0% &
+		  THEN	  GOTO 9070 &
+		  ELSE	  PRINT"Data file cannot be found.  Only KEY FILE will be CREATED!" &
+			\ RESUME 9020 &
+
+9060	  GOTO 15100 &
+
+9070	  PRINT "File ";D3$;" not found!" &
+	\ RESUME 9010 &
+
+14000	  DEF FNC%(A%,X%,A1%) &
+		\ B5%=A1%/A%+1% &
+		\ IF B5%<>B%(X%) &
+		  THEN	  PUT #X%, RECORD B%(X%) IF Z%(X%) &
+			\ Z%(X%)=0% &
+			\ GET #X%, RECORD B5% &
+
+14010		  B%(X%)=B5% &
+		\ FNC%=(A1%-(B5%-1%)*A%)*(512%/A%) &
+	\ FNEND &
+
+14020	  DEF FNB1%(X%) &
+		\ FOR T%=9% STEP -1% UNTIL 2%^T%<X% &
+		\ NEXT T% &
+		\ FNB1%=2%^(T%+1%) &
+	\ FNEND &
+
+14030	  DEF FNH%(A%) &
+		\ GET #A%, RECORD 1% &
+		\ FIELD #A%, 2% AS E0$,2% AS E1$,1% AS E3$,1% AS E4$ &
+		\ K1%(A%)=CVT$%(E0$) &
+		\ K2%(A%)=CVT$%(E1$) &
+		\ K3%(A%)=ASCII(E3$) &
+		\ K4%(A%)=ASCII(E4$) AND (NOT 128%) &
+		\ K5%(A%)=FNB1%(K2%(A%)) &
+	\ FNEND &
+
+14040	  DEF FNE$ &
+		\ FNE$=CVT$$(RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),3%),4%) &
+	\ FNEND &
+
+15000	  IF ERR=11% AND ERL=14000% &
+	  THEN	  RESUME 14010 &
+
+15005	  IF ERR=5% &
+	  THEN	  IF ERL=3110% &
+		  THEN	  RESUME 3120 &
+		  ELSE	  IF ERL=5030% &
+			  THEN	  RESUME 5040 &
+
+15010	  IF ERL=3110% &
+	  THEN	  PRINT "Error - ";FNE$;" in open of file ";A$ &
+		\ RESUME 1010 IF Z% &
+		\ RESUME 3030 &
+
+15020	  IF ERR=5% &
+	  THEN	  PRINT "Error - ";FNE$ &
+		\ RESUME IF ERL=2010% &
+		\ RESUME 1010 &
+
+15030	  IF ERR=50% &
+	  THEN	  PRINT CHR$(7%) &
+		\ RESUME &
+
+15100	  PRINT "Error - ";FNE$ &
+	\ RESUME 1010 &
+
+32767	  END &
+

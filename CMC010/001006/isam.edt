@@ -1,0 +1,18 @@
+!
+!	Convert a program to BASIC-PLUS-2 ISAM Syntax
+!
+S/FNO%/FNO/WH					! Open function
+S/FNC%/FNC/WH					! Close function
+S/FNG%/FNG/WH					! Get function
+S/FNN%/FNN/WH					! Next record
+S/FNA%/FNA/WH					! Add
+S/FNU%/FNU/WH					! Update
+S/FND%/FND/WH					! Delete
+S/FNX$/FNXDLR/WH				! Get core common
+S/FNX%/FNX/WH					! Exit/Sort
+S/FNS%/FNS/WH					! Error
+S/FNL$/FNL/WH					! Read record
+S/FNL%/FNLOFF/WH				! Offset function
+						! FNR Stays the same
+						! FNT Stays the same
+S/FNQ%/FNQ/WH					! Get/Put function

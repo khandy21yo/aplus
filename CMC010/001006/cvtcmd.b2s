@@ -1,0 +1,206 @@
+10	!-------------------------------------------------------------- &
+	! read directory and create cmd file to convert kermit &
+	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+	! &
+\	TEMP$=SYS(CHR$(12%)) 			!LAST FILE OPENED &
+\	PRJPRG$=MID(TEMP$,23%,1%) + MID(TEMP$,24%,1%) + NUM1$(ASCII(MID( &
+		TEMP$,25%,1%))) + ":" + &
+		"["+NUM1$(ASCII(MID(TEMP$,6%,1%))) + "," + &
+		NUM1$(ASCII(MID(TEMP$,5%,1%))) + "]" + &
+		RAD$(ASCII(MID(TEMP$,7%,1%))+SWAP%(ASCII(MID(TEMP$,8%,1%)))) + &
+		RAD$(ASCII(MID(TEMP$,9%,1%))+SWAP%(ASCII(MID(TEMP$,10%,1%)))) &
+	! &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(9%))	! SYS CALL FOR JOB &
+\	JJ%  = ASCII(LEFT(JUNK$,1%))/2%		! GET THE JOB NUMBER &
+\	JJ$  = RIGHT(NUM1$(JJ%+100%),2%)	! SET THE JOB INTO A STRING &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE 1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)				! Escape code for VT100 &
+\	COLM.ON$=ESC$+'[?3h'			! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'			! 80 Column mode &
+\	R.ON$=ESC$+'[7m'      			! Reverse video &
+\	G.OFF$=ESC$+'[m'			! Select graphic off &
+\	CLRLIN$=ESC$+'[2K'			! Erase entire line &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'		! Clear entire screen &
+\	ENTER.COPY$=ESC$+'[5i'			! Enter media copy &
+\	EXIT.COPY$=ESC$+'[4i'			! Exit media copy &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DIM FILE.NAME$(500%), SYS.CALL%(30%), FIL.NAM%(30%), &
+		Y%(32%), Y1%(32%) &
+\	CMD.CH%			= 04% &
+
+2000	PRINT #CH%, CLSCN$;FNP$('4;28');'CREATE CMD FILE'; &
+		FNP$('6;28');'Account to search on '; &
+\	FROM.ACCT$=CVT$$(FNINP$(CH%,0%,'_',20%,0%),-1%) &
+\	PRINT #CH%, FNP$('24;1');CLRLIN$;'Searching. . .'; &
+\	FILES%=FNFILE%(FROM.ACCT$+'*.*') &
+
+2010	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+\	PRINT #CH%, FNP$('8;28');'Command file name '; &
+\	CMD.FILE$=CVT$$(FNINP$(CH%,0%,'_',20%,0%),-1%) &
+
+2020	PRINT #CH%, FNP$('10;28');'Account to output to '; &
+\	TO.ACCT$=CVT$$(FNINP$(CH%,0%,'_',20%,0%),-1%) &
+	&
+
+2100	!-------------------------------------------------OUTPUT REPORT &
+	OPEN CMD.FILE$ FOR OUTPUT AS FILE CMD.CH% &
+\	PRINT #CMD.CH% 'PIP' &
+
+
+2200	FOR LOOP%=1% TO FILES% &
+\		EXTENSION$ = RIGHT(FILE.NAME$(LOOP%), &
+			LEN(FILE.NAME$(LOOP%))-2%) &
+\		PROTECTION$ = '<60>' &
+\		PROTECTION$ = '<104>' IF EXTENSION$ = 'TSK' &
+				OR EXTENSION$ = 'BAC' &
+				OR EXTENSION$ = 'EXE' &
+\		PROTECTION$ = '<40>' IF EXTENSION$ = 'FRM' &
+\		CONVERT$ = '/RTS:BASIC' &
+\		CONVERT$ = '/RTS:RSX' IF EXTENSION$ = 'TSK' &
+\		CMD.LINE$ = FROM.ACCT$ + FILE.NAME$(LOOP%) + PROTECTION$ + &
+				CONVERT$ + '=' + TO.ACCT$ + FILE.NAME$(LOOP%) + &
+				'/RMS:FA/LO' &
+\		PRINT #CMD.CH%, CMD.LINE$ &
+\	NEXT LOOP% &
+
+3000	CLOSE CMD.CH% &
+\	PRINT #CH%, CLSCN$; FNSR$('1;24'); &
+\	GOTO 32767 &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 2900 IF ERL=2300 &
+\	RESUME 2800 IF ERL=2600 &
+\	RESUME 30130 IF ERL=30110 &
+
+19900	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30100	!-----------------------------------------FILE LOOKUP FUNCTION &
+	DEF FNFILE%(FILE.SPEC$) &
+\		WLDCNT%=0% &
+\		WLDCRD.FLAG%=0% &
+
+30110	!-----------------WILD CARD LOOKUP------------------------------ &
+		NEXXT%=0% &
+\		CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.SPEC$) TO SYS.CALL% &
+\		SYS.CALL%(0%)=30% &
+\		SYS.CALL%(1%)=6% &
+\		SYS.CALL%(2%)=17% &
+\		SYS.CALL%(3%)=WLDCRD.FLAG% !JUMP &
+\		SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\		WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\		CHANGE SYS.CALL% TO SYS.CALL$ &
+\		CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\		FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\		FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\		WILD.FILE$=RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+				RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+'.'+ &
+				RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+
+30120		WLDCNT%=WLDCNT%+1% &
+\		FILE.NAME$(WLDCNT%)=WILD.FILE$ &
+
+30125		GOTO 30110 &
+
+30130		FNFILE%=WLDCNT% &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+"["+ROWCOL$+"H"	! Direct Cursor Address &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		PRINT #CHN%, FNP$('24;1');MESG$;FNP$('24;55'); &
+			'Hit any key to continue.'; &
+\		NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+\	FNEND &
+
+30300	DEF*FNSR$(BEGEND$)=ESC$+"["+BEGEND$+"r"	! Scroll control &
+
+30500	DEF*FNZER$(Z%)=RIGHT(NUM1$(100%+Z%),2%) &
+
+30900	!-------------------------------------------------------COMPARE &
+	DEF FNCOMP%(Y$,Y2$) &
+\		Y9%=0% &
+\		Y9%=-1% IF Y2$='*' &
+\		Y2$=Y2$+',' &
+
+30920		IF Y9%=0% &
+		THEN	Y1$=LEFT(Y2$,INSTR(1%,Y2$,',')-1%) &
+\			Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+\			Y1%=INSTR(1%,Y1$,'/') &
+\			IF Y1%+INSTR(1%,Y1$,'?')=0% &
+			THEN	Y9%=Y$=Y1$ &
+			ELSE	IF Y1% &
+				THEN	Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND &
+							Y$<=RIGHT(Y1$, &
+						Y1%+1%) &
+				ELSE	CHANGE CVT$$(LEFT(Y$,30%),-1%) &
+								TO Y% &
+\					CHANGE CVT$$(LEFT(Y1$,30%),-1%) &
+								TO Y1% &
+\					GOTO 30930 &
+					IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%) &
+					=63%) FOR Y3%=1% TO Y1%(0%) &
+\					Y9%=-1% &
+
+30930		IF Y2$<>'' AND Y9%=0% &
+		THEN	GOTO 30920 &
+		ELSE	FNCOMP%=Y9% &
+
+30940	FNEND &
+
+32767	END &
+

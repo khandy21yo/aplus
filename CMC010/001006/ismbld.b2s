@@ -1,0 +1,306 @@
+10	! UTILITY ROUTINE FOR ISAM PACKAGE &
+	! &
+	! ALLOWS USER TO BUILD TEMPORARY SECONDARY INDEX FILES FOR &
+	! PRINTING PURPOSES &
+	! &
+	! WRITTEN BY ROBERT PETERSON &
+	! V01    E01    9/19/81 &
+	! V01    E02    9/5/91 - MENU instead of MENU.BAC &
+	!
+20	DIM Y%(32%), Y1%(32%), Q0%(4%), Q1%(4%), Q2%(4%), Q3%(4%), &
+		Q4%(4%), Q5%(4%), Q6%(4%) &
+\	DIM V1%(30%)
+1000	! &
+	!	PROGRAM CONTROL SECTION &
+	!
+1020	IF OPTION%=0% THEN &
+	PRINT "Options: BU - to build secondary index file" &
+\	PRINT "         RG - to build secondary index for repeating groups" &
+\	PRINT "         IBM- to build compatible key for IBM sort" &
+\	PRINT "              (numbers sort after alpha characters)" &
+\	PRINT "         END- to end" &
+\	INPUT "Selection ";K$
+1030	K$,OPTION$=LEFT(CVT$$(K$,-1%),3%) &
+\	OPTION%=0% &
+\	IF K$="BU" THEN 6100 ELSE IF K$="RG" THEN 6200 ELSE &
+	IF K$="IBM" THEN 6100 ELSE IF K$="END" THEN V%=FNX%("",0%,"") ELSE &
+	GOTO 1020
+1040	K$=FNX$ &
+\	OPTION%=-1% IF K$<>"" &
+\	GOTO 10
+6100	! &
+	!	MODULE TO BUILD SECONDARY INDEX FILES &
+	!
+6110	GOSUB 7010 &
+\	H%=0% &
+\	FOR I%=1% TO 32% &
+	\	INPUT "Enter the start position for the key ";Y%(I%) &
+	\	IF Y%(I%)=0% AND I%=1% &
+		THEN	GOTO 32767 &
+		ELSE	IF Y%(I%)=0% &
+			THEN	GOTO 6120
+6115		INPUT "Enter the number of characters ";Y1%(I%) &
+\		H%=H%+1% &
+\	NEXT I%
+6120	L%=2% &
+\	L%=L%+Y1%(I%) FOR I%=1% TO H% &
+\	REPEATING%=1% &
+\	GOSUB 7020
+6180	C0$=STRING$(L%-2%,68%) &
+\	IBM%=0% &
+\	IBM%=-1% IF OPTION$="IBM" &
+\	IBM$=CHR$(128%) &
+\	IBM$=IBM$+CHR$(I%) FOR I%=1% TO 47% &
+\	IBM$=IBM$+CHR$(I%+128%) FOR I%=48% TO 57% &
+\	IBM$=IBM$+CHR$(I%) FOR I%=58% TO 255% &
+\	S0%=Y%(1%) &
+\	S1%=Y1%(1%) &
+\	FOR X%=1% TO Q0%(4%) &
+\		FIELD #4%,FNC%(4%,X%,0%) AS E$, Q1%(4%) AS L$ &
+\		L1$=MID(L$,S0%,S1%) &
+\		L1$=L1$+MID(L$,Y%(I%),Y1%(I%)) FOR I%=2% TO H% &
+\		Q%,Y1%=Y1%+1% &
+\		Q%=-1% IF L1$=C0$ &
+\		FIELD #1%,FNC%(1%,Y1%,-1%) AS E$, L% AS E0$ &
+\		LSET E0$=L1$+CVT%$(Q%) IF IBM%=0% &
+\		LSET E0$=XLATE(L1$,IBM$)+CVT%$(Q%) IF IBM%
+6190	NEXT X% &
+\	GOTO 7030
+6200	! &
+	!	MODULE TO BUILD SECONDARY INDEX FROM FILE WITH REPEATING &
+	!	GROUPS. &
+	!
+6210	GOSUB 7010 &
+\	H%=0% &
+\	FOR I%=1% TO 32% &
+	\	INPUT "Enter the start position of repeating group ";Y%(I%) &
+	\	IF Y%(I%)=0% AND I%=1% &
+		THEN	GOTO 32767 &
+		ELSE	IF Y%(I%)=0% &
+			THEN	GOTO 6220
+
+6215		INPUT "Enter the number of characters ";Y1%(I%) &
+\		H%=H%+1% &
+\	NEXT I%
+6220	L%=Y1%(I%)+2% IF Y1%(I%)+2%>L% FOR I%=1% TO H% &
+\	REPEATING%=H% &
+\	GOSUB 7020
+6280	C0%=Q1%(4%) &
+\	C0$=STRING$(C0%-2%,68%) &
+\	C1$=SPACE$(L%) &
+\	FOR X%=1% TO Q0%(4%) &
+\		FIELD #4%, FNC%(4%,X%,0%) AS E$, C0% AS L$ &
+\		Q%=Q%+1% &
+\		GOTO 6290 IF LEFT(L$,C0%-2%)=C0$ &
+		OR CVT$%(RIGHT(L$,C0%-1%))=-1% &
+\		FOR LOOP1%=1% TO H% &
+\			L1$=LEFT(MID(L$,Y%(LOOP1%),Y1%(LOOP1%))+C1$,L%-2%) &
+\			SKIP%=CVT$$(L1$,-1%)="" &
+\			Y1%=Y1%+1% IF SKIP%=0% &
+\			FIELD #1%, FNC%(1%,Y1%,-1%) AS E$,L% AS E0$ IF SKIP%=0% &
+\			LSET E0$=L1$+CVT%$(Q%) IF SKIP%=0% &
+\		NEXT LOOP1%
+6290	NEXT X% &
+\	GOTO 7030 &
+
+7010	PRINT "Name of data file: "; &
+\	INPUT LINE A$ &
+\	A$=CVT$$(A$,4%) &
+\	IF A$="" THEN 32767 ELSE &
+	PRINT "Single character identifier for secondary key file <X> "; &
+\	INPUT LINE A1$ &
+\	A1$=CVT$$(LEFT(A1$,1%),-1%) &
+\	A1$="X" IF A1$="" &
+\	IF A1$<>"T" AND A1$<>"1" THEN RETURN ELSE &
+		PRINT "'T' AND '1' are reserved characters!" &
+	\	PRINT "Are you sure you want to use the extension of "; &
+			A1$;" (Yes/No) <Yes> "; &
+	\	INPUT K$ &
+	\	K$=CVT$$(LEFT(K$,1%),-1%) &
+	\	IF K$<>"Y" THEN GOTO 7010 ELSE RETURN
+7020	ON ERROR GOTO 19000 &
+\	Q3%(4%)=16% &
+\	Q3%(1%)=8% &
+\	IN.FILE$=FNDIR$(A$) &
+\	V%=INSTR(1%,IN.FILE$,"<") &
+\	OUT.FILE$=LEFT(IN.FILE$,V%-2%)+A1$+RIGHT(IN.FILE$,V%) &
+\	OPEN IN.FILE$ FOR INPUT AS FILE 4%, RECORDSIZE 512%*Q3%(4%) &
+\	V%=FNH%(4%) &
+
+7024	OPEN OUT.FILE$ FOR OUTPUT AS FILE 1%, RECORDSIZE 512%*Q3%(1%) &
+\	Q1%(1%)=L% &
+\	Q2%(1%)=1% &
+	\	Q2%(1%)=Q2%(1%)*2% UNTIL Q2%(1%)>=Q1%(1%) &
+\	Q4%(1%)=(512%/Q2%(1%))*Q3%(1%) &
+\	Q5%(1%)=1% &
+\	Q6%(1%)=-[Q2%(1%)<=4%] &
+\	TOTAL%=Q0%(4%)/10% &
+\	COUNTER%,PERCENT%=0% &
+\	CPU=TIME(1%) &
+\	T=TIME(0%) &
+\	RETURN &
+
+7030	V%=FNC%(1%,0%,-1%) &
+\	FIELD #1%, 6% AS E$ &
+\	LSET E$=CVT%$(Y1%)+CVT%$(L%)+"U"+CHR$(128%-[L%<=4%]) &
+\	PUT #1%,RECORD 1% &
+\	CLOSE #1%,#4% &
+\	Q9$=CHR$(13%)+OUT.FILE$ &
+\	V%=FNX%(P$,H1%,OUT.FILE$+CORE.COMMON$)
+14000	! &
+	!	USER DEFINED FUNCTIONS &
+	!
+14010	DEF FNC%(C%,R%,Z%) &
+	\	Q0%=((R%+Q6%(C%))/Q4%(C%))*Q3%(C%)+1% &
+	\	IF Q0%<>Q5%(C%) &
+		THEN	PUT #C%, RECORD Q5%(C%) IF Z% &
+		\	Q5%(C%)=Q0% &
+		\	GET #C%, RECORD Q0% &
+
+14015		FNC%=(R%+Q6%(C%)-(Q0%-1%)*(Q4%(C%)/Q3%(C%)))*Q2%(C%) &
+\	FNEND &
+
+14030	DEF FNH%(C%) &
+	\	GET #C%,RECORD 1% &
+	\	Q5%(C%)=1% &
+	\	FIELD #C%, 2% AS E0$, 2% AS E1$, 1% AS E3$, 1% AS E4$ &
+	\	Q0%(C%)=CVT$%(E0$) &
+	\	Q1%(C%)=CVT$%(E1$) &
+	\	Q2%(C%)=1% &
+		\	Q2%(C%)=Q2%(C%)*2% UNTIL Q2%(C%)>=Q1%(C%) &
+	\	Q4%(C%)=(512%/Q2%(C%))*Q3%(C%) &
+	\	Q6%(C%)=ASCII(E4$) AND 127% &
+\	FNEND &
+		! Q%(C%,0%) - Number of records in file &
+		!	1   - Length of records &
+		!	2   - Actual length used &
+		!	3   - Number of blocks/buffer (set in open) &
+		!	4   - Number of records in a buffer &
+		!	5   - Block in core now &
+		! Z%(C%) - Put flags, set to -1 after change &
+		! &
+
+14100	! &
+	!	DIRECTORY LOOK UP &
+	!
+14110	DEF FNDIR$(V$) &
+\	V1$=SYS(CHR$(6%)+CHR$(-23%)+V$) &
+\	V1$=MID(V1$,5%,8%)+STRING$(10%,0%)+MID(V1$,23%,4%)+STRING$(4%,0%) &
+\	V1$=SYS(CHR$(6%)+CHR$(17%)+CHR$(255%)+CHR$(255%)+V1$) &
+\	CHANGE V1$ TO V1% &
+\	FNDIR$=CHR$(V1%(23%))+CHR$(V1%(24%))+NUM1$(V1%(25%))+":"+ &
+		"["+NUM1$(V1%(6%))+","+NUM1$(V1%(5%))+"]"+ &
+		RAD$(V1%(7%)+SWAP%(V1%(8%)))+RAD$(V1%(9%)+SWAP%(V1%(10%)))+ &
+		"."+RAD$(V1%(11%)+SWAP%(V1%(12%)))+"<"+NUM1$(V1%(15%))+">" &
+\	FNEND
+14200	! &
+	!	FNX FUNCTION - TAKEN FOR ISAM &
+	!
+14210	DEF FNX%(C$,C%,C1$) &
+\	Q0$=SYS(CHR$(7%)) &
+\	Q5%=INSTR(1%,Q0$,CHR$(255%)) &
+\	Q2%=INSTR(1%,Q0$,CHR$(14%)) \ Q2%=Q5%+12% IF Q2%=0% &
+\	Q0$=MID(Q0$+SPACE$(12%),Q5%,Q2%-Q5%) IF Q5% &
+\	Q0$="" IF Q5%=0% &
+\	CLOSE Q1% FOR Q1%=1% TO 12% &
+\	IF C%>=0% THEN IF Q9$<>"" THEN Q3$=CVT%$(C%)+C$ IF C$<>"" &
+\	Q3$=CVT%$(8100%)+"!MENU" IF C$="" AND Q5% &
+\	Q3$=Q3$+"  " &
+\	Q9$=Q9$+CHR$(13%)+CHR$(13%)+Q0$ &
+\	Q9$=Q9$+CHR$(14%)+C1$ IF C1$<>"" &
+\	Q$=LEFT(CHR$(LEN(Q3$))+Q3$+Q9$,127%) &
+\	Q$=SYS(CHR$(8%)+Q$) &
+\	CHAIN "ISM:FSTSRS.TSK"
+14220	ON ERROR GOTO 19000 &
+\	CLOSE Q1% FOR Q1%=1% TO 12% IF C%<0% &
+\	C%=-C% IF C%<0% &
+\	CHAIN "ISM:MENU" 8100 IF Q5% AND C$="" &
+\	V$=SYS(CHR$(8%)+Q0$+"   "+CHR$(14%)+C1$) &
+\	CHAIN C$ C% IF C$<>"" &
+\	GOTO 32767 &
+\	FNEND &
+
+14230	DEF FNX$ &
+\	Q$=SYS(CHR$(7%)) &
+\	Q1%=INSTR(4%,Q$,CHR$(14%)) &
+\	Q$=RIGHT(Q$,Q1%+1%) &
+\	FNX$=Q$ &
+\	FNEND &
+
+19000	! &
+	!	ERROR TRAPPING &
+	!
+19010	IF ERR=11% AND ERL=14010 THEN RESUME 14015
+19030	IF ERR=50% THEN PRINT CHR$(7%) \ RESUME
+19100	PRINT &
+\	PRINT "Error - "; &
+		CVT$$(RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),2%),4%); &
+		" at line ";ERL &
+\	V$=SYS(CHR$(11%)) &
+\	INPUT "Press 'return' to proceed to the menu. . . ";K$ &
+\	V%=FNX%("",0%,"")
+21999	ON ERROR GOTO 19000 &
+\	RETURN
+30000	! &
+	!	CHAIN INTO ISAM SECONDARY INDEX BUILD ROUTINE &
+	!
+30010	GOSUB 21999 &
+\	K$=FNX$ &
+\	A%=INSTR(1%,K$,"!")-1% &
+\	IF A%<>-1% THEN &
+		OPTION$=LEFT(K$,A%) &
+	\	K$=RIGHT(K$,A%+2%)
+30020	A%=INSTR(1%,K$,"/")-1% &
+\	A$=LEFT(K$,A%) &
+\	IF A$="" THEN PRINT "Error - Unable to determine the file name "+ &
+		"to use in creating secondary key.  Aborting." &
+	\	V$=SYS(CHR$(11%)) &
+	\	INPUT "Press 'return' to proceed to the menu. . . ";K$ &
+	\	V%=FNX%("",0%,"")
+30030	K$=RIGHT(K$,A%+2%) &
+\	A%=INSTR(1%,K$,"@")-1% &
+\	A1$=LEFT(K$,A%) &
+\	IF A1$="" THEN PRINT "Error - Unable to determine the single char"+ &
+		"acter identifier for secondary key name." &
+	\	V$=SYS(CHR$(11%)) &
+	\	INPUT "Aborting.  Press 'return' to proceed to the menu. . . ";K$ &
+	\	V%=FNX%("",0%,"")
+30040	K$=RIGHT(K$,A%+2%) &
+\	A%=INSTR(1%,K$,"$")-1% &
+\	A%=LEN(K$) IF A%=-1% &
+\	K1$=LEFT(K$,A%) &
+\	K$=RIGHT(K$,A%+2%) &
+\	IF K1$="" THEN PRINT "Error - Unable to determine what should be "+ &
+		"in the secondary key.  Aborting." &
+	\	V$=SYS(CHR$(11%)) &
+	\	INPUT "Press 'return' to proceed to the menu. . . ";K$ &
+	\	V%=FNX%("",0%,"")
+30050	H%=0% &
+\	WHILE K1$<>"" &
+	\	A%=INSTR(1%,K1$,";") &
+	\	A%=LEN(K1$)+1% IF A%=0% &
+	\	K2$=LEFT(K1$,A%-1%) &
+	\	K1$=RIGHT(K1$,A%+1%) &
+	\	A1%=INSTR(1%,K2$,"-") &
+	\	H%=H%+1% &
+	\	Y%(H%)=VAL(LEFT(K2$,A1%-1%)) &
+	\	Y1%(H%)=VAL(RIGHT(K2$,A1%+1%)) &
+	\	IF Y%(H%)=0% OR Y1%(H%)=0% THEN PRINT "Error - Unable to "+ &
+		"determine key location in data file.  Aborting." &
+	\	V$=SYS(CHR$(11%)) &
+	\	INPUT "Press 'return' to proceed to the menu. . . ";K$ &
+	\	V%=FNX%("",0%,"")
+30060	NEXT &
+\	IF K$<>"" THEN A%=INSTR(1%,K$,"#")-1% &
+\	A%=LEN(K$) IF A%=-1% &
+\	P$=LEFT(K$,A%) &
+\	K$=RIGHT(K$,A%+2%)
+30070	IF K$<>"" THEN A%=INSTR(1%,K$,"*")-1% &
+\	A%=LEN(K$) IF A%=-1% &
+\	H1%=VAL(LEFT(K$,A%)) &
+\	K$=RIGHT(K$,A%+2%)
+30080	CORE.COMMON$="*" &
+\	IF K$<>"" THEN CORE.COMMON$=CORE.COMMON$+K$
+30090	IF OPTION$="RG" THEN 6220 ELSE 6120
+32767	NO EXTEND &
+\	END

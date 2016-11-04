@@ -1,0 +1,150 @@
+10	  ! &
+	  ! Program name: [1,6]ISMIND		Compiled with SCALE 0 on V07.0 &
+	  ! Decompiled on 10-Jun-88 at 09:21 AM by UNBAC Version 1
+20	  DIM Q0%(4%), Q1%(4%), Q2%(4%), Q3%(4%), Q4%(4%), Q5%(4%), Q6%(4%)
+35	  !
+1020	  GOTO 6100
+6100	  !
+6110	  GOSUB 7010 &
+	\ L%=Q1%(1%)-2%
+6120	  !
+6180	  C0$=STRING$(Q1%(4%),68%) &
+	\ FOR X%=1% TO Q0%(4%) &
+		\ FIELD #4%, FNC%(4%,X%,0%) AS E$,Q1%(4%) AS L$ &
+		\ Q%,Y1%=Y1%+1% &
+		\ Q%=-1% IF L$=C0$ &
+		\ FIELD #1%, FNC%(1%,Y1%,-1%) AS E$,L%+2% AS E0$ &
+		\ LSET E0$=LEFT(L$,L%)+CVT%$(Q%)
+6190	  NEXT X% &
+	\ GOTO 7030
+7010	  PRINT "Name of Key file: "; &
+	\ INPUT LINE A$ &
+	\ A$=CVT$$(A$,4%) &
+	\ IF A$="" THEN &
+		  GOTO 32767 &
+	  ELSE &
+		  IF RIGHT(A$,LEN(A$))="1" THEN  &
+			  PRINT "Key files must NOT end with a '1'" &
+			\ GOTO 7010
+7020	  ON ERROR GOTO 19000 &
+	\ Q3%(4%)=32% &
+	\ Q3%(1%)=8% &
+	\ OUT.FILE$=FNDIR$(A$) &
+	\ V%=INSTR(1%,OUT.FILE$,"<") &
+	\ IN.FILE$=FNDIR$(LEFT(OUT.FILE$,V%-2%)+"1") &
+	\ OPEN IN.FILE$ FOR INPUT AS FILE 4%, RECORDSIZE 512%*Q3%(4%) &
+	\ V%=FNH%(4%)
+7024	  OPEN OUT.FILE$ FOR INPUT AS FILE 1%, RECORDSIZE 512%*Q3%(1%) &
+	\ V%=FNH%(1%) &
+	\ PRINT "Processing . . ." &
+	\ CPU=TIME(1%) &
+	\ T=TIME(0%) &
+	\ RETURN
+7030	  V%=FNC%(1%,0%,-1%) &
+	\ FIELD #1%, 6% AS E$ &
+	\ LSET E$=CVT%$(Y1%)+CVT%$(L%+2%)+"U"+CHR$(128%-(L%<=4%)) &
+	\ PUT #1%, RECORD 1% &
+	\ CLOSE 1% &
+	\ CLOSE 4% &
+	\ PRINT  &
+	\ PRINT "Number of records in file =";Y1% &
+	\ PRINT "Elapse time in seconds =";TIME(0%)-T &
+	\ PRINT "CPU time in seconds =";(TIME(1%)-CPU)/10. &
+	\ Q9$=CHR$(13%)+OUT.FILE$ &
+	\ V%=FNX%(P$,H1%,CORE.COMMON$)
+14000	  !
+14010	  DEF FNC%(C%,R%,Z%) &
+	\ Q0%=(R%+Q6%(C%))/Q4%(C%)*Q3%(C%)+1% &
+	\ IF Q0%<>Q5%(C%) THEN  &
+		  PUT #C%, RECORD Q5%(C%) IF Z% &
+		\ Q5%(C%)=Q0% &
+		\ GET #C%, RECORD Q0%
+14015	  FNC%=(R%+Q6%(C%)-(Q0%-1%)*(Q4%(C%)/Q3%(C%)))*Q2%(C%) &
+	\ FNEND
+14030	  DEF FNH%(C%) &
+	\ GET #C%, RECORD 1% &
+	\ Q5%(C%)=1% &
+	\ FIELD #C%, 2% AS E0$,2% AS E1$,1% AS E3$,1% AS E4$ &
+	\ Q0%(C%)=CVT$%(E0$) &
+	\ Q1%(C%)=CVT$%(E1$) &
+	\ Q2%(C%)=1% &
+	\ Q2%(C%)=Q2%(C%)*2% UNTIL Q2%(C%)>=Q1%(C%) &
+	\ Q4%(C%)=512%/Q2%(C%)*Q3%(C%) &
+	\ Q6%(C%)=ASCII(E4$) AND 127% &
+	\ FNEND
+14100	  !
+14110	  DEF FNDIR$(V$) &
+	\ V1$=SYS(CHR$(6%)+CHR$(-23%)+V$) &
+	\ V1$=MID(V1$,5%,8%)+STRING$(10%,0%)+MID(V1$,23%,4%)+STRING$(4%,0%) &
+	\ V1$=SYS(CHR$(6%)+CHR$(17%)+CHR$(255%)+CHR$(255%)+V1$) &
+	\ CHANGE V1$ TO V1% &
+	\ FNDIR$=CHR$(V1%(23%))+CHR$(V1%(24%))+NUM1$(V1%(25%))+":"+"["+NUM1$( &
+		V1%(6%))+","+NUM1$(V1%(5%))+"]"+RAD$(V1%(7%)+SWAP%(V1%(8%)))+ &
+		RAD$(V1%(9%)+SWAP%(V1%(10%)))+"."+RAD$(V1%(11%)+SWAP%(V1%(12% &
+		)))+"<"+NUM1$(V1%(15%))+">" &
+	\ FNEND
+14190	  DIM Ö1%(30%)
+14200	  !
+14210	  DEF FNX%(C$,C%,C1$) &
+	\ Q0$=SYS(CHR$(7%)) &
+	\ Q5%=INSTR(1%,Q0$,CHR$(255%)) &
+	\ Q2%=INSTR(1%,Q0$,CHR$(14%)) &
+	\ Q2%=Q5%+12% IF Q2%=0% &
+	\ Q0$=MID(Q0$+SPACE$(12%),Q5%,Q2%-Q5%) IF Q5% &
+	\ Q0$="" IF Q5%=0% &
+	\ CLOSE Q1% FOR Q1%=1% TO 12% &
+	\ IF C%>=0% THEN  &
+		  IF Q9$<>"" THEN  &
+			  Q3$=CVT%$(C%)+C$ IF C$<>"" &
+			\ Q3$=CVT%$(8100%)+"!MENU" IF C$="" AND Q5% &
+			\ Q3$=Q3$+"  " &
+			\ Q9$=Q9$+CHR$(13%)+CHR$(13%)+Q0$ &
+			\ Q9$=Q9$+CHR$(14%)+C1$ IF C1$<>"" &
+			\ Q$=LEFT(CHR$(LEN(Q3$))+Q3$+Q9$,127%) &
+			\ Q$=SYS(CHR$(8%)+Q$) &
+			\ PRINT "<->FILES SECURED<->" &
+			\ CHAIN "[1,6]FSTSRS.TSK" line 0%
+14220	  ON ERROR GOTO 19000 &
+	\ CLOSE Q1% FOR Q1%=1% TO 12% IF C%<0% &
+	\ C%=-C% IF C%<0% &
+	\ CHAIN "!MENU" line 8100% IF Q5% AND C$="" &
+	\ V$=SYS(CHR$(8%)+Q0$+"   "+CHR$(14%)+C1$) &
+	\ CHAIN C$ line C% IF C$<>"" &
+	\ GOTO 32767 &
+	\ FNEND
+14230	  DEF FNX$ &
+	\ Q$=SYS(CHR$(7%)) &
+	\ Q1%=INSTR(4%,Q$,CHR$(14%)) &
+	\ Q$=RIGHT(Q$,Q1%+1%) &
+	\ FNX$=Q$ &
+	\ FNEND
+19000	  !
+19010	  IF ERR=11% AND ERL=14010% THEN  &
+		  RESUME 14015
+19030	  IF ERR=50% THEN  &
+		  PRINT CHR$(7%) &
+		\ RESUME 
+19100	  PRINT "Error - ";CVT$$(RIGHT(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERR)),2%), &
+		4%);" at line ";ERL &
+	\ V$=SYS(CHR$(11%)) &
+	\ INPUT "Type a 'cr' to continue. . . ";V$ &
+	\ V%=FNX%("",0%,"")
+21999	  ON ERROR GOTO 19000 &
+	\ RETURN
+30000	  !
+30010	  GOSUB 21999 &
+	\ A$=FNX$ &
+	\ A%=INSTR(1%,A$,"*") &
+	\ IF A% THEN  &
+		  CORE.COMMON$=RIGHT(A$,A%+1%) &
+		\ A$=LEFT(A$,A%-1%)
+30020	  A%=INSTR(1%,A$,"$") &
+	\ IF A% THEN  &
+		  A1%=INSTR(A%,A$,"#") &
+		\ A1%=LEN(A$) IF A1%=0% &
+		\ H1%=VAL(RIGHT(A$,A1%+1%)) &
+		\ P$=MID(A$,A%+1%,A1%-A%-1%) &
+		\ A$=LEFT(A$,A%-1%)
+30030	  GOSUB 7020 &
+	\ GOTO 6120
+32767	  END
