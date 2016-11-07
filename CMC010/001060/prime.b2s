@@ -1,0 +1,14 @@
+1	  EXTEND
+10	! /* &
+	! ** Find all the primes in the integers 3 through 5000 &
+	! */ &
+
+100	  FOR N%=3% TO 5000% &
+		\ FOR I%=2% TO N% &
+			\ PRINT N% IF N%=I% &
+			\ GOTO 110 UNLESS (N%/I%)*I%-N% &
+		\ NEXT I% &
+
+110	  NEXT N% &
+
+32767	  END
