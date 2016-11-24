@@ -1,0 +1,131 @@
+10	  ! &
+	  ! Program name: varint		Compiled with SCALE 0 on V06.C &
+	  ! Decompiled on 24-Nov-16 at 02:11 AM
+15	  IF V$="Y" THEN  &
+		  PRINT "THIS PROGRAM IS DESIGNED TO ALLOW THE USER TO ANALYZE A SERIES" &
+		\ PRINT "OF CONTRACTS BY DESIGNATING ONE INDEPENDENT VARIABLE AND ONE" &
+		\ PRINT "DEPENDENT VARIABLE IN THE CONTRACT FORMULA.  THE OTHER THREE" &
+		\ PRINT "VARIABLES REMAIN CONSTANT.  FOR EXAMPLE, ONE COULD ANALYZE A" &
+		\ PRINT "SERIES OF CONTRACTS FOR WHICH THE INTEREST RATE (I) VARIES FROM" &
+		\ PRINT "8.5% TO 11.5% IN INCREMENTS OF .5% WHILE THE MONTHLY PAYMENT" &
+		\ PRINT "(R), NUMBER OF PAYMENTS PER YEAR (M) AND NUMBER OF YEARS (N)" &
+		\ PRINT "REMAIN CONSTANT.  THE RESULT WOULD BE A CONTRACT AMOUNT (A)" &
+		\ PRINT "WHICH VARIES AS THE INTEREST RATE VARIES." &
+		\ PRINT  &
+		\ PRINT  &
+		\ V$="-"
+20	  V$(1%)="CONTRACT AMOUNT" &
+	\ V$(2%)="INTEREST RATE" &
+	\ V$(3%)="PAYMENT AMOUNT" &
+	\ V$(4%)="NUMBER OF PAYMENTS PER YEAR" &
+	\ V$(5%)="NUMBER OF YEARS"
+30	  INPUT "DO YOU NEED INSTRUCTIONS";V$ IF V$="" &
+	\ GOTO 15 IF V$="Y"
+35	  INPUT "WHICH VARIABLE DO YOU WISH TO CALCULATE (? FOR HELP)";V$ &
+	\ GOTO 10000 IF V$="" &
+	\ IF V$="?" THEN  &
+		  PRINT "A=CONTRACT AMOUNT" &
+		\ PRINT "I=INTEREST RATE" &
+		\ PRINT "R=PAYMENT AMOUNT" &
+		\ PRINT "M=PAYMENTS/YEAR" &
+		\ PRINT "N=TOTAL YEARS" &
+		\ GOTO 35
+38	  V%=INSTR(1%,"AIRMN",V$)
+40	  INPUT "WHICH VARIABLE WILL FLOAT";F$ &
+	\ GOTO 10000 IF F$="" &
+	\ F%=INSTR(1%,"AIRMN",F$) &
+	\ GOTO 40 IF F%=V% &
+	\ INPUT "	RANGE, FROM";L1 &
+	\ L=L1 &
+	\ L1=L1/100. IF F%=2% &
+	\ INPUT "	         TO";U1 &
+	\ U=U1 &
+	\ U1=U1/100. IF F%=2% &
+	\ INPUT "	  INCREMENT";D1 &
+	\ D=D1 &
+	\ D1=D1/100. IF F%=2%
+50	  FOR I%=1% TO 5% &
+		\ IF V%<>I% AND F%<>I% THEN  &
+			  PRINT V$(I%); &
+			\ INPUT V(I%) &
+			\ V(I%)=FNR(V(I%))/100. IF I%=2%
+60			  NEXT I%
+70	  GOSUB 1000 &
+	\ FOR X=L1 TO U1 STEP D1 &
+		\ V(F%)=X
+80		  ON V% GOTO 100,200,300,400,500
+90		  GOSUB 1100
+95			  NEXT X &
+	\ GOTO 30
+100	  !
+121	  D=V(2%)/V(4%) &
+	\ E1=V(5%)*V(4%)
+122	  V(1%)=V(3%)*((1.-1./(1.+D)^E1)/D) &
+	\ GOTO 90
+200	  !
+210	  N1=V(4%)*V(5%)
+220	  IF V(3%)=V(1%)^2%/(V(3%)*N1^2%) THEN &
+		  GOTO 250 &
+	  ELSE &
+		  V(2%)=V(3%)/V(1%)-V(1%)/(V(3%)*N1^2.)
+230	  ON ERROR GOTO 280 &
+	\ X1=1.-(1.+V(2%))^-N1
+235	  Y=(V(2%)*V(1%)/V(3%)-X1)/(X1/V(2%)-N1*(1.+V(2%))^(-N1-1.)) &
+	\ ON ERROR GOTO 0
+240	  V(2%)=V(2%)-Y &
+	\ Z=ABS(Y)--31539157008384. &
+	\ IF Z>=0. THEN  &
+		  GOTO 230
+250	  V(2%)=INT(V(2%)*0.+0.5)/0.
+260	  V(2%)=V(2%)*V(4%)/100. &
+	\ IF V(2%)>1. THEN  &
+		  PRINT "INTEREST EXCEEDS 100%." &
+		\ GOTO 95
+270	  GOTO 90
+280	  PRINT "UNABLE TO CALCULATE INTEREST FOR THIS CONTRACT." &
+	\ RESUME 95
+300	  !
+310	  N1=V(4%)*V(5%)
+313	  I=V(2%)/V(4%)
+317	  A=(1.+I)^N1
+320	  V(3%)=V(1%)*I*(A/(A-1.))
+325	  GOTO 90
+400	  !
+499	  GOTO 30
+500	  !
+510	  I=V(2%)/V(4%) &
+	\ L1=V(3%)-V(1%)*V(2%)/V(4%) &
+	\ IF L1<0. THEN  &
+		  PRINT "PERIODIC INTEREST EXCEEDS PAYMENT!" &
+		\ GOTO 95
+520	  L1=LOG10(V(3%))-LOG10(L1)
+530	  L2=LOG10(1.+I)
+540	  V(5%)=L1/(V(4%)*L2)
+550	  GOTO 90
+1000	  !
+1010	  INPUT "SET PAGE";V$ &
+	\ PRINT  &
+	\ PRINT  &
+	\ PRINT  &
+	\ PRINT "CONTRACT SCHEDULE" &
+	\ PRINT USING "DEPENDENT VARIABLE  =\                   \", V$(V%) &
+	\ PRINT USING "INDEPENDENT VARIABLE=\                   \", V$(F%) &
+	\ PRINT USING "FROM		#######,###.##", L &
+	\ PRINT USING "TO		#######,###.##", U &
+	\ PRINT USING "INCREMENT	#######,###.##", D &
+	\ PRINT  &
+	\ PRINT  &
+	\ PRINT "     CONTRACT     INTEREST       YEARS      PAYMENT    PMTS/YR"+"   TOTAL INTEREST" &
+	\ RETURN
+1100	  !
+1110	  PRINT USING "######,###.##      ##.###%      ###.##   ###,###.##"+"      ###.#   #######,###.##", V(1%),V(2%)*100.,V(5%),V(3%),V(4%),V(3%)*V(4%)*V(5%)-V(1%) &
+	\ RETURN
+9000	  DEF FNR(X) &
+	\ FNR=0.014687738381326199*INT(100.*X+0.5) &
+	\ FNEND
+10000	  IF ASCII(SYS(CHR$(7%)))=255% THEN &
+		  CHAIN "!MENU" 0. &
+	  ELSE &
+		  V$=SYS(CHR$(8%)) &
+		\ GOTO 32767
+32767	  END
