@@ -1,0 +1,595 @@
+10	!--------------------------------------------------------------- &
+	!	CONVERT GL FILES TO ASCII TEXT FILES &
+	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	!	01/29/93 - Kevin Handy &
+	!		Modified so Control/T, Control/C would work &
+	! &
+	!	12/03/98 - Kevin Handy &
+	!		Skip over empty period files w/o stopping. &
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+
+100	DIM AMOUNT(15%), CHART.MON$(15%), BDGT.PER$(13%) &
+\	DIM FILE.NAME$(100%), SYS.CALL%(30%), FIL.NAM%(30%), &
+		Y%(32%), Y1%(32%) &
+\	CHART.CH%	= 02% &
+\	CONTRL.CH%	= 02% &
+\	GJH.CH%		= 02% &
+\	GJL.CH%		= 04% &
+\	GL.CH%		= 02% &
+\	BUDGET.CH%	= 02% &
+\	FINSTA.CH%	= 02% &
+\	CMD.CH%		= 02% &
+\	GJL.CH% 	= 02% &
+\	ASCII.CH%	= 10% &
+\	MENU.CH%   	= 12% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	CONTRL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CONTRL')=0% &
+\		CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CHART')=0% &
+\		GLMMM.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'GLMMM')=0% &
+\		BUDGET.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'BUDGET')=0% &
+\		GJ.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'GJ')=0% &
+\		FINSTA.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'FINSTA')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	!------------------------------------------------------------- &
+	! OPEN ASCII TEXT FILE &
+	!------------------------------------------------------------- &
+	OPEN 'GLSYS.ASC' FOR OUTPUT AS FILE ASCII.CH% &
+
+1000	!-----------------------------------------------PROGRAM RESTART POINT &
+	PRINT #CH%, CLSCN$;'Convert gl to ascii file' &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Convert Quit'; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,0%),32%) &
+\	GOTO 1000 IF OPT$='%^C' &
+
+1040	IF OPT$='Q' &
+	THEN	CLOSE ASCII.CH% &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1');FNX%('',0%,''); &
+
+1050	GOTO 2000 IF OPT$='C' &
+\	GOTO 1030 &
+
+2000	!-------------------------------------------------------------- &
+	! OPEN CHART AND CONTROL FILE &
+	!-------------------------------------------------------------- &
+	GOTO 2020 IF FNO%(CONTRL.CH%,CONTRL.DEVICE$+'CONTRL.DAT','/RO','') &
+\	GOTO 2020 IF FNG%(CONTRL.CH%,'CHART ') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT FNP$('06;1');CLRLIN$;"Converting CONTRL.DAT"; &
+
+2010	FIELD #CONTRL.CH%+1%,	FNL% AS TEMP$, &
+			06% AS CONTRL.KEY$, &
+			02% AS TEMP$, &
+			02% AS CONTRL.LAST$, &
+			02% AS CONTRL.TEMP$, &
+			02% AS CONTRL.FLAG$, &
+			02% AS CONTRL.TEMP$, &
+			02% AS CONTRL.FF$, &
+			02% AS CONTRL.TEMP$, &
+			02% AS CONTRL.YEAR$, &
+			02% AS CONTRL.BUDYR$, &
+			01% AS CONTRL.EXTHIS$, &
+			23% AS CONTRL.TEMP$, &
+			08% AS CONTRL.SUMMARY.TOTAL$, &
+			08% AS CONTRL.SUMMARY.ACCT$ &
+\	MM%=CVT$%(CONTRL.LAST$) &
+\	YY%=CVT$%(CONTRL.YEAR$) &
+\	FF%=CVT$%(CONTRL.FF$) &
+\	BY%=CVT$%(CONTRL.BUDYR$) &
+\	MM.TEMP%=MM% &
+\	YY.TEMP%=YY% &
+\	YY.COUNT%=1% &
+\	PRINT #ASCII.CH%, '<STARTFILE> = CONTRL' &
+\	PRINT #ASCII.CH%, '<'; CONTRL.SUMMARY.ACCT$; &
+		'><'; MID(NUM1$(MM%+100%),2%,2%); &
+		'><'; MID(NUM1$(YY%+100%),2%,2%); &
+		'><'; MID(NUM1$(FF%+100%),2%,2%); &
+		'><'; MID(NUM1$(BY%+100%),2%,2%); '>' &
+\	PRINT #ASCII.CH%, '<ENDFILE> = CONTRL' &
+
+2020	V% = FNC%(CONTRL.CH%) &
+\	COUNTER% = 0% &
+\	GOTO 2100 IF FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RO','') &
+\	GOTO 2100 IF FNG%(CHART.CH%,'') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #ASCII.CH%, '<STARTFILE> = CHART' &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting CHART .DAT"; &
+
+2030	TEMP%=FNL% &
+\	FIELD #CHART.CH%+1%,TEMP% AS TEMP$, &
+			08% AS CHART.ACCNUM$, &
+			40% AS CHART.DESC$, &
+			02% AS CHART.ACCTYP$, &
+			02% AS CHART.MONTH$, &
+			02% AS CHART.OVHDAL$, &
+			08% AS CHART.MONBUD$, &
+			08% AS CHART.ANNBUD$, &
+			08% AS CHART.MON$(2%), &
+			08% AS CHART.MON$(1%), &
+			08% AS CHART.MON$(15%), &
+			13%*8% AS MUNG$, &
+			08% AS CHART.YR1$, &
+			08% AS CHART.YR2$, &
+			08% AS CHART.YR3$, &
+			08% AS CHART.YR4$, &
+			01% AS CHART.FLAG$, &
+			01% AS CHART.PRTFLG$, &
+			04% AS CHART.TYPE$, &
+			02% AS CHART.DIV$, &
+			02% AS CHART.DEPT$, &
+			02% AS CHART.LOC$, &
+			04% AS CHART.CF.CODE$, &
+			04% AS CHART.WC.CODE$ &
+\	FOR M%=1% TO 12% &
+\		M1%=MM%-1%-M% &
+\		M1%=M1%+12% IF M1%<1% &
+\		M1%=12% IF M1%=0% &
+\		FIELD #CHART.CH%+1%, TEMP%+86%+8%*M1% AS MUNG$, &
+			8% AS CHART.MON$(M%+2%) &
+\	NEXT M% &
+\	AMOUNT(LOOP%)=CVT$F(CHART.MON$(LOOP%)) FOR LOOP%=1% TO 15% &
+\	TEMP$ = '' &
+\	TEMP$ = TEMP$ + '<' + FNREFORM$(AMOUNT(LOOP%),11%) + '>' &
+		FOR LOOP%=1% TO 15% &
+\	PRTFLG% = ASCII(CHART.PRTFLG$) &
+\	PRTFLG$ = '0' &
+\	lset CHART.CF.CODE$ = edit$(CHART.CF.CODE$, 4% + 128%) &
+\	lset CHART.WC.CODE$ = edit$(CHART.WC.CODE$, 4% + 128%) &
+\	lset CHART.TYPE$ = edit$(CHART.TYPE$, 4% + 128%) &
+\	lset CHART.DIV$ = edit$(CHART.DIV$, 4% + 128%) &
+\	lset CHART.DEPT$ = edit$(CHART.DEPT$, 4% + 128%) &
+\	lset CHART.LOC$ = edit$(CHART.LOC$, 4% + 128%) &
+\	PRTFLG$ = NUM1$(PRTFLG%) IF PRTFLG%<4% &
+\	PRINT #ASCII.CH%, &
+		'<' + CHART.ACCNUM$; &
+		'><' + CHART.DESC$; &
+		'><' + CHART.ACCTYP$; &
+		'><' + PRTFLG$; &
+		'><' + CHART.CF.CODE$; &
+		'><' + CHART.WC.CODE$; &
+		'><' + CHART.TYPE$; &
+		'><' + CHART.DIV$; &
+		'><' + CHART.DEPT$; &
+		'><' + CHART.LOC$; &
+		'><' + MID(NUM1$(CVT$%(CHART.MONTH$)+100%),2%,2%); '>'; &
+		TEMP$ &
+
+2090	GOTO 2030 IF FNN%(CHART.CH%)=0% &
+\	PRINT #ASCII.CH%, '<ENDFILE> = CHART' &
+\	V% = FNC%(CHART.CH%) &
+
+2100	!------------------------------------------------------------- &
+	! CONVERT FINSTA FILE &
+	!------------------------------------------------------------- &
+	GOTO 2200 IF FNO%(FINSTA.CH%,"FINSTA.DAT","/RO","") &
+\	GOTO 2200 IF FNG%(FINSTA.CH%,'') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #ASCII.CH%, '<STARTFILE> = FINSTA' &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting FINSTA.DAT"; &
+
+2110	FIELD #FINSTA.CH%+1%, FNL% AS TEMP$, &
+			04% AS FINSTA.PROMPT$, &
+			30% AS FINSTA.DESC$, &
+			50% AS FINSTA.REPTITLE$, &
+			20% AS FINSTA.CMDFIL$, &
+			01% AS FINSTA.TYPE$ &
+\	FIELD #FINSTA.CH%+1%, FNL%+105% + (LOOP%-1%)*16% AS TEMP$, &
+			16% AS FINSTA.INP$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+\	PRINT #ASCII.CH%, '<'; FINSTA.PROMPT$; &
+			'><'; FINSTA.DESC$; &
+			'><'; FINSTA.REPTITLE$; &
+			'><'; FINSTA.CMDFIL$; &
+			'><'; FINSTA.TYPE$; &
+			'><'; FINSTA.INP$(1%); &
+			'><'; FINSTA.INP$(2%); &
+			'><'; FINSTA.INP$(3%); &
+			'><'; FINSTA.INP$(4%); &
+			'><'; FINSTA.INP$(5%); &
+			'><'; FINSTA.INP$(6%); &
+			'><'; FINSTA.INP$(7%); &
+			'><'; FINSTA.INP$(8%); '>' &
+\	GOTO 2110 IF FNN%(FINSTA.CH%) = 0% &
+\	PRINT #ASCII.CH%, '<ENDFILE> = FINSTA' &
+\	V% = FNC%(FINSTA.CH%) &
+
+2200	!------------------------------------------------------------- &
+	! CONVERT FINSTA &
+	!------------------------------------------------------------- &
+	FILES%=FNFILE%('??????.FS') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+2210	FOR LOOP% = 1% TO FILES% &
+\		CLOSE CMD.CH% &
+\		PRINT #ASCII.CH%, '<STARTFILE> = ' + FILE.NAME$(LOOP%) &
+\		OPEN FILE.NAME$(LOOP%) FOR INPUT AS FILE #CMD.CH% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$(LOOP%); &
+
+2220		INPUT LINE #CMD.CH%, INP$ &
+\		PRINT #ASCII.CH%, INP$; &
+\		GOTO 2220 &
+
+2230		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$(LOOP%) &
+\	NEXT LOOP% &
+
+3000	!------------------------------------------------------------- &
+	! CONVERT GL FILES &
+	!------------------------------------------------------------- &
+	FILES%=FNFILE%('GL????.??S') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+3010	FOR LOOP%=1% TO FILES% &
+\		V% = FNC%(GL.CH%) &
+\		GOTO 3099 IF INSTR(1%,FILE.NAME$(LOOP%),'GL    .DAS') &
+\		GOTO 3099 IF INSTR(1%,FILE.NAME$(LOOP%),'GLTOPR.') &
+\		GOTO 3099 IF INSTR(1%,FILE.NAME$(LOOP%),'.B') &
+\		STOP IF FNO%(GL.CH%,FILE.NAME$(LOOP%),"/RO/SF/NS","") &
+\		GOTO 3099 IF FNG%(GL.CH%,'') &
+\		FILE.NAME$ = MID(FILE.NAME$(LOOP%),3%,3%) + &
+			MID(FILE.NAME$(LOOP%),8%,2%) &
+\		PRINT #ASCII.CH%, '<STARTFILE> = GL' + FILE.NAME$ &
+\		COUNTER% = 0% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$; &
+
+3030		FIELD #GL.CH%, FNL% AS TEMP$, &
+			08% AS GL.ACCNO$, &
+			02% AS GL.SOURCE$, &
+			16% AS GL.REFNO$, &
+			02% AS GL.TRANDAT$, &
+			26% AS GL.DESC$, &
+			08% AS GL.AMOUNT$, &
+			06% AS GL.XREFNO$, &
+			02% AS GL.POSTIM$, &
+			02% AS GL.POSDAT$, &
+			06% AS GL.BNKCDE$, &
+			08% AS GL.CKNO$, &
+			06% AS GL.VCHRNO$, &
+			06% AS GL.SUBACC$, &
+			06% AS GL.PHASE$, &
+			08% AS GL.REGQTY$, &
+			08% AS GL.PREQTY$, &
+			02% AS GL.UPDATE$, &
+			04% AS TEMP$, &
+			02% AS POINTER$ &
+\		GOTO 3090 IF CVT$%(POINTER$)<=0% OR GL.ACCNO$='DDDDDDDD' &
+\		GL.WORK$=CVT$$(GL.ACCNO$,-1%) &
+\		GL.WORK$=SPACE$(8%-LEN(GL.WORK$))+GL.WORK$ &
+\		WORK.TRANDAT$ = FND6$(CVT$%(GL.TRANDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		WORK.TRANDAT$ = LEFT(WORK.TRANDAT$+'000000',6%) &
+\		WORK.POSDAT$ = FND6$(CVT$%(GL.POSDAT$)) &
+\		WORK.POSDAT$ = RIGHT(WORK.POSDAT$,7%) + &
+				LEFT(WORK.POSDAT$,2%) + &
+				MID(WORK.POSDAT$,4%,2%) &
+\		WORK.POSDAT$ = LEFT(WORK.POSDAT$+'000000',6%) &
+ !\		BATCH$ = RIGHT(NUM1$(VAL(BATCH$)+1000001.),2%) &
+ !			IF GL.SOURCE$<>WORK.SOURCE$ &
+\		WORK.SOURCE$ = GL.SOURCE$+'' &
+\		WORK.STRG$ = &
+			'<' + GL.ACCNO$+ &
+			'><' + GL.SOURCE$+ &
+			'><' + GL.REFNO$+ &
+			'><' + WORK.TRANDAT$+ &
+			'><' + GL.DESC$+ &
+			'><' + FNREFORM$(CVT$F(GL.AMOUNT$),11%)+ &
+			'><' + GL.XREFNO$+ &
+			'><' + LEFT(FNT24P$(GL.POSTIM$)+'000000',6%)+ &
+			'><' + WORK.POSDAT$+ &
+			'><' + GL.BNKCDE$+ &
+			'><' + GL.CKNO$+ &
+			'><' + GL.VCHRNO$+ &
+			'><' + GL.SUBACC$+ &
+			'><' + GL.PHASE$+ &
+			'><' + FNREFORM$(CVT$F(GL.REGQTY$),11%)+ &
+			'><' + FNREFORM$(CVT$F(GL.PREQTY$),11%)+ &
+			'><' + GL.UPDATE$+ &
+			'><' + BATCH$ + '>' &
+\		PRINT #ASCII.CH%, WORK.STRG$ &
+ !\		IF LEN(WORK.STRG$)<>WORK.STRG% AND WORK.STRG%<>0% &
+ !		THEN	STOP &
+
+3090		WORK.STRG% = LEN(WORK.STRG$) &
+\		GOTO 3030 IF FNN%(GL.CH%)=0% &
+\		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$ &
+
+3099	NEXT LOOP% &
+\	V% = FNC%(GL.CH%) &
+
+4000	!--------------------------------------------------------------- &
+	! CONVERT BUDGET FILE &
+	!--------------------------------------------------------------- &
+	FILES%=FNFILE%('BDGT??.DAT') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+4010	FOR LOOP% = 1% TO FILES% &
+\		V% = FNC%(BUDGET.CH%) &
+\		STOP IF FNO%(BUDGET.CH%,BUDGET.DEVICE$+FILE.NAME$(LOOP%), &
+			'/RO','') &
+\		GOTO 4090 IF FNG%(BUDGET.CH%,"") &
+\		PRINT #ASCII.CH%, '<STARTFILE> = ' + FILE.NAME$(LOOP%) &
+\		COUNTER% = 0% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$(LOOP%); &
+
+4030		TEMP% = FNL% &
+\		FIELD #BUDGET.CH%+1%,	TEMP% AS TEMP$, &
+				08% AS BDGT.ACCNO$, &
+				08% AS BDGT.BEGBAL$ &
+\		FIELD #BUDGET.CH%+1%, TEMP%+8%+8%*I% AS TEMP$, &
+				08% AS BDGT.PER$(I%) FOR I%=1% TO 13% &
+\		AMOUNT(LOOP1%)=CVT$F(BDGT.PER$(LOOP1%)) FOR LOOP1%=1% TO 13% &
+\		TEMP$ = "" &
+\		TEMP$ = TEMP$ + '<' + FNREFORM$(AMOUNT(LOOP1%),11%) + '>' &
+			FOR LOOP1%=1% TO 13% &
+\		PRINT #ASCII.CH%, &
+			'<'; BDGT.ACCNO$; '>'; &
+			TEMP$ &
+
+4040		GOTO 4030 IF FNN%(BUDGET.CH%)=0% &
+\		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$(LOOP%) &
+
+4090	NEXT LOOP% &
+
+5000	!--------------------------------------------------------------- &
+	! CONVERT GJ FILE &
+	!--------------------------------------------------------------- &
+	FILES%=FNFILE%('GJL?.DAT') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+5010	FOR LOOP% = 1% TO FILES% &
+\		V% = FNC%(GJL.CH%) &
+\		STOP IF FNO%(GJL.CH%,GJL.DEVICE$ + FILE.NAME$(LOOP%), &
+			'/RO','') &
+\		GOTO 5090 IF FNG%(GJL.CH%,"") &
+\		PRINT #ASCII.CH%, '<STARTFILE> = ' + FILE.NAME$(LOOP%) &
+\		COUNTER% = 0% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$(LOOP%); &
+
+5030		TEMP% = FNL% &
+\		FIELD #GJL.CH%+1%,	TEMP% AS TEMP$, &
+				06% AS GJL.JOUNUM$, &
+				02% AS GJL.ITEMNO$, &
+				08% AS GJL.ACCNO$, &
+				30% AS GJL.DESC$, &
+				02% AS GJL.DATE$, &
+				08% AS GJL.CKNO$, &
+				06% AS GJL.F$(1%),	! GJL.XREFNO$ &
+				06% AS GJL.F$(2%),	! GJL.BNKCDE$ &
+				06% AS GJL.F$(3%),	! GJL.VCHRNO$ &
+				06% AS GJL.F$(4%),	! GJL.SUBACC$ &
+				06% AS GJL.F$(5%),	! GJL.PHASE$ &
+				08% AS GJL.AMNT$, &
+				08% AS GJL.QTY$(1%),	! GJL.REGQTY$ &
+				08% AS GJL.QTY$(2%)	! GJL.PREQTY$ &
+\		WORK.TRANDAT$ = FND6$(CVT$%(GJL.DATE$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		WORK.TRANDAT$ = LEFT(WORK.TRANDAT$+'000000',6%) &
+\		AMOUNT(1%) = CVT$F(GJL.AMNT$) &
+\		AMOUNT(2%) = CVT$F(GJL.QTY$(1%))	! GJL.REGQTY$ &
+\		AMOUNT(3%) = CVT$F(GJL.QTY$(2%))	! GJL.PREQTY$ &
+\		TEMP$ = "" &
+\		TEMP$ = TEMP$ + '<' + FNREFORM$(AMOUNT(LOOP1%),11%) + '>' &
+			FOR LOOP1% = 1% TO 3% &
+\		PRINT #ASCII.CH%, &
+			'<'; GJL.JOUNUM$; '>'; &
+			'<'; RIGHT(NUM1$(CVT$%(GJL.ITEMNO$)+10000%),2%); '>'; &
+			'<'; GJL.ACCNO$; '>'; &
+			'<'; GJL.DESC$; '>'; &
+			'<'; WORK.TRANDAT$; '>'; &
+			'<'; GJL.CKNO$; '>'; &
+			'<'; GJL.F$(1%); '>'; &
+			'<'; GJL.F$(2%); '>'; &
+			'<'; GJL.F$(3%); '>'; &
+			'<'; GJL.F$(4%); '>'; &
+			'<'; GJL.F$(5%); '>'; &
+			TEMP$ &
+
+5040		GOTO 5030 IF FNN%(GJL.CH%)=0% &
+\		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$(LOOP%) &
+
+5090	NEXT LOOP% &
+
+7000	!--------------------------------------------------------------- &
+	! compete process &
+	!--------------------------------------------------------------- &
+	PRINT #CH%, CLSCN$; "Finished"; &
+\	CLOSE #ASCII.CH% &
+\	V% = FNX%('',0%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 30130 IF ERL=30110 &
+\	RESUME 2230 IF ERL=2220% &
+
+19900	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30020	DEF*FNP$(ROWCOL$)=CHR$(155%)+"["+ROWCOL$+"H" ! Direct Cursor Address &
+
+30030	! &
+	!	FNREFORM - Converts a floating point value to the form: &
+	!		9999999999V99 &
+	!		where: &
+	!			9999999999 = dollar amount zero filled &
+	!			V          = implied decimal point &
+	!			99	   = cents &
+	! &
+	!	NOTE:  AMOUNT is converted to a positive value. &
+	! &
+	DEF FNREFORM$(AMOUNT,STR.LEN%) &
+\		WORK$ = "+" &
+\		WORK$ = "-" IF AMOUNT<0.0 &
+\		AMOUNT = 100.0 * ABS(AMOUNT) &
+\		DOLLARS$ = CVT$$(NUM1$(INT(AMOUNT + .5001)),128%) &
+\		DOLLARS$ = "0" + DOLLARS$ UNTIL LEN(DOLLARS$) >= STR.LEN% &
+\		FNREFORM$ = WORK$+DOLLARS$ &
+\	FNEND &
+
+30040	DEF FNZ(Y)=INT(ABS(Y)*100.+.5001)/100.*SGN(Y) &
+
+30100	!-----------------------------------------FILE LOOKUP FUNCTION &
+	DEF* FNFILE%(FILE.SPEC$) &
+\		WLDCNT%=0% &
+\		WLDCRD.FLAG%=0% &
+
+30110	!-----------------WILD CARD LOOKUP------------------------------ &
+		NEXXT%=0% &
+\		CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.SPEC$) TO SYS.CALL% &
+\		SYS.CALL%(0%)=30% &
+\		SYS.CALL%(1%)=6% &
+\		SYS.CALL%(2%)=17% &
+\		SYS.CALL%(3%)=WLDCRD.FLAG% !JUMP &
+\		SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\		WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\		CHANGE SYS.CALL% TO SYS.CALL$ &
+\		CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\		FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\		FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\		WILD.FILE$= &
+				RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+				RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+'.'+ &
+				RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+
+30120		WLDCNT% = WLDCNT% + 1% &
+\		FILE.NAME$(WLDCNT%)=WILD.FILE$ &
+
+30125		GOTO 30110 &
+
+30130		FNFILE%=WLDCNT% &
+\	FNEND &
+
+30140	DEF*FNZER$(Z%)=RIGHT(NUM1$(100%+Z%),2%) &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 &
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30300	!----------------------------------SYSTEM 24 HOUR TIME HANDLERS &
+	DEF FNT24S$(TYME$)=CHR$(VAL(MID(TYME$,21%,2%)))+ &
+				CHR$(VAL(MID(TYME$,24%,2%))) &
+
+30310	DEF FNT24P$(TYME$)=NUM1$(ASCII(LEFT(TYME$,1%)))+ &
+				NUM1$(ASCII(RIGHT(TYME$,2%))) &
+
+30900	!-------------------------------------------------------COMPARE &
+	DEF FNCOMP%(Y$,Y2$) &
+\		Y9%=0% &
+\		Y9%=-1% IF Y2$='*' &
+\		Y2$=Y2$+',' &
+
+30920		IF Y9%=0% &
+		THEN	Y1$=LEFT(Y2$,INSTR(1%,Y2$,',')-1%) &
+\			Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+\			Y1%=INSTR(1%,Y1$,'/') &
+\			IF Y1%+INSTR(1%,Y1$,'?')=0% &
+			THEN	Y9%=Y$=Y1$ &
+			ELSE	IF Y1% &
+				THEN	Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND &
+							Y$<=RIGHT(Y1$, &
+						Y1%+1%) &
+				ELSE	CHANGE CVT$$(LEFT(Y$,30%),-1%) &
+								TO Y% &
+\					CHANGE CVT$$(LEFT(Y1$,30%),-1%) &
+								TO Y1% &
+\					GOTO 30930 &
+					IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%) &
+					=63%) FOR Y3%=1% TO Y1%(0%) &
+\					Y9%=-1% &
+
+30930		IF Y2$<>'' AND Y9%=0% &
+		THEN	GOTO 30920 &
+		ELSE	FNCOMP%=Y9% &
+
+30940	FNEND &
+
+32767	END &
+

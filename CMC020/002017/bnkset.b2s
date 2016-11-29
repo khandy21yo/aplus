@@ -1,0 +1,481 @@
+10	! MOVE CHECKS FROM GENERAL LEDGER TO BANK BALANCE FILE &
+	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		Copyright (c) 1984 by &
+	!		Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used and &
+	! copied only in accordance with the terms of such license and with &
+	! the inclusion of the above copyright notice.  This software or any &
+	! other copies thereof may not be provided or otherwise made avail- &
+	! able to any other person.  No title to and ownership of the soft- &
+	! ware is hereby transferred. &
+	! &
+	! The information in this software is subject to change without no- &
+	! tice and should not be construed as a committment by Computer &
+	! Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	! ++ &
+	! &
+	! Author: Dave Kochan &
+	! &
+	!----------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+\	TEMP$ = SYS(CHR$(6%) + CHR$(-7%)) &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1% &
+\	ESC$=CHR$(155%) &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J" &
+\	CLEOS$=ESC$+"[J" &
+\	CLRLIN$=ESC$+"[2K" &
+\	CLREL$=ESC$+"[K" &
+\	G.OFF$=ESC$+"[m" &
+\	B.ON$=ESC$+"[1m" &
+\	BLINK.ON$=ESC$+"[5m" &
+\	R.ON$=ESC$+"[7m" &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J" &
+\	PRINT #CH%, ESC$;"<"; &
+		CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+
+100	DEVICE.CH% = 2% &
+\	APCCTL.CH% = 11% &
+\	BANKBL.CH% = 8% &
+\	MENU.CH%   = 12% &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE 12% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE 12% &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 196%+512% &
+\	FIELD #12%, 64% AS BANKBL.BUF$, 128% AS GL.BUF$, &
+		512% AS APCCTL.BUF$ &
+\	FIELD #12%,	08% AS BANKBL.CHECKNUM$,	&
+			06% AS BANKBL.BANKACC$,		&
+			02% AS BANKBL.FLAG$,		&
+			02% AS BANKBL.CHECKDATE$,	&
+			08% AS BANKBL.CHECKAMT$,	&
+			02% AS BANKBL.CANDATE$,		&
+			08% AS BANKBL.BANKAMT$,		&
+			02% AS BANKBL.GLDATE$		&
+\	FIELD #12%, 64% AS ARGLEBARGLE$,		&
+			08% AS GL.ACCNUM$,		&
+			02% AS GL.SOURCE$,		&
+			16% AS GL.REFNUM$,		&
+			02% AS GL.TRXDAT$,		&
+			26% AS GL.DESC$,		&
+			08% AS GL.AMOUNT$,		&
+			06% AS GL.CRXREF$,		&
+			02% AS GL.POSTIM$,		&
+			02% AS GL.POSDAT$,		&
+			06% AS GL.BANKCD$,		&
+			08% AS GL.CHKDEP$,		&
+			06% AS GL.VOUCHR$,		&
+			06% AS GL.SUBACC$,		&
+			06% AS GL.PHASE$,		&
+			08% AS GL.REGQTY$,		&
+			08% AS GL.PREQTY$,		&
+			02% AS GL.UPDATE$		&
+\	FIELD #12%,	64%+128% AS TEMP$, &
+			06% AS APCCTL.RECORD.KEY$, &
+			08% AS TEMP$, &
+			02% AS APCCTL.CUR.YR$, &
+			02% AS APCCTL.FIR.MO$ &
+\	FIELD #12%,	64%+128%+16%+LOOP%*2% AS TEMP$, &
+			02% AS APCCTL.MON.UP$(LOOP%) &
+				FOR LOOP%=1% TO 7% &
+\	FIELD #12%, 	64%+128%+30%+LOOP%*2% AS TEMP$, &
+			02% AS APCCTL.REC.CO$(LOOP%) &
+				FOR LOOP%=1% TO 7% &
+\	FIELD #12%, 	64%+128%+46% AS TEMP$, &
+			02% AS APCCTL.START.COUNT$, &
+			02% AS APCCTL.FINISH.COUNT$, &
+			02% AS APCCTL.FUNCTION$, &
+			06% AS APCCTL.TEMP$, &
+			06% AS APCCTL.PASSWORD$ &
+\	FIELD #12%,	64%+128%+64%+30%*(LOOP%-1%) AS TEMP$, &
+			8% AS APCCTL.ACC$(LOOP%), &
+			8% AS APCCTL.CTD$(LOOP%), &
+			8% AS APCCTL.CUR$(LOOP%), &
+			6% AS APCCTL.BANK$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+
+455	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	APCCTL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"APCCTL")=0% &
+\		GLMMM.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"GLMMM")=0% &
+\		BANKBL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'BANKBL')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+460	IF FNO%(APCCTL.CH%,APCCTL.DEVICE$+"APCCTL.DAS","/RW/SF","") &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While opening 'APCCTL.DAT'";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, SCROLL.ON$; &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+470	IF FNG%(APCCTL.CH%,'BNK') &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While looking up ";'BNK';FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, SCROLL.ON$; &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+480	LSET APCCTL.BUF$=FNL$+'' &
+\	KEY.POINTER%=FNR(APCCTL.CH%) &
+\	TEMP.BANK.ACC$(I%)=CVT$$(APCCTL.BANK$(I%),-1%)+'' FOR I%=1% TO 8% &
+\	TEMP.GL.ACC$(I%)=CVT$$(APCCTL.ACC$(I%),-1%)+'' FOR I%=1% TO 8% &
+\	PRINT #CH%, CLSCN$; &
+\	PRINT #CH%, FNP$(5%+I%,1%);CVT$$(TEMP.BANK.ACC$(I%),4%);FNP$(5%+I%,20%); &
+		TEMP.GL.ACC$(I%); IF TEMP.BANK.ACC$(I%)<>'' &
+			FOR I%=1% TO 8% &
+\	PRINT #CH%, FNP$(24%,1%);"Bank codes to be included in reconcilation "; &
+		FNP$(24%,55%);"Hit any key to continue"; &
+\	INP$=FNINP$(CH%,128%," ",1%) &
+\	PRINT #CH%, SCROLL.ON$; &
+		CLSCN$;B.ON$;R.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+
+500	!	************************************************************* &
+	!	SPECIFY FILE NAMES &
+	!	************************************************************* &
+	YEAR%=CVT$%(APCCTL.CUR.YR$) &
+\	M%(I%)=CVT$%(APCCTL.MON.UP$(I%)) FOR I%=1% TO 7% &
+\	R%(I%)=CVT$%(APCCTL.REC.CO$(I%)) FOR I%=1% TO 7% &
+\	START%=CVT$%(APCCTL.START.COUNT$) &
+\	FINISH%=CVT$%(APCCTL.FINISH.COUNT$) &
+\	FUNCTION%=CVT$%(APCCTL.FUNCTION$) &
+\	IF M%(2%)=0% &
+	THEN	M%(2%)=M%(1%)+1% &
+\		M%(2%)=1% IF M%(2%)>12% &
+\		IF M%(2%)=0% &
+		THEN	PRINT #CH%, CLSCN$; &
+			"Unable to determine the month to be updated." &
+\			PRINT #CH%, FNP$(24%,1%); &
+			"Use the control record maintenance to correct this "; &
+			FNP$(24%,55%);"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%); &
+				"WAIT";G.OFF$; &
+\			V%=FNX%("",0%,"") &
+
+570	IF FUNCTION% AND FUNCTION%<>1% &
+	THEN	PRINT #CH%, CLSCN$; &
+		"Function number ";FUNCTION%;"was started and not completed." &
+\		PRINT #CH%,"You must complete that function before starting"; &
+			" this routine." &
+\		PRINT #CH%, "Consult the user guide for help. . ." &
+\		PRINT #CH%, FNP$(24%,55%); "Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+600	! &
+	!	OPEN GENERAL LEDGER FILES &
+	! &
+	E$="JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC" &
+\	PRINT #CH%, CLSCN$; &
+		"At the prompt type an 'No' if you don't want the interim" &
+\	PRINT #CH%, "     status to be set for that month." &
+\	K$="" &
+\	TEMP%=M%(1%) &
+\	YEAR1%=YEAR% &
+\	FOR I%=2% TO 7% &
+\		IF M%(I%)=0% &
+		THEN	M%(I%)=TEMP%+1% &
+\			M%(I%)=1% IF M%(I%)>12% &
+
+620		YEAR1%=YEAR1%+1% IF M%(I%)=1% AND I%<> 2% &
+\		TEMP%=M%(I%) &
+\		YEAR%(I%)=YEAR1% &
+\		M$(I%)="GL"+MID(E$,M%(I%)*3%-2%,3%)+".DAS" &
+\		PRINT #CH%, FNP$(10%,1%);CLEOS$;'Opening ';M$(I%); &
+\		IF FNO%(I%,GLMMM.DEVICE$+M$(I%),"/RW/SF/NS","") &
+		THEN	IF FNS%=5% &
+			THEN	M$(I%)="GL"+MID(E$,M%(I%)*3%-2%,3%)+ &
+					"."+RIGHT(NUM1$(YEAR1%+100%),2%)+"S" &
+\				V%=FNO%(I%,GLMMM.DEVICE$+M$(I%),"/RW/SF/NS","") &
+
+670		IF FNS% &
+		THEN	M$(I%)="" &
+			ELSE	V%=FNG%(I%,"") &
+\				R1%(I%)=FNT &
+
+675		IF FNS%=10% &
+		THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Unable to gain write privileges for ";M$(I%); &
+			" Continuing. . . " &
+\			M$(I%)="" &
+
+680		M$(I%)="" IF R1%(I%)=R%(I%) OR R1%(I%)=0% &
+\		IF M$(I%)<>"" &
+		THEN	PRINT #CH%, FNP$(10%,1%);CLEOS$; &
+			"Set status for ";M$(I%);" (Yes/No) <Yes> "; &
+\			INP$=CVT$$(FNINP$(CH%,128%,"_",1%),-1%) &
+\			PRINT #CH%, CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$(1%,75%); &
+				"WAIT";G.OFF$;FNX%('',0%,'') IF INP$="%^C" &
+\ 			IF INP$="N" &
+			THEN	M$(I%)="" &
+\				GOTO 690 &
+
+685		IF M$(I%)<>"" &
+		THEN	PRINT #CH%, FNP$(11%,1%); &
+\			PRINT #CH%, "Update will start with record #";R%(I%); &
+\			PRINT #CH%, " Record number to end with <";NUM1$(R1%(I%));">"; &
+\			INP$=FNINP$(CH%,0%,"_",5%) &
+\			PRINT #CH%, CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$(1%,75%); &
+				"WAIT";G.OFF$;FNX%('',0%,'') IF INP$="%^C" &
+\			R%=VAL(INP$) &
+\			IF R%=0% AND INP$<>"" &
+			THEN	M$(I%)="" &
+			ELSE	IF R%>R%(I%) AND R%<R1%(I%) &
+				THEN	R1%(I%)=R% &
+
+690		K$=K$+M$(I%) &
+\		M%(I%)=0% IF R%(I%)=0% AND R1%(I%)=0% &
+\		REC.CNT=REC.CNT+(R1%(I%)-(R%(I%))) IF M$(I%)<>"" &
+
+700	NEXT I% &
+\	IF K$="" &
+	THEN	PRINT #CH%, CLSCN$;"Unable find anything to update." &
+\		PRINT #CH%, FNP$(24%,55%); "Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+710	M%=FNO%(BANKBL.CH%,BANKBL.DEVICE$+'BANKBL.DAT','/RW','') &
+\	M%=FNO%(BANKBL.CH%,BANKBL.DEVICE$+'BANKBL.DAT','/CR:16,64','') IF M%=5% &
+\	IF FNS% &
+	THEN	PRINT #CH%, FNP$(24%,1%);"Can't open BANKBL.DAT - Aborting"; &
+			FNP$(24%,55%);"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, &
+		CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+2000	! UPDATE THE RECONCILATION FILE &
+	! &
+	V%=FNG%(-APCCTL.CH%,NUM1$(KEY.POINTER%)) &
+
+2015	INTERRUPT%=0% &
+\	IF START%<>FINISH% &
+	THEN	INTERRUPT%=-1% &
+
+2020	FUNCTION%=1% &
+\	START%=START%+1% IF START%=FINISH% &
+\	IF FNU%(-APCCTL.CH%,LEFT(FNL$,46%)+CVT%$(START%)+MID(FNL$,49%,2%)+ &
+		  CVT%$(FUNCTION%)+RIGHT(FNL$,53%)) &
+	THEN	PRINT #CH%, CLSCN$; "Unable to change status of flag record." &
+\		PRINT #CH%, FNP$(24%,1%);"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+2025	REC.CNT=REC.CNT/10% &
+\	COUNTER%,PERCENT%=0% &
+\	COL%=10% &
+\	TEMP$     = "Check Reconciliation Update from G/L" &
+\	PRINT #CH%, CLSCN$+R.ON$+LEFT(TEMP$,39%)+SPACE$(40%-LEN(TEMP$))+ &
+			SPACE$(40%-LEN(COMPANY$))+COMPANY$ &
+\	PRINT #CH%, FNP$(I%,1%)+" "+FNP$(I%,80%)+" " FOR I%=2% TO 19% &
+\	PRINT #CH%, FNP$(20%,1%)+SPACE$(80%)+G.OFF$ &
+\	PRINT #CH%, FNP$(19%,2%); "Starting to update the current status "; &
+		"for ";'BNK'; &
+		FNP$(11%,10%);"0%   10%  20%  30%  40%  50%"; &
+		"  60%  70%  80%  90% 100%";FNP$(24%,80%); &
+\	UPDATE%,ADD%,R%,ABORT%=0% &
+\	FOR LOOP%=2% TO 7% &
+\		GOTO 2070 IF M$(LOOP%)="" &
+\		MONTH$=RIGHT(NUM1$(M%(LOOP%)+100%),2%) &
+\		YEAR$=RIGHT(NUM1$(YEAR%(LOOP%)+100%),2%) &
+\		R2%(LOOP%)=R%(LOOP%) &
+\		IF FNG%(-LOOP%,NUM1$(R%(LOOP%)+1%)) &
+		THEN	PRINT #CH%,CLSCN$; &
+			"Unable to find record number";R%(LOOP%); &
+				"in ";M$(LOOP%);"." &
+\			PRINT #CH%, "Please check problem and restart."; &
+\			PRINT #CH%, FNP$(24%,1%);"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\			V%=FNX%("",0%,"") &
+
+2030		COUNTER%=COUNTER%+1% &
+\		IF COUNTER%>=REC.CNT &
+		THEN	COUNTER%=0% &
+\			PERCENT%=PERCENT%+10% &
+\			IF PERCENT%<=100% &
+			THEN	PRINT #CH%, FNP$(12%,COL%);R.ON$;"     "; &
+					G.OFF$;FNP$(24%,80%); &
+				IF PERCOM%<100% &
+\				COL%=COL%+5% &
+
+2040		R%=R%+1% &
+\		LSET GL.BUF$=FNL$+"" &
+\		GOSUB 3000 IF FNCOMP%(CVT$$(GL.ACCNUM$,-1%), &
+			TEMP.GL.ACC$(FLAG%)) AND TEMP.GL.ACC$(FLAG%)<>'' &
+				FOR FLAG%=1% TO 8% &
+
+2060		IF ABORT% &
+		THEN	2100 &
+
+2065		R%(LOOP%)=FNR(LOOP%) &
+\		GOTO 2030 IF FNN%(LOOP%)=0% AND R1%(LOOP%)>=R%(LOOP%) &
+
+2070	NEXT LOOP% &
+
+2100	! &
+	!	END PROGRAM AND UPDATE RECORD FLAGS &
+	! &
+	PRINT #CH%, CLSCN$;'BNK';"  ";APCCTL.TITLE$ &
+\	PRINT #CH%, "Current status update routine" &
+\	PRINT #CH%, "Update counter ";START% &
+\	PRINT #CH% &
+\	PRINT #CH%  USING "Records read in the general ledger file  ######",R% &
+\	PRINT #CH%  USING "Records add to reconcilation ######",ADD% &
+\	FOR LOOP%=2% TO 7% &
+\		PRINT #CH%, FNP$(8%,1%);CLEOS$; &
+\		IF M$(LOOP%)<>"" &
+		THEN	PRINT #CH% &
+\			PRINT #CH%  USING "\          \ record series ##### - ######", &
+				M$(LOOP%),R2%(LOOP%),R%(LOOP%) &
+\			PRINT #CH%  USING "     \"+SPACE$(15%)+ &
+				"\ ###,###,###.##", &
+			APCCTL.ACC$(I%),CUR(LOOP%,I%) IF CUR(LOOP%,I%)<>0. &
+				FOR I%=1% TO 8% &
+\			PRINT #CH%, FNP$(24%,55%);'Hit any key continue'; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+
+2120	NEXT LOOP% &
+\	PRINT #CH%, FNP$(8%,1%);CLEOS$; &
+\	PRINT #CH%  USING SPACE$(10%)+"UPDATE Amount###,###,###.##",TOTAL &
+\	IF FNG%(-APCCTL.CH%,NUM1$(KEY.POINTER%)) &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$;"Unable to find flag record."; &
+			FNP$(24%,55%);"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+2130	PRINT #CH%, CLRBOT$; FNP$(24%,1%);"Hit any key to continue"; &
+\	INP$=FNINP$(CH%,128%," ",1%) &
+\	E$="" &
+\	E$=E$+CVT%$(M%(I%)) FOR I%=1% TO 7% &
+\	E$=E$+CVT%$(R%(I%)) FOR I%=1% TO 7% &
+\	IF FNU%(-APCCTL.CH%,LEFT(FNL$,16%)+MID(FNL$,17%,2%)+E$+ &
+		CVT%$(START%)+CVT%$(START%)+CVT%$(0%)+RIGHT(FNL$,53%)) &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Unable to change flag record."; &
+\		PRINT #CH%, FNP$(24%,55%);"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\		V%=FNX%("",0%,"") &
+
+2140	PRINT #CH%, CLSCN$;B.ON$;BLINK.ON$;R.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\	V%=FNX%("",0%,"") &
+
+3000	! &
+	!	ADD TO BANK BALANCE FILE &
+	! &
+	AMOUNT=-CVT$F(GL.AMOUNT$) &
+\	TEMP$=XLATE(CVT$$(GL.CHKDEP$,-1%),STRING$(48%,0%)+'0123456789') &
+\	CHANGE TEMP$ TO Y% &
+\	GOTO 3010 IF Y%(I%)<>48% FOR I%=1% TO Y%(0%) &
+
+3010	RSET BANKBL.CHECKNUM$ = RIGHT(TEMP$,I%)	&
+\	LSET BANKBL.BANKACC$  = TEMP.BANK.ACC$(FLAG%)	&
+\	LSET BANKBL.FLAG$     = 'A'	&
+\	LSET BANKBL.FLAG$     = 'C' IF GL.SOURCE$='CD' &
+\	LSET BANKBL.FLAG$     = 'D' IF GL.SOURCE$='CR' &
+\	LSET BANKBL.CHECKDATE$= GL.TRXDAT$	&
+\	LSET BANKBL.CHECKAMT$ = CVTF$(AMOUNT)	&
+\	LSET BANKBL.CANDATE$  = CVT%$(0%)	&
+\	LSET BANKBL.BANKAMT$  = CVTF$(0.)	&
+\	LSET BANKBL.GLDATE$   = CVT%$(FND6%(MONTH$+"00"+YEAR$))	&
+\	M%=FNA%(BANKBL.CH%,BANKBL.BUF$+'') &
+\	CUR(LOOP%,FLAG%)=CUR(LOOP%,FLAG%)+AMOUNT &
+\	TOTAL=TOTAL+AMOUNT &
+\	ADD%=ADD%+1% &
+\	RETURN &
+
+10000	PRINT #CH%, FNP$(24%,55%);"Hit any key to continue "; &
+\	INP$=FNINP$(CH%,128%," ",1%) &
+\	PRINT #CH%, &
+		CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$(1%,75%);"WAIT";G.OFF$; &
+\	M%=FNX%('',0%,'') &
+
+19000	! E R R O R   T R A P P I N G &
+	&
+
+19010	IF ERL=400% &
+	THEN	RESUME 450 &
+
+19999	ON ERROR GOTO &
+		! Pretty tricky, eh? &
+
+30000	DEF*FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR MID(BUFFER$,2%,2%)="OP" &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$="%^C" IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!------------------------------------------------------------ &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!------------------------------------------------------------ &
+	DEF*FNP$(ROW%,COL%)=ESC$+"["+NUM1$(ROW%)+";"+NUM1$(COL%)+"H" &
+
+30060	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30065	DEF FND8%(Y)=Y &
+
+30900	!-------------------------------------------------COMPARE &
+	DEF FNCOMP%(Y$,Y2$) &
+\	Y9%=0% &
+\	Y9%=-1% IF Y2$="*" &
+\	Y2$=Y2$+"," &
+
+30920	IF Y9%=0% &
+	THEN	Y1$=LEFT(Y2$,INSTR(1%,Y2$,",")-1%) &
+\		Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+\		Y1%=INSTR(1%,Y1$,"/") &
+\		IF Y1%+INSTR(1%,Y1$,"?")=0% &
+		THEN	Y9%=Y$=Y1$ &
+			ELSE IF Y1% &
+			THEN	Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND Y$<=RIGHT(Y1$, &
+					Y1%+1%) &
+				ELSE	CHANGE CVT$$(LEFT(Y$,30%),-1%) TO Y% &
+\					CHANGE CVT$$(LEFT(Y1$,30%),-1%) TO Y1% &
+\					GOTO 30930 IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%) &
+						=63%) FOR Y3%=1% TO Y1%(0%) &
+\					Y9%=-1% &
+
+30930	IF Y2$<>"" AND Y9%=0% &
+	THEN	GOTO 30920 &
+		ELSE	FNCOMP%=Y9% &
+\			FNEND &
+
+32767	END &
+

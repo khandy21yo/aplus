@@ -1,0 +1,669 @@
+10	! SELECT VOUCHERS TO PAY &
+	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		COPYRIGHT (c) 1984 BY &
+	!		COMPUTER MANAGEMENT CENTER, IDAHO FALLS, IDAHO &
+	! &
+	! THIS SOFTWARE IS FURNISHED UNDER A LICENSE AND MAY BE USED AND &
+	! COPIED ONLY IN ACCORDANCE WITH THE TERMS OF SUCH LICENSE AND WITH &
+	! THE INCLUSION OF THE ABOVE COPYRIGHT NOTICE.  THIS SOFTWARE OR ANY &
+	! OTHER COPIES THEROF MAY NOT BE PROVIDED OR OTHERWISE MADE AVAIL- &
+	! ABLE TO ANY OTHER PERSON.  NO TITLE TO AND OWNERSHIP OF THE SOFT- &
+	! WARE IS HEREBY TRANSFERRED. &
+	! &
+	! THE INFORMATION IN THIS SOFTWARE IS SUBJECT TO CHANGE WITHOUT NO- &
+	! TICE AND SHOULD NOT BE CONSTRUED AS A COMMITTMENT BY COMPUTER &
+	! MANAGEMENT CENTER. &
+	! &
+	! CMC ASSUMES NO RESPONSIBILITY FOR THE USE OR RELIABILITY OF &
+	! ITS SOFTWARE ON EQUIPMENT WHICH IS NOT SUPPORTED BY CMC. &
+	! &
+	! ++ &
+	! &
+	! ABSTRACT: &
+	! &
+	! &
+	! &
+	! &
+	! ENVIRONMENT: &
+	! &
+	!	PDP-11 UNDER RSTS/E BP2 &
+	! &
+	! AUTHOR: &
+	! &
+	! MODIFIED BY: &
+	! &
+	!----------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erace cursor to end of screen &
+\	PRINT #CH%, ESC$;"<";		! Enter ANSI mode &
+
+100	DEVICE.CH% = 2% &
+\	APREG.CH%  = 2% &
+\	CDJOUR.CH% = 4% &
+\	APCCTL.CH% = 6% &
+\	VENDES.CH% = 8% &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	VENDES.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(DEVICE.CH%,"VENDES")=0% &
+\		CDJOUR.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(DEVICE.CH%,"CDJOUR")=0% &
+\		APREG.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(DEVICE.CH%,"APREG")=0% &
+\		APCCTL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(DEVICE.CH%,"APCCTL")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	IF FNO%(APREG.CH%,APREG.DEVICE$+"APREG.DAT","/RW","") &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While opening APREG.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+310	V%=FNO%(CDJOUR.CH%,CDJOUR.DEVICE$+"CDJOUR.DAT","/RW","") &
+\	V%=FNO%(CDJOUR.CH%,CDJOUR.DEVICE$+"CDJOUR.DAT","/CR:14,128","") &
+		IF FNS%=5% &
+\	IF FNS% &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While open CDJOUR.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+320	V%=FNO%(APCCTL.CH%,APCCTL.DEVICE$+"APCCTL.DAS","/RW/SF/NS","") &
+\	V%=FNG%(APCCTL.CH%,'APL') IF V%=0% &
+\	IF FNS% &
+	THEN	PRINT #CH%, CLRBOT$; FNP$(24%,1%);"Error";FNS%; &
+		"in AP Control file"; FNP$(24%,55%); "Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+340	FIELD #APCCTL.CH%, 	304% AS TEMP$, &
+				08% AS APCCTL.APCASH$, &
+				08% AS APCCTL.DISLOST$, &
+				06% AS APCCTL.VOUCH$ &
+
+350	IF CVT$$(APCCTL.APCASH$,-1%)<>'' &
+	THEN	CASH.ACCT$=APCCTL.APCASH$+'' &
+	ELSE	PRINT #CH%, CLSCN$;FNP$(24%,1%); &
+		"Please enter the A/P cash account # "; &
+\		INP$=FNINP$(CH%,0%,"_",8%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+				IF INP$='' OR INP$="%^C" &
+\		CASH.ACCT$=SPACE$(8%-LEN(INP$))+INP$ &
+\		V%=FNU%(-APCCTL.CH%,LEFT(FNL$,304%)+CASH.ACCT$+ &
+			RIGHT(FNL$,313%)) &
+
+360	IF CVT$$(APCCTL.DISLOST$,-1%)<>'' &
+	THEN	DISC.LOST.ACCT$=APCCTL.DISLOST$+'' &
+	ELSE	PRINT #CH%, CLSCN$;FNP$(24%,1%); &
+		"Please enter the Discount lost account # "; &
+\		INP$=FNINP$(CH%,0%,"_",8%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+				IF INP$='' OR INP$="%^C" &
+\		DISC.LOST.ACCT$=SPACE$(8%-LEN(INP$))+INP$ &
+\		V%=FNU%(-APCCTL.CH%,LEFT(FNL$,312%)+DISC.LOST.ACCT$+ &
+			RIGHT(FNL$,321%)) &
+
+370	V%=FNC%(APCCTL.CH%) &
+
+390	IF FNO%(VENDES.CH%,VENDES.DEVICE$+"VENDES.DAT","/RO","") &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While opening VENDES.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\		V%=FNX%("",0%,"") &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE 12% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE 12% &
+
+450	!---------------RESUME LINE FOR ERROR ON LINE 400 &
+	OPEN "NL:" AS FILE 12%, RECORDSIZE 512% &
+\	FIELD #12%,	06% AS APR.VENNUM$,	&
+			06% AS APR.VOUNUM$,	&
+			02% AS APR.VOUDAT$,	&
+			15% AS APR.INVOIC$,	&
+			02% AS APR.INVDAT$,	&
+			08% AS APR.INVAMT$,	&
+			02% AS APR.CD1099$,	&
+			06% AS APR.PONUM$,	&
+			02% AS APR.DISDAT$,	&
+			08% AS APR.DISAMT$,	&
+			02% AS APR.DUEDAT$,	&
+			08% AS APR.APACCT$,	&
+			06% AS APR.CKNUM$,	&
+			02% AS APR.CKDAT$,	&
+			08% AS APR.CASHACCT$,	&
+			01% AS APR.USETAX$,	&
+			08% AS APR.AMT1099$,	&
+			08% AS APR.USEAMT$,	&
+			20% AS APR.CKDESC$,	&
+			02% AS APR.UPDATE.MON$,	&
+			06% AS APR.USE.JOB$	&
+\	FIELD #12%, 128% AS TEMP$, &
+			06% AS CDJ.VENNUM$,	&
+			06% AS CDJ.VOUNUM$,	&
+			02% AS CDJ.VOUDAT$,	&
+			15% AS CDJ.INVOIC$,	&
+			02% AS CDJ.INVDAT$,	&
+			20% AS CDJ.CKDESC$,	&
+			08% AS CDJ.AMT$,	&
+			08% AS CDJ.DISC$,	&
+			08% AS CDJ.APACCT$,	&
+			08% AS CDJ.ACCT$,	&
+			06% AS CDJ.CKNUM$,	&
+			02% AS CDJ.CKDAT$,	&
+			08% AS CDJ.DISCLOST$,	&
+			08% AS CDJ.DISCACCT$,	&
+			06% AS CDJ.PONUM$,	&
+			02% AS CDJ.DISDAT$,	&
+			02% AS CDJ.DUEDAT$,	&
+			11% AS CDJ.SORTKEY$	&
+\	FIELD #12%, 256% AS TEMP$,		&
+			06% AS AP.VENNUM$,		&
+			29% AS AP.VENNAM$,		&
+			29% AS AP.VENADD$,		&
+			29% AS AP.VENCST$,		&
+			29% AS AP.VENZIP$,		&
+			05% AS AP.VENXXX$,		&
+			01% AS AP.VENPURGE$,		&
+			10% AS AP.VENPHN$,		&
+			13% AS AP.VENFED$,		&
+			01% AS AP.VEN199$,		&
+			02% AS AP.VENDUE$,		&
+			02% AS AP.VENDISDAY$,		&
+			02% AS AP.VENDISC$,		&
+			08% AS AP.VENBILMTD$,		&
+			02% AS AP.VENVOUMTD$,		&
+			08% AS AP.VENBILYTD$,		&
+			02% AS AP.VENVOUYTD$,		&
+			08% AS AP.VENPAIDMTD$,		&
+			08% AS AP.VENPAIDYTD$,		&
+			02% AS AP.VENUPDFLAG$,		&
+			02% AS AP.VENUPDCOUNT$,		&
+			02% AS AP.VENLMU$,		&
+			01% AS AP.VEN.OK.TO.PURGE$,	&
+			15% AS AP.SORTKEY$		&
+\	FIELD #12%, 	128% AS APREG.BUF$,	&
+			128% AS CDJOUR.BUF$,	&
+			256% AS APVEND.BUF$	&
+
+500	TEMP$     = "CASH DISBURSEMENTS SELECT" &
+\	FRAME$    = CLSCN$+R.ON$+LEFT(TEMP$,39%)+SPACE$(40%-LEN(TEMP$))+ &
+			SPACE$(40%-LEN(COMPANY$))+COMPANY$ &
+\	FRAME$    = FRAME$+FNP$(I%,1%)+" "+FNP$(I%,80%)+" " FOR I%=2% TO 19% &
+\	FRAME$    = FRAME$+FNP$(20%,1%)+SPACE$(80%)+G.OFF$ &
+
+510	IF FNG%(APREG.CH%,"") &
+	THEN	PRINT #CH%,FNP$(24%,1%);"APREG IF EMPTY";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+1000	!---------------------------------------------------PROGRAM CONTROL &
+
+1010	PRINT #CH%, SCROLL.ON$;G.OFF$;FRAME$; &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		"COMMAND: Clear Due dIscount Vendor Quit "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%),32%) &
+\	GOTO 1010 IF OPT$="%^C" &
+
+1040	IF OPT$="Q" &
+	THEN	PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+			FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+1050	GOTO 3000 IF OPT$="C" &
+\	GOTO 3100 IF OPT$="D" &
+\	GOTO 3200 IF OPT$="I" &
+\	GOTO 3300 IF OPT$="V" &
+\	GOTO 1030 &
+
+3000	!---------------------------CLEAR SELECTED RECORDS &
+	PRINT #CH%, CLRBOT$;"Confirm clearing of payment flags (Y/N) "; &
+\	GOTO 1030 IF CVT$$(FNINP$(CH%,128%," ",1%),-1%)<>"Y" &
+\	PRINT #CH%,	CLRBOT$; &
+			FNP$(4%,25%);"UNSELECTED"; &
+			FNP$(6%,25%);"NUMBER OF ITEMS UNSELECTED"; &
+			FNP$(10%,10%);"PERCENT COMPLETE"; &
+			FNP$(11%,10%);"0%   10%  20%  30%  40%  50%";  &
+			"  60%  70%  80%  90% 100%"; &
+\	COL%,ITEM%,COUNTER%=0% &
+\	TOTAL.RECORD%=FNT/50% &
+\	V%=FNC%(CDJOUR.CH%) &
+\	IF FNO%(CDJOUR.CH%,CDJOUR.DEVICE$+"CDJOUR.DAT","/CR:14,128","")=0% &
+	THEN	V%=FNG%(APREG.CH%,"") &
+	ELSE	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+		"Error";FNS%;"While open CDJOUR.DAT";FNP$(24%,55%); &
+		"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+		FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+3030	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=TOTAL.RECORD% &
+	THEN	COUNTER%=0% &
+\		COL%=COL%+1% &
+\		IF COL%<=50% &
+		THEN	PRINT #CH%, FNP$(12%,9%+COL%);R.ON$;" ";G.OFF$; &
+
+3040	LSET APREG.BUF$=FNL$+"" &
+\	IF CVT$$(APR.CKNUM$,-1%)="PAY" &
+	THEN	ITEM%=ITEM%+1% &
+\		PRINT #CH%, FNP$(6%,58%); &
+\		PRINT #CH%  USING "#####",ITEM%; &
+\		LSET APR.CKNUM$="" &
+\		IF FNU%(APREG.CH%,APREG.BUF$) &
+		THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While changing APREG.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			PRINT #CH%, CLSCN$;SCROLL.ON$;BLINK.ON$;R.ON$;B.ON$; &
+				FNP$(1%,75%);'WAIT';G.OFF$;FNX%("",0%,"") &
+
+3080	IF FNN%(APREG.CH%)=0% &
+	THEN	GOTO 3030 &
+	ELSE	PRINT #CH%, FNP$(24%,1%);CLRLIN$;"All pay flags "; &
+		"have been cleared.";FNP$(24%,55%); &
+		"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		GOTO 1000 &
+
+3100	!------------------------------------SELECT BY DUE DATE &
+	PRINT #CH%,	FNP$(4%,25%);"SELECT BY"; &
+			FNP$(6%,25%);"NUMBER OF ITEMS SELECTED"; &
+			FNP$(8%,25%);"TOTAL AMOUNT SELECTED"; &
+			FNP$(10%,10%);"PERCENT COMPLETE"; &
+			FNP$(11%,10%);"0%   10%  20%  30%  40%  50%"; &
+			"  60%  70%  80%  90% 100%"; &
+			FNP$(4%,35%);"DUE DATE"; &
+\	TOTAL=0. &
+\	ITEM%=0% &
+\	V%=FNG%(APREG.CH%,"") &
+\	TOTAL.RECORD%=FNT/50% &
+
+3110	PRINT #CH%, FNP$(12%,10%);SPACE$(60%);CLRBOT$; &
+		FNP$(24%,1%);"Type ^C to end off this option or "; &
+			"return to select from the beginning"; & 
+		FNP$(21%,1%);"Select by due date.  Beginning date "; &
+\	INP$=FNINP$(CH%,0%,"_",6%) &
+\	GOTO 1000 IF INP$="%^C" &
+\	INP$="000000" IF INP$="" &
+\	INP$=XLATE(INP$,STRING$(48%,0%)+"0123456789") &
+\	START$=FNSDATE$(INP$) &
+\	PRINT #CH%, FNP$(21%,37%);INP$;FNP$(21%,50%);" Ending date "; &
+\	INP$=FNINP$(CH%,0%,"_",6%) &
+\	GOTO 1000 IF INP$="%^C" &
+\	INP$="123199" IF INP$="" &
+\	INP$=XLATE(INP$,STRING$(48%,0%)+"0123456789") &
+\	ENDING$=FNSDATE$(INP$) &
+\	PRINT #CH%, FNP$(14%,10%);"Starting date ";FNRDATE$(START$); &
+		" Ending date ";FNRDATE$(ENDING$);CLRBOT$; &
+		"Is this correct (Y/N) "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%),-1%) &
+\	GOTO 3110 IF INP$<>"Y" &
+\	V%=FNG%(APREG.CH%,"") &
+\	COUNTER%,COL%=0% &
+
+3120	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=TOTAL.RECORD% &
+	THEN	COUNTER%=0% &
+\		COL%=COL%+1% &
+\		IF COL%<=50% &
+		THEN	PRINT #CH%, FNP$(12%,9%+COL%);R.ON$;" ";G.OFF$; &
+
+3130	LSET APREG.BUF$=FNL$+"" &
+\	IF APR.DUEDAT$<START$ OR APR.DUEDAT$>ENDING$ &
+		OR CVT$$(APR.CKNUM$,-1%)="PAY" &
+	THEN	GOTO 3190 &
+	ELSE	KEY.POINTER%=FNR(APREG.CH%) &
+\		DATA.POINTER%=FNR(APREG.CH%+1%) &
+\		TOTAL.INV=FNZ(CVT$F(APR.INVAMT$),2%) &
+\		TOTAL.DIS=FNZ(CVT$F(APR.DISAMT$),2%) &
+\		AMOUNT=FNZ(CVT$F(APR.INVAMT$),2%)- &
+			FNZ(CVT$F(APR.DISAMT$),2%) &
+\		IF XLATE(APR.CKNUM$,STRING$(48%,0%)+"0123456789")<>"" &
+		THEN	TOTAL.INV,TOTAL.DIS,AMOUNT=0.
+
+3140	N.KEY.POINTER%=FNR(APREG.CH%) &
+\	N.DATA.POINTER%=FNR(APREG.CH%+1%) &
+\	IF FNN%(APREG.CH%)=0% &
+	THEN	IF LEFT(FNL$,12%)=LEFT(APREG.BUF$,12%) &
+		THEN	LSET APREG.BUF$=FNL$+"" &
+\			GOTO 3140 IF CVT$$(APR.CKNUM$,-1%)="PAY" &
+\			TOTAL.INV=TOTAL.INV-FNZ(CVT$F(APR.INVAMT$),2%) &
+\			TOTAL.DIS=TOTAL.DIS-FNZ(CVT$F(APR.DISAMT$),2%) &
+\			AMOUNT=AMOUNT-(FNZ(CVT$F(APR.INVAMT$),2%)- &
+				FNZ(CVT$F(APR.DISAMT$),2%)) &
+\			GOTO 3140 &
+
+3150	IF AMOUNT<>0. &
+	THEN	V%=FNG%(-APREG.CH%,NUM1$(KEY.POINTER%))+ &
+			FNG%(-APREG.CH%-1%,NUM1$(DATA.POINTER%)) &
+\		LSET APREG.BUF$=FNL$+"" &
+\		ITEM%=ITEM%+1% &
+\		PRINT #CH%, FNP$(6%,58%); &
+\		PRINT #CH%  USING "#####",ITEM%; &
+\		PRINT #CH%, FNP$(8%,50%); &
+\		TOTAL=TOTAL+(TOTAL.INV-TOTAL.DIS) &
+\		PRINT #CH%  USING "##,###,###.##",TOTAL; &
+\		LSET APR.CKNUM$="PAY" &
+\		IF FNU%(APREG.CH%,APREG.BUF$)=0% &
+		THEN	GOSUB 4000 &
+		ELSE	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While changing APREG.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\			V%=FNX%("",0%,"") &
+
+3180	V%=FNG%(-APREG.CH%,NUM1$(N.KEY.POINTER%))+ &
+		FNG%(-APREG.CH%-1%,NUM1$(N.DATA.POINTER%)) &
+
+3190	IF FNN%(APREG.CH%)=0% &
+	THEN	GOTO 3120 &
+	ELSE	GOTO 3110 &
+
+3200	!------------------------------------SELECT BY DISCOUNT DATE &
+	PRINT #CH%,	FNP$(4%,25%);"SELECT BY"; &
+			FNP$(6%,25%);"NUMBER OF ITEMS SELECTED"; &
+			FNP$(8%,25%);"TOTAL AMOUNT SELECTED"; &
+			FNP$(10%,10%);"PERCENT COMPLETE"; &
+			FNP$(11%,10%);"0%   10%  20%  30%  40%  50%"; &
+			"  60%  70%  80%  90% 100%"; &
+			FNP$(4%,35%);"DISCOUNT DATE"; &
+\	TOTAL=0. &
+\	ITEM%=0% &
+\	V%=FNG%(APREG.CH%,"") &
+\	TOTAL.RECORD%=FNT/50% &
+
+3210	PRINT #CH%, FNP$(12%,10%);SPACE$(60%);CLRBOT$; &
+		FNP$(24%,1%);"Type ^C to end off this option or "; &
+			"return to select from the beginning"; & 
+		FNP$(21%,1%);"Select by disc date.  Beginning date "; &
+\	INP$=FNINP$(CH%,0%,"_",6%) &
+\	GOTO 1000 IF INP$="%^C" &
+\	INP$="000000" IF INP$="" &
+\	INP$=XLATE(INP$,STRING$(48%,0%)+"0123456789") &
+\	START$=FNSDATE$(INP$) &
+\	PRINT #CH%, FNP$(21%,38%);INP$;FNP$(21%,50%);" Ending date "; &
+\	INP$=FNINP$(CH%,0%,"_",6%) &
+\	GOTO 1000 IF INP$="%^C" &
+\	INP$="123199" IF INP$="" &
+\	INP$=XLATE(INP$,STRING$(48%,0%)+"0123456789") &
+\	ENDING$=FNSDATE$(INP$) &
+\	PRINT #CH%, FNP$(14%,10%);"Starting date ";FNRDATE$(START$); &
+		" Ending date ";FNRDATE$(ENDING$);CLRBOT$; &
+		"Is this correct (Y/N) "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%),-1%) &
+\	GOTO 3210 IF INP$<>"Y" &
+\	V%=FNG%(APREG.CH%,"") &
+\	COUNTER%,COL%=0% &
+
+3220	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=TOTAL.RECORD% &
+	THEN	COUNTER%=0% &
+\		COL%=COL%+1% &
+\		IF COL%<=50% &
+		THEN	PRINT #CH%, FNP$(12%,9%+COL%);R.ON$;" ";G.OFF$; &
+
+3230	LSET APREG.BUF$=FNL$+"" &
+\	IF APR.DISDAT$<START$ OR APR.DISDAT$>ENDING$ &
+		OR CVT$$(APR.CKNUM$,-1%)="PAY" &
+	THEN	GOTO 3290 &
+	ELSE	KEY.POINTER%=FNR(APREG.CH%) &
+\		DATA.POINTER%=FNR(APREG.CH%+1%) &
+\		TOTAL.INV=FNZ(CVT$F(APR.INVAMT$),2%) &
+\		TOTAL.DIS=FNZ(CVT$F(APR.DISAMT$),2%) &
+\		AMOUNT=FNZ(CVT$F(APR.INVAMT$),2%)- &
+			FNZ(CVT$F(APR.DISAMT$),2%) &
+\		IF XLATE(APR.CKNUM$,STRING$(48%,0%)+"0123456789")<>"" &
+		THEN	TOTAL.INV,TOTAL.DIS,AMOUNT=0.
+
+3240	N.KEY.POINTER%=FNR(APREG.CH%) &
+\	N.DATA.POINTER%=FNR(APREG.CH%+1%) &
+\	IF FNN%(APREG.CH%)=0% &
+	THEN	IF LEFT(FNL$,12%)=LEFT(APREG.BUF$,12%) &
+		THEN	LSET APREG.BUF$=FNL$+"" &
+\			GOTO 3240 IF CVT$$(APR.CKNUM$,-1%)="PAY" &
+\			TOTAL.INV=TOTAL.INV-FNZ(CVT$F(APR.INVAMT$),2%) &
+\			TOTAL.DIS=TOTAL.DIS-FNZ(CVT$F(APR.DISAMT$),2%) &
+\			AMOUNT=AMOUNT-(FNZ(CVT$F(APR.INVAMT$),2%)- &
+				FNZ(CVT$F(APR.DISAMT$),2%)) &
+\			GOTO 3240 &
+
+3250	IF AMOUNT<>0. &
+	THEN	V%=FNG%(-APREG.CH%,NUM1$(KEY.POINTER%))+ &
+			FNG%(-APREG.CH%-1%,NUM1$(DATA.POINTER%)) &
+\		LSET APREG.BUF$=FNL$+"" &
+\		ITEM%=ITEM%+1% &
+\		PRINT #CH%, FNP$(6%,58%); &
+\		PRINT #CH%  USING "#####",ITEM%; &
+\		PRINT #CH%, FNP$(8%,50%); &
+\		TOTAL=TOTAL+(TOTAL.INV-TOTAL.DIS) &
+\		PRINT #CH%  USING "##,###,###.##",TOTAL; &
+\		LSET APR.CKNUM$="PAY" &
+\		IF FNU%(APREG.CH%,APREG.BUF$)=0% &
+		THEN	GOSUB 4000 &
+		ELSE	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While changing APREG.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\			V%=FNX%("",0%,"") &
+
+3280	V%=FNG%(-APREG.CH%,NUM1$(N.KEY.POINTER%))+ &
+		FNG%(-APREG.CH%-1%,NUM1$(N.DATA.POINTER%)) &
+
+3290	IF FNN%(APREG.CH%)=0% &
+	THEN	GOTO 3220 &
+	ELSE	GOTO 3210 &
+
+3300	!---------------------------------SELECT BY VENDOR &
+	PRINT #CH%,	FNP$(4%,25%);"SELECT BY"; &
+			FNP$(6%,25%);"NUMBER OF ITEMS SELECTED"; &
+			FNP$(8%,25%);"TOTAL AMOUNT SELECTED"; &
+			FNP$(10%,10%);"PERCENT COMPLETE"; &
+			FNP$(11%,10%);"0%   10%  20%  30%  40%  50%"; &
+			"  60%  70%  80%  90% 100%"; &
+			FNP$(4%,35%);"VENDOR"; &
+			FNP$(11%,10%);SPACE$(60%);FNP$(10%,10%);SPACE$(30%); &
+\	TOTAL=0. &
+\	ITEM%=0% &
+
+3310	PRINT #CH%,CLRBOT$;"Select by vendor "; &
+\	INP$=FNINP$(CH%,0%,"_",6%) &
+\	GOTO 1000 IF INP$="" OR INP$="%^C" &
+\	TEMP$=LEFT(INP$+SPACE$(6%),6%) &
+\	IF FNG%(APREG.CH%,TEMP$) &
+	THEN	PRINT #CH%, FNP$(24%,1%);"No transactions for that vendor "; &
+		FNP$(24%,55%);"Hit any key to continue" ; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		GOTO 1000 IF INP$="%^C" &
+\		GOTO 3310 &
+
+3315	PRINT #CH%, FNP$(21%,25%);"Voucher # "; &
+\	INP$=FNINP$(CH%,0%,"_",36%) &
+\	GOTO 3310 IF INP$="" &
+\	GOTO 1000 IF INP$="%^C" &
+
+3320	LSET APREG.BUF$=FNL$+"" &
+\	GOTO 3310 IF APR.VENNUM$<>TEMP$ &
+\	IF APR.CKNUM$<>"" OR FNCOMP%(CVT$$(APR.VOUNUM$,-1%),INP$)=0% &
+	THEN	GOTO 3390 &
+	ELSE	KEY.POINTER%=FNR(APREG.CH%) &
+\		DATA.POINTER%=FNR(APREG.CH%+1%) &
+\		TOTAL.INV=FNZ(CVT$F(APR.INVAMT$),2%) &
+\		TOTAL.DIS=FNZ(CVT$F(APR.DISAMT$),2%) &
+\		AMOUNT=FNZ(CVT$F(APR.INVAMT$),2%)- &
+			FNZ(CVT$F(APR.DISAMT$),2%) &
+\		IF XLATE(APR.CKNUM$,STRING$(48%,0%)+"0123456789")<>"" &
+		THEN	TOTAL.INV,TOTAL.DIS,AMOUNT=0. &
+
+3340	N.KEY.POINTER%=FNR(APREG.CH%) &
+\	N.DATA.POINTER%=FNR(APREG.CH%+1%) &
+\	IF FNN%(APREG.CH%)=0% &
+	THEN	IF LEFT(FNL$,12%)=LEFT(APREG.BUF$,12%) &
+		THEN	LSET APREG.BUF$=FNL$+"" &
+\			GOTO 3340 IF CVT$$(APR.CKNUM$,-1%)="PAY" &
+\			TOTAL.INV=TOTAL.INV-FNZ(CVT$F(APR.INVAMT$),2%) &
+\			TOTAL.DIS=TOTAL.DIS-FNZ(CVT$F(APR.DISAMT$),2%) &
+\			AMOUNT=AMOUNT-(FNZ(CVT$F(APR.INVAMT$),2%)- &
+				FNZ(CVT$F(APR.DISAMT$),2%)) &
+\			GOTO 3340 &
+
+3350	IF AMOUNT<>0. &
+	THEN	V%=FNG%(-APREG.CH%,NUM1$(KEY.POINTER%))+ &
+			FNG%(-APREG.CH%-1%,NUM1$(DATA.POINTER%)) &
+\		LSET APREG.BUF$=FNL$+"" &
+\		ITEM%=ITEM%+1% &
+\		PRINT #CH%, FNP$(6%,58%); &
+\		PRINT #CH%  USING "#####",ITEM%; &
+\		PRINT #CH%, FNP$(8%,50%); &
+\		TOTAL=TOTAL+(TOTAL.INV-TOTAL.DIS) &
+\		PRINT #CH%  USING "##,###,###.##",TOTAL; &
+\		LSET APR.CKNUM$="PAY" &
+\		IF FNU%(APREG.CH%,APREG.BUF$)=0% &
+		THEN	GOSUB 4000 &
+		ELSE	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While changing APREG.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\			V%=FNX%("",0%,"") &
+
+3380	V%=FNG%(-APREG.CH%,NUM1$(N.KEY.POINTER%))+ &
+		FNG%(-APREG.CH%-1%,NUM1$(N.DATA.POINTER%)) &
+
+3390	IF FNN%(APREG.CH%)=0% &
+	THEN	GOTO 3320 &
+	ELSE	GOTO 3310 &
+
+4000	!----------------------------------------------------ADD TO CDJOUR &
+	LSET AP.SORTKEY$="" &
+\	V%=FNG%(VENDES.CH%,APR.VENNUM$) &
+\	LSET APVEND.BUF$=FNL$+"" IF FNS%=0% &
+\	LSET CDJ.VENNUM$  = APR.VENNUM$ &
+\	LSET CDJ.VOUNUM$  = APR.VOUNUM$ &
+\	LSET CDJ.VOUDAT$  = APR.VOUDAT$ &
+\	LSET CDJ.INVOIC$  = APR.INVOIC$ &
+\	LSET CDJ.INVDAT$  = APR.INVDAT$ &
+\	LSET CDJ.CKDESC$  = APR.CKDESC$ &
+\	LSET CDJ.AMT$     = CVTF$(TOTAL.INV) &
+\	LSET CDJ.DISC$    = CVTF$(TOTAL.DIS) &
+\	LSET CDJ.APACCT$  = APR.APACCT$ &
+\	RSET CDJ.ACCT$    = CASH.ACCT$ &
+\	LSET CDJ.CKNUM$   = '' &
+\	LSET CDJ.CKDAT$   = CVT%$(0%) &
+\	LSET CDJ.DISCLOST$= CVTF$(0.) &
+\	RSET CDJ.DISCACCT$= DISC.LOST.ACCT$ &
+\	LSET CDJ.PONUM$   = APR.PONUM$ &
+\	LSET CDJ.DISDAT$  = APR.DISDAT$ &
+\	LSET CDJ.DUEDAT$  = APR.DUEDAT$ &
+\	LSET CDJ.SORTKEY$ = AP.SORTKEY$ &
+\	IF FNA%(CDJOUR.CH%,CDJOUR.BUF$)=0% &
+	THEN	RETURN &
+	ELSE	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+		"Error";FNS%;"While adding to CDJOUR.DAT";FNP$(24%,55%); &
+		"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\		V%=FNX%("",0%,"") &
+
+19000	!----------------------------------------------------ERROR TRAPPING &
+
+19010	IF ERL=400% &
+	THEN	RESUME 450 &
+
+19990	ON ERROR GOTO 0 &
+
+30000	DEF*FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR MID(BUFFER$,2%,2%)="OP" &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$="%^C" IF ASCII(BUFFER$)=3% &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!------------------------------------------------------------ &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!------------------------------------------------------------ &
+	DEF*FNP$(ROW%,COL%)=ESC$+"["+NUM1$(ROW%)+";"+NUM1$(COL%)+"H" &
+
+30120	DEF FNSDATE$(Y$)=CVT%$(VAL(MID(Y$,3%,2%))+VAL(LEFT(Y$,2%))*32%+ &
+		FNI%(VAL(RIGHT(Y$,5%)))*512%) &
+
+30130	DEF FNI%(Y)=Y &
+
+30140	DEF FNRDATE$(Y$) &
+\		Y%=CVT$%(Y$) &
+\		FNRDATE$=RIGHT(NUM1$((Y% AND 480%)/32%+100%),2%)+ &
+			RIGHT(NUM1$((Y% AND 31%)+100%),2%)+ &
+			RIGHT(NUM1$((SWAP%(Y%) AND 254%)/2%+100%),2%) &
+\	FNEND &
+
+30500   DEF FNZ(Y,N%)=SGN(Y)*10.0^(-N%)*INT(ABS(Y)*10.0^N%+0.5001)         &
+
+30900	!-------------------------------------------------COMPARE &
+	DEF FNCOMP%(Y$,Y2$) &
+\	Y9%=0% &
+\	Y9%=-1% IF Y2$="*" &
+\	Y2$=Y2$+"," &
+
+30920	IF Y9%=0% &
+	THEN	Y1$=LEFT(Y2$,INSTR(1%,Y2$,",")-1%) &
+\		Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+\		Y1%=INSTR(1%,Y1$,"/") &
+\		IF Y1%+INSTR(1%,Y1$,"?")=0% &
+		THEN	Y9%=Y$=Y1$ &
+		ELSE	IF Y1% &
+			THEN	Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND Y$<=RIGHT(Y1$, &
+				Y1%+1%) &
+			ELSE	CHANGE CVT$$(LEFT(Y$,30%),-1%) TO Y% &
+\				CHANGE CVT$$(LEFT(Y1$,30%),-1%) TO Y1% &
+\				GOTO 30930 IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%) &
+					=63%) FOR Y3%=1% TO Y1%(0%) &
+\				Y9%=-1% &
+
+30930	IF Y2$<>"" AND Y9%=0% &
+	THEN	GOTO 30920 &
+	ELSE	FNCOMP%=Y9% &
+
+30940	FNEND &
+
+32767	END

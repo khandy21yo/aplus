@@ -1,0 +1,35 @@
+1	! Convert budget file to ascii file. &
+	! &
+	! 06/15/89 - Kevin Handy &
+	! &
+
+10	DIM BDGT$(15%) &
+
+100	OPEN "NL:" AS FILE 12%, RECORDSIZE 128% &
+\	FIELD #12%, 128% AS BDGT.BUF$ &
+\	FIELD #12%, (I%-1%)*8% AS JUNK$, 8% AS BDGT$(I%) FOR I% = 1% TO 15% &
+
+150	OPEN "GLSYS1.ASC" FOR OUTPUT AS FILE 11% &
+
+200	IF FNO%(2%, "BDGT89.DAT", "/RO", "") &
+	THEN &
+		PRINT "Unable to open budget file" &
+\		GOTO 32767 &
+
+250	IF FNG%(2%, "") &
+	THEN &
+		PRINT "No records in file" &
+\		GOTO 32767 &
+
+300	LSET BDGT.BUF$ = FNL$ &
+
+310	PRINT #11%, CVT$$(BDGT$(1%), 136%) &
+\	PRINT #11%, NUM1$(CVT$F(BDGT$(I%))) FOR I% = 2% TO 15% &
+
+380	PRINT ":"; &
+\	PRINT IF POS(0%) >= 50% &
+
+390	GOTO 300 UNLESS FNN%(2%) &
+\	GOTO 32767
+
+32767	END

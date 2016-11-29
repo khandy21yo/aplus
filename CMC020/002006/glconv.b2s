@@ -1,0 +1,255 @@
+10	!-------------------------------------------------------------------- &
+	! &
+	!		Copyright (c) 1984 BY &
+	!		Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used and &
+	! copied only in accordance with the terms of such license and with &
+	! the inclusion of the above copyright notice.  This software or any &
+	! other copies therof may not be provided or otherwise made avail- &
+	! able to any other person.  No title to and ownership of the soft- &
+	! ware is hereby transferred. &
+	! &
+	! The information in this software is subject to change without no- &
+	! tice and should not be construed as a committment by Computer &
+	! Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!----------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(16%) + CHR$(0%) + CHR$(255%) + &
+		CHR$(81%) + STRING$(5%,0%) + CHR$(255%) + &
+		STRING$(14%,0%) + CHR$(255%) + CHR$(128%+26%) + STRING$(6%,0%)) &
+\	TEMP$ = SYS(CHR$(12%)) &
+\	PRJPRG$=MID(TEMP$,23%,1%) + MID(TEMP$,24%,1%) + NUM1$(ASCII(MID( &
+		TEMP$,25%,1%))) + ":" + &
+		"["+NUM1$(ASCII(MID(TEMP$,6%,1%))) + ","+ &
+		NUM1$(ASCII(MID(TEMP$,5%,1%))) + "]" + &
+		RAD$(ASCII(MID(TEMP$,7%,1%))+SWAP%(ASCII(MID(TEMP$,8%,1%)))) + &
+		RAD$(ASCII(MID(TEMP$,9%,1%))+SWAP%(ASCII(MID(TEMP$,10%,1%)))) &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLREL$=ESC$+"[K"		! Cursor to end of line &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[5;19r"	! Scroll region &
+\	S.RESET$=ESC$+"c"		! Reset Screen &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column mode &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column mode &
+\	ENTER.COPY$=ESC$+"[?5i"		! Enter media copy &
+\	EXIT.COPY$=ESC$+"[?4i"		! Exit media copy &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+\	HID.CURSOR$=ESC$+"[24;80H"	! Hid the cursor in the corner &
+\	PRINT #CH%, ESC$;"<";		! Enter ANSI mode &
+\	PRINT #CH%, CLSCN$;FNP$(1%,74%);B.ON$;R.ON$;BLINK.ON$;"WAIT";G.OFF$; &
+
+100	FILE.CH%   = 2% &
+\	GL.CH%     = 4% &
+\	CKDATA.CH% = 6% &
+\	CHAOLD.CH% = 4% &
+\	CHART.CH%  = 6% &
+\	CROSS.CH%  = 8% &
+\	LOOP.DATA% = 2% &
+\	LOOP.KEY%  = 1% &
+\	KEY.LEN%   = 8% &
+\	DATA.LEN%  = 18% &
+
+200	CHACVT.DEVICE$,GL.DEVICE$,CHART.DEVICE$='SY:' &
+\	IF FNO%(FILE.CH%,"DEVICE.DAT","/R0","") &
+	THEN	300 &
+		ELSE	CHACVT.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(FILE.CH%,"CHACVT")=0% &
+\			GL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(FILE.CH%,"GL    ")=0% &
+\			CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(FILE.CH%,"CHART ")=0% &
+
+290	V%=FNC%(FILE.CH%) &
+
+300	CHACVT.FLAG%=FNO%(FILE.CH%,CHACVT.DEVICE$+"CHACVT.DAT","/SF/RW","") &
+
+400	GOTO 500 IF CHAIN.FLAG% OR CHACVT.FLAG% &
+\	V%=FNX%('ISM:ISMBLD',30000%,CHACVT.DEVICE$+"CHACVT.DAT/X@9-8;1-8$"+ &
+			PRJPRG$+"#450*") &
+
+450	CHAIN.FLAG%=-1% &
+\	GOTO 10 &
+
+500	IF FNO%(CROSS.CH%,CHACVT.DEVICE$+"CHACVT.DAX","/SF/RW","") &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Unable to open cross file";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 10000 &
+
+1000	PRINT #CH%, CLSCN$;  "1 = CONVERT GL"; &
+		FNP$(5%,1%); "3 = CONVERT CHART"; &
+		FNP$(7%,1%); "0 = END"; &
+		FNP$(9%,1%); "SELECT "; &
+\	INP$=FNINP$(CH%,128%,"_",1%) &
+\	GOTO 2000 IF INP$="1" &
+\	GOTO 4000 IF INP$="3" &
+\	GOTO 10000 IF INP$="0" &
+\	GOTO 1000 &
+
+2000	!---------------------------------CONVERT FROM GL TO CKDATA FORMAT &
+
+2010	PRINT #CH%, CLSCN$;FNP$(4%,1%);"ENTER MONTH (MMM.YY) "; &
+\	GL$=CVT$$(FNINP$(CH%,0%," ",6%),-1%) &
+\	GOTO 10000 IF GL$="%^C" OR GL$="" &
+\	GL$='GL'+GL$+'S' &
+\	V% = FNC%(GL.CH%) &
+\	IF FNO%(GL.CH%,GL.DEVICE$+GL$,"/SF/NS/RW","") &
+	THEN 	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Unable to open ";GL$;FNP$(24%,55%); "Hit any key to"; &
+			" continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 2010 &
+
+2030	IF FNG%(GL.CH%,"") &
+	THEN 	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			GL$;" is empty";FNP$(24%,55%); "Hit any key to"; &
+			" continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 10000 &
+
+2035	PRINT #CH%, CLSCN$;"Converting file. ";GL$;" Please wait" &
+
+2040	TEMP.GL$ = FNL$ &
+\	ACCNUM$ = CVT$$(LEFT(TEMP.GL$, 8%), -1%) &
+\	ACCNUM$ = SPACE$(8% - LEN(ACCNUM$)) + ACCNUM$ &
+\	PRINT #CH%, ACCNUM$;CHR$(13%); &
+
+2050	TEMP.ACC$=ACCNUM$+'' &
+\	IF FNG%(CROSS.CH%,ACCNUM$)=0% &
+	THEN	TEMP.ACC$=CVT$$(MID(FNL$,9%,8%), -1%)+'' &
+\		GOTO 2200 IF TEMP.ACC$<>"" &
+
+2060	PRINT #CH%, FNP$(6%,1%);ACCNUM$;" is an undefined account number. Not changed."; &
+\	TEMP.ACC$=ACCNUM$ &
+
+2200	TEMP.ACC$ = CVT$$(TEMP.ACC$, -1%) &
+\	TEMP.ACC$=' '+CVT$$(TEMP.ACC$,-1%)+' ' &
+		IF LEN(CVT$$(TEMP.ACC$,-1%))=6% &
+\	TEMP.ACC$ = LEFT(TEMP.ACC$ + "        ", 8%) &
+\	STOP IF FNU%(-GL.CH%,TEMP.ACC$ + RIGHT(TEMP.GL$, 9%)) &
+
+2300	IF FNN%(GL.CH%)=0% THEN 2040 ELSE 2010
+
+4000	!-----------------------CONVERT TO NEW ACCOUNT NUMBER IN CHART &
+
+4020	IF FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT',"/RW","") &
+	THEN 	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Unable to open CHART";FNP$(24%,55%); "Hit any key to"; &
+			" continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 10000 &
+
+4030	IF FNG%(CHART.CH%,"") &
+	THEN 	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"CHART is empty";FNP$(24%,55%); "Hit any key to"; &
+			" continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 10000 &
+
+4035	PRINT CLSCN$;"Converting file.  Please wait" &
+
+4040	TEMP.CHART$ = FNL$ &
+\	ACCNUM$ = LEFT(TEMP.CHART$, 8%) &
+
+4050	ACCNUM$=CVT$$(ACCNUM$,-1%) &
+\	TEMP.ACC$=SPACE$(8%-LEN(ACCNUM$))+ACCNUM$ &
+\	GOTO 4200 IF CROSS.FLAG% &
+\	IF FNG%(CROSS.CH%,TEMP.ACC$)=0% &
+	THEN	TEMP.ACC$=CVT$$(MID(FNL$,9%,8%), -1%) &
+\		GOTO 4200 &
+
+4060	PRINT #CH%, FNP$(6%,1%);ACCNUM$;" is an undefined account number" &
+
+4200	TEMP.ACC$=SPACE$(8%-LEN(TEMP.ACC$))+TEMP.ACC$ &
+\	STOP IF FNU%(-CHART.CH%,TEMP.ACC$+RIGHT(TEMP.CHART$, 9%)) &
+
+4300	IF FNN%(CHART.CH%)=0% THEN 4040 ELSE V%=FNX%("",0%,"") &
+
+10000	! &
+	PRINT #CH%, CLSCN$;FNP$(1%,76%);B.ON$;R.ON$;BLINK.ON$;"WAIT";G.OFF$; &
+\	V%=FNX%("",0%,"") &
+
+19000	!-------------------------------------------------ERROR TRAPPING &
+	IF ERR=28% &
+	THEN	JUNK$=SYS(CHR$(6%) + CHR$(-7%)) &
+\		IF ERL<1000% &
+		THEN	OPT$="Q" &
+\			RESUME 1040 &
+
+19010	IF ERR=28% &
+	THEN	V%=FNG%(-FILE.CH%,NUM1$(KEY.POINTER%)) &
+			IF KEY.POINTER%<>0% &
+\		RESUME 1010 &
+
+19020	IF ERR=52% &
+	THEN	INP$="" &
+\		RESUME &
+
+19030	IF ERR=11% &
+	THEN	RESUME 1000 &
+
+19900	ON ERROR GOTO 0 &
+
+30000	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR ASCII(BUFFER$)=8% &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$="%^C" IF ASCII(BUFFER$)=3% &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	  !------------------------------------------------------------ &
+	  ! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	  !------------------------------------------------------------ &
+	  DEF*FNP$(ROW%,COL%)=ESC$+"["+NUM1$(ROW%)+";"+NUM1$(COL%)+"H" &
+
+30140	DEF FNRDATE$(Y$) &
+\		Y%=CVT$%(Y$) &
+\		FNRDATE$=RIGHT(NUM1$((Y% AND 480%)/32%+100%),2%)+ &
+			RIGHT(NUM1$((Y% AND 31%)+100%),2%)+ &
+			RIGHT(NUM1$((SWAP%(Y%) AND 254%)/2%+100%),2%) &
+\	FNEND &
+
+32040	DEF FND8%(D8)=D8 &
+
+32060	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+32767	END &
+	&
+

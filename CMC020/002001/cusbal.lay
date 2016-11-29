@@ -1,0 +1,52 @@
+
+
+
+           CUSTOMER BALANCE FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: CUS...
+
+    KEY FILE NAME : CUSBAL.B2S               KEY = 6 + 2   DATA = 128
+
+	   NAME                         SIZE            VARIABLE     
+
+	1 _Customer Number_________  	_06A/01___  	CUSBAL.CUSNUM$ 
+
+	2 _Account_________________  	_08A/07___  	CUSBAL.ACCT$ 
+
+	3 _Balance Current_________  	_08F/15___  	CUSBAL.CUR$ 
+
+	4 _30 Days_________________  	_08F/23___  	CUSBAL.30$
+
+	5 _60 Days_________________  	_08F/31___  	CUSBAL.60$
+
+	6 _90 Days_________________  	_08F/39___  	CUSBAL.90$
+
+	7 _Over 90 Days____________	_08F/47___	CUSBAL.OVER$
+
+	8 _YTD Service Charge______	_08F/55___	CUSBAL.YTDSER$
+
+	9 _Last Charge Date________  	_02I/63___  	CUSBAL.LSTCHRG$
+
+	10 _Last Payment Date_______  	_02I/65___  	CUSBAL.LSTPYMT$
+
+	11 _Customer Limit__________	_08F/67___	CUSBAL.LIMIT$
+
+	12 _Last Update_____________	_02I/75___	CUSBAL.UPDAT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =77, FROM 128, FREE =  51
+
+
+  
+
+
+
+
+
+
+
+
+
+
+

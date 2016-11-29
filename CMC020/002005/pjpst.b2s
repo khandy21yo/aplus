@@ -1,0 +1,964 @@
+10	!---------------------------------------------------------------&
+	!	INVENTORY SYSTEM	 -P/O System			&
+	!	Posting Invoice Journal					&
+	!								&
+	!	APPST.B2S	V1.0	October 1986			&
+	!								&
+	! Author - Frank Starman, Computer Management Center, Inc.	&
+	!								&
+	! Files-APH.DAT	-ISAM	Issue Journal File		&
+	!	GL(MMM).DAS   	-ISAM	General Ledger File		&
+	!	ACT(MMM).DAT	-ISAM	Action File			&
+	!	CHART.DAT     	-ISAM	Chart of Accounts File		&
+	!	POREL.DAT     	-ISAM	WO Register File		&
+	!---------------------------------------------------------------&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	!---------------------------------------------------------------&
+	! &
+	!	03/18/92 - Kevin Handy &
+	!		Having a possible max mem exceeded error. &
+	!		Cleaned up source code functions/variables &
+	!		Reformatted if-then-else statements &
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS('6'C + '9'C) &
+\	JJ%  = ASCII(LEFT(JUNK$,1%))/2% &
+\	JJ$  = RIGHT(NUM1$(JJ%+100%),2%) &
+\	MON.NUM$='  01 02 03 04 05 06 07 08 09 10 11 12' &
+\	MON.NAM$='  JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC' &
+\	JUNK$ = SYS('6'C + CHR$(-7%)) &
+\	DIM INVC.ACCOUNT$(100%),DEBIT(100%),CREDIT(100%) &
+
+60	CH%,OUTPUT.CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE 1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	CLSCN$='155'C+'[H'+'155'C+'[J'	! Clear screen &
+\	CLRLIN$='155'C+'[2K'		! Erase entire line &
+\	ENTER.COPY$='155'C+'[5i'		! Enter media copy &
+\	EXIT.COPY$='155'C+'[4i'		! Exit media copy &
+
+80	DATE.TIME$=SYS('6'C+'20'C+'0'C+'0'C+'1'C+ &
+		'0'C+'0'C+'0'C+'0'C+'0'C+'0'C+ &
+		'0'C+'0'C+'0'C+'0'C+'0'C+'0'C+ &
+		'0'C+'1'C+'0'C) &
+\	POST.TIME$ = FNT24S$(DATE.TIME$) &
+\	POST.DATE$ = CVT%$(FND6%(MID(DATE.TIME$,10%,2%)+ &
+		MID(DATE.TIME$,13%,2%)+MID(DATE.TIME$,7%,2%))) &
+
+100	PRNT.TMP%,DEVICE.CH%	= 02% &
+\	APH.CH% 		= 02% &
+\	POREL.CH%		= 02% &
+\	APL.CH%			= 04% &
+\	INVPRC.CH%		= 06% &
+\	APREG.CH%		= 06% &
+\	INVSCT.CH%		= 08% &
+\	POREH.CH%		= 08% &
+\	VENDES.CH%		= 08% &
+\	CHART.CH%		= 08% &
+\	CDJHND.CH%		= 08% &
+\	GLMMM.CH%		= 10% &
+\	INVOIC.CH%		= 11% &
+\	MENU.CH%		= 12% &
+
+120	!============================================================== &
+	! OPEN THE PRINT CONTROL FILE					&
+	!============================================================== &
+	OPEN 'PRNT'+JJ$+'.TMP' FOR INPUT AS FILE PRNT.TMP% &
+\	NEXT.REPORT%=0% &
+\	CHAIN.PROGRAM$='' &
+
+130	INPUT LINE #PRNT.TMP%, A$ &
+\	PR$=LEFT(A$,2%) &
+\	CMD$=CVT$$(RIGHT(A$,4%),140%) &
+\	IF PR$='RN' &
+	THEN	IF NEXT.REPORT% &
+		THEN	GOTO 160 &
+		ELSE	NEXT.REPORT%=-1% &
+
+140	LIN.PER.PAGE%	= VAL(CMD$) IF PR$='LP' ! LINES PER PAGE &
+\	EPAGE%		= VAL(CMD$) IF PR$='EP'	! END PAGE &
+\	REPDATE$	= CMD$ IF PR$='RD'	! REPORT DATE &
+\	DISPLAY$	= CMD$ IF PR$='DP'	! DISPLAY (Y/N) &
+\	OUTDEV$		= CMD$ IF PR$='OD'	! OUTPUT DEVICE &
+\	U1$		= CMD$ IF PR$='U1'	! UDF 1 &
+\	U2$		= CMD$ IF PR$='U2'	! UDF 2 &
+\	U3$		= CMD$ IF PR$='U3'	! UDF 3 &
+		! IF A FILE IS TO BE CREATED THEN THE &
+		! VARIABLE SRTKEY MUST BE SET TO 'S' &
+		! \	SRTKEY$='S' IF U?$='????' &
+\	IF PR$='PC' &
+	THEN	TEMP%=1% &
+\		TEMP%=2% IF LEFT(CMD$,1%)='\' &
+\		PC$=PC$+CHR$(VAL(MID(CMD$,TEMP%+(LOOP%-1%)*4%,3%))) &
+			FOR LOOP%=1% TO LEN(CMD$)/4% &
+		! PRINTER CONTROL ESCAPE SEQUENCE &
+		! FORMAT '\###\###\###\###' &
+		! '\' IS THE DELIMITER &
+		! '###' IS THE ASCII VALUE TO PRINT &
+
+150	GOTO 130 &
+
+160	KILL 'PRNT'+JJ$+'.TMP' &
+		! KILL THE PRNTJJ.TMP FILE &
+\	GOTO 190 IF PR$<>'RN' &
+		! SKIP CREATING PRINT WORK FILE IF THERE ISN'T &
+		! ANOTHER REPORT TO PRINT &
+
+170	OPEN 'PRNT'+JJ$+'.TMP' FOR OUTPUT AS FILE PRNT.TMP%+1% &
+		! OPEN A NEW PRINT WORK FILE FOR THE NEXT &
+		! SERIES OF REPORTS TO BE PRINTED &
+
+180	PRINT #PRNT.TMP%+1%, A$; &
+\	INPUT LINE #PRNT.TMP%, A$ &
+\	CHAIN.PROGRAM$=CVT$$(RIGHT(A$,4%),140%) IF LEFT(A$,2%)='PG' &
+		AND CHAIN.PROGRAM$='' &
+\	GOTO 180 &
+
+190	! SET USER DEFINED FIELDS &
+	CLOSE PRNT.TMP%,PRNT.TMP%+1% &
+\	GL.YEAR$ = RIGHT(U1$,4%) &
+\	GL.MONTH$ = LEFT(U1$,3%) &
+\	PRE.BN$		= U2$ &
+\	SUF.BN$		= U3$ &
+\	BATCH.NUM$=PRE.BN$+SUF.BN$ &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/RO','')=0% &
+	THEN	APH.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'APH   ')=0% &
+\		APL.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'APL   ')=0% &
+\		GLMMM.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'GLMMM ')=0% &
+\		VENDES.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'VENDES')=0% &
+\		CHART.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'CHART ')=0% &
+\		APREG.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'APREG ')=0% &
+\		POREL.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'POREL ')=0% &
+\		POREH.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'POREH ')=0% &
+\		INVSCT.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'INVSCT')=0% &
+\		CDJHND.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'CDJHND')=0% &
+\		INVPRC.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'INVPRC')=0% &
+\		INVOIC.DEVICE$=MID(FNL$,7%,20%) &
+			IF FNG%(DEVICE.CH%,'INVOIC')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+210	IF FNO%(APH.CH%,APH.DEVICE$+'APH'+BATCH.NUM$+'.DAT','/RO','') &
+	THEN	V$=FNMESS$(FNS%,' APH'+BATCH.NUM$+'.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+215	IF FNO%(APL.CH%,APL.DEVICE$+'APL'+BATCH.NUM$+'.DAT','/RW','') &
+	THEN	V$=FNMESS$(FNS%,' APL'+BATCH.NUM$+'.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+220	IF FNO%(INVPRC.CH%,INVPRC.DEVICE$+'INVPRC.DAT','/RO','') &
+	THEN	V$=FNMESS$(FNS%,' INVPRC.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+225	METHOD%=1% &
+\	PRICE.VARIANCE$ = 'XXXXXXXX' &
+\	GOTO 230 IF FNO%(INVSCT.CH%,INVSCT.DEVICE$+'INVSCT.DAT','/RO','') &
+\	IF FNG%(INVSCT.CH%,'')=0% &
+	THEN	METHOD%=ASCII(MID(FNL$,59%,1%)) &
+\		DEF.STORNUM$=MID(FNL$,60%,3%) &
+\		PRICE.VARIANCE$ = MID(FNL$,63%,8%) &
+
+230	V%=FNC%(INVSCT.CH%) &
+
+235	V% = FNO%(POREH.CH%,POREH.DEVICE$+'POREH.DAT','/RO','') &
+\	V%=FNG%(APH.CH%,'') &
+
+240	FIELD #APH.CH%+1%,     FNL% AS JUNK$, &
+			06% AS APH.VOUNUM$,	&
+			02% AS APH.VOUDAT$, 	&
+			06% AS APH.VENNUM$,	&
+			15% AS APH.INVNUM$,	&
+			08% AS APH.AMTINV$,	&
+			02% AS APH.CD1099$,	&
+			08% AS APH.AMT1099$,	&
+			01% AS APH.USETAX$,	&
+			08% AS APH.AMTUSE$,	&
+			20% AS APH.INVDESC$,	&
+			02% AS APH.INVDAT$,	&
+			02% AS APH.DISCDAT$,	&
+			08% AS APH.AMTDISC$,	&
+			02% AS APH.DUEDAT$,	&
+			08% AS APH.APACCT$,	&
+			06% AS APH.CKNUM$,	&
+			02% AS APH.CKDAT$,	&
+			08% AS APH.CASHACCT$,	&
+			02% AS APH.UPDATE.MON$,	&
+			06% AS APH.USE.JOB$,	&
+			02% AS APH.LINE$(1%)	&
+
+245	GOTO 290 IF FNG%(APL.CH%,APH.VOUNUM$) &
+
+250	FIELD #APL.CH%+1%,     FNL% AS JUNK$, &
+			128% AS WORK$ &
+\	FIELD #APL.CH%+1%,     FNL% AS JUNK$, &
+			06% AS APL.VOUNUM$,	&
+			02% AS APL.LINE$,	&
+			06% AS APL.PONUM$,	&
+			02% AS APL.POLINE$,	&
+			30% AS APL.DESC$,	&
+			08% AS APL.ACCNUM$,	&
+			06% AS APL.SUBACC$,	&
+			08% AS APL.PHASE$,	&
+			08% AS APL.QTY$,	&
+			08% AS APL.AMOUNT$	&
+\	GOTO 290 IF APL.VOUNUM$<>APH.VOUNUM$ &
+\	PRICE.VAR,STD.COST,PJ.PRICE,DISC=0. &
+\	GOTO 280 IF CVT$F(APL.AMOUNT$)=0. OR CVT$$(APL.PONUM$,-1%)='' &
+
+255	IF FNG%(POREH.CH%,APL.PONUM$+APL.POLINE$)=0% &
+	THEN	FIELD #POREH.CH%+1%,     FNL% AS JUNK$, &
+				06% AS POREH.PONUM$,	&
+				02% AS POREH.ITEM$,     &
+				15% AS POREH.PRONUM$,	&
+				03% AS POREH.STORNUM$,	&
+				30% AS POREH.DESC$,	&
+				06% AS POREH.VENNUM$,   &
+				02% AS POREH.TERMS$,	&
+				08% AS POREH.PRICE$	&
+\		GOTO 280 IF CVT$$(POREH.PONUM$,-1%)='' &
+\		STD.COST= FNPC(INVPRC.CH%,POREH.PRONUM$+POREH.STORNUM$+'C  '+ &
+			DEF.STORNUM$,APH.INVDAT$,METHOD%,1.) &
+
+260	DISC = FNZ(CVT$F(APL.AMOUNT$)/CVT$F(APH.AMTINV$)* &
+		(CVT$F(APH.AMTINV$)-CVT$F(APH.AMTDISC$))) &
+			IF CVT$F(APH.AMTINV$)<>0. &
+\	PJ.PRICE = FNZ(DISC/CVT$F(APL.QTY$)) &
+			IF CVT$F(APL.QTY$)<>0. &
+\	PRICE.VAR = FNZ(PJ.PRICE*CVT$F(APL.QTY$)-STD.COST*CVT$F(APL.QTY$)) &
+				IF STD.COST<>0.0 &
+\	PRICE.VAR=0. IF PJ.PRICE=0. &
+
+280	IF FNU%(APL.CH%,LEFT(WORK$,84%)+CVTF$(PRICE.VAR)) &
+	THEN	V$=FNMESS$(FNS%,' APL'+BATCH.NUM$+'.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+285	GOTO 250 IF FNN%(APL.CH%)=0% &
+
+290	GOTO 240 IF FNN%(APH.CH%)=0% &
+
+300	V%=FNC%(INVPRC.CH%)+FNC%(POREH.CH%) &
+\	V%=FNO%(APREG.CH%,APREG.DEVICE$+"APREG.DAT","/RW","") &
+\	V%=FNO%(APREG.CH%,APREG.DEVICE$+"APREG.DAT","/CR:14,128","") &
+		IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(FNS%,' APREG.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+310	IF FNO%(VENDES.CH%,VENDES.DEVICE$+"VENDES.DAT","/RO","") &
+	THEN	V$=FNMESS$(FNS%,' VENDES.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+400	COMPANY$ = "" &
+ !	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+ !\	DIM #12%, A0$(1%)=64% &
+ !\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+ !\	CLOSE MENU.CH% &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 128%+64%+128%+128% &
+\	FIELD #12%,	08% AS GL.ACCNO$, 	&
+			02% AS GL.SOURCE$, 	&
+			16% AS GL.REFNO$, 	&
+			02% AS GL.TRANDAT$, 	&
+			26% AS GL.DESC$, 	&
+			08% AS GL.AMOUNT$, 	&
+			06% AS GL.XREFNO$, 	&
+			02% AS GL.POSTIM$, 	&
+			02% AS GL.POSDAT$, 	&
+			06% AS GL.BNKCDE$, 	&
+			08% AS GL.CKNO$, 	&
+			06% AS GL.VCHRNO$, 	&
+			06% AS GL.SUBACC$, 	&
+			06% AS GL.PHASE$, 	&
+			08% AS GL.REGQTY$, 	&
+			08% AS GL.PREQTY$, 	&
+			02% AS GL.UPDATE$ 	&
+\	FIELD #12%,	128% AS JUNK$,		&
+			06% AS POREL.PONUM$,    &
+			02% AS POREL.ITEM$,     &
+			02% AS POREL.TYPE$,     &
+			08% AS POREL.QTY$,	&
+			02% AS POREL.DATE$,	&
+			02% AS POREL.PSTDTE$,	&
+			08% AS POREL.ACCNUM$,	&
+			06% AS POREL.SUBACC$,	&
+			08% AS POREL.PHASE$,	&
+			08% AS POREL.PRICE$	&
+\	FIELD #12%,	128%+64% AS JUNK$,		&
+			06% AS APREG.VENNUM$,	&
+			06% AS APREG.VOUNUM$,	&
+			02% AS APREG.VOUDAT$,	&
+			15% AS APREG.INVOIC$,	&
+			02% AS APREG.INVDAT$,	&
+			08% AS APREG.INVAMT$,	&
+			02% AS APREG.CD1099$,	&
+			06% AS APREG.PONUM$,	&
+			02% AS APREG.DISDAT$,	&
+			08% AS APREG.DISAMT$,	&
+			02% AS APREG.DUEDAT$,	&
+			08% AS APREG.APACCT$,	&
+			06% AS APREG.CKNUM$,	&
+			02% AS APREG.CKDAT$,	&
+			08% AS APREG.CASHACCT$,	&
+			01% AS APREG.USETAX$,	&
+			08% AS APREG.AMT1099$,	&
+			08% AS APREG.USEAMT$,	&
+			20% AS APREG.CKDESC$,	&
+			02% AS APREG.UPDATE.MON$,	&
+			06% AS APREG.USE.JOB$	&
+\	FIELD #12%, 	128%+64%+128% AS TEMP$, &
+			06% AS CDJ.VENNUM$, &
+			06% AS CDJ.VOUNUM$, &
+			02% AS CDJ.VOUDAT$, &
+			15% AS CDJ.INVOIC$, &
+			02% AS CDJ.INVDAT$, &
+			20% AS CDJ.CKDESC$, &
+			08% AS CDJ.AMT$, &
+			08% AS CDJ.DISC$, &
+			08% AS CDJ.APACCT$, &
+			08% AS CDJ.ACCT$, &
+			06% AS CDJ.CKNUM$, &
+			02% AS CDJ.CKDAT$, &
+			08% AS CDJ.DISCLOST$, &
+			08% AS CDJ.DISCACCT$, &
+			06% AS CDJ.PONUM$, &
+			02% AS CDJ.DISDAT$, &
+			02% AS CDJ.DUEDAT$, &
+			11% AS CDJ.SORTKEY$ &
+\	FIELD #12%,	128% AS GL.BUF$,	&
+			64% AS POREL.BUF$, 	&
+			128% AS APREG.BUF$,      &
+			128% AS CDJ.BUF$      &
+
+510	TITLE$='Invoice Journal Transmittal'  &
+\	PAGE.TOP$='13'C+'10'C+'10'C+'10'C+ &
+		'DATE: '+DATE$(0%)+SPACE$(25%-LEN(COMPANY$)/2%)+ &
+		COMPANY$+SPACE$(32%-LEN(COMPANY$)/2%)+'PAGE <<###>>'+ &
+		'10'C+'13'C+ &
+		'TIME: '+TIME$(0%)+SPACE$(25%-LEN(TITLE$)/2%)+ &
+		TITLE$+SPACE$(32%-LEN(TITLE$)/2%)+'V1.0'+ &
+		'10'C+'13'C+SPACE$(39%-LEN(REPDATE$)/2%)+REPDATE$+ &
+		'10'C+'10'C+'13'C &
+\	PAGE.TOP1$='General Ledger Updated To '+GL.MONTH$+' '+GL.YEAR$+ &
+		SPACE$(38%)+'Batch # '+BATCH.NUM$+'10'C+'13'C+ &
+		STRING$(80%,61%)+'10'C+'13'C+'     Account #'+ &
+		SPACE$(32%)+'Debit         Credit'+'10'C+'13'C &
+\	PAGE.BOT$='10'C+'10'C+'10'C+'10'C+'10'C+'10'C+'13'C &
+\	BOT.MARGIN%=7% &
+\	PAGE.BREAK%=LIN.PER.PAGE%-BOT.MARGIN% &
+\	DISPLAY.CONTROL%=13% &
+\	MORE.LINES%=3% &
+
+550	!-------------------------------------------PREPARE TO UPDATE &
+	MONTH$=MID(MON.NUM$,INSTR(1%,MON.NAM$,GL.MONTH$),2%) &
+\	MONTH.UPDATE$=CVT%$(FND6%(MONTH$+'00'+GL.YEAR$)) &
+\	IF FNO%(GLMMM.CH%,GLMMM.DEVICE$+'GL'+GL.MONTH$+'.'+ &
+		GL.YEAR$+'S','/SF/NS/RW','')=0% &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$;GL.MONTH$;GL.YEAR$; &
+			' has been closed'; &
+			FNP$('24;55');'Hit any key to continue '; &
+\		INP$=CVT$$(FNINP$(CH%,128%,' ',1%,0%),-1%) &
+\		GOTO 18610 &
+
+560	V%=FNO%(GLMMM.CH%,GLMMM.DEVICE$+'GL'+GL.MONTH$+'.DAS','/SF/NS/RW','') &
+\	V%=FNO%(GLMMM.CH%,GLMMM.DEVICE$+'GL'+GL.MONTH$+'.DAS','/SF/NS/CR:128', '') &
+		IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(FNS%,'GL'+GL.MONTH$+'.DAS',0%,-1%) &
+\		GOTO 18610 &
+
+17000	!-------------------------------------------------POSTING ROUTINE &
+	V%=FNG%(APH.CH%,'') &
+
+17030	FIELD #APH.CH%+1%,     FNL% AS JUNK$, &
+			06% AS APH.VOUNUM$,	&
+			02% AS APH.VOUDAT$, 	&
+			06% AS APH.VENNUM$,	&
+			15% AS APH.INVNUM$,	&
+			08% AS APH.AMTINV$,	&
+			02% AS APH.CD1099$,	&
+			08% AS APH.AMT1099$,	&
+			01% AS APH.USETAX$,	&
+			08% AS APH.AMTUSE$,	&
+			20% AS APH.INVDESC$,	&
+			02% AS APH.INVDAT$,	&
+			02% AS APH.DISCDAT$,	&
+			08% AS APH.AMTDISC$,	&
+			02% AS APH.DUEDAT$,	&
+			08% AS APH.APACCT$,	&
+			06% AS APH.CKNUM$,	&
+			02% AS APH.CKDAT$,	&
+			08% AS APH.CASHACCT$,	&
+			02% AS APH.UPDATE.MON$,	&
+			06% AS APH.USE.JOB$,	&
+			02% AS APH.LINE$(1%)	&
+\	AMOUNT = -(CVT$F(APH.AMTINV$)-CVT$F(APH.AMTDISC$)) &
+\	TOT.DISC = 0.
+
+17040	VENDOR.NAME$ = 'UNDEFINED NAME' &
+\	IF FNG%(VENDES.CH%,APH.VENNUM$)=0% &
+	THEN	VENDOR.NAME$ = MID(FNL$,7%,25%) &
+
+17050	IF CVT$$(APH.CKNUM$,-1%)='' &
+	THEN	TRAN.ACCOUNT$ = APH.APACCT$+'' &
+\		SOURCE$       ='PJ' &
+\		TRAN.DATE$    =APH.INVDAT$+'' &
+\		CHECK.NO$     ='' &
+
+17060	IF CVT$$(APH.CKNUM$,-1%)<>'' &
+	THEN	TRAN.ACCOUNT$ = APH.CASHACCT$+'' &
+\		SOURCE$       ='CD' &
+\		TRAN.DATE$    =APH.CKDAT$+'' &
+\		CHECK.NO$     =APH.CKNUM$+'' &
+
+17070	GOSUB 18000 IF AMOUNT<>0. &
+\	GOSUB 18020 &
+
+17100	VAR.TOTAL = 0.0 &
+\	GOTO 17390 IF FNG%(APL.CH%,APH.VOUNUM$) &
+
+17110	FIELD #APL.CH%+1%,     FNL% AS JUNK$, &
+			06% AS APL.VOUNUM$,	&
+			02% AS APL.LINE$,	&
+			06% AS APL.PONUM$,	&
+			02% AS APL.POLINE$,	&
+			30% AS APL.DESC$,	&
+			08% AS APL.ACCNUM$,	&
+			06% AS APL.SUBACC$,	&
+			08% AS APL.PHASE$,	&
+			08% AS APL.QTY$,	&
+			08% AS APL.AMOUNT$,	&
+			08% AS APL.PRICE.VAR$	&
+\	GOTO 17200 IF APL.VOUNUM$<>APH.VOUNUM$ &
+
+17120	AMOUNT = 0.0 &
+\	IF APH.LINE$(1%)=APL.LINE$ &
+	THEN	AMOUNT = CVT$F(APH.AMTINV$)-CVT$F(APH.AMTDISC$) - TOT.DISC &
+	ELSE	AMOUNT = FNZ(CVT$F(APL.AMOUNT$)/CVT$F(APH.AMTINV$)* &
+		(CVT$F(APH.AMTINV$)-CVT$F(APH.AMTDISC$))) &
+			IF CVT$F(APH.AMTINV$)<>0. &
+\		TOT.DISC = TOT.DISC + AMOUNT &
+
+17125	PRICE.VAR = CVT$F(APL.PRICE.VAR$) &
+\	VAR.TOTAL = VAR.TOTAL + PRICE.VAR &
+\	AMOUNT = AMOUNT - PRICE.VAR &
+\	TRAN.ACCOUNT$ = APL.ACCNUM$+'' &
+\	GOSUB 18006 IF AMOUNT<>0. &
+
+17190	GOTO 17110 IF FNN%(APL.CH%)=0% &
+
+17200	IF VAR.TOTAL <> 0.0 &
+	THEN	TRAN.ACCOUNT$ = PRICE.VARIANCE$ &
+\		AMOUNT = VAR.TOTAL &
+\		GOSUB 18007 &
+
+17390	GOTO 17030 IF FNN%(APH.CH%)=0% &
+
+17400	GOTO 18300 &
+
+17600	!Perform the pagination &
+	IF DISPLAY$<>'Y' AND LINE.COUNT%+MORE.LINES%>PAGE.BREAK% &
+	THEN	END.FLAG%=-1% IF PAGE%>=EPAGE% AND EPAGE%<>0% &
+\		RETURN IF END.FLAG% &
+\		PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPAGE%,PAGE.TOP$+PAGE.TOP1$,PAGE.BOT$); &
+\		LINE.COUNT%=FNLINE% &
+
+17650	IF DISPLAY$='Y' AND LINE.COUNT%>DISPLAY.CONTROL% &
+	THEN	PRINT #OUTPUT.CH%, FNP$('24;55');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\		LINE.COUNT%=0% &
+\		PRINT #OUTPUT.CH%, FNP$('24;1');CLRLIN$;FNP$('18;132') &
+
+17670	RETURN &
+
+18000	! POST ENTRY TO GENERAL LEDGER - HEADER &
+	GOSUB 18200 &
+\	RSET GL.ACCNO$ 	= TRAN.ACCOUNT$	&
+\	LSET GL.SOURCE$ = SOURCE$	&
+\	LSET GL.REFNO$ 	= APH.INVNUM$   &
+\	LSET GL.TRANDAT$= TRAN.DATE$	&
+\	LSET GL.DESC$	= CVT$$(APH.DESC$,128%)+' '+VENDOR.NAME$ &
+\	LSET GL.DESC$	= VENDOR.NAME$ IF CVT$$(APH.DESC$,-1%)='' &
+\	LSET GL.AMOUNT$ = CVTF$(AMOUNT)&
+\	LSET GL.XREFNO$ = APH.VENNUM$	&
+\	LSET GL.POSTIM$ = POST.TIME$	&
+\	LSET GL.POSDAT$ = POST.DATE$	&
+\	LSET GL.BNKCDE$ = ''		&
+\	LSET GL.CKNO$ 	= CHECK.NO$	&
+\	LSET GL.VCHRNO$ = APH.VOUNUM$	&
+\	LSET GL.SUBACC$ = ''		&
+\	LSET GL.PHASE$  = ''		&
+\	LSET GL.REGQTY$ = CVTF$(0.0)	&
+\	LSET GL.PREQTY$ = CVTF$(0.0)	&
+\	LSET GL.UPDATE$ = ''		&
+\	RETURN IF FNA%(GLMMM.CH%,GL.BUF$)=0% &
+\	V$=FNMESS$(FNS%,'GL'+GL.MONTH$+'.BBB',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18006	! POST ENTRY TO GENERAL LEDGER - LINE FILE	&
+	GOSUB 18200 &
+\	RSET GL.ACCNO$ 	= TRAN.ACCOUNT$	&
+\	LSET GL.SOURCE$ = 'PJ'		&
+\	LSET GL.REFNO$ 	= APH.INVNUM$   &
+\	LSET GL.TRANDAT$= APH.INVDAT$	&
+\	LSET GL.DESC$	= CVT$$(APH.DESC$,128%)+' '+VENDOR.NAME$ &
+\	LSET GL.DESC$	= VENDOR.NAME$ IF CVT$$(APH.DESC$,-1%)='' &
+\	LSET GL.AMOUNT$ = CVTF$(AMOUNT)&
+\	LSET GL.XREFNO$ = APH.VENNUM$	&
+\	LSET GL.POSTIM$ = POST.TIME$	&
+\	LSET GL.POSDAT$ = POST.DATE$	&
+\	LSET GL.BNKCDE$ = ''		&
+\	LSET GL.CKNO$ 	= APH.CKNUM$	&
+\	LSET GL.VCHRNO$ = APH.VOUNUM$	&
+\	LSET GL.SUBACC$ = APL.SUBACC$	&
+\	LSET GL.PHASE$  = APL.PHASE$	&
+\	LSET GL.REGQTY$ = APL.QTY$	&
+\	LSET GL.PREQTY$ = CVTF$(0.0)	&
+\	LSET GL.UPDATE$ = ''		&
+\	RETURN IF FNA%(GLMMM.CH%,GL.BUF$)=0% &
+\	V$=FNMESS$(FNS%,'GL'+GL.MONTH$+'.CCC',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18007	! POST ENTRY TO GENERAL LEDGER - HEADER &
+	GOSUB 18200 &
+\	RSET GL.ACCNO$ 	= TRAN.ACCOUNT$	&
+\	LSET GL.SOURCE$ = 'PJ'	&
+\	LSET GL.REFNO$ 	= APH.INVNUM$	&
+\	LSET GL.TRANDAT$= POST.DATE$	&
+\	LSET GL.DESC$	= VENDOR.NAME$ &
+\	LSET GL.AMOUNT$ = CVTF$(AMOUNT)&
+\	LSET GL.XREFNO$ = APH.VENNUM$	&
+\	LSET GL.POSTIM$ = POST.TIME$	&
+\	LSET GL.POSDAT$ = POST.DATE$	&
+\	LSET GL.BNKCDE$ = BATCH.NUM$	&
+\	LSET GL.CKNO$ 	= CHECK.NO$	&
+\	LSET GL.VCHRNO$ = APH.VOUNUM$	&
+\	LSET GL.SUBACC$ = ''		&
+\	LSET GL.PHASE$  = ''		&
+\	LSET GL.REGQTY$ = CVTF$(0.0)	&
+\	LSET GL.PREQTY$ = CVTF$(0.0)	&
+\	LSET GL.UPDATE$ = ''		&
+\	RETURN IF FNA%(GLMMM.CH%,GL.BUF$)=0% &
+\	V$=FNMESS$(FNS%,'GL'+GL.MONTH$+'.DAS',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18008	RETURN &
+
+18010	! POST ENTRY TO THE REGISTER LINE FILE 	&
+	LSET POREL.PONUM$  = APL.PONUM$     	&
+\	LSET POREL.ITEM$   = APL.POLINE$    	&
+\	LSET POREL.TYPE$   = '00'              	&
+\	LSET POREL.QTY$    = APL.QTY$       	&
+\	LSET POREL.DATE$   = APH.VOUDAT$      	&
+\	LSET POREL.PSTDTE$ = MONTH.UPDATE$	&
+\	LSET POREL.ACCNUM$ = APL.ACCNUM$	&
+\	LSET POREL.SUBACC$ = APL.SUBACC$    	&
+\	LSET POREL.PHASE$  = APL.PHASE$     	&
+\	LSET POREL.PRICE$  = APL.AMOUNT$	&
+\	RETURN IF FNA%(POREL.CH%,POREL.BUF$)=0% &
+\	V$=FNMESS$(FNS%,'POREL.DAT',0%,-1%) 	&
+\	V%=FNX%('',-1%,'') 			&
+
+18020	!----------------------------POST TO A/P REGISTER FILE M&
+	LSET APREG.VENNUM$	= APH.VENNUM$	&
+\	LSET APREG.VOUNUM$	= APH.VOUNUM$	&
+\	LSET APREG.VOUDAT$	= APH.VOUDAT$	&
+\	LSET APREG.INVOIC$	= APH.INVNUM$	&
+\	LSET APREG.INVDAT$	= APH.INVDAT$	&
+\	LSET APREG.INVAMT$	= APH.AMTINV$	&
+\	LSET APREG.CD1099$	= APH.CD1099$	&
+\	LSET APREG.PONUM$	= ''		&
+\	LSET APREG.DISDAT$	= APH.DISCDAT$  &
+\	LSET APREG.DISAMT$	= APH.AMTDISC$	&
+\	LSET APREG.DUEDAT$	= APH.DUEDAT$	&
+\	RSET APREG.APACCT$	= APH.APACCT$	&
+\	LSET APREG.CKNUM$	= APH.CKNUM$	&
+\	LSET APREG.CKDAT$	= APH.CKDAT$	&
+\	LSET APREG.CASHACCT$	= APH.CASHACCT$	&
+\	LSET APREG.USETAX$	= APH.USETAX$	&
+\	LSET APREG.AMT1099$	= APH.AMT1099$	&
+\	LSET APREG.USEAMT$	= CVTF$(0.0)	&
+\	LSET APREG.CKDESC$	= APH.INVDESC$	&
+\	LSET APREG.UPDATE.MON$	= MONTH.UPDATE$	&
+\	LSET APREG.USE.JOB$	= ''		&
+\	RETURN IF FNA%(APREG.CH%,APREG.BUF$)=0% &
+\	V$=FNMESS$(FNS%,'APREG.DAT',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18030	!------------------POST TO INVOICE FILE AND TO CDJHND FILE &
+	IF FNA%(INVOIC.CH%,APH.VENNUM$+APH.INVNUM$+APH.INVDAT$) &
+	THEN	V$=FNMESS$(FNS%,'INVOIC.DAT',0%,-1%) &
+\		V%=FNX%('',-1%,'') &
+
+18035	RETURN IF CVT$$(APH.CKNUM$,-1%)='' &
+\	LSET CDJ.VENNUM$	=APH.VENNUM$ &
+\	LSET CDJ.VOUNUM$	=APH.VOUNUM$ &
+\	LSET CDJ.VOUDAT$	=APH.VOUDAT$ &
+\	LSET CDJ.INVOIC$	=APH.INVNUM$ &
+\	LSET CDJ.INVDAT$	=APH.INVDAT$ &
+\	LSET CDJ.CKDESC$	=APH.INVDESC$&
+\	LSET CDJ.AMT$		=APH.AMTINV$ &
+\	LSET CDJ.DISC$		=APH.AMTDISC$&
+\	LSET CDJ.APACCT$	=APH.APACCT$ &
+\	LSET CDJ.ACCT$		=APH.CASHACCT$ &
+\	LSET CDJ.CKNUM$		=APH.CKNUM$ &
+\	LSET CDJ.CKDAT$		=APH.CKDAT$ &
+\	LSET CDJ.DISCLOST$	='0'C   &
+\	LSET CDJ.DISCACCT$	=''	    &
+\	LSET CDJ.PONUM$		=''         &
+\	LSET CDJ.DISDAT$	=APH.DISCDAT$ &
+\	LSET CDJ.DUEDAT$	=APH.DUEDAT$ &
+\	LSET CDJ.SORTKEY$	="" &
+\	RETURN IF FNA%(CDJHND.CH%,CDJ.BUF$)=0% &
+\	V$=FNMESS$(FNS%,'CDJHND.DAT',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18200	!------------------------------------------ACUMULATE THE TRANSMITAL &
+	GOTO 18210 IF INVC.ACCOUNT$(LOOP%)=TRAN.ACCOUNT$ &
+						FOR LOOP%=1% TO INVC.LOOP% &
+\	INVC.LOOP%,LOOP%=INVC.LOOP%+1% &
+\	DEBIT(LOOP%),CREDIT(LOOP%)=0. &
+\	INVC.ACCOUNT$(LOOP%)=TRAN.ACCOUNT$+'' &
+
+18210	IF AMOUNT>=0. &
+	THEN	DEBIT(LOOP%) = DEBIT(LOOP%) + AMOUNT &
+	ELSE	CREDIT(LOOP%) = CREDIT(LOOP%) - AMOUNT &
+
+18220	RETURN &
+
+18300	!--------------------------------------PRINT TRANSMITTAL TOTALS &
+	IF DISPLAY$<>'Y' &
+	THEN	OUTPUT.CH%=12% &
+\		OPEN OUTDEV$ AS FILE OUTPUT.CH%, MODE 2% &
+
+18310	V%=FNC%(CHART.CH%) &
+\	V%=FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RO','') &
+\	IF DISPLAY$='Y' &
+	THEN	PRINT #OUTPUT.CH%, CLSCN$;PAGE.TOP1$;FNSR$('4;19');FNP$('19;1');&
+	ELSE	PRINT #OUTPUT.CH%, ENTER.COPY$; &
+		FNPAGE$(LIN.PER.PAGE%,0%,1%,PAGE.TOP$+PAGE.TOP1$,''); &
+\		LINE.COUNT%=FNLINE% &
+
+18320	DEBIT.TOTAL,CREDIT.TOTAL,TOTAL=0. &
+\	FOR I%=1% TO INVC.LOOP% &
+\		FOR J%=1% TO INVC.LOOP%-1% &
+\			IF INVC.ACCOUNT$(J%) > INVC.ACCOUNT$(J%+1%) &
+			THEN	ACCOUNT$ = INVC.ACCOUNT$(J%) &
+\				INVC.ACCOUNT$(J%) = INVC.ACCOUNT$(J%+1%) &
+\				INVC.ACCOUNT$(J%+1%) = ACCOUNT$ &
+\				DEBIT = DEBIT(J%) &
+\				DEBIT(J%) = DEBIT(J%+1%) &
+\				DEBIT(J%+1%) = DEBIT &
+\				CREDIT = CREDIT(J%) &
+\				CREDIT(J%) = CREDIT(J%+1%) &
+\				CREDIT(J%+1%) = CREDIT &
+
+18330		NEXT J% &
+\	NEXT I% &
+
+18350	FOR LOOP%=1% TO INVC.LOOP% &
+\		TEMP$=INVC.ACCOUNT$(LOOP%) &
+\		TEMP$=SPACE$(8%-LEN(TEMP$))+TEMP$ &
+\		CHART.DESC$='' &
+\		V%=FNG%(CHART.CH%,TEMP$) &
+\		CHART.DESC$='Undefined' IF FNS% &
+\		CHART.DESC$=MID(FNL$,9%,20%) IF FNS%=0% &
+\		GOSUB 17600 &
+\		PRINT #OUTPUT.CH% USING '     \      \  \                    \', &
+			INVC.ACCOUNT$(LOOP%),CHART.DESC$; &
+\		PRINT #OUTPUT.CH%, '               '; IF DEBIT(LOOP%)=0. &
+\		PRINT #OUTPUT.CH% USING '###,###,###.## ', &
+			DEBIT(LOOP%); IF DEBIT(LOOP%)<>0. &
+\		PRINT #OUTPUT.CH% USING '###,###,###.##', &
+			CREDIT(LOOP%); IF CREDIT(LOOP%)<>0. &
+\		PRINT #OUTPUT.CH% &
+\		DEBIT.TOTAL  = DEBIT.TOTAL  + DEBIT(LOOP%) &
+\		CREDIT.TOTAL = CREDIT.TOTAL + CREDIT(LOOP%) &
+\		TOTAL=TOTAL+DEBIT(LOOP%)-CREDIT(LOOP%) &
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\	NEXT LOOP% &
+\	GOSUB 17600 &
+
+18360	PRINT #OUTPUT.CH%, &
+\	PRINT #OUTPUT.CH% USING '\      \  '+SPACE$(27%)+'###,###,###.## ###,###,###.##', &
+			'TOTAL',DEBIT.TOTAL,CREDIT.TOTAL &
+\	PRINT #OUTPUT.CH%, &
+
+18365	PRINT #OUTPUT.CH%, 'Purchase Journal has been posted to the ledger' &
+\	LINE.COUNT% = LINE.COUNT% + 2% &
+\	PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%+2%,0%,'', &
+			PAGE.BOT$);EXIT.COPY$; IF DISPLAY$<>'Y' &
+\	CLOSE OUTPUT.CH%,CH% &
+\	OPEN 'KB:' AS FILE CH%, MODE 8%+256% &
+\	GOTO 18390 IF FNZ(DEBIT.TOTAL)=FNZ(CREDIT.TOTAL) &
+\	PRINT #CH%, FNP$('24;1'); &
+		'Batch is OUT OF BALANCE -- POSTING IS ABORTED.'; &
+		FNP$('24;55');'Hit any key to continue. . . '; &
+\		INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\		PRINT #CH%, CLSCN$;FNSR$('1;24'); &
+\		V%=FNX%('',-1%,'') &
+
+18390	PRINT #CH%, FNP$('24;1'); &
+		'Hit Y to abort or any other key to continue '; &
+\	INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\	IF CVT$$(INP$,-1%)='Y' &
+	THEN	PRINT #CH%, CLSCN$;FNSR$('1;24');'Aborted';FNP$('24;1'); &
+\		V%=FNX%('',-1%,'') &
+
+18400	!------------------------------------------------------------------ &
+	!POST TO PO LINE, INVOICE, AND CDJHND FILE &
+	!------------------------------------------------------------------ &
+	PRINT #CH%, 'Continuing posting process'  &
+\	V% = FNC%(POREL.CH%) + FNC%(CDJHND.CH%) &
+\	V%=FNO%(POREL.CH%,POREL.DEVICE$+"POREL.DAT","/RW","") &
+\	V%=FNO%(POREL.CH%,POREL.DEVICE$+"POREL.DAT","/CR:12,64","") &
+		IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(FNS%,' POREL.DAT ',0%,-1%) &
+\		GOTO 18630 &
+
+18405	V%=FNO%(CDJHND.CH%,CDJHND.DEVICE$+"CDJHND.DAT","/RW","") &
+\	V%=FNO%(CDJHND.CH%,CDJHND.DEVICE$+"CDJHND.DAT","/CR:14,128","") &
+		IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(FNS%,' CDJHND.DAT ',0%,-1%) &
+\		GOTO 18630 &
+
+18410	V%=FNO%(INVOIC.CH%,INVOIC.DEVICE$+"INVOIC.DAS","/RW/SF","") &
+\	V%=FNO%(INVOIC.CH%,INVOIC.DEVICE$+"INVOIC.DAS","/SF/CR:32","") &
+		IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(FNS%,' INVOIC.DAT ',0%,-1%) &
+\		GOTO 18630 &
+
+18420	APH.CH%		= 06% &
+\	V%=FNC%(APH.CH%) &
+\	V%=FNO%(APH.CH%,APH.DEVICE$+'APH'+BATCH.NUM$+'.DAT','/RO','') &
+\	V%=FNG%(APH.CH%,'') &
+
+18430	FIELD #APH.CH%+1%,     FNL% AS JUNK$, &
+			06% AS APH.VOUNUM$,	&
+			02% AS APH.VOUDAT$, 	&
+			06% AS APH.VENNUM$,	&
+			15% AS APH.INVNUM$,	&
+			08% AS APH.AMTINV$,	&
+			02% AS APH.CD1099$,	&
+			08% AS APH.AMT1099$,	&
+			01% AS APH.USETAX$,	&
+			08% AS APH.AMTUSE$,	&
+			20% AS APH.INVDESC$,	&
+			02% AS APH.INVDAT$,	&
+			02% AS APH.DISCDAT$,	&
+			08% AS APH.AMTDISC$,	&
+			02% AS APH.DUEDAT$,	&
+			08% AS APH.APACCT$,	&
+			06% AS APH.CKNUM$,	&
+			02% AS APH.CKDAT$,	&
+			08% AS APH.CASHACCT$,	&
+			02% AS APH.UPDATE.MON$,	&
+			06% AS APH.USE.JOB$,	&
+			02% AS APH.LINE$(1%)	&
+\	GOSUB 18030 &
+\	GOTO 18490 IF FNG%(APL.CH%,APH.VOUNUM$) &
+
+18440	FIELD #APL.CH%+1%,     FNL% AS JUNK$, &
+			06% AS APL.VOUNUM$,	&
+			02% AS APL.LINE$,	&
+			06% AS APL.PONUM$,	&
+			02% AS APL.POLINE$,	&
+			30% AS APL.DESC$,	&
+			08% AS APL.ACCNUM$,	&
+			06% AS APL.SUBACC$,	&
+			08% AS APL.PHASE$,	&
+			08% AS APL.QTY$,	&
+			08% AS APL.AMOUNT$,	&
+			08% AS APL.PRICE.VAR$	&
+\	GOTO 18490 IF APL.VOUNUM$<>APH.VOUNUM$ &
+\	IF CVT$$(APL.PONUM$,-1%)<>'' &
+	THEN	GOSUB 18010 &
+
+18480	GOTO 18440 IF FNN%(APL.CH%)=0% &
+
+18490	GOTO 18430 IF FNN%(APH.CH%)=0% &
+
+18500	!------------------------------------------------------------------- &
+	! COMPLETE PROCESS &
+	!------------------------------------------------------------------- &
+
+18510	V%=FNC%(I%) FOR I%=1% TO 12% &
+\	KILL APH.DEVICE$+'APH'+BATCH.NUM$+'.DAT' &
+\	KILL APH.DEVICE$+'APH'+BATCH.NUM$+'.DA1' &
+\	KILL APL.DEVICE$+'APL'+BATCH.NUM$+'.DAT' &
+\	KILL APL.DEVICE$+'APL'+BATCH.NUM$+'.DA1' &
+
+18600	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;1');'Process complete '; &
+		FNP$('24;1'); &
+
+18610	V%=FNX%('',0%,'') &
+
+18630	PRINT #CH%, CLSCN$;FNP$('24;1');'Try later again. Aborting'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\	INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\	V%=FNX%('',-1%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 450 IF ERL=400% 						&
+\	RESUME 70 IF ERL=60% AND ERR=27% 				&
+\	RESUME 18610 IF ERR=54% 					&
+\	RESUME 18600 IF ERL=18510 &
+\	RESUME 160 IF ERL=130% &
+\	RESUME 190 IF ERL=170% OR ERL=180% &
+
+19010	IF ERR=28%	&
+	THEN	JUNK$ = SYS('6'C + CHR$(-7%)) 	&
+\		RESUME 18610 				&
+
+19100	IF ERL=120% &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			'Unable to find print control file.  Aborting'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\		RESUME 18610 &
+
+19900	ON ERROR GOTO 0 						&
+
+30000	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,'3'C) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1.0) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30090	!--------------------------------------------------------------- &
+	! LOOK UP PRICE OR COST IN INVENTORY PRICE COST FILE &
+	! CHN%		= CHANNEL THAT PRICE COST FILE IS OPENED ON &
+	! INVSTO$	= INVENTORY # AND STORE # &
+	! FLAG.CUSTYP$	= PRICE OR COST FLAG AND THE CUSTOMER TYPE &
+	! DATE.TIME$	= DATE AND TIME COST OR PRICE IS EFFECTIVE &
+	! METHOD%	= INVENTORY METHOD &
+	! PC		= PRICE OR COST &
+	!--------------------------------------------------------------- &
+	DEF*FNPC(CHN%, INVSTO$, WORK.DATE$, METHOD%, INVQTY) &
+\		FLAG.CUSTYP$ = MID(INVSTO$,19%,3%) &
+\		DEF.STORE$ = RIGHT(INVSTO$,22%) &
+\		INVSTO$ = LEFT(INVSTO$,18%) &
+
+30091		PC = 0.0 &
+\		TEMP.DATE$ = CVT%$(-32766%) &
+\		IF FNG%(CHN%,INVSTO$)  &
+		THEN	GOTO 30098 &
+
+30092		FIELD #CHN%+1%,	FNL% AS TEMP$,	&
+			15% AS INVPRC.INVNUM$,	&
+			03% AS INVPRC.STORNUM$,	&
+			02% AS INVPRC.LINE$,	&
+			01% AS INVPRC.TYPFLAG$,	&
+			02% AS INVPRC.CUSTYPE$,	&
+			02% AS INVPRC.DATE$,	&
+			02% AS INVPRC.TIME$,	&
+			08% AS INVPRC.COSTPRICE$,&
+			08% AS INVPRC.QTY$	&
+\		GOTO 30098 IF INVPRC.INVNUM$ + INVPRC.STORNUM$ <> INVSTO$ &
+\		GOTO 30097 IF INVPRC.TYPFLAG$ + INVPRC.CUSTYPE$ <> &
+				LEFT(FLAG.CUSTYP$+'  ',3%) &
+\		IF METHOD% = 1% OR INVPRC.TYPFLAG$ = 'P' &
+		THEN	IF CVT$%(WORK.DATE$) >= CVT$%(INVPRC.DATE$) AND &
+				CVT$%(INVPRC.DATE$) >= CVT$%(TEMP.DATE$) &
+			THEN	PC = CVT$F(INVPRC.COSTPRICE$) &
+\				TEMP.DATE$ = INVPRC.DATE$ + '' &
+
+30097		GOTO 30092 IF FNN%(CHN%) = 0% &
+
+30098		IF PC=0.0 AND DEF.STORE$<>RIGHT(INVSTO$,16%) &
+		THEN	INVSTO$ = LEFT(INVSTO$,15%)+DEF.STORE$ &
+\			GOTO 30091 &
+
+30099		FNPC = FNZ(PC*INVQTY) &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)='155'C+"["+ROWCOL$+"H"	! Direct Cursor Address &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)			&
+\		MESG$=MID(SYS('6'C+'9'C+CHR$(ERRNUM%)),3%,30%)+	&
+								DESC$	&
+\		IF PRINT.TEST%					&
+		THEN	PRINT #CH%, FNP$('24;1');MESG$;FNP$('24;55');	&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CH%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30270	DEF*FNSR$(BEGEND$)='155'C+"["+BEGEND$+"r"	! Scroll control 	&
+
+30300	!----------------------------------SYSTEM 24 HOUR TIME HANDLERS &
+	DEF FNT24S$(TYME$)=CHR$(VAL(MID(TYME$,21%,2%)))+		&
+				CHR$(VAL(MID(TYME$,24%,2%)))		&
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 						&
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% 	&
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% 			&
+
+30500   DEF FNZ(Y)=SGN(Y)*INT(ABS(Y)*100.+0.5001)/100.0 &
+
+30600	DEF FNPAGE$(Y0%,Y1%,Y2%,Y0$,Y1$) 				&
+\		Y2$='' 							&
+\		Y2$=STRING$(Y0%-(Y1%+ 					&
+			LEN(XLATE(Y1$,'0'C+'0'C+'0'C+'0'C+'0'C+ &
+			'0'C+'0'C+'0'C+'0'C+'0'C+'10'C))),10%) &
+			IF Y1$<>'' 	&
+\		PAGE.LINE%=LEN(XLATE(Y0$,'0'C+'0'C+'0'C+'0'C+'0'C+ &
+			'0'C+'0'C+'0'C+'0'C+'0'C+'10'C)) 	&
+\		Y%=INSTR(1%,Y1$+Y0$,'<<#') 				&
+\		Y3%=INSTR(1%,Y1$+Y0$,'#>>') 				&
+\		Y$=RIGHT(NUM1$(100000.0+Y2%),8%-(Y3%-Y%)) 		&
+\		Y3%=-3% IF Y%=0% 					&
+\		PRINT #OUTPUT.CH%, Y2$;LEFT(Y1$+Y0$,Y%-1%);Y$; 		&
+			RIGHT(Y1$+Y0$,Y3%+3%); 				&
+\		PAGE%=Y2% 						&
+\	FNEND 								&
+
+30650	DEF FNPAGE%=PAGE%+1% 						&
+
+30660	DEF FNLINE%=PAGE.LINE% 						&
+
+31000	! Chain entry 							&
+	GOTO 30 							&
+
+32767	END

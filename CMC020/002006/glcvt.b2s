@@ -1,0 +1,231 @@
+10	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		Copyright (c) 1984 BY &
+	!		Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used and &
+	! copied only in accordance with the terms of such license and with &
+	! the inclusion of the above copyright notice.  This software or any &
+	! other copies therof may not be provided or otherwise made avail- &
+	! able to any other person.  No title to and ownership of the soft- &
+	! ware is hereby transferred. &
+	! &
+	! The information in this software is subject to change without no- &
+	! tice and should not be construed as a committment by Computer &
+	! Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!	Convert from old CK gotmat to new GL format. &
+	! &
+	!----------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLREL$=ESC$+"[K"		! Cursor to end of line &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[5;19r"	! Scroll region &
+\	S.RESET$=ESC$+"c"		! Reset Screen &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column mode &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column mode &
+\	ENTER.COPY$=ESC$+"[?5i"		! Enter media copy &
+\	EXIT.COPY$=ESC$+"[?4i"		! Exit media copy &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+\	HID.CURSOR$=ESC$+"[24;80H"	! Hid the cursor in the corner &
+\	PRINT #CH%, ESC$;"<";		! Enter ANSI mode &
+\	PRINT #CH%, CLSCN$;FNP$(1%,74%);B.ON$;R.ON$;BLINK.ON$;"WAIT";G.OFF$; &
+
+100	FILE.CH%   = 2% &
+\	GL.CH%     = 4% &
+\	CKDATA.CH% = 6% &
+\	CHAOLD.CH% = 4% &
+\	CHART.CH%  = 6% &
+\	CROSS.CH%  = 8% &
+\	UNIQUE.CH% = 12% &
+\	LOOP.DATA% = 2% &
+\	LOOP.KEY%  = 1% &
+\	KEY.LEN%   = 8% &
+\	DATA.LEN%  = 18% &
+
+200	IF FNO%(FILE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	CHACVT.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(FILE.CH%,"CHACVT")=0% &
+\		CKDATA.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(FILE.CH%,"CKDATA")=0% &
+\		GL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(FILE.CH%,"GL    ")=0% &
+\		CHAOLD.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(FILE.CH%,"CHAOLD")=0% &
+\		CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(FILE.CH%,"CHART ")=0% &
+\		V%=FNC%(FILE.CH%) &
+
+3000	!---------------------------------CONVERT TO GL FROM CKDATA FORMAT &
+
+3010	PRINT #CH%, CLSCN$;FNP$(4%,1%);"ENTER MONTH (MMM.YY) "; &
+\	GL$=CVT$$(FNINP$(CH%,0%," ",6%),-1%) &
+\	GOTO 10000 IF GL$="%^C" OR GL$="" &
+\	GLMMM$='GL'+GL$+'S' &
+!\	V%=FNO%(GL.CH%,GL.DEVICE$+GLMMM$,"/SF/NS/RW","") &
+\	STOP IF FNO%(GL.CH%,GL.DEVICE$+GLMMM$,"/CR:128/NS/SF","") &
+
+3020	CK$='CK'+GL$+'1' &
+\	V%=FNO%(CKDATA.CH%,CKDATA.DEVICE$+CK$,'/RO/SF/NS','') &
+\	IF FNS% &
+	THEN 	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Unable to open ";CK$;FNP$(24%,55%); "Hit any key to"; &
+			" continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 3020 IF INP$<>'%^C' &
+\		PRINT FNX%('',0%,'') &
+
+3025	CLOSE 12% &
+\	OPEN "NL:" AS FILE 12%, RECORDSIZE 128% &
+\	FIELD #12%, &
+		8% AS ACCNUM$, 2% AS SOURCE$, 16% AS REFNUM$, &
+		2% AS TRXDAT$, 26% AS DESC$, 8% AS AMOUNT$, 6% AS CRXREF$, &
+		2% AS POSTIM$, 2% AS POSDAT$, 6% AS BANKCD$, 8% AS CHKDEP$, &
+		6% AS VOUCHR$, 6% AS SUBACC$, 6% AS PHASE$, 8% AS REGQTY$, &
+		8% AS PREQTY$, 2% AS UPDATE$ &
+\	FIELD #12%, 128% AS GL.BUF$ &
+
+3030	IF FNG%(CKDATA.CH%,"") &
+	THEN 	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			CK$;" is empty";FNP$(24%,55%); "Hit any key to"; &
+			" continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLRLIN$; &
+\		GOTO 10000 &
+
+3035	PRINT #CH%, CLSCN$;"Converting file "+CK$+".  Please wait" &
+
+3040	FIELD #CKDATA.CH%, FNL% AS TEMP$, &
+		06% AS CK.REFNUM$, &
+		08% AS CK.ACCNUM$, &
+		02% AS CK.SOURCE$, &
+		08% AS CK.AMOUNT$, &
+		02% AS CK.MONTH$, &
+		02% AS CK.DAY$, &
+		02% AS CK.YEAR$, &
+		28% AS CK.DESC$, &
+		06% AS CK.JOB$ &
+\	GOTO 3300 IF CK.REFNUM$ = "DDDDDD" &
+\	PRINT #CH%, FNR(CKDATA.CH%);CHR$(13%); &
+
+3050	RSET ACCNUM$=CVT$$(CK.ACCNUM$,-1%) &
+\	LSET SOURCE$=CK.SOURCE$ &
+\	LSET REFNUM$=CK.REFNUM$ &
+
+3210	LSET TRXDAT$=CVT%$(FND6%( &
+		RIGHT(NUM1$(CVT$%(CK.MONTH$)+100%),2%) + &
+		RIGHT(NUM1$(CVT$%(CK.DAY$)+100%),2%) + &
+		RIGHT(NUM1$(CVT$%(CK.YEAR$)+100%),2%))) &
+
+3220	LSET DESC$=CK.DESC$ &
+\	TEMP$='' &
+\	TEMP$=RIGHT(CK.DESC$,11%)+'' &
+		IF LEFT(CK.DESC$,3%)="JE#" &
+\	PERSON$=CVT$$(TEMP$,-1%) &
+\	SPACE%=INSTR(1%,PERSON$,"*") &
+\	SPACE%=INSTR(1%,PERSON$," ") IF SPACE%<2% &
+\	GOTO 3230 IF SPACE%<2% OR SPACE%>6% &
+\	TEMP$=LEFT(TEMP$,SPACE%-1%) &
+
+3230	LSET AMOUNT$=CK.AMOUNT$ &
+\	LSET CRXREF$=TEMP$ &
+\	LSET POSTIM$=CVT%$(0%) &
+\	LSET POSDAT$=CVT%$(0%) &
+\	LSET BANKCD$='' &
+\	LSET CHKDEP$=CK.REFNUM$ &
+\	LSET VOUCHR$=CK.REFNUM$ &
+\	LSET SUBACC$=CK.JOB$ &
+\	LSET PHASE$='' &
+\	LSET REGQTY$,PREQTY$=CVTF$(0.) &
+\	LSET UPDATE$=RIGHT(CK.DESC$,28%) &
+\	STOP IF FNA%(GL.CH%,GL.BUF$) &
+
+3300	IF FNN%(CKDATA.CH%)=0% THEN 3040 &
+
+3310	V%=FNC%(CKDATA.CH%)+FNC%(GL.CH%) &
+\	GOTO 3000 &
+!\	V%=FNO%(CKDATA.CH%,CKDATA.DEVICE$+'CK'+GL$+'.DAT','/CR:16,64','') &
+
+10000	! &
+	PRINT #CH%, CLSCN$;FNP$(1%,76%);B.ON$;R.ON$;BLINK.ON$;"WAIT";G.OFF$; &
+\	V%=FNX%("",0%,"") &
+
+19000	!-------------------------------------------------ERROR TRAPPING &
+	IF ERR=28% &
+	THEN	JUNK$=SYS(CHR$(6%) + CHR$(-7%)) &
+\		IF ERL<1000% &
+		THEN	OPT$="Q" &
+\			RESUME 1040 &
+
+19010	IF ERR=28% &
+	THEN	V%=FNG%(-FILE.CH%,NUM1$(KEY.POINTER%)) &
+			IF KEY.POINTER%<>0% &
+\		RESUME 1010 &
+
+19020	IF ERR=52% &
+	THEN	INP$="" &
+\		RESUME &
+
+19030	IF ERR=11% &
+	THEN	RESUME 1000 &
+
+19900	ON ERROR GOTO 0 &
+
+30000	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR ASCII(BUFFER$)=8% &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$="%^C" IF ASCII(BUFFER$)=3% &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	  !------------------------------------------------------------ &
+	  ! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	  !------------------------------------------------------------ &
+	  DEF*FNP$(ROW%,COL%)=ESC$+"["+NUM1$(ROW%)+";"+NUM1$(COL%)+"H" &
+
+30140	DEF FNRDATE$(Y$) &
+\		Y%=CVT$%(Y$) &
+\		FNRDATE$=RIGHT(NUM1$((Y% AND 480%)/32%+100%),2%)+ &
+			RIGHT(NUM1$((Y% AND 31%)+100%),2%)+ &
+			RIGHT(NUM1$((SWAP%(Y%) AND 254%)/2%+100%),2%) &
+\	FNEND &
+
+32040	DEF FND8%(D8)=D8 &
+
+32060	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+32767	END &
+	&
+

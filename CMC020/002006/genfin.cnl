@@ -1,0 +1,10 @@
+$ BE2
+OLD [2,6]GENFIN
+APPEND ISM:ISAM19
+COMPILE/DOU/OBJ/CHAIN/nowarn
+$ TKB @[2,6]GENFIN
+$ PIP [2,6]GENFIN<104>=GENFIN.TSK/LO
+$ pip genfin.obj/de/lo
+$ pip genfin.cmd/de/lo
+$ pip genfin.odl/de/lo
+$ pip genfin.tsk/de/lo

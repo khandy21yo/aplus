@@ -1,0 +1,7 @@
+dcl
+be2
+old build
+compile/dou/obj/nolist/nocross/flag:nodeclining/chain
+build/ind
+$tkb @build
+del build.cmd,build.obj,build.odl,build.bak

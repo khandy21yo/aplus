@@ -1,0 +1,355 @@
+10	! CLEAR CANCELED CHECKS &
+	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		COPYRIGHT (c) 1984 BY &
+	!		COMPUTER MANAGEMENT CENTER, IDAHO FALLS, IDAHO &
+	! &
+	! THIS SOFTWARE IS FURNISHED UNDER A LICENSE AND MAY BE USED AND &
+	! COPIED ONLY IN ACCORDANCE WITH THE TERMS OF SUCH LICENSE AND WITH &
+	! THE INCLUSION OF THE ABOVE COPYRIGHT NOTICE.  THIS SOFTWARE OR ANY &
+	! OTHER COPIES THEROF MAY NOT BE PROVIDED OR OTHERWISE MADE AVAIL- &
+	! ABLE TO ANY OTHER PERSON.  NO TITLE TO AND OWNERSHIP OF THE SOFT- &
+	! WARE IS HEREBY TRANSFERRED. &
+	! &
+	! THE INFORMATION IN THIS SOFTWARE IS SUBJECT TO CHANGE WITHOUT NO- &
+	! TICE AND SHOULD NOT BE CONSTRUED AS A COMMITTMENT BY COMPUTER &
+	! MANAGEMENT CENTER. &
+	! &
+	! CMC ASSUMES NO RESPONSIBILITY FOR THE USE OR RELIABILITY OF &
+	! ITS SOFTWARE ON EQUIPMENT WHICH IS NOT SUPPORTED BY CMC. &
+	! &
+	! ++ &
+	! &
+	! ABSTRACT: &
+	! &
+	! &
+	! &
+	! &
+	! ENVIRONMENT: &
+	! &
+	!	PDP-11 UNDER RSTS/E BP2 &
+	! &
+	! AUTHOR: &
+	! &
+	! MODIFIED BY: &
+	! &
+	!----------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erace cursor to end of screen &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+\	PRINT #CH%, ESC$;"<";		! Enter ANSI mode &
+
+100	DIM POINTER%(500%) &
+\	BANKBL.CH% = 2% &
+\	BNKTMP.CH% = 4% &
+\	BANKNW.CH% = 6% &
+\	APCCTL.CH% = 8% &
+\	DEVICE.CH% = 2% &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	APCCTL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"APCCTL")=0% &
+\		BANKBL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"BANKBL")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	NAME BANKBL.DEVICE$+'BANKBL.DAT' AS BANKBL.DEVICE$+'BANKBK.DAT' &
+\	NAME BANKBL.DEVICE$+'BANKBL.DA1' AS BANKBL.DEVICE$+'BANKBK.DA1' &
+
+310	IF FNO%(BANKBL.CH%,BANKBL.DEVICE$+"BANKBK.DAT","/RW","")+ &
+		FNO%(BNKTMP.CH%,BANKBL.DEVICE$+'BANKBK.DA1','/SF/RO/NS', &
+			'') &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While open BANKBK.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+320	IF FNO%(BANKNW.CH%,BANKBL.DEVICE$+"BANKBL.DAT","/CR:16,64","") &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While open BANKBL.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+330	IF FNO%(APCCTL.CH%,APCCTL.DEVICE$+'APCCTL.DAS',"/RW/SF/NS","") &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While open APCCTL.DAS";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE 12% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE 12% &
+
+450	!---------------RESUME LINE FOR ERROR ON LINE 400 &
+	OPEN "NL:" AS FILE 12%, RECORDSIZE 512% &
+\	FIELD #12%,	06% AS APCCTL.RECORD.KEY$, &
+			08% AS TEMP$, &
+			02% AS APCCTL.CUR.YR$, &
+			02% AS APCCTL.FIR.MO$ &
+\	FIELD #12%,	16%+LOOP%*2% AS TEMP$, &
+			02% AS APCCTL.MON.UP$(LOOP%) &
+				FOR LOOP%=1% TO 7% &
+\	FIELD #12%, 	30%+LOOP%*2% AS TEMP$, &
+			02% AS APCCTL.REC.CO$(LOOP%) &
+				FOR LOOP%=1% TO 7% &
+\	FIELD #12%, 	46% AS TEMP$, &
+			02% AS APCCTL.START.COUNT$, &
+			02% AS APCCTL.FINISH.COUNT$, &
+			02% AS APCCTL.FUNCTION$, &
+			06% AS APCCTL.TEMP$, &
+			06% AS APCCTL.PASSWORD$ &
+\	FIELD #12%, 512% AS APCCTL.BUF$ &
+
+460	IF FNG%(APCCTL.CH%,'BNK') &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While looking for the control record";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+470	LSET APCCTL.BUF$=FNL$+'' &
+\	CUR.YR%=CVT$%(APCCTL.CUR.YR$) &
+\	MON.UP%(LOOP%)=CVT$%(APCCTL.MON.UP$(LOOP%)) &
+		FOR LOOP%=1% TO 7% &
+\	REC.CO%(LOOP%)=CVT$%(APCCTL.REC.CO$(LOOP%)) &
+		FOR LOOP%=1% TO 7% &
+\	MON.UP%(2%)=MON.UP%(1%)+1% IF MON.UP%(2%)=0% &
+\	MON.UP%(2%)=1% IF MON.UP%(2%)>12% &
+\	MON.UP%(LOOP%)=MON.UP%(LOOP%+1%) FOR LOOP%=1% TO 7% &
+\	REC.CO%(LOOP%)=REC.CO%(LOOP%+1%) FOR LOOP%=1% TO 7% &
+\	TEMP%=CUR.YR% &
+\	TEMP%=CUR.YR%+1% IF MON.UP%(1%)=12% &
+\	TEMP%=0% IF TEMP%>99% &
+\	CUR.YR$=RIGHT(NUM1$(TEMP%+100%),2%) &
+\	CAN.DATE$=RIGHT(NUM1$(MON.UP%(1%)+100%),2%)+CUR.YR$ &
+\	CUTOFF%=FND6%(LEFT(CAN.DATE$,2%)+'00'+RIGHT(CAN.DATE$,3%)) &
+
+500	TEMP$     = "REMOVE CANCELLED DOCUMENTS" &
+\	FRAME$    = CLSCN$+R.ON$+LEFT(TEMP$,39%)+SPACE$(40%-LEN(TEMP$))+ &
+			SPACE$(40%-LEN(COMPANY$))+COMPANY$ &
+\	FRAME$    = FRAME$+FNP$(I%,1%)+" "+FNP$(I%,80%)+" " FOR I%=2% TO 19% &
+\	FRAME$    = FRAME$+FNP$(20%,1%)+SPACE$(80%)+G.OFF$ &
+\	PAINT1.1$ = 	FNP$(6%,20%)+'     CUT OFF DATE ('+CAN.DATE$+')'+ &
+			FNP$(10%,10%)+"PERCENT COMPLETE"+ &
+			FNP$(11%,10%)+"0%   10%  20%  30%  40%  50%"+ &
+			"  60%  70%  80%  90% 100%" &
+
+510	IF FNG%(BANKBL.CH%,"") &
+	THEN	PRINT #CH%,FNP$(24%,1%);"BANKBL IS EMPTY";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+1000	!---------------------------------------------------PROGRAM CONTROL &
+
+1010	PRINT #CH%, COLM.OFF$;SCROLL.ON$;G.OFF$;FRAME$;PAINT1.1$; &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		"COMMAND: Process Quit "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%),32%) &
+\	GOTO 1010 IF OPT$="%^C" &
+
+1040	IF OPT$="Q" &
+	THEN	PRINT #CH%, SCROLL.ON$;CLSCN$; &
+			FNP$(1%,1%);"Returning to previous menu."; &
+			FNP$(1%,64%);"Please wait. . . " &
+\		KILL BANKBL.DEVICE$+'BANKBL.DAT' &
+\		KILL BANKBL.DEVICE$+'BANKBL.DA1' &
+\		NAME BANKBL.DEVICE$+'BANKBK.DAT' AS BANKBL.DEVICE$+'BANKBL.DAT' &
+\		NAME BANKBL.DEVICE$+'BANKBK.DA1' AS BANKBL.DEVICE$+'BANKBL.DA1' &
+\		V%=FNX%("",0%,"") &
+
+1050	GOTO 1030 IF OPT$<>'P' &
+
+3100	!------------------------------------REMOVE CANCELED DOCUMENTS &
+	PRINT #CH%, CLRBOT$;FNP$(24%,1%);"Processing. . . "; &
+		FNP$(24%,1%); &
+\	ITEM%=0% &
+\	V%=FNG%(BANKBL.CH%,"") &
+\	PERCOM%,COUNTER%=0% &
+\	COL%=10% &
+\	COUNTER%,TOTAL.RECORD=FNT/10. &
+\	TESTCHECK$='' &
+\	CA,BA=0. &
+
+3120	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=TOTAL.RECORD &
+	THEN	PRINT #CH%, FNP$(12%,COL%);R.ON$;"     ";G.OFF$; &
+			IF PERCOM%<100% &
+\		COUNTER%=0% &
+\		COL%=COL%+5% &
+\		PERCOM%=PERCOM%+10% &
+\		PRINT #CH%, FNP$(24%,1%); &
+
+3130	FIELD #BANKBL.CH%+1%, FNL% AS TEMP$,		&
+			08% AS BANKBL.CHECKNUM$,	&
+			06% AS BANKBL.BANKACC$,		&
+			02% AS BANKBL.FLAG$,		&
+			02% AS BANKBL.CHECKDATE$,	&
+			08% AS BANKBL.CHECKAMT$,	&
+			02% AS BANKBL.CANDATE$,		&
+			08% AS BANKBL.BANKAMT$,		&
+			02% AS BANKBL.GLDATE$		&
+\	FIELD #BANKBL.CH%+1%, FNL% AS TEMP$,		&
+			64% AS BANKBL.BUF$		&
+\	GOSUB 18000 IF CK.TEST$<>BANKBL.CHECKNUM$ OR &
+		BANKBL.BANKACC$<>BANK.TEST$ &
+\	CK.TEST$=BANKBL.CHECKNUM$+'' &
+\	BANK.TEST$=BANKBL.BANKACC$+'' &
+
+3140	GL.AMOUNT=FNZ(CVT$F(BANKBL.CHECKAMT$)) &
+\	BANK.AMOUNT=FNZ(CVT$F(BANKBL.BANKAMT$)) &
+\	GL.DATE$=FND6$(CVT$%(BANKBL.GLDATE$)) &
+\	GL.DATE%=FND6%(LEFT(GL.DATE$,2%)+'00'+ &
+		RIGHT(GL.DATE$,7%)) &
+\	CAN.DATE$=FND6$(CVT$%(BANKBL.CANDATE$)) &
+\	CAN.DATE%=FND6%(LEFT(CAN.DATE$,2%)+'00'+ &
+		RIGHT(CAN.DATE$,7%)) &
+\	GOTO 3200 IF CAN.DATE%>CUTOFF% AND BANK.AMOUNT<>0. AND CAN.DATE% &
+		OR GL.DATE%>CUTOFF% AND GL.AMOUNT<>0. AND GL.DATE% &
+\	CA=CA+GL.AMOUNT &
+\	BA=BA+BANK.AMOUNT &
+\	ITEM%=ITEM%+1% &
+\	POINTER%(ITEM%)=FNR(BANKBL.CH%+1%) &
+\	GOTO 3220 &
+
+3200	IF FNA%(BANKNW.CH%,BANKBL.BUF$) &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While adding to BANKBL.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+3220	IF FNN%(BANKBL.CH%)=0% &
+	THEN	GOTO 3120 &
+
+3300	GOSUB 18000 &
+
+3310	PRINT #CH%, CLRBOT$;'Confirm (Y/n) '; &
+\	INP$=CVT$$(FNINP$(CH%,128%,'_',1%),-1%) &
+\	IF INP$='N' &
+	THEN	OPT$='Q' &
+\		GOTO 1040 &
+
+3320	IF FNG%(APCCTL.CH%,'BNK') &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While looking for the control record";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\		V%=FNX%("",0%,"") &
+
+3330	LSET APCCTL.BUF$=FNL$ &
+\	LSET APCCTL.MON.UP$(LOOP%)=CVT%$(MON.UP%(LOOP%)) FOR LOOP%=1% TO 7% &
+\	LSET APCCTL.REC.CO$(LOOP%)=CVT%$(REC.CO%(LOOP%)) FOR LOOP%=1% TO 7% &
+\	CUR.YR%=CUR.YR%+1% IF MON.UP%(1%)=12% &
+\	LSET APCCTL.CUR.YR$=CVT%$(CUR.YR%) &
+\	IF FNU%(-APCCTL.CH%,APCCTL.BUF$) &
+	THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"while updating the control record";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		PRINT #CH%, CLSCN$;SCROLL.ON$; &
+\		V%=FNX%("",0%,"") &
+
+3390	PRINT #CH%, CLSCN$;"Please wait"; &
+\	KILL BANKBL.DEVICE$+'BANKBK.DAT' &
+\	KILL BANKBL.DEVICE$+'BANKBK.DA1' &
+\	V%=FNX%("",0%,"") &
+
+18000	!=============================================================== &
+	! ADD BACK TO FILE IF NOT CANCELED &
+	!=============================================================== &
+	GOTO 18090 IF BANK.TEST$='' AND CK.TEST$='' AND CA=0. AND BA=0. &
+		OR FNZ(CA-BA)=0.0 &
+
+18010	FOR LOOP%=1% TO ITEM% &
+\		IF FNG%(-BNKTMP.CH%,NUM1$(POINTER%(LOOP%))) &
+		THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While looking up in BANKBL.DAT";FNP$(24%,55%); &
+				"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			OPT$='Q' &
+\			GOTO 1040 &
+
+18020		IF FNA%(BANKNW.CH%,FNL$) &
+		THEN	PRINT #CH%, FNP$(24%,1%);CLRLIN$; &
+			"Error";FNS%;"While adding to BANKBL.DAT";FNP$(24%,55%); &
+			"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			OPT$='Q' &
+\			GOTO 1040 &
+
+18030	NEXT LOOP% &
+
+18090	ITEM%=0% &
+\	BA,CA=0. &
+\	RETURN &
+
+19000	!----------------------------------------------------ERROR TRAPPING &
+
+19010	IF ERL=400% &
+	THEN	RESUME 450 &
+
+19020	IF ERR=51% OR ERR=52% &
+	THEN	 RESUME &
+
+19990	ON ERROR GOTO 0 &
+
+30000	DEF*FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+
+30010		BUFFER$="%^C" IF INSTR(1%,BUFFER$,CHR$(3%))=3% &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!------------------------------------------------------------ &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!------------------------------------------------------------ &
+	DEF*FNP$(ROW%,COL%)=ESC$+"["+NUM1$(ROW%)+";"+NUM1$(COL%)+"H" &
+
+30055	DEF FNZ(A.VALUE)=INT(A.VALUE*100.+.5)/100. &
+
+30060	DEF FND8%(D8)=D8 &
+
+30070	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30090	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ "/"+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ "/"+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+32767	END &
+

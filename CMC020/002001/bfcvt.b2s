@@ -1,0 +1,69 @@
+10	STOP IF FNO%(2%,'CUSTOM.DAT','','') &
+\	STOP IF FNO%(4%,'CUSBAL.DAT','/CR:16,128','') &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 128% &
+\	FIELD #12%,	06% AS CUSBAL.CUSNUM$,		&
+			08% AS CUSBAL.ACCT$,		&
+			08% AS CUSBAL.CUR$,		&
+			08% AS CUSBAL.30$,		&
+			08% AS CUSBAL.60$,		&
+			08% AS CUSBAL.90$,		&
+			08% AS CUSBAL.OVER$,		&
+			08% AS CUSBAL.YTDSER$,		&
+			02% AS CUSBAL.LSTCHRG$,		&
+			02% AS CUSBAL.LSTPYMT$,		&
+			08% AS CUSBAL.LIMIT$,		&
+			02% AS CUSBAL.UPDDAT$		&
+\	FIELD #12%, 128% AS CUSBAL.BUF$ &
+
+500	STOP IF FNG%(2%,'') &
+
+600	FIELD #3%, 	FNL% AS TEMP$,		&
+			006% AS CUSTOM.NUM$, &
+			120% AS TEMP$, &
+			008% AS AR.ACCT$, &
+			044% AS TEMP$, &
+			008% AS T$(1%), &
+			008% AS T$(2%), &
+			008% AS T$(3%), &
+			008% AS T$(4%), &
+			008% AS T$(5%), &
+			008% AS T$(6%), &
+			008% AS T$(7%), &
+			008% AS T$(8%), &
+			002% AS LAST.DATE$ &
+\	FLAG% = 0% &
+\	FLAG% = -1% IF CVT$F(T$(I%)) <> 0.0 FOR I% = 1% TO 5% &
+\	FLAG% = -1% IF CVT$F(T$(7%)) <> 0.0 &
+\	PRINT CUSTOM.NUM$,CVT$F(T$(7%)) &
+\	IF FLAG% &
+	THEN	LSET CUSBAL.CUSNUM$	= CUSTOM.NUM$		&
+\		RSET CUSBAL.ACCT$	= CVT$$(AR.ACCT$,-1%)	&
+\		LSET CUSBAL.CUR$	= CVTF$(CVT$F(T$(1%))+	&
+						CVT$F(T$(7%)))	&
+\		LSET CUSBAL.30$		= T$(2%)		&
+\		LSET CUSBAL.60$		= T$(3%)		&
+\		LSET CUSBAL.90$		= T$(4%)		&
+\		LSET CUSBAL.OVER$	= T$(5%)		&
+\		LSET CUSBAL.YTDSER$	= T$(6%)		&
+\		LSET CUSBAL.LSTCHRG$	= CVT%$(0%)		&
+\		LSET CUSBAL.LSTPYMT$	= LAST.DATE$		&
+\		LSET CUSBAL.LIMIT$	= CVTF$(0.)		&
+\		LSET CUSBAL.UPDDAT$	= CVT%$(FND6%('020087'))&
+\		STOP IF FNA%(4%,CUSBAL.BUF$) &
+
+700	GOTO 600 IF FNN%(2%)=0% &
+\	V%=FNX%('',0%,'') &
+
+30060	DEF FND8%(D8)=D8						&
+
+30070	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% 	&
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% 			&
+
+30080	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ "/"+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ "/"+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+32767	END &
+
+

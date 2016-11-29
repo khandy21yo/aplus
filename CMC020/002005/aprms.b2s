@@ -1,0 +1,872 @@
+10	!--------------------------------------------------------------- &
+	!	CONVERT AP FILES TO ASCII TEXT FILES &
+	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	!	10/03/92 - Kevin Handy &
+	!		Modified to handle city/state/zip conversion better. &
+
+30	INPUT "Retain all History ";RETAIN$ &
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+
+100	DIM FILE.NAME$(100%), SYS.CALL%(30%), FIL.NAM%(30%) &
+\	DIM PERIOD$(12%), MONTH$(12%) &
+\	CONTRL.CH%	= 02% &
+\	VENDES.CH%	= 06% &
+\	APJ.CH%		= 02% &
+\	AP1.CH%		= 02% &
+\	APREG.CH%	= 02% &
+\	APCLOS.CH%	= 02% &
+\	APCCTL.CH%	= 02% &
+\	AP109T.CH%	= 02% &
+\	AP1099.CH%	= 02% &
+\	APCHK.FRM%	= 02% &
+\	ATTACH.FRM%	= 02% &
+\	ASCII.CH%	= 10% &
+
+110	MONTH$(1%) = "01" &
+\	MONTH$(2%) = "02" &
+\	MONTH$(3%) = "03" &
+\	MONTH$(4%) = "04" &
+\	MONTH$(5%) = "05" &
+\	MONTH$(6%) = "06" &
+\	MONTH$(7%) = "07" &
+\	MONTH$(8%) = "08" &
+\	MONTH$(9%) = "09" &
+\	MONTH$(10%) = "10" &
+\	MONTH$(11%) = "11" &
+\	MONTH$(12%) = "12" &
+
+200	! &
+
+300	!------------------------------------------------------------- &
+	! OPEN ASCII TEXT FILE &
+	!------------------------------------------------------------- &
+	OPEN 'APSYS.ASC' FOR OUTPUT AS FILE ASCII.CH% &
+
+1000	!-----------------------------------------------PROGRAM RESTART POINT &
+	PRINT #CH%, CLSCN$;'Convert ap to ascii file' &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Convert Test Quit'; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,0%),32%) &
+\	GOTO 1000 IF OPT$='%^C' &
+
+1040	IF OPT$='Q' &
+	THEN	CLOSE ASCII.CH% &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1');FNX%('',0%,''); &
+
+1050	TEST% = 0% &
+\	GOTO 2000 IF OPT$='C' &
+\	IF OPT$ = 'T' &
+	THEN	TEST% = -1% &
+\		GOTO 2000 &
+
+1055	GOTO 1030 &
+
+2000	!-------------------------------------------------------------- &
+	! OPEN CHART AND CONTROL FILE &
+	!-------------------------------------------------------------- &
+	GOTO 2009 IF FNO%(CONTRL.CH%,'CONTRL.DAT','/RO','') &
+\	GOTO 2009 IF FNG%(CONTRL.CH%,'CHART ') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting CONTRL.DAT"; &
+
+2005	FIELD #CONTRL.CH%+1%,	FNL% AS TEMP$, &
+			06% AS CONTRL.KEY$, &
+			02% AS TEMP$, &
+			02% AS CONTRL.LAST$, &
+			02% AS CONTRL.TEMP$, &
+			02% AS CONTRL.FLAG$, &
+			02% AS CONTRL.TEMP$, &
+			02% AS CONTRL.FF$, &
+			02% AS CONTRL.TEMP$, &
+			02% AS CONTRL.YEAR$, &
+			02% AS CONTRL.BUDYR$, &
+			01% AS CONTRL.EXTHIS$, &
+			23% AS CONTRL.TEMP$, &
+			08% AS CONTRL.SUMMARY.TOTAL$, &
+			08% AS CONTRL.SUMMARY.ACCT$ &
+\	TEMP%=CVT$%(CONTRL.FF$) &
+\	FOR LOOP% = 1% TO 12% &
+\		PERIOD$(LOOP%) = MONTH$(TEMP%) &
+\		TEMP% = TEMP% + 1% &
+\		TEMP% = 1% IF TEMP%>12% &
+\	NEXT LOOP% &
+
+2009	!-------------------------------------------------------------- &
+	! OPEN VENDES AND CONTROL FILE &
+	!-------------------------------------------------------------- &
+	GOTO 2020 IF FNO%(APCCTL.CH%,'APCCTL.DAS','/SF/RO','') &
+\	GOTO 2020 IF FNG%(APCCTL.CH%,'APL') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting APCCTL.DAT"; &
+
+2010	TEMP% = FNL% &
+\	FIELD #APCCTL.CH%, &
+	!------------------------------------------------CONTROL RECORD &
+			TEMP% + 64%+30%*(LOOP%-1%) AS JUNK$, &
+			8% AS APCCTL.ACC$(LOOP%), &
+			8% AS APCCTL.CTD$(LOOP%), &
+			8% AS APCCTL.CUR$(LOOP%), &
+			6% AS APCCTL.BANK$(LOOP%)	FOR LOOP%=1% TO 8% &
+\	FIELD #APCCTL.CH%, 	TEMP% + 304% AS JUNK$, &
+			08% AS APCCTL.APCASH$, &
+			08% AS APCCTL.DISLOST$, &
+			06% AS APCCTL.VOUCH$, &
+			06% AS APCCTL.CKNUM$ &
+\	PRINT #ASCII.CH%, '<STARTFILE> = APCCTL' &
+\	PRINT #ASCII.CH%, '<AP_ACCT>';		APCCTL.ACC$(1%) &
+\	PRINT #ASCII.CH%, '<CASH_ACCT>';	APCCTL.APCASH$ &
+\	PRINT #ASCII.CH%, '<DISCLOST_ACCT>';	APCCTL.DISLOST$ &
+\	PRINT #ASCII.CH%, '<LAST_TRANKEY>';	APCCTL.VOUCH$ &
+\	PRINT #ASCII.CH%, '<LAST_CKNUM>';	APCCTL.CKNUM$ &
+\	PRINT #ASCII.CH%, '<>' &
+\	PRINT #ASCII.CH%, '<ENDFILE> = CONTRL' &
+
+2020	V% = FNC%(APCCTL.CH%) &
+\	COUNTER% = 0% &
+\	GOTO 2100 IF FNO%(VENDES.CH%,'VENDES.DAT','/RO','') &
+\	GOTO 2100 IF FNG%(VENDES.CH%,'') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #ASCII.CH%, '<STARTFILE> = VENDES' &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting VENDES .DAT"; &
+
+2030	TEMP%=FNL% &
+\	FIELD #VENDES.CH%+1%,TEMP% AS TEMP$, &
+			06% AS VENDES.NUM$, &
+			29% AS VENDES.NAM$, &
+			29% AS VENDES.ADD$, &
+			29% AS VENDES.CST$, &
+			29% AS VENDES.ZIP$, &
+			05% AS VENDES.XXX$, &
+			01% AS VENDES.PURGE$, &
+			10% AS VENDES.PHN$, &
+			13% AS VENDES.FED$, &
+			01% AS VENDES.199$, &
+			02% AS VENDES.DUE$, &
+			02% AS VENDES.DISDAY$, &
+			02% AS VENDES.DISC$, &
+			08% AS VENDES.BILMTD$, &
+			02% AS VENDES.VOUMTD$, &
+			08% AS VENDES.BILYTD$, &
+			02% AS VENDES.VOUYTD$, &
+			08% AS VENDES.PAIDMTD$, &
+			08% AS VENDES.PAIDYTD$, &
+			02% AS VENDES.UPDFLAG$, &
+			02% AS VENDES.UPDCOUNT$, &
+			02% AS VENDES.LMU$, &
+			01% AS VENDES.OK.TO.PURGE$, &
+			15% AS VENDES.SORTKEY$ &
+\	IF LEN(FNL$) > 256% &
+	THEN	FIELD #VENDES.CH% + 1%, TEMP% + 216% AS TEMP$, &
+			29% AS VENDES.ADD2$, &
+			29% AS VENDES.CST2$, &
+			29% AS VENDES.ZIP2$ &
+
+2040	DUE = CVT$%(VENDES.DUE$)/100. &
+\	DISDAY = CVT$%(VENDES.DISDAY$)/100. &
+\	DISC = CVT$%(VENDES.DISC$)/100. &
+\	V% = FNPR%('<VENNUM>',	VENDES.NUM$) &
+\	V% = FNPR%('<VENNAM>',	VENDES.NAM$) &
+\	CITY$, STATE$, ZIP$ = '' &
+\	CST$ = "" &
+	! &
+\	CST$ = CVT$$(VENDES.ZIP$, 8%+16%+128%) &
+\	VENDES.ZIP$ = "" &
+\	IF ((INSTR(1%, "0123456789", LEFT(CST$,1%)) <> 0%) OR (CST$ = "")) AND &
+		INSTR(1%, CST$, ",") = 0% AND &
+		INSTR(1%, VENDES.CST$, ",") <> 0% &
+	THEN &
+		CST$ = CVT$$(VENDES.CST$ + " " + CST$, 8%+16%+128%) &
+\		VENDES.CST$ = "" &
+
+2042	IF INSTR(1%, CST$, "CANADA") OR INSTR(1%, CST$, "GERMANY") OR &
+		INSTR(1%, CST$, ",") = 0% &
+	THEN &
+		CITY$ = CST$ &
+\		GOTO 2050 &
+
+2044	I% = LEN(CST$) &
+\	I% = I% - 1% WHILE (I% >=1%) AND INSTR(1%, "0123456789-", MID(CST$,I%,1%)) <> 0% &
+\	ZIP$ = RIGHT(CST$, I%+1%) &
+\	CST$ = LEFT(CST$, I%) &
+\	I% = INSTR(1%, CST$, ",") &
+\	CITY$ = LEFT(CST$, I% - 1%) &
+\	STATE$ = RIGHT(CST$, I%+1%) &
+
+2050	V% = FNPR%('<ADD1>',	VENDES.ADD$) &
+\	V% = FNPR%('<ADD2>',	VENDES.CST$) &
+\	V% = FNPR%('<CITY>',	CITY$) &
+\	V% = FNPR%('<STATE>',	STATE$) &
+\	V% = FNPR%('<ZIP>',	ZIP$) &
+\	V% = FNPR%('<PURGE>',	VENDES.PURGE$) &
+\	V% = FNPR%('<PHONE>',	VENDES.PHN$) &
+\	V% = FNPR%('<FEDID>',	VENDES.FED$) &
+\	V% = FNPR%('<FLG1099>',	VENDES.199$) &
+\	V% = FNPR%('<DUEDAYS>',	FNREFORM$(DUE,5%)) &
+\	V% = FNPR%('<DISDAYS>',	FNREFORM$(DISDAY,5%)) &
+\	V% = FNPR%('<DISCPER>',	FNREFORM$(DISC,5%)) &
+\	V% = FNPR%('<ALPSRT>',	VENDES.SORTKEY$) &
+\	IF LEN(FNL$)<256% &
+	THEN	GOTO 2080 &
+
+2060	CITY$, STATE$, ZIP$ = '' &
+\	CST$ = "" &
+	! &
+\	CST$ = CVT$$(VENDES.ZIP2$, 8%+16%+128%) &
+\	VENDES.ZIP2$ = "" &
+\	IF INSTR(1%, "0123456789", LEFT(CST$,1%)) <> 0% AND &
+		INSTR(1%, CST$, ",") = 0% AND &
+		INSTR(1%, VENDES.CST$, ",") <> 0% &
+	THEN &
+		CST$ = CVT$$(VENDES.CST2$ + " " + CST$, 8%+16%+128%) &
+\		VENDES.CST2$ = "" &
+
+2062	IF INSTR(1%, CST$, "CANADA") OR INSTR(1%, CST$, "GERMANY") OR &
+		INSTR(1%, CST$, ",") = 0% &
+	THEN &
+		CITY$ = CST$ &
+\		GOTO 2070 &
+
+2064	I% = LEN(CST$) &
+\	I% = I% - 1% WHILE (I% >=1%) AND INSTR(1%, "0123456789-", MID(CST$,I%,1%)) <> 0% &
+\	ZIP$ = RIGHT(CST$, I%+1%) &
+\	CST$ = LEFT(CST$, I%) &
+\	I% = INSTR(1%, CST$, ",") &
+\	CITY$ = LEFT(CST$, I% - 1%) &
+\	STATE$ = RIGHT(CST$, I%+1%) &
+
+2070	V% = FNPR%('<POADD1>',	VENDES.ADD2$) &
+\	V% = FNPR%('<POADD2>',	VENDES.CST2$) &
+\	V% = FNPR%('<POCITY>',	CITY$) &
+\	V% = FNPR%('<POSTATE>',	STATE$) &
+\	V% = FNPR%('<POZIP>',	ZIP$) &
+
+2080	PRINT #ASCII.CH%, '<>' &
+
+2090	GOTO 2030 IF FNN%(VENDES.CH%)=0% AND TEST% = 0% &
+\	PRINT #ASCII.CH%, '<ENDFILE> = VENDES' &
+
+2100	!------------------------------------------------------------- &
+	! CONVERT AP REG FILE &
+	!------------------------------------------------------------- &
+	GOTO 2200 IF FNO%(APREG.CH%,"APREG.DAT","/RO","") &
+\	GOTO 2200 IF FNG%(APREG.CH%,'') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #ASCII.CH%, '<STARTFILE> = APREG' &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting APREG.DAT"; &
+
+2110	FIELD #APREG.CH%+1%, FNL% AS TEMP$, &
+			06% AS APREG.VENNUM$, &
+			06% AS APREG.VOUNUM$, &
+			02% AS APREG.VOUDAT$, &
+			15% AS APREG.INVOIC$, &
+			02% AS APREG.INVDAT$, &
+			08% AS APREG.INVAMT$, &
+			02% AS APREG.CD1099$, &
+			06% AS APREG.PONUM$, &
+			02% AS APREG.DISDAT$, &
+			08% AS APREG.DISAMT$, &
+			02% AS APREG.DUEDAT$, &
+			08% AS APREG.APACCT$, &
+			06% AS APREG.CKNUM$, &
+			02% AS APREG.CKDAT$, &
+			08% AS APREG.CASHACCT$, &
+			01% AS APREG.USETAX$, &
+			08% AS APREG.AMT1099$, &
+			08% AS APREG.USEAMT$, &
+			20% AS APREG.CKDESC$, &
+			02% AS APREG.UPDATE.MON$, &
+			06% AS APREG.USE.JOB$ &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.VOUDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	VOUDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.INVDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	INVDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.DISDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	DISDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.DUEDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	DUEDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.CKDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	CKDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+
+2120	WORK.TRANDAT$ = FND6$(CVT$%(APREG.UPDATE.MON$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	PP$ = MID(WORK.TRANDAT$,3%,2%) &
+\	FOR LOOP% = 1% TO 12% &
+\		IF PP$ = PERIOD$(LOOP%) &
+		THEN	YEAR% = VAL(LEFT(WORK.TRANDAT$,2%)) &
+\			YEAR% = YEAR% - 1% IF PERIOD$(LOOP%)<PERIOD$(LOOP%-1%) &
+\			WORK.TRANDAT$ = RIGHT(NUM1$(YEAR%+100%),2%) + &
+					RIGHT(NUM1$(LOOP%+100%),2%) + &
+					RIGHT(WORK.TRANDAT$,5%) &
+\			GOTO 2130 &
+
+2125	NEXT LOOP% &
+
+2130	UPDATED$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	PRINT #ASCII.CH%, '<VENNUM>'; APREG.VENNUM$ &
+\	PRINT #ASCII.CH%, '<TRANKEY>'; APREG.VOUNUM$ &
+\	PRINT #ASCII.CH%, '<TRAN_DATE>'; VOUDAT$ &
+\	PRINT #ASCII.CH%, '<INVNUM>'; APREG.INVOIC$ &
+\	PRINT #ASCII.CH%, '<INVDAT>'; INVDAT$ &
+\	PRINT #ASCII.CH%, '<INVAMT>'; FNREFORM$(CVT$F(APREG.INVAMT$),11%) &
+\	PRINT #ASCII.CH%, '<CODE_1099>'; APREG.CD1099$ &
+\	PRINT #ASCII.CH%, '<PONUM>'; APREG.PONUM$ &
+\	PRINT #ASCII.CH%, '<DISCDAT>'; DISDAT$ &
+\	PRINT #ASCII.CH%, '<DISAMT>'; FNREFORM$(CVT$F(APREG.DISAMT$),11%) &
+\	PRINT #ASCII.CH%, '<DUEDAT>'; DUEDAT$ &
+\	PRINT #ASCII.CH%, '<AP_ACCT>'; APREG.APACCT$ &
+\	PRINT #ASCII.CH%, '<CKNUM>'; APREG.CKNUM$ &
+\	PRINT #ASCII.CH%, '<CKDAT>'; CKDAT$ &
+\	PRINT #ASCII.CH%, '<CASH_ACCT>'; APREG.CASHACCT$ &
+\	PRINT #ASCII.CH%, '<AMT_1099>'; FNREFORM$(CVT$F(APREG.AMT1099$),11%) &
+\	PRINT #ASCII.CH%, '<USE_AMT>'; FNREFORM$(CVT$F(APREG.USETAX$),11%) &
+\	PRINT #ASCII.CH%, '<CKDESC>'; APREG.CKDESC$ &
+\	PRINT #ASCII.CH%, '<UPDATED>'; UPDATED$ &
+\	PRINT #ASCII.CH%, '<USE_JOB_NUM>'; APREG.USE.JOB$ &
+\	PRINT #ASCII.CH%, '<>' &
+\	GOTO 2110 IF FNN%(APREG.CH%) = 0% AND TEST% = 0% &
+\	PRINT #ASCII.CH%, '<ENDFILE> = APREG' &
+\	V% = FNC%(APREG.CH%) &
+
+2200	!------------------------------------------------------------- &
+	! CONVERT AP CLOSE FILE &
+	!------------------------------------------------------------- &
+	GOTO 2300 IF FNO%(APCLOS.CH%,"APCLOS.DAT","/RO","") &
+\	GOTO 2300 IF FNG%(APCLOS.CH%,'') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #ASCII.CH%, '<STARTFILE> = APCLOS' &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting APCLOS.DAT"; &
+\	TEST.VOUNUM$ = "" &
+
+2210	FIELD #APCLOS.CH%+1%, FNL% AS TEMP$, &
+			06% AS APREG.VENNUM$, &
+			06% AS APREG.VOUNUM$, &
+			02% AS APREG.VOUDAT$, &
+			15% AS APREG.INVOIC$, &
+			02% AS APREG.INVDAT$, &
+			08% AS APREG.INVAMT$, &
+			02% AS APREG.CD1099$, &
+			06% AS APREG.PONUM$, &
+			02% AS APREG.DISDAT$, &
+			08% AS APREG.DISAMT$, &
+			02% AS APREG.DUEDAT$, &
+			08% AS APREG.APACCT$, &
+			06% AS APREG.CKNUM$, &
+			02% AS APREG.CKDAT$, &
+			08% AS APREG.CASHACCT$, &
+			01% AS APREG.USETAX$, &
+			08% AS APREG.AMT1099$, &
+			08% AS APREG.USEAMT$, &
+			20% AS APREG.CKDESC$, &
+			02% AS APREG.UPDATE.MON$, &
+			06% AS APREG.USE.JOB$ &
+\	IF RETAIN$ = "N" &
+	THEN	IF FNG%(VENDES.CH%,APREG.VENNUM$) = 0% &
+		THEN	FIELD #VENDES.CH%+1%,FNL% AS TEMP$, &
+				06% AS VENDES.NUM$, &
+				29% AS VENDES.NAM$, &
+				29% AS VENDES.ADD$, &
+				29% AS VENDES.CST$, &
+				29% AS VENDES.ZIP$, &
+				05% AS VENDES.XXX$, &
+				01% AS VENDES.PURGE$, &
+				10% AS VENDES.PHN$, &
+				13% AS VENDES.FED$, &
+				01% AS VENDES.199$ &
+\			IF VENDES.199$ <> "Y" &
+			THEN	PRINT "!"; &
+\				COUNTER% = COUNTER% + 1% &
+\				PRINT IF COUNTER% > 70% &
+\				COUNTER% = 0% IF COUNTER% > 70% &
+\				GOTO 2280 &
+
+2215	WORK.TRANDAT$ = FND6$(CVT$%(APREG.VOUDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	VOUDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	GOTO 2280 IF VOUDAT$ < "1992" &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.INVDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	INVDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.DISDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	DISDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.DUEDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	DUEDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	WORK.TRANDAT$ = FND6$(CVT$%(APREG.CKDAT$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	CKDAT$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+
+2220	WORK.TRANDAT$ = FND6$(CVT$%(APREG.UPDATE.MON$)) &
+\	WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+			LEFT(WORK.TRANDAT$,2%) + &
+			MID(WORK.TRANDAT$,4%,2%) &
+\	PP$ = MID(WORK.TRANDAT$,3%,2%) &
+\	FOR LOOP% = 1% TO 12% &
+\		IF PP$ = PERIOD$(LOOP%) &
+		THEN	YEAR% = VAL(LEFT(WORK.TRANDAT$,2%)) &
+\			YEAR% = YEAR% - 1% IF PERIOD$(LOOP%)<PERIOD$(LOOP%-1%) &
+\			WORK.TRANDAT$ = RIGHT(NUM1$(YEAR%+100%),2%) + &
+					RIGHT(NUM1$(LOOP%+100%),2%) + &
+					RIGHT(WORK.TRANDAT$,5%) &
+\			GOTO 2230 &
+
+2225	NEXT LOOP% &
+
+2230	UPDATED$ = "19" + LEFT(WORK.TRANDAT$+'000000',6%) &
+\	PRINT #ASCII.CH%, '<VENNUM>'; APREG.VENNUM$ &
+\	PRINT #ASCII.CH%, '<TRANKEY>'; APREG.VOUNUM$ &
+\	PRINT #ASCII.CH%, '<TRAN_DATE>'; VOUDAT$ &
+\	PRINT #ASCII.CH%, '<INVNUM>'; APREG.INVOIC$ &
+\	PRINT #ASCII.CH%, '<INVDAT>'; INVDAT$ &
+\	PRINT #ASCII.CH%, '<INVAMT>'; FNREFORM$(CVT$F(APREG.INVAMT$),11%) &
+\	PRINT #ASCII.CH%, '<CODE_1099>'; APREG.CD1099$ &
+\	PRINT #ASCII.CH%, '<PONUM>'; APREG.PONUM$ &
+\	PRINT #ASCII.CH%, '<DISCDAT>'; DISDAT$ &
+\	PRINT #ASCII.CH%, '<DISAMT>'; FNREFORM$(CVT$F(APREG.DISAMT$),11%) &
+\	PRINT #ASCII.CH%, '<DUEDAT>'; DUEDAT$ &
+\	PRINT #ASCII.CH%, '<AP_ACCT>'; APREG.APACCT$ &
+\	PRINT #ASCII.CH%, '<CKNUM>'; APREG.CKNUM$ &
+\	PRINT #ASCII.CH%, '<CKDAT>'; CKDAT$ &
+\	PRINT #ASCII.CH%, '<CASH_ACCT>'; APREG.CASHACCT$ &
+\	PRINT #ASCII.CH%, '<AMT_1099>'; FNREFORM$(CVT$F(APREG.AMT1099$),11%) &
+\	PRINT #ASCII.CH%, '<USE_AMT>'; FNREFORM$(CVT$F(APREG.USETAX$),11%) &
+\	PRINT #ASCII.CH%, '<CKDESC>'; APREG.CKDESC$ &
+\	PRINT #ASCII.CH%, '<UPDATED>'; UPDATED$ &
+\	PRINT #ASCII.CH%, '<USE_JOB_NUM>'; APREG.USE.JOB$ &
+\	PRINT #ASCII.CH%, '<>' &
+
+2280	GOTO 2210 IF FNN%(APCLOS.CH%) = 0% AND TEST% = 0% &
+\	PRINT #ASCII.CH%, '<ENDFILE> = APCLOS' &
+\	V% = FNC%(APCLOS.CH%) &
+
+2300	!------------------------------------------------------------- &
+	! CONVERT 1099 TABLE &
+	!------------------------------------------------------------- &
+	GOTO 2400 IF FNO%(AP109T.CH%,"AP109T.DAS","/SF/RO","") &
+\	GOTO 2400 IF FNG%(AP109T.CH%,'') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	PRINT #ASCII.CH%, '<STARTFILE> = AP109T' &
+\	PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting AP109T.DAT"; &
+
+2310	FIELD #AP109T.CH%, FNL% AS TEMP$, &
+			02% AS AP109T.CODENUM$, &
+			20% AS AP109T.DESC$, &
+			08% AS AP109T.BASE$, &
+			02% AS AP109T.FRMLOC$, &
+			01% AS AP109T.FRMNUM$ &
+\	PRINT #ASCII.CH%, '<CODE>'; AP109T.CODENUM$ &
+\	PRINT #ASCII.CH%, '<DESCR>'; AP109T.DESC$ &
+\	PRINT #ASCII.CH%, '<BASEAMT>'; FNREFORM$(CVT$F(AP109T.BASE$),11%) &
+\	PRINT #ASCII.CH%, '<FRMNUM>'; AP109T.FRMLOC$ &
+\	PRINT #ASCII.CH%, '<FRMLOC>'; AP109T.FRMNUM$ &
+\	PRINT #ASCII.CH%, '<>' &
+\	GOTO 2310 IF FNN%(AP109T.CH%) = 0% AND TEST% = 0% &
+\	PRINT #ASCII.CH%, '<ENDFILE> = AP109T' &
+\	V% = FNC%(AP109T.CH%) &
+
+2400	!--------------------------------------------------------------- &
+	! CONVERT 1099 REGISTER FILE &
+	!--------------------------------------------------------------- &
+	FILES%=FNFILE%('AP1099.??T') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+2410	FOR LOOP% = 1% TO FILES% &
+\		V% = FNC%(AP1099.CH%) &
+\		STOP IF FNO%(AP1099.CH%,FILE.NAME$(LOOP%), &
+			'/RO','') &
+\		GOTO 2490 IF FNG%(AP1099.CH%,"") &
+\		PRINT #ASCII.CH%, '<STARTFILE> = ' + FILE.NAME$(LOOP%) &
+\		COUNTER% = 0% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$(LOOP%); &
+
+2430		FIELD #AP1099.CH%+1%,	FNL% AS TEMP$, &
+				06% AS AP1099.VENNUM$, &
+				02% AS AP1099.CODENUM$, &
+				06% AS AP1099.VOUNUM$, &
+				15% AS AP1099.INVOIC$, &
+				02% AS AP1099.INVDAT$, &
+				06% AS AP1099.CKNO$, &
+				02% AS AP1099.CKDAT$, &
+				08% AS AP1099.AMT1099$, &
+				08% AS AP1099.INVAMT$, &
+				01% AS AP1099.PR.AP.FLAG$ &
+\		WORK.TRANDAT$ = FND6$(CVT$%(AP1099.INVDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		INVDAT$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		WORK.TRANDAT$ = FND6$(CVT$%(AP1099.CKDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		CKDAT$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		PRINT #ASCII.CH%, '<VENNUM>';	AP1099.VENNUM$ &
+\		PRINT #ASCII.CH%, '<CODE>';	AP1099.CODENUM$ &
+\		PRINT #ASCII.CH%, '<TRANKEY>';	AP1099.VOUNUM$ &
+\		PRINT #ASCII.CH%, '<INVNUM>';	AP1099.INVOIC$ &
+\		PRINT #ASCII.CH%, '<INVDAT>';	INVDAT$ &
+\		PRINT #ASCII.CH%, '<CKNUM>';	AP1099.CKNO$ &
+\		PRINT #ASCII.CH%, '<CKDAT>';	CKDAT$ &
+\		PRINT #ASCII.CH%, '<AMT1099>'; &
+				FNREFORM$(CVT$F(AP1099.AMT1099$),11%) &
+\		PRINT #ASCII.CH%, '<INVAMT>'; &
+				FNREFORM$(CVT$F(AP1099.INVAMT$),11%) &
+\		PRINT #ASCII.CH%, '<>' &
+
+2440		GOTO 2430 IF FNN%(AP1099.CH%)=0% AND TEST% = 0% &
+\		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$(LOOP%) &
+
+2490	NEXT LOOP% &
+
+2500	!--------------------------------------------------------------- &
+	! CONVERT  APJ HEADER FILE &
+	!--------------------------------------------------------------- &
+	FILES%=FNFILE%('APJ???.DAT') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+2510	FOR LOOP% = 1% TO FILES% &
+\		V% = FNC%(APJ.CH%) &
+\		STOP IF FNO%(APJ.CH%,FILE.NAME$(LOOP%), &
+			'/RO','') &
+\		GOTO 2590 IF FNG%(APJ.CH%,"") &
+\		PRINT #ASCII.CH%, '<STARTFILE> = ' + FILE.NAME$(LOOP%) &
+\		COUNTER% = 0% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$(LOOP%); &
+
+2530		FIELD #APJ.CH%+1%,	FNL% AS TEMP$, &
+			06% AS APJVOUNUM$, &
+			06% AS APVENNUM$, &
+			02% AS VOUDAT$, &
+			15% AS INVOIC$, &
+			02% AS INVDAT$, &
+			08% AS INVAMT$, &
+			02% AS CD1099$, &
+			06% AS PONUM$, &
+			02% AS DISDAT$, &
+			08% AS DISAMT$, &
+			02% AS DUEDAT$, &
+			08% AS APACCT$, &
+			06% AS CKNUM$, &
+			02% AS CKDAT$, &
+			08% AS CASHACCT$, &
+			01% AS USETAX$, &
+			08% AS AMT1099$, &
+			08% AS USEAMT$, &
+			20% AS CKDESC$, &
+			02% AS UPDATE.MON$, &
+			06% AS USE.JOB$ &
+\		WORK.TRANDAT$ = FND6$(CVT$%(VOUDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		VOUDATE$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		WORK.TRANDAT$ = FND6$(CVT$%(INVDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		INVDATE$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		WORK.TRANDAT$ = FND6$(CVT$%(DISDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		DISDATE$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		WORK.TRANDAT$ = FND6$(CVT$%(DUEDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		DUEDATE$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		WORK.TRANDAT$ = FND6$(CVT$%(CKDAT$)) &
+\		WORK.TRANDAT$ = RIGHT(WORK.TRANDAT$,7%) + &
+				LEFT(WORK.TRANDAT$,2%) + &
+				MID(WORK.TRANDAT$,4%,2%) &
+\		CKDATE$ = '19' + LEFT(WORK.TRANDAT$+'000000',6%) &
+\		CKAMT = 0.0 &
+\		CKAMT = CVT$F(INVAMT$) IF CKNUM$ <> "" &
+\		PRINT #ASCII.CH%, '<TRANKEY>';	APJVOUNUM$ &
+\		PRINT #ASCII.CH%, '<VENNUM>'; 	APVENNUM$ &
+\		PRINT #ASCII.CH%, '<TRANKEY_DATE>'; VOUDATE$ &
+\		PRINT #ASCII.CH%, '<INVNUM>';	INVOIC$ &
+\		PRINT #ASCII.CH%, '<INVDAT>';	INVDATE$ &
+\		PRINT #ASCII.CH%, '<INVAMT>'; 	FNREFORM$(CVT$F(INVAMT$),11%) &
+\		PRINT #ASCII.CH%, '<CODE_1099>';CD1099$ &
+\		PRINT #ASCII.CH%, '<AMT_1099>';	FNREFORM$(CVT$F(AMT1099$),11%) &
+\		PRINT #ASCII.CH%, '<USE_JOB_NUM>'; USE.JOB$ &
+\		PRINT #ASCII.CH%, '<USE_AMT>';	FNREFORM$(CVT$F(USEAMT$),11%) &
+\		PRINT #ASCII.CH%, '<DISCDAT>';	DISDATE$ &
+\		PRINT #ASCII.CH%, '<DUEDAT>';	DUEDATE$ &
+\		PRINT #ASCII.CH%, '<PONUM>';	PONUM$ &
+\		PRINT #ASCII.CH%, '<AP_ACCT>';	APACCT$ &
+\		PRINT #ASCII.CH%, '<CASH_ACCT>';CASHACCT$ &
+\		PRINT #ASCII.CH%, '<CKNUM>';	CKNUM$ &
+\		PRINT #ASCII.CH%, '<CKDAT>';	CKDATE$ &
+\		PRINT #ASCII.CH%, '<DESCR>';	CKDESC$ &
+\		PRINT #ASCII.CH%, '<CKAMT>';	FNREFORM$(CKAMT,11%) &
+\		PRINT #ASCII.CH%, '<>' &
+
+2540		GOTO 2530 IF FNN%(APJ.CH%)=0% AND TEST% = 0% &
+\		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$(LOOP%) &
+
+2590	NEXT LOOP% &
+
+2600	!--------------------------------------------------------------- &
+	! CONVERT  AP1 HEADER FILE &
+	!--------------------------------------------------------------- &
+	FILES%=FNFILE%('AP1???.DAT') &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+
+2610	FOR LOOP% = 1% TO FILES% &
+\		V% = FNC%(AP1.CH%) &
+\		STOP IF FNO%(AP1.CH%,FILE.NAME$(LOOP%), &
+			'/RO','') &
+\		GOTO 2690 IF FNG%(AP1.CH%,"") &
+\		PRINT #ASCII.CH%, '<STARTFILE> = ' + FILE.NAME$(LOOP%) &
+\		COUNTER% = 0% &
+\		PRINT #CH%, FNP$('06;1');CLRLIN$;"Converting "; &
+			FILE.NAME$(LOOP%); &
+
+2630		FIELD #AP1.CH%+1%,	FNL% AS TEMP$, &
+			06% AS AP1VOUNUM$, &
+			02% AS POLINE$, &
+			08% AS ACCTNUM$, &
+			06% AS SUBCODE$, &
+			10% AS PHASE$, &
+			16% AS APDESC$, &
+			08% AS UNITS$, &
+			08% AS AP1AMT$ &
+\		PRINT #ASCII.CH%, '<TRANKEY>';	AP1VOUNUM$ &
+\		PRINT #ASCII.CH%, '<SLINE>';	FNREFORM$(CVT$%(POLINE$),4%) &
+\		PRINT #ASCII.CH%, '<ACCT>';	ACCTNUM$ &
+\		PRINT #ASCII.CH%, '<SUBACC>';	SUBCODE$ &
+\		PRINT #ASCII.CH%, '<OPERATION>';PHASE$ &
+\		PRINT #ASCII.CH%, '<UNITS>';	FNREFORM$(CVT$F(UNITS$),11%) &
+\		PRINT #ASCII.CH%, '<AMOUNTS>';	FNREFORM$(CVT$F(AP1AMT$),11%) &
+\		PRINT #ASCII.CH%, '<>' &
+
+2640		GOTO 2630 IF FNN%(AP1.CH%)=0% AND TEST% = 0% &
+\		PRINT #ASCII.CH%, '<ENDFILE> = ' + FILE.NAME$(LOOP%) &
+
+2690	NEXT LOOP% &
+\	V% = FNC%(AP1.CH%) &
+
+2700	!--------------------------------------------------------------- &
+	! CONVERT  CHECK FORM &
+	!--------------------------------------------------------------- &
+	GOTO 3000 &
+\	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	OPEN 'APCHK.FRM' FOR INPUT AS FILE #APCHK.FRM% &
+\	GOTO 2720 &
+
+2710	OPEN 'ISM:APCHK.FRM' FOR INPUT AS FILE #APCHK.FRM% &
+
+2720	PRINT #ASCII.CH%, '<STARTFILE> = CHKFRM' &
+
+2730	INPUT LINE #APCHK.FRM%, INP$ &
+\	PRINT #ASCII.CH%, INP$; &
+\	GOTO 2730 &
+
+2740	PRINT #ASCII.CH%, '<ENDFILE> = CHKFRM' &
+
+2750	CLOSE APCHK.FRM% &
+
+2800	!--------------------------------------------------------------- &
+	! CONVERT ATTACH FORM &
+	!--------------------------------------------------------------- &
+	PRINT #CH%,	FNP$('06;1');CLRLIN$; &
+			FNP$('08;1');CLRLIN$; &
+			FNP$('10;1');CLRLIN$; &
+\	OPEN 'ATTACH.FRM' FOR INPUT AS FILE #ATTACH.FRM% &
+\	GOTO 2820 &
+
+2810	OPEN 'ISM:ATTACH.FRM' FOR INPUT AS FILE #ATTACH.FRM% &
+
+2820	PRINT #ASCII.CH%, '<STARTFILE> = ATTFRM' &
+
+2830	INPUT LINE #ATTACH.FRM%, INP$ &
+\	PRINT #ASCII.CH%, INP$; &
+\	GOTO 2830 &
+
+2840	PRINT #ASCII.CH%, '<ENDFILE> = ATTFRM' &
+
+2850	CLOSE ATTACH.FRM% &
+
+3000	V% = FNX%('',0%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 30130 IF ERL=30110 &
+\	RESUME 2230 IF ERL=2220% &
+\	RESUME 2710 IF ERL=2700 &
+\	RESUME 2740 IF ERL = 2730 &
+\	RESUME 2810 IF ERL=2800 &
+\	RESUME 2840 IF ERL = 2830 &
+	&
+
+19900	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1.0) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30020	DEF*FNP$(ROWCOL$)=CHR$(155%)+"["+ROWCOL$+"H" ! Direct Cursor Address &
+
+30030	! &
+	!	FNREFORM - Converts a floating point value to the form: &
+	!		9999999999V99 &
+	!		where: &
+	!			9999999999 = dollar amount zero filled &
+	!			V          = implied decimal point &
+	!			99	   = cents &
+	! &
+	!	NOTE:  AMOUNT is converted to a positive value. &
+	! &
+	DEF FNREFORM$(AMOUNT,STR.LEN%) &
+\		WORK$ = "+" &
+\		WORK$ = "-" IF AMOUNT<0.0 &
+\		AMOUNT = 100.0 * ABS(AMOUNT) &
+\		DOLLARS$ = CVT$$(NUM1$(INT(AMOUNT + 0.5001)),128%) &
+\		DOLLARS$ = "0" + DOLLARS$ UNTIL LEN(DOLLARS$) >= STR.LEN% &
+\		FNREFORM$ = WORK$+DOLLARS$ &
+\	FNEND &
+
+30040	DEF FNZ(Y)=INT(ABS(Y)*100.+0.5001)/100.*SGN(Y) &
+
+30100	!-----------------------------------------FILE LOOKUP FUNCTION &
+	DEF FNFILE%(FILE.SPEC$) &
+\		WLDCNT%=0% &
+\		WLDCRD.FLAG%=0% &
+
+30110	!-----------------WILD CARD LOOKUP------------------------------ &
+		NEXXT%=0% &
+\		CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.SPEC$) TO SYS.CALL% &
+\		SYS.CALL%(0%)=30% &
+\		SYS.CALL%(1%)=6% &
+\		SYS.CALL%(2%)=17% &
+\		SYS.CALL%(3%)=WLDCRD.FLAG% !JUMP &
+\		SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\		WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\		CHANGE SYS.CALL% TO SYS.CALL$ &
+\		CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\		FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\		FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\		WILD.FILE$= &
+				RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+				RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+'.'+ &
+				RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+
+30120		WLDCNT% = WLDCNT% + 1% &
+\		FILE.NAME$(WLDCNT%)=WILD.FILE$ &
+
+30125		GOTO 30110 &
+
+30130		FNFILE%=WLDCNT% &
+\	FNEND &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30900	DEF FNPR%(A$, B$) &
+\		IF NOT(B$ = "") &
+		THEN	PRINT #ASCII.CH%, A$; CVT$$(B$,8%+128%) &
+
+30910	FNEND &
+
+32767	END

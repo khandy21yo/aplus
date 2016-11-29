@@ -1,0 +1,484 @@
+10	!--------------------------------------------------------------- &
+	!	Read a lotus dif file and store in budget &
+	! &
+	!	RDDIF.B2S	V1.0	February 1985 &
+	! &
+	! Author - Randall Beard, Computer Management Center, Inc. &
+	! &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	!	06/07/90 - Kevin Handy &
+	!		Modified to handle quote marks in descriptions. &
+
+20	SYSDAT$=CVT$$(DATE$(0%),-1%) &
+\	YEAR$=RIGHT(SYSDAT$,8%) &
+\	PERIOD$=MID(SYSDAT$,4%,3%) &
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	CLREL$=ESC$+'[K'		! Cursor to end of line &
+\	INSERT.LIN$=ESC$+'[1L'		! Insert a line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	S.RESET$=ESC$+'c'		! Reset Screen &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erace cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%)) &
+\	IF 	DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(DATE.TIME$),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DIM BDGT.PER$(13%),BDGT.PER(13%),MONTH%(13%),AMOUNT(13%), &
+		SYS.CALL%(30%),FIL.NAM%(30%), COL$(100%) &
+\	DEVICE.CH%,CONTRL.CH%	= 02% &
+\	BDGT.CH% 	= 02% &
+\	CHART.CH% 	= 04% &
+\	DIF.CH%		= 06% &
+\	MENU.CH%  	= 12% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	BUDGET.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'BUDGET')=0% &
+\		CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CHART ')=0% &
+\		CONTRL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CONTRL')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	PRINT #CH%, COLM.OFF$;FNSR$('1;24'); &
+		CLSCN$;FNP$('4;20');'READ LOTUS DIF FILE TO CREATE BUDGET'; &
+\	PRINT #CH%, FNP$('6;24');'Year? <';YEAR$;'> :'; &
+\	N.YEAR$=CVT$$(FNINP$(CH%,0%,'_',2%,0%),-1%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+			IF N.YEAR$='%^C' &
+\	PRINT #CH%, YEAR$ IF N.YEAR$='' &
+\	IF LEN(N.YEAR$)=2% THEN YEAR$=N.YEAR$ ELSE &
+		IF N.YEAR$<>'' THEN PRINT #CH%, FNP$('10;1');'Illegal format.' &
+\		PRINT #CH%, 'Enter the last two digits of the '+ &
+			'year' &
+\		PRINT #CH%, 'Example: For 1984 use "84"' &
+\		PRINT #CH%, 'Simply hit <RETURN> for this year.' &
+\		GOTO 300 &
+
+310	PRINT #CH%, FNP$('8;24');CLRLIN$;'DIF File name '; &
+\	PRINT #CH%, '<';WILD.FILE$;'> '; IF WILD.FILE$<>'' &
+\	DIF.FILE$=FNINP$(CH%,0%,'_',16%,0%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+			IF DIF.FILE$='%^C' &
+\	DIF.FILE$=WILD.FILE$ IF DIF.FILE$='' &
+\	GOTO 350 IF DIF.FILE$<>'' &
+\	PRINT #CH%, FNSR$('10;19');FNP$('9;1'); &
+\	PRINT #CH% &
+
+320	!-------------Work over the WILD file---&
+	WLDCRD.FLAG%=0%	&
+\	FILE.NAME$='??????.DIF'  &
+
+330	GOSUB 18100 ! Pick up the wildcard file names &
+\	PRINT #CH%, TAB(24%);WILD.FILE$ &
+\	GOTO 330 &
+
+350	DIF.FILE$='.DIF' IF INSTR(1%,DIF.FILE$,'.')=0% &
+\	OPEN DIF.FILE$ FOR INPUT AS FILE DIF.CH% &
+
+360	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+\	IF FNO%(CONTRL.CH%,CONTRL.DEVICE$+'CONTRL.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,' CONTRL.DAT',0%,-1%) &
+\		PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+			BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+
+365	IF FNG%(CONTRL.CH%,'CHART ')=0% &
+	THEN	FF% = CVT$%(MID(FNL$,17%,2%)) &
+		ELSE	V$=FNMESS$(CH%,FNS%,' CONTRL.DAT',0%,-1%) &
+\			PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+				BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+
+369	V%=FNC%(CONTRL.CH%) &
+
+370	V%=FNO%(BDGT.CH%,BUDGET.DEVICE$+'BDGT'+YEAR$+'.DAT','/RW','') &
+\	V%=FNO%(BDGT.CH%,BUDGET.DEVICE$+'BDGT'+YEAR$+'.DAT','/CR:10,128','') &
+								IF FNS%=5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,' BDGT'+YEAR$+'.DAT',0%,-1%) &
+\		PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+			BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+
+380	IF FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,' CHART.DAT',0%,-1%) &
+\		PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+			BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+
+390	CHART.FORMAT$=STRING$(8%,ASCII('0')) &
+\	IF FNG%(CHART.CH%,'')=0% &
+	THEN	CHART.FORMAT$=LEFT(FNL$,8%) &
+
+395	CHANGE CHART.FORMAT$ TO CHART.FORMAT% &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 512% &
+\	FIELD #12%, 128% AS BUDGET.BUF$, &
+		    256% AS CHART.BUF$ &
+\	FIELD #12%,	08% AS BDGT.ACCNO$, &
+			08% AS BDGT.BEGBAL$ &
+\	FIELD #12%, 8%+8%*I% AS TEMP$, &
+			08% AS BDGT.PER$(I%) FOR I%=1% TO 13% &
+\	FIELD #12%,	128% AS TEMP$, &
+			08% AS CHART.ACCNO$, &
+			30% AS CHART.DESC$, &
+			10% AS TEMP$, &
+			02% AS CHART.ACCTYP$, &
+			28% AS TEMP$, &
+			08% AS CHART.CURR$ &
+
+500	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+
+510	TEMP$='READ LOTUS DIF FILE' &
+\	PRINT #CH%, FNSR$('1;24'); &
+		CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+		FRAME$;FNP$('20;1');SPACE$(80%);G.OFF$; &
+\	PRINT #CH%, FNP$('3;05');'Col # for Account #'; &
+\	PRINT #CH%, FNP$('5;05'); &
+		'Col # for Beg budget '; &
+\	TEMP%=FF% &
+\	FOR I%=1% TO 12% &
+\		PRINT #CH%, FNP$(NUM1$(I%+5%)+';05'); &
+			'Col # for ';FNM1$(TEMP%);' budget '; &
+\		TEMP%=TEMP%+1% &
+\		TEMP%=1% IF TEMP%>12% &
+\	NEXT I% &
+
+600	!================================================================ &
+	! READ LOTUS DIF FILE TO DETERMINE WHAT TO PUT IN &
+	!================================================================ &
+	INPUT LINE #DIF.CH%, A$ &
+\	GOTO 17540 IF LEFT(A$,3%)='EOD' &
+\	A$=CVT$$(A$,4%) &
+\	TEST$=RIGHT(A$,LEN(A$)) &
+\	A1$=A1$+A$ &
+\	GOTO 600 IF TEST$<>'"' AND TEST$<>'V' AND A$<>'BOT' &
+\	GOTO 660 IF A$<>'BOT' &
+\	LOOP%=0% &
+\	PRINT #CH%, FNP$('02;40');'COL DESCRIPTION'; &
+\	FOR I%=1% TO 17% &
+\		LOOP%=LOOP%+1% &
+\		PRINT #CH% USING FNP$(NUM1$(I%+2%)+';40')+ &
+			'### \                           \', &
+				LOOP%, &
+				COL$(LOOP%); &
+\	NEXT I% &
+\	COL%=0% &
+\	A1$='' &
+
+610	PRINT #CH%, CLRBOT$;'COMMAND: Set column  Next row'; &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',1%,-1%),-1%) &
+\	GOTO 1000 IF INP$='S' &
+\	PRINT #CH%, CLRBOT$; &
+\	GOTO 600 IF INP$='N' &
+\	GOTO 610 &
+
+660	COL%=COL%+1% &
+\	IF TEST$='"' &
+	THEN	A1$=LEFT(A1$,LEN(A1$)-1%) &
+\		TEMP% = 0% &
+\		TEMP%=INSTR(TEMP%+1%,A1$,'"')+1% &
+			WHILE INSTR(TEMP%+1%,A1$,'"') &
+\		A1$=RIGHT(A1$,TEMP%) &
+
+670	IF TEST$='V' &
+	THEN	A1$=LEFT(A1$,LEN(A1$)-1%) &
+\		TEMP%=INSTR(1%,A1$,',')+1% &
+\		A1$=RIGHT(A1$,TEMP%) &
+\		TEMP%=INSTR(1%,A1$,'E') &
+\		IF TEMP%=0% &
+		THEN	A=VAL(A1$) &
+			ELSE	TEMP$=RIGHT(A1$,TEMP%+2%) &
+\				SIGN$=MID(A1$,TEMP%+1%,1%) &
+\				A1$=LEFT(A1$,TEMP%-1%) &
+\				TEMP=VAL(SIGN$+TEMP$) &
+\				A1$=NUM1$(VAL(A1$)*10.^TEMP) &
+
+680	COL$(COL%)=A1$ &
+\	GOTO 600 &
+
+1000	! &
+	PRINT #CH%, FNP$('3;30'); &
+\	INP$=FNINP$(CH%,0%,'_',2%,0%) &
+\	GOTO 17540 IF INP$='%^C' &
+\	COL%=VAL(XLATE(INP$,STRING$(48%,0%)+"0123456789")) &
+\	GOTO 1000 IF COL%=0% &
+\	PRINT #CH%, FNP$('3;30');INP$;'  '; &
+\	ACC.COL%=COL% &
+\	COL$='!' &
+
+1005	PRINT #CH%, FNP$('5;30'); &
+\	INP$=FNINP$(CH%,0%,'_',2%,0%) &
+\	GOTO 17540 IF INP$='%^C' &
+\	COL%=VAL(XLATE(INP$,STRING$(48%,0%)+"0123456789")) &
+\	COL$=COL$+RIGHT(NUM1$(COL%+100%),2%)+'!' &
+\	PRINT #CH% USING FNP$('5;30')+'##',COL%; &
+\	MONTH%(0%)=COL% &
+
+1010	FOR I%=1% TO 12% &
+\		PRINT #CH%, FNP$(NUM1$(I%+5%)+';30'); &
+\		INP$=FNINP$(CH%,0%,'_',2%,0%) &
+\		GOTO 17540 IF INP$='%^C' &
+\		COL%=VAL(XLATE(INP$,STRING$(48%,0%)+"0123456789")) &
+\		COL$=COL$+RIGHT(NUM1$(COL%+100%),2%)+'!' &
+\		PRINT #CH% USING FNP$(NUM1$(I%+5%)+';30')+'##',COL%; &
+\		MONTH%(I%)=COL% &
+\	NEXT I% &
+
+1020	PRINT #CH%,CLRBOT$;'Confirm (Y/n) '; &
+\	INP$=FNINP$(CH%,128%,'_',1%,0%) &
+\	GOTO 17540 IF INP$='%^C' OR CVT$$(INP$,-1%)='N' &
+\	PRINT #CH%, CLRBOT$;'Processing. . .';FNP$('24;1'); &
+
+17000	!-----------------------------------READ A DIF FILE &
+	OPEN DIF.FILE$ FOR INPUT AS FILE DIF.CH% &
+\	PRINT #CH% FNP$(NUM1$(I%+1%)+';40'); &
+			'                                 '; &
+		FOR I%=1% TO 18% &
+
+17030	INPUT LINE #DIF.CH%, A$ &
+\	GOTO 17400 IF LEFT(A$,3%)='EOD' &
+\	A$=CVT$$(A$,4%) &
+\	TEST$=RIGHT(A$,LEN(A$)) &
+\	A1$=A1$+A$ &
+\	GOTO 17030 IF TEST$<>'"' AND TEST$<>'V' AND A$<>'BOT' &
+\	IF A$<>'BOT' &
+	THEN	17040 &
+		ELSE	GOTO 17037 IF ACCOUNT.TEST%=0% &
+
+17032	IF FNG%(BDGT.CH%,ACCOUNT.NUM$) &
+	THEN	RSET BDGT.ACCNO$=ACCOUNT.NUM$ &
+\		LSET BDGT.BEGBAL$=CVTF$(INT(AMOUNT(0%))) &
+\		LSET BDGT.PER$(I%)=CVTF$(INT(AMOUNT(I%))) FOR I%=1% TO 13% &
+\		IF FNA%(BDGT.CH%,BUDGET.BUF$)=0% &
+		THEN	GOTO 17037 &
+			ELSE	V$=FNMESS$(CH%,FNS%,' BUDGET.DAT',0%,-1%) &
+\				PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+					BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+						FNX%('',-1%,'') &
+
+17035	LSET BUDGET.BUF$=FNL$+'' &
+\	LSET BDGT.BEGBAL$=CVTF$(INT(AMOUNT(0%))) IF MONTH%(0%) &
+\	LSET BDGT.PER$(I%)=CVTF$(INT(AMOUNT(I%))) IF MONTH%(I%) &
+			FOR I%=1% TO 13% &
+\	IF FNU%(BDGT.CH%,BUDGET.BUF$) &
+	THEN	V$=FNMESS$(CH%,FNS%,' BUDGET.DAT',0%,-1%) &
+\			PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+				BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+					FNX%('',-1%,'') &
+
+17037	AMOUNT(I%)=0. FOR I%=0% TO 13% &
+\	A1$='' &
+\	COL%=0% &
+\	ACCOUNT.TEST%=0% &
+\	GOTO 17030 &
+
+17040	PRINT #CH%, RECORD 256%, CHR$(129%); &
+\	GET #CH%, RECORD 8192% &
+
+17042	FIELD #CH%, RECOUNT AS X.TEST$ &
+\	GOTO 17540 IF INSTR(1%,X.TEST$,CHR$(3%)) &
+
+17045	A=0. &
+\	COL%=COL%+1% &
+\	IF TEST$='"' &
+	THEN	A1$=LEFT(A1$,LEN(A1$)-1%) &
+\		TEMP% = 0% &
+\		TEMP%=INSTR(TEMP%+1%,A1$,'"')+1% &
+			WHILE INSTR(TEMP%+1%,A1$,'"') &
+\		A1$=RIGHT(A1$,TEMP%) &
+
+17050	IF TEST$='V' &
+	THEN	A1$=LEFT(A1$,LEN(A1$)-1%) &
+\		TEMP%=INSTR(1%,A1$,',')+1% &
+\		A1$=RIGHT(A1$,TEMP%) &
+\		TEMP%=INSTR(1%,A1$,'E') &
+\		IF TEMP%=0% &
+		THEN	A=VAL(A1$) &
+			ELSE	TEMP$=RIGHT(A1$,TEMP%+2%) &
+\				SIGN$=MID(A1$,TEMP%+1%,1%) &
+\				A1$=LEFT(A1$,TEMP%-1%) &
+\				TEMP=VAL(SIGN$+TEMP$) &
+\				A=VAL(A1$)*10.^TEMP &
+
+17060	IF COL%<>ACC.COL% OR A1$='' &
+	THEN	17100 &
+
+17070	IF TEST$<>'V' &
+	THEN	TEMP$=A1$ &
+		ELSE	TEMP$=NUM1$(A) &
+
+17080	TEMP$=XLATE(TEMP$,STRING$(48%,0%)+ &
+		'0123456789')+STRING$(8%,ASCII('0')) &
+\	ACCOUNT.NUM$='' &
+\	FOR LOOP%=1% TO 8% &
+\		ACCOUNT.NUM$=ACCOUNT.NUM$+CHR$(CHART.FORMAT%(LOOP%)) &
+			IF CHART.FORMAT%(LOOP%)<48% OR &
+				CHART.FORMAT%(LOOP%)>57% &
+\		ACCOUNT.NUM$=ACCOUNT.NUM$+LEFT(TEMP$,1%) &
+			IF CHART.FORMAT%(LOOP%)>47% AND &
+				CHART.FORMAT%(LOOP%)<58% &
+\		TEMP$=RIGHT(TEMP$,2%) &
+			IF CHART.FORMAT%(LOOP%)>47% AND &
+				CHART.FORMAT%(LOOP%)<58% &
+\	NEXT LOOP% &
+
+17090	IF FNG%(CHART.CH%,ACCOUNT.NUM$)=0% &
+	THEN	PRINT #CH%, FNP$('3;30');ACCOUNT.NUM$;' ';MID(FNL$,9%,20%); &
+				FNP$('24;1'); IF COUNTER%<1% &
+\		ACCOUNT.TEST%=-1% &
+\		COUNTER%=COUNTER%+1% &
+\		PRINT #CH% USING FNP$('19;3')+'Record !####','#',COUNTER%; &
+
+17100	GOTO 17390 IF ACCOUNT.TEST%=0% &
+\	TEMP%=1% &
+
+17110	MONTH%=(INSTR(TEMP%,COL$,'!'+RIGHT(NUM1$(COL%+100%),2%) &
+				+'!')+2%)/3%-1% &
+\	IF MONTH%>=0% &
+	THEN	AMOUNT(MONTH%)=FNZ(A) &
+\		PRINT #CH% USING FNP$(NUM1$(5%+MONTH%)+';30')+ &
+				"###,###,###",A; IF COUNTER%<2% &
+\		TEMP%=(MONTH%+1%)*3%+1% &
+\		GOTO 17110 &
+
+17390	GOTO 17030 &
+
+17400	! &
+
+17540	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+			BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+
+18100	!---------------WILD CARD LOOKUP---------------------&
+	NEXXT%=0% &
+\	CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.NAME$) TO SYS.CALL% &
+\	SYS.CALL%(0%)=30% &
+\	SYS.CALL%(1%)=6% &
+\	SYS.CALL%(2%)=17% &
+\	SYS.CALL%(3%)=WLDCRD.FLAG% ! JUMP &
+\	SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\	WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\	CHANGE SYS.CALL% TO SYS.CALL$ &
+\	CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\	FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\	FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\	WILD.FILE$=CHR$(FIL.NAM%(23%))+CHR$(FIL.NAM%(24%))+ &
+		NUM1$(FIL.NAM%(25%))+":"+ &
+		"["+NUM1$(FIL.NAM%(6%))+","+NUM1$(FIL.NAM%(5%))+"]"+ &
+		RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+		RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+"."+ &
+		RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+\	RETURN &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 310 IF ERL=350 OR ERL=18100 &
+\	RESUME 450 IF ERL=400 &
+\	RESUME 17540 IF ERL=17030 OR ERR=54% &
+\	RESUME 17045 IF ERL=17040% &
+
+19010	IF ERL = 17050 &
+	THEN	PRINT #CH%, CLRBOT$;FNP$('24;1'); &
+			'Error';ERR;'on account # ';ACCOUNT.NUM$; &
+			'  Set value to zero'; &
+\		A = 0.0 &
+\		RESUME 17060 &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30100	DEF FNZ(Y) 				!ROUNDING FUNCTION	&
+\		TEMP=Y 							&
+\		TEMP=-Y IF Y<0. 					&
+\		TEMP=INT(TEMP+.51)	 				&
+\		TEMP=-TEMP IF Y<0. 					&
+\		FNZ=TEMP 						&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r' ! Scroll control &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30550	DEF FNM1$(ARG%)= &
+	MID('JanFebMarAprMayJunJulAugSepOctNovDec',ARG%*3%-2%,3%) &
+
+32767	END &
+

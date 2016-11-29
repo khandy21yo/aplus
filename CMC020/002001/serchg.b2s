@@ -1,0 +1,609 @@
+10	!---------------------------------------------------------------&	
+	!								&
+	! SERCHG.B2S	V1.0	March 1985				&
+	!								&
+	! Author - Paul Cazier, Computer Management Center, Inc.	&
+	!								&
+	! Files Used -	SERCHG.DAT  - ISAM	Vendor Description File	&
+	!								&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies thereof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+
+50	ON ERROR GOTO 19000 &
+\	JUNK% = CTRLC &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(16%) + CHR$(0%) + CHR$(255%) + &
+		CHR$(81%) + STRING$(5%,0%) + CHR$(255%) + &
+		STRING$(14%,0%) + CHR$(255%) + CHR$(128%+26%) + &
+		STRING$(6%,0%)) &
+\	TEMP$ = SYS(CHR$(12%)) &
+\	PRJPRG$ = "[" + NUM1$( ASCII( MID( TEMP$,6%,1%))) + "," + &
+		NUM1$( ASCII( MID( TEMP$,5%,1%))) + "]" &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLREL$=ESC$+"[K"		! Cursor to end of line &
+\ 	B.ON$=ESC$+"[1m"		! Bold face on &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+\	R.ON$=ESC$+"[7m"      		! Reverse video &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	SCROLL.REGION$=ESC$+"[4;19r"	! Scroll region &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column &
+
+100	SERCHG.CH%   = 2% &
+\	DEVICE.CH%   = 2% &
+\	CHART.CH%    = 4% &
+\	MENU.CH% = 12% &
+\	LOOP.DATA% = 6% &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/RO","")=0% &
+	THEN	SERCHG.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"SERCHG")=0% &
+\		CHART.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"CHART")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	V%=FNO%(SERCHG.CH%,SERCHG.DEVICE$+'SERCHG.DAS','/SF/RW','') &
+\	V%=FNO%(SERCHG.CH%,SERCHG.DEVICE$+'SERCHG.DAS','/SF/CR:64','') &
+								IF FNS%=5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(FNS%,'SERCHG.DAS',0%,-1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+310	CHART.FLAG%=FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RO','') &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN "NL:" AS FILE 12%, RECORDSIZE 64%	&
+\	FIELD #12%,	02% AS SERCHG.STATE$,	&
+			08% AS SERCHG.SERCHRG$,	&
+			08% AS SERCHG.MINIMUM$,	&
+			08% AS SERCHG.DOLLAR$,	&
+			08% AS SERCHG.ARACCT$,	&
+			08% AS SERCHG.SCREV$	&
+\	FIELD #12%, 64% AS SERCHG.BUF$ &
+
+500	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+" "+FNP$(NUM1$(I%)+';80')+" " FOR I%=2% TO 19% &
+\	FRAME1$=FRAME1$+FNP$(NUM1$(I%)+';1')+" "+FNP$(NUM1$(I%)+';132')+" " FOR I%=2% TO 19% &
+\	COMMAND$  = " " &
+\	COMMAND$  = COMMAND$+RIGHT(NUM1$(I%+100%),2%) + " " &
+		FOR I%=1% TO LOOP.DATA% &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+	IF FNG%(SERCHG.CH%,"")=0% &
+	THEN	1010 &
+		ELSE	PRINT #CH%, G.OFF$; &
+\			GOSUB 1060 &
+\			GOTO 1030 &
+
+1005	IF FNN%(SERCHG.CH%) &
+	THEN	18910 &
+		ELSE	1015 &
+
+1010	PRINT #CH%, COLM.OFF$;SCROLL.ON$;G.OFF$; &
+\	GOSUB 1060 &
+
+1015	KEY.POINTER%=FNR(SERCHG.CH%) &
+\	GOSUB 6000 &
+
+1030	CHNG.FLAG%=0% &
+\	PRINT #CH%, CLRBOT$;G.OFF$; &
+		FNP$('21;1');"COMMAND: Add Erase Change Blank Initialize "; &
+		"Default Find Next Restore View";FNP$('22;10'); &
+		"Quit "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%,1%),32%) &
+\	OPT$="A" IF OPT$="" &
+\	OPT$="" IF KEY.POINTER%=0% AND INSTR(1%,"AQD",OPT$)=0% &
+
+1040	IF OPT$='Q' &
+	THEN	PRINT #CH%, CLSCN$;SCROLL.ON$;FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+			FNX%('',0%,''); &
+
+1050	GOTO 2000 IF OPT$="A" &
+\	GOTO 2400 IF OPT$="E" &
+\	GOTO 2200 IF OPT$="C" &
+\	GOTO 2300 IF OPT$="B" &
+\	GOTO 2000 IF OPT$="F" &
+\	GOTO 1005 IF OPT$="N" &
+\	GOTO 17000 IF OPT$="V" &
+\	GOTO 2500 IF OPT$="D" &
+\	GOTO 2600 IF OPT$="I" &
+\	GOTO 1000 IF OPT$="R" &
+\	GOTO 1030 &
+
+1060	TEMP$     = "SERVICE CHARGE FILE MAINTENANCE" &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+			FNP$('20;1');SPACE$(80%);FRAME$;G.OFF$; &
+\	PRINT #CH%,	FNP$('04;20');"(01) State"; &
+			FNP$('06;20');"(02) Monthly S.C."; &
+			FNP$('08;20');'(03) S.C. Minimum'; &
+			FNP$('10;20');'(04) $ Minimum'; &
+			FNP$('12;20');'(05) AR Acct #'; &
+			FNP$('14;20');'(06) S.C. Rev #'; &
+\	RETURN &
+
+2000	!-------------------------------------------------SEARCH FOR KEYS &
+	FOR LOOP%=1% TO LOOP.DATA% &
+\		INP$='' &
+\		INP$=DEFAULT$(LOOP%) IF OPT$='A' &
+\		GOSUB 6030 &
+\	NEXT LOOP% &
+\	OPTION$="ADD " &
+\	OPTION$="FIND " IF OPT$="F" &
+\	LOOP%=1% &
+\	GOSUB 6210 &
+\	V%=FNG%(SERCHG.CH%,SERCHG.STATE$) &
+\	IF OPT$="A" AND FNS%=0% OR OPT$='F' &
+	THEN	GOTO 1015 &
+
+2100	!-----------------------------------------------------ADD RECORD &
+	OPTION$="ADD " &
+\	GOSUB 6010 FOR LOOP%=2% TO LOOP.DATA% &
+
+2110	IF FNA%(SERCHG.CH%,SERCHG.BUF$) &
+	THEN	PRINT #CH%, FNP$('24;1');"Error";FNS%;"while adding to file"; &
+			FNP$('24;55');"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+\		GOTO 1000 &
+
+2120	KEY.POINTER%=FNR(SERCHG.CH%) &
+\	GOTO 1030 &
+
+2200	!--------------------------------------------------CHANGE RECORD &
+	OPTION$ = "CHANGE " &
+\	CHNG.FLAG% = -1% &
+\	PRINT #CH%, CLRBOT$; "Change:"; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",2%,1%),32%) &
+\	GOTO 1030 IF INP$="" &
+\	LOOP%=(INSTR(1%,COMMAND$," "+INP$+" ")+2%)/3% &
+\	GOTO 2200 IF LOOP%=0% &
+\	GOSUB 6010 &
+
+2210	V%=FNG%(-SERCHG.CH%,NUM1$(KEY.POINTER%)) &
+\	V%=FNU%(-SERCHG.CH%,SERCHG.BUF$) IF FNS%=0% &
+\	IF FNS% &
+	THEN	PRINT #CH%, FNP$('24;1');"Error";FNS%; &
+			"while changing to file";FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+\		GOTO 1010 &
+
+2220	GOTO 2200 &
+
+2300	!--------------------------------------------------BLANK RECORD &
+	OPTION$ = "BLANK " &
+\	PRINT #CH%, CLRBOT$; "Blank:"; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",2%,1%),32%) &
+\	GOTO 1030 IF INP$="" &
+\	LOOP%=(INSTR(1%,COMMAND$," "+INP$+" ")+2%)/3% &
+\	GOTO 2300 IF LOOP%>LOOP.DATA% &
+\	INP$="" &
+\	GOSUB 6030 &
+
+2310	V%=FNG%(-SERCHG.CH%,NUM1$(KEY.POINTER%)) &
+\	V%=FNU%(-SERCHG.CH%,SERCHG.BUF$) IF FNS%=0% &
+\	IF FNS% &
+	THEN	PRINT #CH%, FNP$('24;1'); &
+			"Error";FNS%;"while changing to file"; &
+			FNP$('24;55');"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+\		GOTO 1010 &
+
+2320	GOTO 2300 &
+
+2400	!-----------------------------------------------DELETE RECORD &
+	PRINT #CH%, CLRBOT$;"Confirm deletion (Yes/No) "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%,1%),32%) &
+\	IF INP$<>"Y" &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$;"This record has "; B.ON$; &
+			BLINK.ON$;"NOT ";G.OFF$; "been deleted."; &
+			FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+\		GOTO 1030 &
+
+2420	IF FND%(SERCHG.CH%,"")=0% &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			"This record has been deleted."; &
+			FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+\		GOTO 1005 &
+
+2430	PRINT #CH%, FNP$('24;1');"Error";FNS%;"while deleting to file"; &
+		FNP$('24;55');"Hit any key to continue"; &
+\	INP$=FNINP$(CH%,128%," ",1%,1%) &
+\	GOTO 1005 &
+
+2500	!-----------------------------------------------SET DEFAULT VALUES &
+	FOR LOOP%=1% TO LOOP.DATA% &
+\		INP$=DEFAULT$(LOOP%) &
+\		GOSUB 6030 &
+\	NEXT LOOP% &
+
+2510	OPTION$="DEFAULT " &
+\	PRINT #CH%, CLRBOT$;"Default:"; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",2%,0%),32%) &
+\	GOTO 1010 IF INP$="%^C" OR INP$="" &
+\	LOOP%=(INSTR(1%,COMMAND$," "+INP$+" ")+2%)/3% &
+\	GOTO 2510 IF LOOP%=0% &
+\	GOSUB 6010 &
+\	DEFAULT$(LOOP%)=INP$ &
+\	GOTO 2510 &
+
+2600	!-----------------------------------------------INITIALIZATION &
+	INP$='' &
+\	GOSUB 6030 FOR LOOP%=1% TO LOOP.DATA% &
+\	INITIALIZE$=" " &
+
+2610	PRINT #CH%, CLRBOT$;FNP$('22;1');INITIALIZE$; &
+		FNP$('21;1');"Field to initialize:"; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",2%,1%),32%) &
+\	IF INP$<>"" &
+	THEN	LOOP%=(INSTR(1%,COMMAND$," "+INP$+" ")+2%)/3% &
+\		INITIALIZE$=INITIALIZE$+INP$+" " IF &
+			LOOP%<>0% AND (INSTR(1%,INITIALIZE$," "+INP$+" ") &
+				+2%)/3%=0% &
+\		GOTO 2610 &
+
+2620	GOTO 1010 IF INITIALIZE$="" &
+\	INP$='' &
+\	GOSUB 6030 FOR LOOP%=1% TO LOOP.DATA% &
+\	OPT$="C" &
+\	OPTION$="INITIALIZE " &
+\	CHNG.FLAG%=-1% &
+\	GOTO 2660 &
+
+2650	GOTO 18910 IF FNN%(SERCHG.CH%) &
+\	KEY.POINTER%=FNR(SERCHG.CH%) &
+
+2660	GOSUB 6000 &
+\	FOR I%=1% TO LEN(INITIALIZE$)/3% &
+\		LOOP%=(INSTR(1%,COMMAND$,MID(INITIALIZE$,I%*3%-2%,3%))+2%)/3% &
+\		GOSUB 6010 &
+
+2680		IF INP$<>"" &
+		THEN	V%=FNG%(-SERCHG.CH%,NUM1$(KEY.POINTER%)) &
+\			V%=FNU%(-SERCHG.CH%,SERCHG.BUF$) IF FNS%=0% &
+\			SORT.FLAG%=-1% IF LOOP%=1% AND FNS%=0% &
+\			IF FNS% &
+			THEN	PRINT #CH%, FNP$('24;1');"Error";FNS%; &
+					"while changing to file"; &
+				FNP$('24;55');"Hit any key to continue"; &
+\				INP$=FNINP$(CH%,128%," ",1%,1%) &
+\				GOTO 1010 &
+
+2690	NEXT I% &
+\	GOTO 2650 &
+
+6000	!------------------------------------------------DATA ENTRY SECTION &
+	RETURN IF KEY.POINTER%<1% OR FNG%(-SERCHG.CH%,NUM1$(KEY.POINTER%)) &
+\	LSET SERCHG.BUF$=FNL$+'' &
+\	FOR LOOP%=1% TO LOOP.DATA% &
+\		ON LOOP%  GOSUB	6220, 6240, 6260, 6280, 6300, 6320 &
+\	NEXT LOOP% &
+\	RETURN &
+
+6010	ON LOOP% GOSUB	6210, 6230, 6250, 6270, 6290, 6310 &
+\	RETURN &
+		! INPUT DATA &
+
+6030	ON LOOP% GOSUB	6217, 6237, 6257, 6277, 6297, 6317 &
+\	RETURN &
+		! DEFAULT &
+
+6200	!-----------------------------------------------DATA ENTRY SECTION &
+
+6210	INP$=FNSIO$('','4;42',SERCHG.STATE$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+		STRING$(2%,LEN(SERCHG.STATE$))+CHR$(1%)+CHR$(0%)+ &
+							OPTION$+" ALPHA") &
+\	GOTO 6210 IF INP$='' AND OPT$='A' &
+\	IF 	OPT$='C' AND INP$<>'' &
+	THEN	IF 	FNG%(SERCHG.CH%,INP$+SPACE$(2%-LEN(INP$)))=0% &
+		THEN	PRINT #CH%, CLRBOT$;FNP$('24;1');'Duplicate key ';INP$; &
+				FNP$('21;1');'COMMAND: Re-enter Exit '; &
+\			INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\			PRINT #CH%, FNP$('4;42');B.ON$;SERCHG.STATE$;G.OFF$; &
+\			GOTO 6210 IF INP$='R' &
+\			RETURN &
+
+6217	LSET SERCHG.STATE$=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6220	PRINT #CH%, FNP$('4;42');B.ON$;SERCHG.STATE$;G.OFF$; &
+\	RETURN &
+
+6230	INP$=FNSIO$('##.###%','6;42',CVTF$(CVT$F(SERCHG.SERCHRG$)*100.), &
+		DEFAULT$(LOOP%),CHR$(CH%)+ &
+		CHR$(6%)+CHR$(5%)+CHR$(5%)+CHR$(3%)+OPTION$+" VALUE") &
+
+6237	LSET SERCHG.SERCHRG$=CVTF$(VAL(INP$)/100.) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6240	PRINT #CH% USING FNP$('6;42')+B.ON$+"##.###%"+G.OFF$, &
+						CVT$F(SERCHG.SERCHRG$)*100.; &
+\	RETURN &
+
+6250	INP$=FNSIO$('###.##','8;42',SERCHG.MINIMUM$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+		CHR$(6%)+CHR$(5%)+CHR$(5%)+CHR$(2%)+OPTION$+" VALUE") &
+
+6257	LSET SERCHG.MINIMUM$=CVTF$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6260	PRINT #CH% USING FNP$('8;42')+B.ON$+"###.##"+G.OFF$, &
+						CVT$F(SERCHG.MINIMUM$); &
+\	RETURN &
+
+6270	INP$=FNSIO$('###.##','10;42',SERCHG.DOLLAR$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+		CHR$(6%)+CHR$(5%)+CHR$(5%)+CHR$(2%)+OPTION$+" VALUE") &
+
+6277	LSET SERCHG.DOLLAR$=CVTF$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6280	PRINT #CH% USING FNP$('10;42')+B.ON$+"###.##"+G.OFF$, &
+						CVT$F(SERCHG.DOLLAR$); &
+\	RETURN &
+
+6290	INP$=FNSIO$('','12;42',SERCHG.ARACCT$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			STRING$(2%,LEN(SERCHG.ARACCT$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	IF INP$<>'' AND CHART.FLAG%=0% &
+	THEN	IF FNG%(CHART.CH%,SPACE$(8%-LEN(INP$))+INP$) &
+		THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			'Undefined account number.';FNP$('24;55'); &
+			'Entry anyway (Y/N) '; &
+\			NW$=CVT$$(FNINP$(CH%,128%,'_',1%,1%),-1%) &
+\			PRINT #CH%, FNP$('24;1');CLRLIN$; &
+\			IF NW$<>'Y' &
+			THEN	GOTO 6290 &
+
+6297	RSET SERCHG.ARACCT$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6300	PRINT #CH%, FNP$('12;42');B.ON$;SERCHG.ARACCT$;G.OFF$; &
+\	ACC.DESC$=SPACE$(20%) &
+\	IF CHART.FLAG%=0% &
+	THEN	IF FNG%(CHART.CH%,SERCHG.ARACCT$)=0% &
+		THEN	ACC.DESC$=MID(FNL$,9%,20%)+'' &
+
+6305	PRINT #CH%, FNP$('12;52');ACC.DESC$; &
+\	RETURN &
+
+6310	INP$=FNSIO$('','14;42',SERCHG.SCREV$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			STRING$(2%,LEN(SERCHG.SCREV$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	IF INP$<>'' AND CHART.FLAG%=0% &
+	THEN	IF FNG%(CHART.CH%,SPACE$(8%-LEN(INP$))+INP$) &
+		THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			'Undefined account number.';FNP$('24;55'); &
+			'Entry anyway (Y/N) '; &
+\			NW$=CVT$$(FNINP$(CH%,128%,'_',1%,1%),-1%) &
+\			PRINT #CH%, FNP$('24;1');CLRLIN$; &
+\			IF NW$<>'Y' &
+			THEN	GOTO 6310 &
+
+6317	RSET SERCHG.SCREV$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6320	PRINT #CH%, FNP$('14;42');B.ON$;SERCHG.SCREV$;G.OFF$; &
+\	ACC.DESC$=SPACE$(20%) &
+\	IF CHART.FLAG%=0% &
+	THEN	IF FNG%(CHART.CH%,SERCHG.SCREV$)=0% &
+		THEN	ACC.DESC$=MID(FNL$,9%,20%)+'' &
+
+6325	PRINT #CH%, FNP$('14;52');ACC.DESC$; &
+\	RETURN &
+
+17000	!-----------------------------------------------VIEW ROUTINE &
+! Frame the scroll region &
+	PRINT #CH%, R.ON$;CLSCN$;COLM.OFF$;FNP$('1;1');SPACE$(80%);FRAME$; &
+	FNP$('20;1');SPACE$(80%);SCROLL.REGION$; &
+! Set up title line &
+\	PRINT #CH%, G.OFF$;	FNP$('2;2');"State"; &
+				FNP$('2;10');"Service Charge"; &
+				FNP$('2;27');"Min. Srvc Chg"; &
+				FNP$('2;41');"Dollar Amnt"; &
+				FNP$('2;54');"AR/Acc #"; &
+				FNP$('2;65');"SC. Rev Acc#"; &
+\	PRINT #CH%, R.ON$;LDS.ON$; &
+				FNP$('2;9');CHR$(120%); &
+				FNP$('2;26');CHR$(120%); &
+				FNP$('2;40');CHR$(120%); &
+				FNP$('2;53');CHR$(120%); &
+				FNP$('2;64');CHR$(120%); &
+					USASCII$;G.OFF$; &
+\	PRINT #CH%, R.ON$;LDS.ON$; &
+				FNP$('3;2');STRING$(80%,113%); &
+				FNP$('3;9');CHR$(110%); &
+				FNP$('3;26');CHR$(110%); &
+				FNP$('3;40');CHR$(110%); &
+				FNP$('3;53');CHR$(110%); &
+				FNP$('3;64');CHR$(110%); &
+					USASCII$;G.OFF$; &
+\	DISPLAY.LINE%=0% &
+\	PRINT.LINE%=4% &
+
+17010	V%=FNG%(-SERCHG.CH%,NUM1$(KEY.POINTER%)) &
+\	GOTO 17105 &
+
+17100	IF FNN%(SERCHG.CH%) &
+	THEN	17200 &
+
+17105	I$=NUM1$(PRINT.LINE%) &
+\	LSET SERCHG.BUF$=FNL$+'' &
+\	PRINT #CH%, FNP$(I$+';4');SERCHG.STATE$; &
+		    FNP$(I$+';15'); &
+\	PRINT #CH%  USING '##.###',CVT$F(SERCHG.SERCHRG$); &
+\	PRINT #CH%, FNP$(I$+';30'); &
+\	PRINT #CH%  USING '###.##',CVT$F(SERCHG.MINIMUM$); &
+\	PRINT #CH%, FNP$(I$+';44'); &
+\	PRINT #CH%  USING '###.##',CVT$F(SERCHG.DOLLAR$); &
+\	PRINT #CH%, FNP$(I$+';55'); SERCHG.ARACCT$; &
+			FNP$(I$+';68'); SERCHG.SCREV$; &
+
+17106	PRINT #CH%, R.ON$;LDS.ON$; &
+\	PRINT #CH%,	FNP$(I$+';9');CHR$(120%); &
+			FNP$(I$+';26');CHR$(120%); &
+			FNP$(I$+';40');CHR$(120%); &
+			FNP$(I$+';53');CHR$(120%); &
+			FNP$(I$+';64');CHR$(120%); &
+				USASCII$;G.OFF$; &
+\	PRINT.LINE%=PRINT.LINE%+1% IF PRINT.LINE%<19% &
+
+17110	IF DISPLAY.LINE%>14% &
+	THEN	PRINT #CH%, FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+\		GOTO 17210 IF INP$="%^C" &
+\		DISPLAY.LINE%=0% &
+\		PRINT #CH%, CLRBOT$;FNP$(NUM1$(PRINT.LINE%)+';1'); &
+
+17120	PRINT #CH% &
+\	DISPLAY.LINE%=DISPLAY.LINE%+1% &
+\	IF PRINT.LINE%=19% &
+	THEN	PRINT #CH%, FNP$(NUM1$(PRINT.LINE%)+';1');R.ON$;" "; &
+			FNP$(NUM1$(PRINT.LINE%)+';80');" ";G.OFF$; &
+
+17190	GOTO 17100 &
+
+17200	IF DISPLAY.LINE%>0% &
+	THEN	PRINT #CH%, FNP$('24;1');"End of file.  "; &
+			FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%," ",1%,1%) &
+
+17210	V%=FNG%(-SERCHG.CH%,NUM1$(KEY.POINTER%)) &
+\	PRINT #CH%, FNP$('1;1');SCROLL.ON$; &
+\	GOTO 1010 &
+
+18910	!----------------------------------------------END OF FILE &
+	PRINT #CH%, CLRBOT$;FNP$('24;1');"End of file has been reached."; &
+		FNP$('24;55');"Hit any key to continue "; &
+\	INP$=FNINP$(CH%,128%," ",1%,1%) &
+\	GOTO 1000 &
+
+19000	!-------------------------------------------------ERROR TRAPPING &
+	RESUME 30705 IF (ERR=51% OR ERR=52%) AND ERL>30700% &
+\	RESUME IF ERR=51% OR ERR=52% &
+\	RESUME 450 IF ERL=400% &
+\	RESUME 1010 IF ERR=54% &
+\	ON ERROR GOTO 0 &
+
+30000	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% &
+\	FNEND &
+
+30050	  !------------------------------------------------------------ &
+	  ! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	  !------------------------------------------------------------ &
+	  DEF*FNP$(ROWCOL$)=ESC$+"["+ROWCOL$+"H" &
+
+30060	DEF FND8%(D8)=D8 &
+
+30070	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30080	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ "/"+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ "/"+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)			&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+								DESC$	&
+\		IF 	PRINT.TEST%					&
+		THEN	PRINT #CH%, FNP$('24;1');MESG$;FNP$('24;55');	&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CH%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30700	!========================================= DATA INPUT FUNCTIONS	&
+	DEF*FNSIO$(FRMAT$,ROWCOL$,VARABLE$,DEFAL$,ITEMS$)		&
+\		CHN%=ASCII(MID(ITEMS$,1%,1%))				&
+\		KIND%=ASCII(MID(ITEMS$,4%,1%))				&
+\		DECI=ASCII(MID(ITEMS$,5%,1%))				&
+\		OPT$=MID(ITEMS$,6%,1%)					&
+
+30705		PRINT #CHN%, FNP$(ROWCOL$);R.ON$;B.ON$;			&
+\		IF OPT$='C'						&
+		THEN	ON KIND% GOTO 30710, 30715, 30720, 30725, 30730	&
+		ELSE	PRINT #CHN%, SPACE$(ASCII(MID(ITEMS$,2%,1%)));	&
+\			GOTO 30735					&
+
+30710		PRINT #CHN%, VARABLE$;			   ! ALPHA	&
+\		GOTO 30735						&
+
+30715		PRINT #CHN% USING FRMAT$,ASCII(VARABLE$);  ! ASCII	&
+\		GOTO 30735						&
+
+30720		PRINT #CHN% USING FRMAT$, CVT$%(VARABLE$)/(10.**DECI);	&
+\		GOTO 30735				   ! INTEGER	&
+
+30725		PRINT #CHN%, FND6$(CVT$%(VARABLE$));	   ! DATE	&
+\		GOTO 30735						&
+
+30730		PRINT #CHN% USING FRMAT$,CVT$F(VARABLE$);  ! FLOAT	&
+
+30735		PRINT #CHN%,G.OFF$;CLRBOT$;RIGHT(ITEMS$,6%)+':  ';B.ON$;&
+\		FIN$ = FNINP$(CHN%,0%,'_',ASCII(MID(ITEMS$,3%,1%)),1%)	&
+\		V% = VAL(FIN$) IF KIND%=3%				&
+\		V  = VAL(FIN$) IF KIND%>3%				&
+\		IF FIN$=''						&
+		THEN	FIN$ = DEFAL$ IF INSTR(1%,'CF',OPT$)=0%		&
+\			GOTO 30745					&
+
+30740		IF KIND%=3% OR KIND%=5%					&
+		THEN	TEMP = 1.					&
+\			TEMP = 10.**DECI IF INSTR(1%,FIN$,'.')=0%	&
+\			FIN$ = NUM1$(VAL(FIN$)/TEMP)			&
+\			FIN$ = FIN$ + '.' IF INSTR(1%,FIN$,'.')=0%	&
+
+30745		FNSIO$ = FIN$+''					&
+\	FNEND								&
+!\	INP$=FNSIO$('',NUM1$(ROW%)+';'+NUM1$(COL%),TAXTBL.AUTH$,'',CHR$(CH%)+ &
+!		CHR$(LEN(TAXTBL.AUTH$))+CHR$(LEN(TAXTBL.AUTH$))+CHR$(0%)+OPTION$) &
+!\	INP$=FNSIO$('<PRINT USING OR NULL>','<ROW>;<COL>',<FIELDED VARIABLE>, &
+!			DEFAULT$(LOOP%),CHR$(<CHANNEL #>%), &
+!			CHR$(<HI LIGHT LEN>%),CHR$(<FNINP$ LEN.>%), &
+!			CHR$(<1-ALPHA 2-ASCII 3-INTEGER 4-DATE 5-FLOAT>%), &
+!			CHR$(<# OF DECIMAL PLACES>%),<OPTION$+" ALPHA" or &
+!			OPTION$+" VALUE" or OPTION$+" DATE(MMDDYY)">) &
+
+32767	END &
+
+
+

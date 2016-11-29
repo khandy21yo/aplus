@@ -1,0 +1,595 @@
+10	! CHECK REGISTER &
+	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		Copyright (c) 1984 by &
+	!		Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used and &
+	! copied only in accordance with the terms of such license and with &
+	! the inclusion of the above copyright notice.  This software or any &
+	! other copies therof may not be provided or otherwise made avail- &
+	! able to any other person.  No title to and ownership of the soft- &
+	! ware is hereby transferred. &
+	! &
+	! The information in this software is subject to change without no- &
+	! tice and should not be construed as a committment by Computer &
+	! Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	! ++ &
+	! &
+	! Modification history &
+	! &
+	!	08/23/88 - Kevin Handy &
+	!		Modified to not print excess distribution items &
+	!		if display is turned on. &
+	! &
+	!----------------------------------------------------------------- &
+
+30	ON ERROR GOTO 19000 &
+\	TEMP$=SYS(CHR$(6%)+CHR$(-7%)) &
+\	TEMP$=SYS(CHR$(12%)) &
+\	PRJPRG$=MID(TEMP$,23%,1%) + MID(TEMP$,24%,1%) + NUM1$(ASCII(MID( &
+		TEMP$,25%,1%))) + ":" + &
+		"["+NUM1$(ASCII(MID(TEMP$,6%,1%))) + "," + &
+		NUM1$(ASCII(MID(TEMP$,5%,1%))) + "]" + &
+		RAD$(ASCII(MID(TEMP$,7%,1%))+SWAP%(ASCII(MID(TEMP$,8%,1%)))) + &
+		RAD$(ASCII(MID(TEMP$,9%,1%))+SWAP%(ASCII(MID(TEMP$,10%,1%)))) &
+
+60	OUTPUT.CH%,CH%=1%			! Keyboard channel &
+\	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLREL$=ESC$+"[K"		! Cursor to end of line &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[3;19r"	! Scroll region &
+\	S.RESET$=ESC$+"c"		! Reset Screen &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column mode &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column mode &
+\	ENTER.COPY$=ESC$+"[5i"		! Enter media copy &
+\	EXIT.COPY$=ESC$+"[4i"		! Exit media copy &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+
+100	DIM GENLED$(200%),DEBIT(200%),CREDIT(200%) &
+\	PPRINT.CH%	= 02% &
+\	DEVICE.CH%	= 02% &
+\	APCCTL.CH%	= 02% &
+\	GLMMM.CH%	= 02% &
+\	CKREG.CH%	= 04% &
+\	MENU.CH%	= 12% &
+
+150	!------------------------------------------GET PRINTING INFORMATION &
+	IF FNO%(PPRINT.CH%,'PPRINT.DAT','/RO','') &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$;'Error';FNS%;"while opening "; &
+			"pprint.dat"; &
+\		V%=FNX%("",0%,"") &
+
+160	IF FNG%(PPRINT.CH%,REP.NUM$) &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$;"Can't find report # ";REP.NUM$; &
+			'in PPRINT.DAT' &
+\		M%=FNX%('',0%,'') &
+
+170	FIELD #PPRINT.CH%+1%,	FNL%+06% AS MUNG$, &
+		20% AS PPRINT.REPDES$, &
+		30% AS MUNG$, &
+		01% AS PPRINT.HPIT$, &
+		01% AS PPRINT.VPIT$, &
+		01% AS PPRINT.LPAGE$, &
+		20% AS PPRINT.OUTDEV$, &
+		06% AS PPRINT.SPOOLR$, &
+		02% AS PPRINT.SPAGE$, &
+		02% AS PPRINT.EPAGE$, &
+		02% AS PPRINT.COPIES$, &
+		20% AS PPRINT.REPDATE$, &
+		44% AS TEMP$, &
+		20% AS PPRINT.MONTH$, &
+		44% AS TEMP$, &
+		20% AS PPRINT.YEAR$, &
+		44% AS TEMP$, &
+		20% AS PPRINT.ACCT.TO.PRT$, &
+		44% AS TEMP$, &
+		20% AS PPRINT.DIS.FLAG$ &
+\	FIELD #PPRINT.CH%+1%, FNL%+441% AS MUNG$, &
+		03% AS PPRINT.SYSNAM$, &
+		08% AS MUNG$, &
+		01% AS PPRINT.DISPLAY$ &
+\	REPDES$=PPRINT.REPDES$+'' &
+\	HPIT%=ASCII(PPRINT.HPIT$) &
+\	VPIT%=ASCII(PPRINT.VPIT$) &
+\	LIN.PER.PAGE%=ASCII(PPRINT.LPAGE$) &
+\	OUTDEV$=PPRINT.OUTDEV$+'' &
+\	SPOOLR$=PPRINT.SPOOLR$+'' &
+\	SPAGE%=CVT$%(PPRINT.SPAGE$) &
+\	EPAGE%=CVT$%(PPRINT.EPAGE$) &
+\	COPIES%=CVT$%(PPRINT.COPIES$) &
+\	REPDATE$=CVT$$(PPRINT.REPDATE$,132%) &
+\	DISPLAY$  = PPRINT.DISPLAY$+'' &
+\	MONTH$ = CVT$$(PPRINT.MONTH$,-1%)+'' &
+\	YEAR$ = CVT$$(PPRINT.YEAR$,-1%)+'' &
+\	ACCT.TO.PRT$=CVT$$(PPRINT.ACCT.TO.PRT$,-1%) &
+\	DIS.FLAG$ = CVT$$(PPRINT.DIS.FLAG$,-1%)+'' &
+\	V%=FNC%(PPRINT.CH%) &
+		! Get report parameters from PPRINT.DAT &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	APCCTL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"APCCTL")=0% &
+\		GLMMM.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"GLMMM")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+210	IF FNO%(APCCTL.CH%,APCCTL.DEVICE$+"APCCTL.DAS","/RO/SF","") &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			"Error";FNS%;"While opening 'APCCTL.DAT'";FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		V%=FNX%("",0%,"") &
+
+220	IF FNG%(APCCTL.CH%,'BNK') &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			"Error";FNS%;"While looking up ";'BNK';FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		V%=FNX%("",0%,"") &
+
+230	FIELD #APCCTL.CH%,	FNL%+64%+30%*(LOOP%-1%) AS TEMP$, &
+			08% AS APCCTL.ACC$(LOOP%), &
+			08% AS APCCTL.CTD$(LOOP%), &
+			08% AS APCCTL.CUR$(LOOP%), &
+			06% AS APCCTL.BANK$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+\	FIELD #APCCTL.CH%,	FNL% + 332%+16%*(LOOP%-1%) AS TEMP$, &
+			8% AS APCCTL.STARTCHK$(LOOP%), &
+			8% AS APCCTL.ENDCHK$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+\	GOTO 235 IF CVT$$(APCCTL.BANK$(LOOP%),-1%)=ACCT.TO.PRT$ AND &
+		CVT$$(APCCTL.BANK$(LOOP%),-1%)<>'' &
+			FOR LOOP%=1% TO 8% &
+\	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+		"Unable to determine the bank account"; FNP$('24;55'); &
+		"Hit any key to continue"; &
+\	INP$=FNINP$(CH%,128%,' ',1%) &
+\	V%=FNX%('',0%,'') &
+
+235	CASH.ACC$=CVT$$(APCCTL.ACC$(LOOP%),-1%)+'' &
+\	STARTCHK$ = CVT$$(APCCTL.STARTCHK$(LOOP%), -1%) + "" &
+\	STARTCHK$=SPACE$(8%-LEN(STARTCHK$))+STARTCHK$ &
+\	ENDCHK$ = CVT$$(APCCTL.ENDCHK$(LOOP%), -1%) + "" &
+\	ENDCHK$=SPACE$(8%-LEN(ENDCHK$))+ENDCHK$ &
+\	IF CASH.ACC$='' &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			"Unable to determine the cash account"; FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%,' ',1%) &
+\		V%=FNX%('',0%,'') &
+
+240	V%=FNC%(APCCTL.CH%) &
+\	GOTO 300 IF PASS.ONE% &
+	! &
+	! Start of creation of temp file &
+	! &
+\	IF FNO%(CKREG.CH%,APCCTL.DEVICE$+"CKREG.TMP","/RW/CR:64/SF","") &
+	THEN	PRINT #CH%, FNP$('24;1'); "Unable to open the temporary "; &
+			"file.";FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%,'',1%) &
+\		V%=FNX%('',0%,'') &
+
+250	V%=FNO%(GLMMM.CH%,GLMMM.DEVICE$+"GL"+MONTH$+"."+YEAR$+"S", &
+			"/RO/SF/NS","") &
+\	V%=FNO%(GLMMM.CH%,GLMMM.DEVICE$+"GL"+MONTH$+".DAS", &
+			"/RO/SF/NS","") IF FNS%=5% &
+\	IF FNS% &
+	THEN	PRINT #CH%, FNP$('24;1'); "Unable to open GL file. "; &
+			FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%,'',1%) &
+\		V%=FNX%('',0%,'') &
+
+255	! &
+	! Start of creation of temporary sort file. &
+	! &
+	IF FNG%(GLMMM.CH%,'') &
+	THEN	PRINT #CH%, FNP$('24;1'); "Error";FNS%; &
+			"while reading the G/L file "; &
+			FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%,'',1%) &
+\		V%=FNX%('',0%,'') &
+
+260	! &
+	! Loop &
+	! &
+	FIELD #GLMMM.CH%, FNL% AS TEMP$, &
+			08% AS GL.ACCNUM$, &
+			02% AS GL.SOURCE$, &
+			16% AS GL.REFNUM$, &
+			02% AS GL.TRXDAT$, &
+			26% AS GL.DESC$, &
+			08% AS GL.AMOUNT$, &
+			06% AS GL.CRXREF$, &
+			02% AS GL.POSTIM$, &
+			02% AS GL.POSDAT$, &
+			06% AS GL.BANKCD$, &
+			08% AS GL.CHKDEP$, &
+			06% AS GL.VOUCHR$, &
+			06% AS GL.SUBACC$, &
+			06% AS GL.PHASE$, &
+			08% AS GL.REGQTY$, &
+			08% AS GL.PREQTY$, &
+			02% AS GL.UPDATE$ &
+\	TEMP$=CVT$$(GL.CHKDEP$,-1%) &
+\	CHANGE TEMP$ TO Y% &
+\	GOTO 270 IF Y%(I%)<>48% FOR I%=1% TO Y%(0%) &
+
+270	TEMP$=RIGHT(TEMP$,I%) &
+\	CHECK$=CVT$$(XLATE(TEMP$,STRING$(48%,0%)+"0123456789"),-1%) &
+\	CHECK$="0" IF CHECK$="" &
+\	CHECK$=SPACE$(8%-LEN(CHECK$))+CHECK$ &
+\	IF (CVT$$(GL.ACCNUM$,-1%)=CASH.ACC$) OR &
+			(CVT$$(GL.ACCNUM$,-1%)<>CASH.ACC$ &
+			AND STARTCHK$<=CHECK$ AND CHECK$ <= ENDCHK$ &
+			AND DIS.FLAG$="Y") &
+	THEN	AMOUNT=CVT$F(GL.AMOUNT$) &
+\		CHECK$=CHECK$+"D " IF AMOUNT>=0. &
+\		CHECK$=CHECK$+"DC" IF AMOUNT<0. AND CVT$$(GL.ACCNUM$,-1%)<>CASH.ACC$ &
+\		CHECK$=CHECK$+"CC" IF AMOUNT <0. AND CVT$$(GL.ACCNUM$,-1%)=CASH.ACC$ &
+\		IF FNA%(4%,CHECK$+GL.DESC$+GL.TRXDAT$+GL.AMOUNT$+GL.ACCNUM$) &
+		THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			"Unable to add to the temporary file.";FNP$('24;55'); &
+			"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%) &
+\			V%=FNX%('',0%,'') &
+
+280	IF FNN%(2%)=0% &
+	THEN	260 &
+
+290	V%=FNX%(PRJPRG$,30999%,"~"+REP.NUM$) &
+
+300	! &
+	! Open temporary sort file that has been created. &
+	! &
+	IF FNO%(CKREG.CH%,APCCTL.DEVICE$+"CKREG.TMP","/RW/SF","") &
+	THEN	PRINT #CH%, FNP$('24;1'); "Unable to open the temporary "; &
+			"file.";FNP$('24;55');"Hit any key to continue "; &
+\		INP$=FNINP$(CH%,128%,'',1%) &
+\		V%=FNX%('',0%,'') &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	! ERROR LINE &
+
+510	TITLE$="Check/Cash Distribution Register for "+MONTH$+" "+YEAR$ &
+\	PAGE.TOP$=STRING$(3%,10%)+ &
+		"Date: "+DATE$(0%)+SPACE$(50%-LEN(COMPANY$)/2%)+ &
+		COMPANY$+SPACE$(57%-LEN(COMPANY$)/2%)+"Page <<###>>"+ &
+		CHR$(10%)+CHR$(13%)+ &
+		"Time: "+TIME$(0%)+SPACE$(50%-LEN(TITLE$)/2%)+ &
+		TITLE$+SPACE$(61%-LEN(TITLE$)/2%)+"V1.0"+ &
+		CHR$(10%)+CHR$(13%)+SPACE$(65%-LEN(REPDATE$)/2%)+ &
+		REPDATE$+ &
+		CHR$(10%)+CHR$(13%)+STRING$(132%,ASCII('='))+ &
+		CHR$(10%)+CHR$(13%) &
+\	PAGE.TOP1$=SPACE$(49%)+ &
+		"<--Cash Acc # "+CASH.ACC$+"-->"+SPACE$(20%)+ &
+		"  <------------Distribution----------->"+CHR$(10%)+CHR$(13%)+ &
+		"Check#    Description                     Date    "+ &
+		"      Debit       Credit                    Acct #      "+ &
+		"      Debit       Credit"+CHR$(10%)+CHR$(10%)+CHR$(13%) &
+\	USE1$='\        \    \'+SPACE$(24%)+'\  \  \  \  \    !'+ &
+		'           \\       \    \  \\        '+ &
+		'###,###.###' &
+\	PAGE.BOT$=STRING$(6%,10%) &
+\	BOT.MARGIN%=6% &
+\	MORE.LINES%=2% &
+
+10000	IF 	DISPLAY$<>'Y' &
+	THEN	CLOSE CH% &
+\		RESET.CH%	= 1% &
+\		TEMP.CH%	= 12% &
+\		OPEN OUTDEV$ AS FILE OUTPUT.CH%, MODE 2% &
+\		IF 	SPAGE%>1%	THEN	OPEN 'NL:' AS FILE TEMP.CH% &
+\						OUTPUT.CH%=TEMP.CH% &
+
+17000	!-------------------------------------------------OUTPUT REPORT &
+	PAGE.BREAK%=LIN.PER.PAGE%-BOT.MARGIN% &
+\	A$="" &
+\	TOTAL,TOTAL.1,TOTAL.2,TOTAL.3=0. &
+\	H%=0% &
+\	GOTO 17400 IF FNG%(CKREG.CH%,'') &
+\	IF DISPLAY$="Y" &
+	THEN	PRINT #OUTPUT.CH%, CLSCN$;COLM.ON$;R.ON$;PAGE.TOP1$; &
+			SCROLL.REGION$;FNP$('3;1');G.OFF$; &
+	ELSE	PRINT #OUTPUT.CH%, ENTER.COPY$;FNPAGE$(LIN.PER.PAGE%, &
+			0%,1%,PAGE.TOP$+PAGE.TOP1$,''); &
+\		LINE.COUNT%=FNLINE% &
+
+17030	FIELD #CKREG.CH%, FNL% AS TEMP$, &
+		08% AS CKREG.CHECK$, &
+		02% AS CKREG.TEMP$, &
+		26% AS CKREG.DESC$, &
+		02% AS CKREG.TRXDAT$, &
+		08% AS CKREG.AMOUNT$, &
+		08% AS CKREG.ACCNUM$ &
+\	AMOUNT=CVT$F(CKREG.AMOUNT$) &
+\	S=AMOUNT &
+\	GENLED$=CVT$$(CKREG.ACCNUM$,-1%)+"" &
+\	GOSUB 18000 &
+\	IF A$=CKREG.CHECK$ &
+	THEN	IF GENLED$<>CASH.ACC$ &
+		THEN	GOTO 17070 &
+		ELSE	GOTO 17050 &
+
+17035	! &
+	! If display is turned on, skip over distribution that does &
+	! not match up to a check item &
+	! &
+	IF (DIS.FLAG$ = "Y") AND &
+		((CKREG.TEMP$ <> "CC") AND (CKREG.TEMP$ <> "D ")) &
+	THEN	GOTO 17040 IF FNN%(CKREG.CH%) &
+\		GOTO 17030 &
+
+17040	! &
+	! Total for this check number &
+	! &
+	LINE.COUNT%=LINE.COUNT%+1% &
+\	IF FNZ(TOTAL.0)=0. &
+	THEN	PRINT #OUTPUT.CH% IF A$<>'' &
+	ELSE	TOTAL.0=-TOTAL.0 &
+\		PRINT #OUTPUT.CH%, TAB(96%);"VARIOUS   "; &
+\		PRINT #OUTPUT.CH%  USING "             ########.##", &
+			-TOTAL.0 IF TOTAL.0<0. &
+\		PRINT #OUTPUT.CH%  USING "########.##", &
+			TOTAL.0 IF TOTAL.0>=0. &
+\		TOTAL.2=TOTAL.2+TOTAL.0 IF TOTAL.0<0. &
+\		TOTAL.3=TOTAL.3+TOTAL.0 IF TOTAL.0>=0. &
+\		S=TOTAL.0 &
+\		GENLED$="VARIOUS" &
+\		GOSUB 18000 &
+\		GENLED$=CVT$$(CKREG.ACCNUM$,-1%)+"" &
+
+17045	IF VAL(A$)+1.<>VAL(CKREG.CHECK$) AND A$<>'' &
+	THEN	PRINT #OUTPUT.CH% &
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\		GOSUB 17600 &
+\		GOTO 17400 IF END.FLAG% &
+\		PRINT #OUTPUT.CH%, '          **MISSING CHECK(S) '; &
+			NUM1$(VAL(A$)+1.);' - '; &
+			NUM1$(VAL(CKREG.CHECK$)-1.) &
+\		LINE.COUNT%=LINE.COUNT%+1% &
+
+17050	! &
+	! Print first line(s) of a check &
+	! &
+	PRINT #OUTPUT.CH% IF A$<>"" &
+\	LINE.COUNT%=LINE.COUNT%+1% IF A$<>"" &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+\	TOTAL.0=0. IF A$<>CKREG.CHECK$ &
+\	PRINT #OUTPUT.CH%  USING "\      \  \"+SPACE$(26%)+"\  \      \  ", &
+		CVT$$(CKREG.CHECK$,-1%),CKREG.DESC$, &
+		FND6$(CVT$%(CKREG.TRXDAT$)); &
+
+17060	IF GENLED$=CASH.ACC$ &
+	THEN	PRINT #OUTPUT.CH%  USING "             ########.##",-AMOUNT; &
+			IF AMOUNT<0. &
+\		TOTAL=TOTAL+AMOUNT IF AMOUNT<0. &
+\		PRINT #OUTPUT.CH%  USING "########.##",AMOUNT; IF AMOUNT >0. &
+\		TOTAL.1=TOTAL.1+AMOUNT IF AMOUNT >0. &
+\		GOTO 17090 &
+
+17070	! &
+	! Print remaining lines of a check &
+	! &
+	PRINT #OUTPUT.CH%, TAB(96%); &
+\	PRINT #OUTPUT.CH%  USING "\      \  ",GENLED$; &
+\	PRINT #OUTPUT.CH%  USING "             ########.##",-AMOUNT; IF AMOUNT<0. &
+\	PRINT #OUTPUT.CH%  USING "########.##",AMOUNT; IF AMOUNT >0. &
+\	TOTAL.2=TOTAL.2+AMOUNT IF AMOUNT <0. &
+\	TOTAL.3=TOTAL.3+AMOUNT IF AMOUNT >0. &
+\	PRINT #OUTPUT.CH% &
+\	LINE.COUNT%=LINE.COUNT%+1% &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+
+17090	A$=CKREG.CHECK$+"" &
+\	TOTAL.0=TOTAL.0+FNZ(AMOUNT) &
+\	IF FNN%(CKREG.CH%)=0% &
+	THEN	17030 &
+
+17400	! &
+	! Print grand totals &
+	! &
+	GOTO 17500 IF END.FLAG% &
+\	IF FNZ(TOTAL.0)<>0. &
+	THEN	TOTAL.0=-TOTAL.0 &
+\		PRINT #OUTPUT.CH%, TAB(96%);"VARIOUS   "; &
+\		PRINT #OUTPUT.CH%  USING "             ########.##", &
+			-TOTAL.0 IF TOTAL.0<0. &
+\		PRINT #OUTPUT.CH%  USING "########.##", &
+			TOTAL.0 IF TOTAL.0>=0. &
+\		TOTAL.2=TOTAL.2+TOTAL.0 IF TOTAL.0<0. &
+\		TOTAL.3=TOTAL.3+TOTAL.0 IF TOTAL.0>=0. &
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\		GOSUB 17600 &
+\		S=TOTAL.0 &
+\		GENLED$="VARIOUS" &
+\		GOSUB 18000 &
+\		GENLED$=CVT$$(CKREG.ACCNUM$,-1%)+"" &
+
+17410	PRINT #OUTPUT.CH% &
+\	PRINT #OUTPUT.CH%  USING SPACE$(43%)+"Total########.##  ########.##"+ &
+		SPACE$(34%)+"########.##  ########.##", &
+			TOTAL.1,-TOTAL,TOTAL.3,-TOTAL.2 &
+\	LINE.COUNT%=LINE.COUNT%+2% &
+\	TOTAL,TOTAL.1,TOTAL.2=0. &
+\	MORE.LINES%=100% &
+\	PAGE.TOP1$= &
+		"Acct #                    Debit       Credit       Change"+ &
+		CHR$(10%)+CHR$(13%) &
+\	GOSUB 17600 &
+\	MORE.LINES%=2% &
+
+17420	FOR I1%=1% TO H% &
+\		PRINT #OUTPUT.CH%, GENLED$(I1%);TAB(20%); &
+\		IF DEBIT(I1%)=0. &
+		THEN	PRINT #OUTPUT.CH%, "             "; &
+		ELSE	PRINT #OUTPUT.CH% USING "########.##  ", &
+				DEBIT(I1%); &
+\			TOTAL=TOTAL+DEBIT(I1%) &
+
+17430		IF CREDIT(I1%)=0. &
+		THEN	PRINT #OUTPUT.CH%, "             "; &
+		ELSE	PRINT #OUTPUT.CH% USING "########.##  ", &
+				-CREDIT(I1%); &
+\			TOTAL.1=TOTAL.1-CREDIT(I1%) &
+
+17440		PRINT #OUTPUT.CH%  USING "########.##-",DEBIT(I1%)+CREDIT(I1%) &
+\		TOTAL.2=TOTAL.2+DEBIT(I1%)+CREDIT(I1%) &
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\		GOSUB 17600 &
+\	NEXT I1% &
+\	PRINT #OUTPUT.CH% &
+\	PRINT #OUTPUT.CH%  USING SPACE$(20%)+"########.##  ########.##  ########.##", &
+		TOTAL,TOTAL.1,TOTAL.2 &
+
+17500	IF DISPLAY$<>"Y" &
+	THEN	PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%,FNPAGE%, &
+			"",PAGE.BOT$); &
+	ELSE	PRINT #CH%, FNP$('24;1');"End of list"; &
+			FNP$('24;105');"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+
+17530	KILL APCCTL.DEVICE$+"CKREG.TMP" &
+
+17540	PRINT #OUTPUT.CH%, COLM.OFF$; IF DISPLAY$='Y' &
+\	PRINT #OUTPUT.CH%, EXIT.COPY$; IF DISPLAY$<>'Y' &
+\	CLOSE OUTPUT.CH% &
+\	V%=FNX%('',0%,'') &
+
+17600	!---------------------------------------PAGINATION SUBROUTINE &
+	IF 	DISPLAY$<>'Y' AND LINE.COUNT%+MORE.LINES%>PAGE.BREAK% &
+	THEN	END.FLAG% = -1% IF PAGE%>=EPAGE% AND EPAGE%<>0% &
+\		RETURN IF END.FLAG% &
+\		PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPAGE%,PAGE.TOP$+PAGE.TOP1$,PAGE.BOT$); &
+\		LINE.COUNT%	= FNLINE% &
+\		IF 	SPAGE%>1% &
+		THEN	IF 	SPAGE%<=PAGE% &
+			THEN	OUTPUT.CH% = RESET.CH% &
+\				PRINT #OUTPUT.CH%, ENTER.COPY$; &
+					FNPAGE$(LIN.PER.PAGE%,0%, &
+					PAGE%,PAGE.TOP$+PAGE.TOP1$,''); &
+\				LINE.COUNT% = FNLINE% &
+\				SPAGE% = 0% &
+
+17650	IF DISPLAY$="Y" AND LINE.COUNT%>15% &
+	THEN	PRINT #OUTPUT.CH%, FNP$('24;105');"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%) &
+\		GOTO 17540 IF INP$="%^C" &
+\		LINE.COUNT%=0% &
+\		PRINT #OUTPUT.CH%, FNP$('24;1');CLRLIN$;FNP$('18;132') &
+
+17670	RETURN &
+
+18000	! ============================================================= &
+	!	ADD BY ACCOUNT # &
+	! ============================================================= &
+	GOTO 18020 IF GENLED$=GENLED$(LOOP%) FOR LOOP%=1% TO H% &
+\	H%,LOOP%=H%+1% &
+\	GENLED$(LOOP%)=GENLED$+"" &
+\	DEBIT(LOOP%),CREDIT(LOOP%)=0. &
+
+18020	DEBIT(LOOP%)=DEBIT(LOOP%)+S IF S>0. &
+\	CREDIT(LOOP%)=CREDIT(LOOP%)+S IF S<0. &
+\	RETURN &
+
+18900	STOP &
+
+19000	!-------------------------------------------------ERROR TRAPPING &
+	IF ERR=28% &
+	THEN	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+\		RESUME 17540 &
+
+19010	IF 	ERR=27%	THEN	RESUME 70	IF ERL=60% &
+\				RESUME 18900 &
+
+19035	IF ERL=400% &
+	THEN	RESUME 450 &
+
+19040	IF ERL=17530 &
+	THEN	RESUME 17540 &
+
+19900	ON ERROR GOTO 0 &
+
+30000	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+
+30010		BUFFER$="%^C" IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!------------------------------------------------------------ &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!------------------------------------------------------------ &
+	DEF*FNP$(DCA$)=ESC$+"["+DCA$+"H" &
+
+30060	DEF*FNZ(Z)=INT(Z*100.+.51)/100. &
+
+30090	  DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ "/"+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ "/"+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30200	!	************************************************************* &
+	!	Print top and bottom of page &
+	!	Format : &
+	!	PRINT FNPAGE$(<LINES/PAGE>,<CURRENT LINE COUNT>,<PAGE COUNT>, &
+	!		<TOP OF PAGE>,<BOTTOM OF PAGE>) &
+	!	FNPAGE% = PAGE COUNT &
+	!	FNLINE% = LINE COUNT &
+	! &
+	!	Written by Robert Peterson - July 1981 &
+	!	Version 1 Edition 0 &
+	!	*********************************************************** &
+
+30210	DEF FNPAGE$(Y0%,Y1%,Y2%,Y0$,Y1$) &
+\		Y2$="" &
+\		Y2$=STRING$(Y0%-(Y1%+ &
+			LEN(XLATE(Y1$,STRING$(10%,0%)+CHR$(10%)))),10%) IF Y1$<>"" &
+\		PAGE.LINE%=LEN(XLATE(Y0$,STRING$(10%,0%)+CHR$(10%))) &
+\		Y%=INSTR(1%,Y1$+Y0$,"<<#") &
+\		Y3%=INSTR(1%,Y1$+Y0$,"#>>") &
+\		Y$=RIGHT(NUM1$(100000+Y2%),8%-(Y3%-Y%)) &
+\		Y3%=-3% IF Y%=0% &
+\		PRINT #OUTPUT.CH%, Y2$;LEFT(Y1$+Y0$,Y%-1%);Y$; &
+			RIGHT(Y1$+Y0$,Y3%+3%); &
+\		PAGE%=Y2% &
+\	FNEND &
+
+30250	DEF FNPAGE%=PAGE%+1% &
+
+30260	DEF FNLINE%=PAGE.LINE% &
+
+30999	PASS.ONE%=-1% &
+
+31000	! Chain entry &
+	M$=SYS(CHR$(7%)) &
+\	REP.NUM$=MID(M$,INSTR(1%,M$,'~')+1%,6%) &
+\	GOTO 30 &
+
+32767	END &
+

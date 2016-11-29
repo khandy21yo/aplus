@@ -1,0 +1,62 @@
+
+
+
+
+
+           BILL OF MATERIALS
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : BOMMNT.TSK
+
+    KEY FILE NAME : BOM.DAT                 KEY = 19 + 2   DATA = 64
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _PARENT BOM______________  _15A/1____  BOM.PARENT__ : 
+
+      2 _ITEM____________________  __2I/16___  BOM.ITEM____ : 
+
+      3 _COMPONENT_______________  _15A/18___  BOM.COMP____ : 
+
+      4 _QUANTITY________________  __8F/33___  BOM.QTY_____ : 
+
+      5 _OPERATION_______________  __6A/41___  BOM.OPERAT__ : 
+
+      6 _SCRAP FACTOR____________  __2I/47___  BOM.SCRAP___ : 
+
+      7 _ACTIVITY FLAG___________  __1A/49___  BOM.FLAG_____ : 1-ACTIVE
+                                                               2-FORECAST
+                                                               3-OBSOLETE
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 49, FROM  64, FREE = 15
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

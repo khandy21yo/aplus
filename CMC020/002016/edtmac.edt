@@ -1,0 +1,54 @@
+!	Standard Initializer File	V01.3	25-Jun-82
+!+
+!	Key Definitions
+!-
+DEF K 10     AS "."
+DEF K CONT A AS "(+20V)."
+DEF K CONT B AS "-W."
+DEF K CONT F AS "+W."
+DEF K CONT G AS "PASTE=?'Put buffer: '."
+DEF K CONT P AS "PAR."
+DEF K CONT R AS "(-20V)."
+DEF K CONT X AS "CUTSR=?'Cut buffer: '."
+!
+DEF K GOLD DEL    AS "EXT CL ?'Clear what buffer: '."
+DEF K GOLD CONT B AS "BSEN."
+DEF K GOLD CONT G AS "CUTSR=DELETE PASTE=?'Replace with buffer: '."
+DEF K GOLD CONT F AS "ESEN."
+DEF K GOLD CONT H AS "(-C D-C +C UNDC)."
+DEF K GOLD CONT I AS "(8C)."
+DEF K GOLD CONT T AS "TOP."
+DEF K GOLD CONT X AS "EXT CO SELECT TO=?'Copy to buffer: ' ; F L."
+DEF K GOLD CONT Z AS "EXT EX."
+!
+DEF K GOLD . AS "I~~/\~~^Z -6C."
+DEF K GOLD / AS "S%~~/\~~%%."
+DEF K GOLD B AS "EXT F=?'Buffer: '.."
+DEF K GOLD C AS "(C SEL W CHGCSR)."
+DEF K GOLD F AS "(SEL PAR FILLSR)."
+DEF K GOLD I AS "EXT INC ?'Input file: ' =?' Buffer: '."
+DEF K GOLD L AS "EXT F L."
+DEF K GOLD M AS "EXT F=MAIN.."
+DEF K GOLD O AS "EXT WR ?'Output file: ' =?' Buffer: '."
+DEF K GOLD P AS "PAGE."
+DEF K GOLD Q AS "EXT QUIT/SAVE."
+DEF K GOLD R AS "EXT RES."
+DEF K GOLD S AS "EXT SH BU."
+!+
+!	Set terminal characteristics
+!-
+SE WR 79
+SE TR
+SE K
+SE M C
+SE LINES 22
+SE CURSOR 1:20
+SE SCREEN 80
+SE SEARCH GENERAL
+SE SEARCH END
+SET TEXT END "[EOB]"
+SET TEXT PAGE "<FF>"
+!+
+!	Set buffer to MAIN, and Start
+!-
+F=MAIN

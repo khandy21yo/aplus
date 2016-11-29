@@ -1,0 +1,470 @@
+10	!---------------------------------------------------------------&
+	!	ACCOUNTS RECEIVABLE SYSTEM				&
+	!	Cash Receipts Journal Writer				&
+	!								&
+	!	CRJREP.B2S	V1.0	April 1985			&
+	!								&
+	! Author - Randall Beard, Computer Management Center, Inc.	&
+	!								&
+	! Files-PPRINT.DAT 	 -ISAM	Printing Info File		&
+	!	CRJH(Batch #).DAT-ISAM	Cash Recpts Journal Header File &
+	!	CRJL(Batch #).DAT-ISAM	Cash Recpts Journal Line File	&
+	!	CUSTOM.DAT	 -ISAM	Customer File			&
+	!	CRJHND.DAT	 -ISAM	Cash Rcpts Jrnl Hand Check File	&
+	!---------------------------------------------------------------&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	!---------------------------------------------------------------&
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+
+60	CH%,OUTPUT.CH%=1%			! Keyboard and Output channel  &
+\	OPEN 'KB:' AS FILE 1%, MODE 8%+256% 	! Echo Cntl,Disbl Hibrn,Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	R.ON$=ESC$+'[7m'		! Reverse Video &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m' 		! Select Graphic off &
+\	ENTER.COPY$=ESC$+'[5i'		! Enter media copy &
+\	EXIT.COPY$=ESC$+'[4i'		! Exit media copy &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%))) &
+\	IF 	DROP.DEAD.DATE$<>'' &
+	THEN	IF 	DROP.DEAD.DATE$<MID(DATE.TIME$,7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)),3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	PPRINT.CH%,DEVICE.CH%	= 02% &
+\	CRJH.CH% 		= 04% &
+\	CRJL.CH%		= 06% &
+\	CUSTOM.CH%		= 08% &
+\	CRJHND.CH%		= 10% &
+\	MENU.CH% 		= 12% &
+
+150	IF 	FNO%(PPRINT.CH%,'PPRINT.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'PPRINT.DAT',0%,-1%) &
+\		GOTO 17540 &
+
+160	IF 	FNG%(PPRINT.CH%,REP.NUM$) &
+	THEN	V$=FNMESS$(CH%,FNS%,'PPRINT.DAT  '+REP.NUM$,0%,-1%) &
+\		GOTO 17540 &
+
+170	FIELD #PPRINT.CH%+1%,				&
+		    FNL%+6% AS PPRINT.MUNG$,		&
+			20% AS PPRINT.REPDESC$,		&
+			30% AS PPRINT.MUNG$,		&
+			01% AS PPRINT.HPITCH$,		&
+			01% AS PPRINT.VPITCH$,		&
+			01% AS PPRINT.LPAGE$,		&
+			20% AS PPRINT.OUTDEV$,		&
+			06% AS PPRINT.SPOOLR$,		&
+			02% AS PPRINT.SPAGE$,		&
+			02% AS PPRINT.EPAGE$,		&
+			02% AS PPRINT.COPIES$,		&
+			20% AS PPRINT.REPDATE$,		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(1%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(2%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(3%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(4%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(5%)		&
+\	FIELD #PPRINT.CH%+1%, 				&
+		  FNL%+441% AS JUNK$,			&
+			03% AS B.SYSNAM$,		&
+			08% AS MUNG$,			&
+			01% AS B.DISPLAY$		&
+\	REPDESC$=PPRINT.REPDESC$+'' 			&
+\	HPITCH%=ASCII(PPRINT.HPITCH$) 			&
+\	VPITCH%=ASCII(PPRINT.VPITCH$) 			&
+\	LIN.PER.PAGE%=ASCII(PPRINT.LPAGE$) 		&
+\	OUTDEV$=PPRINT.OUTDEV$+'' 			&
+\	SPAGE%=CVT$%(PPRINT.SPAGE$) 			&
+\	EPAGE%=CVT$%(PPRINT.EPAGE$) 			&
+\	COPIES%=CVT$%(PPRINT.COPIES$) 			&
+\	REPDATE$=CVT$$(PPRINT.REPDATE$,132%) 		&
+\	DISPLAY$  = B.DISPLAY$+'' 			&
+&
+\	FROM.ITEM$= 'ALL' 				&
+\	FROM.ITEM$= CVT$$(PPRINT.UDF$(1%),132%) 	&
+				 IF PPRINT.UDF$(1%)<>'' &
+\	TO.ITEM$= CVT$$(PPRINT.UDF$(2%),132%) 		&
+\	BATCH.NO$=CVT$$(PPRINT.UDF$(3%),132%)		&
+\	V%=FNC%(PPRINT.CH%) 				&
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/RO','')=0% &
+	THEN	CRJH.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'CRJH')=0% &
+\		CRJL.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'CRJL')=0% &
+\		CUSTOM.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'CUSTOM')=0% &
+\		CRJHND.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'CRJHND')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	IF FNO%(CRJH.CH%,CRJH.DEVICE$+'CRJH'+BATCH.NO$+'.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'CRJH'+BATCH.NO$+'.DAT',0%,-1%) &
+\		GOTO 17540 &
+
+310	IF FNO%(CRJL.CH%,CRJL.DEVICE$+'CRJL'+BATCH.NO$+'.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'CRJL'+BATCH.NO$+'.DAT',0%,-1%) &
+\		GOTO 17540 &
+
+320	IF FNO%(CUSTOM.CH%,CUSTOM.DEVICE$+'CUSTOM.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'CUSTOM.DAT',0%,-1%) &
+\		GOTO 17540 &
+
+330	CRJHND.FLAG%=FNO%(CRJHND.CH%,CRJHND.DEVICE$+'CRJHND.DAT','/RO','') &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+510	TITLE$='Cash Receipts Journal - Batch # '+BATCH.NO$ &
+\	PAGE.TOP$=STRING$(2%,10%)+CHR$(13%)+'Date: '+DATE$(0%)+ &
+		SPACE$(50-LEN(COMPANY$)/2%)+COMPANY$+ &
+		SPACE$(58%-LEN(COMPANY$)/2%)+'Page <<###>>'+CHR$(10%)+ &
+		CHR$(13%)+'Time: '+TIME$(0%)+SPACE$(52%-LEN(TITLE$)/2%)+ &
+		TITLE$+SPACE$(57%-LEN(TITLE$)/2%)+VERSION.NO$+CHR$(10%)+ &
+		CHR$(13%)+SPACE$(65%-LEN(REPDATE$)/2%)+REPDATE$+ &
+		STRING$(2%,10%)+CHR$(13%)+STRING$(131%,45%)+CHR$(10%)+ &
+		CHR$(13%) &
+\	PAGE.TOP1$='Rcpt #    Cust #   Customer Name               Chk #'+ &
+		'    Dep #    Trn Date   Ln #   Invce #    Acct #'+ &
+		'           Amount'+CHR$(10%)+CHR$(13%) &
+\	USE.1$= '\      \  \    \   \                       \   \    \'+ &
+		'   \    \   \      \   \  \   \      \   \      \'+ &
+		'   #,###,###.##' &   
+\	TOT.USE$=SPACE$(67%)+'\              \'+ &
+		'   \              \   #,###,###.##' &
+\	BOT.MARGIN%=6% &
+\	PAGE.BOT$=STRING$(BOT.MARGIN%,10%) &
+\	PAGE.BREAK%=LIN.PER.PAGE%-BOT.MARGIN% &
+\	START.TEMP$='' &
+\	START.TEMP$=FROM.ITEM$ IF FROM.ITEM$<>'ALL' &
+\	MORE.LINES%=3% &
+\	DISPLAY.CONTROL%=15% &
+
+10000	IF 	DISPLAY$<>'Y' &
+	THEN	CLOSE CH% &
+\		RESET.CH%=1% &
+\		TEMP.CH%=12% &
+\		OPEN OUTDEV$ AS FILE OUTPUT.CH%, MODE 2% &
+\		IF 	SPAGE%>1% 	THEN	OPEN 'NL:' AS FILE TEMP.CH% &
+\						OUTPUT.CH%=TEMP.CH% &
+
+17000	!-------------------------------------------------OUTPUT REPORT &
+	INV.TOT,JOURNAL.TOT=0. &
+\	V%=FNG%(CRJH.CH%,START.TEMP$) &
+\	IF 	DISPLAY$='Y' &
+	THEN	PRINT #OUTPUT.CH%, CLSCN$;R.ON$;COLM.ON$;PAGE.TOP1$; &
+		FNSR$('2;19');G.OFF$;FNP$('19;1'); &
+	ELSE	PRINT #OUTPUT.CH%,ENTER.COPY$; &
+			FNPAGE$(LIN.PER.PAGE%,0%,1%,PAGE.TOP$+PAGE.TOP1$,''); &
+\	LINE.COUNT%=FNLINE% &
+
+17030	FIELD #CRJH.CH%+1%,     FNL% AS JUNK$, 		&
+				08% AS CRJH.RECNUM$,	&
+				06% AS CRJH.CUSNUM$,	&
+				06% AS CRJH.CHECK$,	&
+				06% AS CRJH.DEPOSIT$,	&
+				02% AS CRJH.TRADAT$,	&
+				08% AS CRJH.ACCT$,	&
+				08% AS CRJH.AMNT$,	&
+				02% AS CRJH.COUNT$,	! Line count &
+				02% AS CRJH.TRATYP$,	! Receipt type &
+							!  01 - ROA &
+							!  02 - Other &
+				16% AS CRJH.DESC$	! Description &
+\	GOTO 17400 IF TO.ITEM$<CRJH.RECNUM$ AND TO.ITEM$<>'' &
+\	REC.AMT=CVT$F(CRJH.AMNT$) &
+\	REC.TOTAL=REC.TOTAL+REC.AMT &
+\	INV.TOT=FNZ(INV.TOT+REC.AMT) &
+\	JOURNAL.TOT=FNZ(JOURNAL.TOT+REC.AMT) &
+\	CUSTOM.NAME$='' &
+\	CUSTOM.NAME$=MID(FNL$,7%,20%) IF FNG%(CUSTOM.CH%,CRJH.CUSNUM$)=0% &
+\	PRINT #OUTPUT.CH% USING USE.1$,			&
+				CVT$$(CRJH.RECNUM$,-1%)	&
+					CRJH.CUSNUM$,	&
+					CUSTOM.NAME$,	&
+					CRJH.CHECK$,	&
+					CRJH.DEPOSIT$,	&
+			FND6$(CVT$%(CRJH.TRADAT$)),	&
+					'','',		&
+					CRJH.ACCT$,	&
+					REC.AMT		&
+\	LINE.COUNT%=LINE.COUNT%+1% &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+\	IF 	FNG%(CRJL.CH%,CRJH.RECNUM$) &
+	THEN 	PRINT #OUTPUT.CH%,SPACE$(50%);'No line items for this Receipt' &
+\	     	PRINT #OUTPUT.CH% &
+\		LINE.COUNT%=LINE.COUNT%+2% &
+\	   	GOSUB 17600 &
+\		GOTO 17400 IF END.FLAG% &
+\		GOSUB 18000 &
+\	  	GOTO 17350 &
+
+17040	FIELD #CRJL.CH%+1%,    FNL% AS JUNK$,		&
+				08% AS CRJL.RECNUM$,	&
+				02% AS CRJL.LINE$,	&
+				08% AS CRJL.INVNUM$,	&
+				08% AS CRJL.ACCT$,	&
+				08% AS CRJL.AMOUNT$,	&
+				02% AS CRJL.TRATYP$	! Apply to type &
+							!  01 - ROA &
+							!  02 - Other &
+\ 	IF CRJH.RECNUM$<>CRJL.RECNUM$ &
+	THEN	GOSUB 18000 &
+\		GOTO 17350 &
+
+17050	TRATYP$='ROA' &
+\	TRATYP$='OTHER' IF CRJH.TRATYP$='02' OR CRJL.TRATYP$='02' &
+\	AMOUNT=CVT$F(CRJL.AMOUNT$) &
+\	IF AMOUNT<>0.0 &
+	THEN	INV.TOT=FNZ(INV.TOT+AMOUNT) &
+\		JOURNAL.TOT=FNZ(JOURNAL.TOT+AMOUNT) &
+\		PRINT #OUTPUT.CH% USING USE.1$,'','','','','',	&
+				TRATYP$,			&
+				NUM1$(CVT$%(CRJL.LINE$)), 	&
+					CRJL.INVNUM$,		&
+					CRJL.ACCT$, 		&
+					AMOUNT			&
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\		GOSUB 17600 &
+\		GOTO 17400 IF END.FLAG% &
+
+17060	GOTO 17040 IF FNN%(CRJL.CH%)=0% &
+\	GOSUB 18000 &
+
+17350	GOTO 17030 IF FNN%(CRJH.CH%)=0% &
+
+17400	IF 	END.FLAG%=0% &
+	THEN	GOSUB 18000 &
+\		F$='' &
+\		F$='Out of Balance' IF JOURNAL.TOT<>0. &
+\		PRINT #OUTPUT.CH% USING TOT.USE$, 	'Journal Total',&
+							F$,		&
+							JOURNAL.TOT	&	
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\		GOSUB 17600 &
+\		GOTO 17400 IF END.FLAG% &
+\		GOSUB 18100 &
+\		GRAND.TOT=CS.TOT+JOURNAL.TOT	&
+\		F$='' &
+\		F$='Out of Balance' IF GRAND.TOT<>CS.TOT &
+\		PRINT #OUTPUT.CH% &
+\		PRINT #OUTPUT.CH% USING TOT.USE$,'Grand Total',F$,	&
+							GRAND.TOT	&
+\		PRINT #OUTPUT.CH% USING TOT.USE$,'Total Cash receipt',F$, &
+							REC.TOTAL	&
+\		LINE.COUNT%=LINE.COUNT%+3% &
+
+17500	IF 	DISPLAY$<>'Y' &			
+	THEN	PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%,FNPAGE%, &
+			'',PAGE.BOT$); &
+	ELSE	PRINT #OUTPUT.CH%, FNP$('24;1');'End of report'; &
+			FNP$('24;105');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+
+17540	!KILL 'TEMPORARY.FILES' &
+
+17550	PRINT #OUTPUT.CH%, EXIT.COPY$; IF DISPLAY$<>'Y' &
+\	PRINT #OUTPUT.CH%, FNSR$('1;24');COLM.OFF$; IF DISPLAY$='Y' &
+\	CLOSE OUTPUT.CH% &
+\	V%=FNX%('',0%,'') &
+
+17600	!Perform the pagination &
+	IF 	DISPLAY$<>'Y' AND LINE.COUNT%+MORE.LINES%>PAGE.BREAK% &
+	THEN	END.FLAG%=-1% IF PAGE%>=EPAGE% AND EPAGE%<>0% &
+\		RETURN IF END.FLAG% &
+\		PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPAGE%,PAGE.TOP$+PAGE.TOP1$,PAGE.BOT$); &
+\		LINE.COUNT%=FNLINE% &
+\		IF 	SPAGE%>1% &
+		THEN	IF 	SPAGE%<=PAGE% &
+			THEN	OUTPUT.CH%=RESET.CH% &
+\				PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,0%, &
+					PAGE%,PAGE.TOP$+PAGE.TOP1$,''); &
+\				LINE.COUNT%=FNLINE% &
+\				SPAGE%=0% &
+
+17650	IF 	DISPLAY$='Y' AND LINE.COUNT%>DISPLAY.CONTROL% &
+	THEN	PRINT #OUTPUT.CH%, FNP$('24;105');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\		LINE.COUNT%=0% &
+\		PRINT #OUTPUT.CH%, FNP$('24;1');CLRLIN$;FNP$('18;132') &
+
+17670	RETURN &
+
+18000	PRINT #OUTPUT.CH% &
+\	F$='' &
+\	F$='Out of Balance' IF INV.TOT<>0. &
+\	PRINT #OUTPUT.CH% USING TOT.USE$,	'Receipt Total',&
+						F$,		&
+						INV.TOT		&
+		IF INV.TOT<>0. &
+\	LINE.COUNT%=LINE.COUNT%+1% &
+		IF INV.TOT<>0. &
+\	PRINT #OUTPUT.CH% &
+\	LINE.COUNT%=LINE.COUNT%+2% &
+\	INV.TOT=0. &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+\	RETURN &
+
+18100	RETURN IF FNG%(CRJHND.CH%,'') &
+\	PRINT #OUTPUT.CH% &
+\	PRINT #OUTPUT.CH%,'The following cash sales'+ &
+		' have already been posted to the GENERAL LEDGER' &
+\	PRINT #OUTPUT.CH% &
+\	LINE.COUNT%=LINE.COUNT%+3% &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+
+18130	FIELD #CRJHND.CH%+1%,    FNL% AS JUNK$, 		&
+				08% AS CRJHND.RECNUM$,	&
+				06% AS CRJHND.CUSNUM$,	&
+				06% AS CRJHND.CHECK$,	&
+				06% AS CRJHND.DEPOSIT$,	&
+				02% AS CRJHND.TRADAT$,	&
+				08% AS CRJHND.ACCT$,	&
+				08% AS CRJHND.AMNT$	&
+\	CS.AMT=CVT$F(CRJHND.AMNT$) &
+\	REC.TOTAL=REC.TOTAL+CS.AMT &
+\	CS.TOT=CS.TOT+CS.AMT &
+\	CUSTOM.NAME$='' &
+\	CUSTOM.NAME$=MID(FNL$,7%,20%) IF FNG%(CUSTOM.CH%,CRJHND.CUSNUM$)=0% &
+\	PRINT #OUTPUT.CH% USING USE.1$,			&
+			CVT$$(CRJHND.RECNUM$,-1%),	&
+					CRJHND.CUSNUM$,	&
+					CUSTOM.NAME$,	&
+					CRJHND.CHECK$,	&
+					CRJHND.DEPOSIT$,&
+			FND6$(CVT$%(CRJHND.TRADAT$)),	&
+					'','',		&
+					CRJH.ACCT$,	&
+					CS.AMT		&
+\	LINE.COUNT%=LINE.COUNT%+1% &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+\	GOTO 18130 IF FNN%(CRJHND.CH%)=0% &
+\	PRINT #OUTPUT.CH% &
+\	PRINT #OUTPUT.CH% USING TOT.USE$,	'Cash Sales Total','',	&
+						CS.TOT			&
+\	LINE.COUNT%=LINE.COUNT%+2% &
+\	GOSUB 17600 &
+\	GOTO 17400 IF END.FLAG% &
+\	RETURN &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME IF ERR=52% 						&
+\	RESUME 510 IF ERL=400% 						&
+\	RESUME 70 IF ERL=60% AND ERR=27% 				&
+\	RESUME 17540 IF ERR=54% 					&
+
+19010	IF ERR=28% 							&
+	THEN	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) 			&
+\		RESUME 17500 IF OUTPUT.CH%=CH% 				&
+\		RESUME 17540 						&
+
+19900	ON ERROR GOTO 0 						&
+
+30000	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+"["+ROWCOL$+"H"	! Direct Cursor Address &
+
+30250	!-----------------------------------------------MESSAGE HANDLER	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						&
+\		IF 	PRINT.TEST%					&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+				FNP$('24;55');				&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260	FNMESS$=MESG$							&
+\	FNEND 								&
+
+30300	DEF*FNSR$(BEGEND$)=ESC$+"["+BEGEND$+"r"	! Scroll control 	&
+
+30340	DEF FNZ(Y) 							&
+\	TEMP=Y								&
+\	TEMP=-Y IF Y<0. 						&
+\	TEMP=INT(TEMP*100.+.51)/100.					&
+\	TEMP=-TEMP IF Y<0.						&
+\	FNZ=TEMP							&
+\	FNEND								&
+
+30400	!--------------------------------------------------DATE HANDLER &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) 	&
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) 		&
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) 	&
+
+30600	DEF FNPAGE$(Y0%,Y1%,Y2%,Y0$,Y1$) 				&
+\		Y2$='' 							&
+\		Y2$=STRING$(Y0%-(Y1%+ 					&
+			LEN(XLATE(Y1$,STRING$(10%,0%)+CHR$(10%)))),10%) &
+							IF Y1$<>'' 	&
+\		PAGE.LINE%=LEN(XLATE(Y0$,STRING$(10%,0%)+CHR$(10%))) 	&
+\		Y%=INSTR(1%,Y1$+Y0$,'<<#') 				&
+\		Y3%=INSTR(1%,Y1$+Y0$,'#>>') 				&
+\		Y$=RIGHT(NUM1$(100000+Y2%),8%-(Y3%-Y%)) 		&
+\		Y3%=-3% IF Y%=0% 					&
+\		PRINT #OUTPUT.CH%, Y2$;LEFT(Y1$+Y0$,Y%-1%);Y$; 		&
+			RIGHT(Y1$+Y0$,Y3%+3%); 				&
+\		PAGE%=Y2% 						&
+\	FNEND 								&
+
+30650	DEF FNPAGE%=PAGE%+1% 						&
+
+30660	DEF FNLINE%=PAGE.LINE% 						&
+
+31000	! Chain entry 							&
+	M$=SYS(CHR$(7%)) 						&
+\	REP.NUM$=MID(M$,INSTR(1%,M$,'~')+1%,6%) 			&
+\	GOTO 30 							&
+
+32767	END &
+

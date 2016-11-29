@@ -1,0 +1,346 @@
+10	!---------------------------------------------------------------&
+	!	FINANCIAL STATMENT        -FINR01			&
+	!	FIN Report Writer	 				&
+	!								&
+	!	FINR02.B2S	V1.0	March 1985			&
+	!								&
+	! Author - Glenn Carl Hillam, Computer Management Center, Inc.	&
+	!								&
+	! Files-PPRINT.DAT	-ISAM	Printing Info File		&
+	!	FINSTA.DAT 	-[2,6]	Finacial Sta. Description File	&
+	!								&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$=SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	CH%,OUTPUT.CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE 1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	R.ON$=ESC$+"[7m"      		! Reverse video &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	ENTER.COPY$=ESC$+'[5i'		! Enter media copy &
+\	EXIT.COPY$=ESC$+'[4i'		! Exit media copy &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DIM SYS.CALL%(30%), FIL.NAM%(30%), Y%(32%), Y1%(32%),NAM$(100%) &
+\	DEVICE.CH%,PPRINT.CH%	= 02% &
+\	WRK.CH%			= 04% &
+\	MENU.CH%		= 12% &
+
+150	IF FNO%(PPRINT.CH%,'PPRINT.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'PPRINT.DAT',0%,-1%) &
+\		GOTO 17540 &
+
+160	IF FNG%(PPRINT.CH%,REP.NUM$) &
+	THEN	V$=FNMESS$(CH%,FNS%,'PPRINT.DAT  '+REP.NUM$,0%,-1%) &
+\		GOTO 17540 &
+
+170	FIELD #PPRINT.CH%+1%, FNL%+6% AS PPRINT.MUNG$,	&
+			20% AS PPRINT.REPDESC$,		&
+			30% AS PPRINT.MUNG$,		&
+			01% AS PPRINT.HPITCH$,		&
+			01% AS PPRINT.VPITCH$,		&
+			01% AS PPRINT.LPAGE$,		&
+			20% AS PPRINT.OUTDEV$,		&
+			06% AS PPRINT.SPOOLR$,		!(not used)&
+			02% AS PPRINT.SPAGE$,		&
+			02% AS PPRINT.EPAGE$,		&
+			02% AS PPRINT.COPIES$,		&
+			20% AS PPRINT.REPDATE$,		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(1%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(2%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(3%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(4%),		&
+			44% AS JUNK$,			&
+			20% AS PPRINT.UDF$(5%)		&
+\	FIELD #PPRINT.CH%+1%, FNL%+441% AS JUNK$,	&
+			03% AS B.SYSNAM$,		&
+			08% AS MUNG$,			&
+			01% AS B.DISPLAY$		&
+\	REPDESC$	=PPRINT.REPDESC$+'' 		&
+\	HPITCH%		=ASCII(PPRINT.HPITCH$) 		&
+\	VPITCH%		=ASCII(PPRINT.VPITCH$) 		&
+\	LIN.PER.PAGE%	=ASCII(PPRINT.LPAGE$) 		&
+\	OUTDEV$		=PPRINT.OUTDEV$+'' 		&
+\	SPAGE%		=CVT$%(PPRINT.SPAGE$) 		&
+\	EPAGE%		=CVT$%(PPRINT.EPAGE$) 		&
+\	COPIES%		=CVT$%(PPRINT.COPIES$) 		&
+\	REPDATE$	=CVT$$(PPRINT.REPDATE$,132%) 	&
+\	DISPLAY$  	=B.DISPLAY$+'' 			&
+\	V%=FNC%(PPRINT.CH%) ! Close PPRINT.DAT channel 	&
+
+300	!-------------Work over the WILD file---&
+	WLDCRD.FLAG%=0%	&
+\	FILE.NAME$='??????.FS'  &
+
+310	GOSUB 18100 ! Pick up the wildcard file names &
+
+320	!---------SET FILE NAMES INTO ARRAY------------&
+	COUNTER%=COUNTER%+1%  & 
+\	NAM$(COUNTER%)=WILD.FILE$ &
+\	GOTO 310  &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	! RESUME FROM LINE 400 ERROR &
+	
+510	TITLE$='FINANCIAL REPORT FILE LIST' &
+\	PAGE.TOP$=STRING$(2%,10%)+CHR$(13%)+ &
+		'Date: '+DATE$(0%)+SPACE$(50%-LEN(COMPANY$)/2%)+ &
+		COMPANY$+SPACE$(58%-LEN(COMPANY$)/2%)+'Page <<###>>'+ &
+		CHR$(10%)+CHR$(13%)+ &
+		'Time: '+TIME$(0%)+SPACE$(51%-LEN(TITLE$)/2%)+ &
+		TITLE$+SPACE$(57%-LEN(TITLE$)/2%)+'V1.0'+ &
+		CHR$(10%)+CHR$(13%)+SPACE$(64%-LEN(REPDATE$)/2%)+REPDATE$+ &
+		STRING$(2%,10%)+CHR$(13%)+ &
+		' '+STRING$(130%,61%)+CHR$(10%)+CHR$(13%) &
+\	PAGE.BOT$=STRING$(6%,10%)+CHR$(13%) &
+\	BOT.MARGIN%=6% &
+\	MORE.LINES%=2% &
+\	DISPLAY.CONTROL%=16% &
+
+10000	IF DISPLAY$<>'Y' &
+	THEN	CLOSE CH% &
+\		RESET.CH%=1% &
+\		TEMP.CH%=12% &
+\		OPEN OUTDEV$ AS FILE OUTPUT.CH%, MODE 2% &
+\		IF 	SPAGE%>1% &
+		THEN	OPEN 'NL:' AS FILE TEMP.CH% &
+\			OUTPUT.CH%=TEMP.CH% &
+
+17000	!-------------------------------------------------OUTPUT REPORT &
+	PAGE.BREAK%=LIN.PER.PAGE%-BOT.MARGIN% &
+\	IF DISPLAY$<>'Y' &
+	THEN	PRINT #OUTPUT.CH%, ENTER.COPY$;FNPAGE$(LIN.PER.PAGE%,0%,1%, &
+			PAGE.TOP$,''); &
+\		LINE.COUNT%=FNLINE% &
+
+17030	FOR LOOP%=1% TO COUNTER% &
+\		OPEN NAM$(LOOP%) FOR INPUT AS FILE WRK.CH%
+
+17035		IF DISPLAY$='Y' &
+		THEN	PRINT #OUTPUT.CH%, CLSCN$;R.ON$;COLM.ON$; &
+				NAM$(LOOP%);SPACE$(130%-LEN(NAM$(LOOP%))); &
+				FNSR$('2;19');G.OFF$;FNP$('19;1'); &
+			ELSE	PRINT #OUTPUT.CH%,NAM$(LOOP%) &
+\				LINE.COUNT%=LINE.COUNT%+1% &
+
+17050		INPUT LINE #WRK.CH%, CMD$ &
+\		PRINT #OUTPUT.CH%, SPACE$(5%);CMD$; &
+\		LINE.COUNT%=LINE.COUNT%+1% &
+\		GOSUB 17600 &
+\		GOTO 17050 &
+
+17100		GOTO 17200 IF LOOP%=COUNTER% &
+
+17110		IF DISPLAY$='Y' &
+		THEN	PRINT #OUTPUT.CH%, FNP$('24;105');'Hit any key to continue'; &
+\			INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\			LINE.COUNT%=0% &
+\			PRINT #OUTPUT.CH%, FNP$('24;1');CLRLIN$;FNP$('18;132') &
+
+17120		IF DISPLAY$<>'Y' &
+		THEN	MORE.LINES%=1000% &
+\			GOSUB 17600 &
+\			MORE.LINES%=2% &
+
+17200	NEXT LOOP% &
+
+17400	&
+
+17500	IF DISPLAY$<>'Y' &
+	THEN	PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%,FNPAGE%, &
+			'',PAGE.BOT$) &
+	ELSE	PRINT #OUTPUT.CH%, FNP$('24;1');'End of report'; &
+			FNP$('24;105');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+
+17540	! &
+
+17550	PRINT #OUTPUT.CH%, EXIT.COPY$; IF DISPLAY$<>'Y' &
+\	PRINT #OUTPUT.CH%, FNSR$('1;24');COLM.OFF$; IF DISPLAY$='Y' &
+\	CLOSE OUTPUT.CH% &
+\	V%=FNX%('',0%,'') &
+
+17600	!Perform the pagination &
+	IF DISPLAY$<>'Y' AND LINE.COUNT%+MORE.LINES%>PAGE.BREAK% &
+	THEN	END.FLAG%=-1% IF PAGE%>=EPAGE% AND EPAGE%<>0% &
+\		RETURN IF END.FLAG% &
+\		PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPAGE%,PAGE.TOP$+PAGE.TOP1$,PAGE.BOT$); &
+\		LINE.COUNT%=FNLINE% &
+\		IF SPAGE%>1% &
+		THEN	IF SPAGE%<=PAGE% &
+			THEN	OUTPUT.CH%=RESET.CH% &
+\			PRINT #OUTPUT.CH%, FNPAGE$(LIN.PER.PAGE%,0%, &
+				PAGE%,PAGE.TOP$+PAGE.TOP1$,''); &
+\				LINE.COUNT%=FNLINE% &
+\				SPAGE%=0% &
+
+17650	IF DISPLAY$='Y' AND LINE.COUNT%>DISPLAY.CONTROL% &
+	THEN	PRINT #OUTPUT.CH%, FNP$('24;105');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\		LINE.COUNT%=0% &
+\		PRINT #OUTPUT.CH%, FNP$('24;1');CLRLIN$;FNP$('18;132') &
+
+17670	RETURN &
+
+18100	!---------------WILD CARD LOOKUP---------------------&
+	NEXXT%=0% &
+\	CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.NAME$) TO SYS.CALL% &
+\	SYS.CALL%(0%)=30% &
+\	SYS.CALL%(1%)=6% &
+\	SYS.CALL%(2%)=17% &
+\	SYS.CALL%(3%)=WLDCRD.FLAG% ! JUMP &
+\	SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\	WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\	CHANGE SYS.CALL% TO SYS.CALL$ &
+\	CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\	FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\	FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\	WILD.FILE$=CHR$(FIL.NAM%(23%))+CHR$(FIL.NAM%(24%))+ &
+		NUM1$(FIL.NAM%(25%))+":"+ &
+		"["+NUM1$(FIL.NAM%(6%))+","+NUM1$(FIL.NAM%(5%))+"]"+ &
+		RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+		RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+"."+ &
+		RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+\	RETURN &
+
+18110	NEXXT%=1% ! Move on to the next &
+\	RETURN &
+	
+18900	! SEND MESSAGE IF DETACHED KEYBOARD &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 450 IF ERL=400% 						&
+\	RESUME 17100 IF ERL=17050%					&
+\	RESUME 17540 IF ERR=54% 					&
+\	RESUME 17550 IF ERL=17540 					&
+\	RESUME 400 IF ERL=18100%					&
+
+19010	IF ERR=28% 							&
+	THEN	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) 			&
+\		RESUME 17540		 				&
+
+19015	IF 	ERR=27% 						&
+	THEN	RESUME 70 IF ERL=60% 					&
+\		RESUME 18900 						&
+
+19900	ON ERROR GOTO 0 						&
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H'	! Direct Cursor Address &
+
+30250	!-----------------------------------------------MESSAGE HANDLER	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						&
+\		IF PRINT.TEST%						&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+				FNP$('24;55');				&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30300	DEF*FNSR$(BEGEND$)=ESC$+'['+BEGEND$+'r'	! Scroll control 	&
+
+30400	DEF FNFONE$(PHN$)='('+LEFT(PHN$,3%)+')'+MID(PHN$,4%,3%)+'-' &
+		+RIGHT(PHN$,7%) &
+
+30600	!	********************************************************&
+	!	Print top and bottom of page 				&
+	!	Format : 						&
+	!	PRINT FNPAGE$(<LINES/PAGE>,<CURRENT LINE COUNT>,	&
+	!		<PAGE COUNT>,<TOP OF PAGE>,<BOTTOM OF PAGE>) 	&
+	!	FNPAGE% = PAGE COUNT 					&
+	!	FNLINE% = LINE COUNT 					&
+	! 								&
+	!	Written by Robert Peterson - July 1981 			&
+	!	Version 1 Edition 0 					&
+	!	********************************************************&
+
+30610	DEF FNPAGE$(Y0%,Y1%,Y2%,Y0$,Y1$) 				&
+\		Y2$='' 							&
+\		Y2$=STRING$(Y0%-(Y1%+ 					&
+			LEN(XLATE(Y1$,STRING$(10%,0%)+CHR$(10%)))),10%) &
+							IF Y1$<>'' 	&
+\		PAGE.LINE%=LEN(XLATE(Y0$,STRING$(10%,0%)+CHR$(10%))) 	&
+\		Y%=INSTR(1%,Y1$+Y0$,'<<#') 				&
+\		Y3%=INSTR(1%,Y1$+Y0$,'#>>') 				&
+\		Y$=RIGHT(NUM1$(100000+Y2%),8%-(Y3%-Y%)) 		&
+\		Y3%=-3% IF Y%=0% 					&
+\		PRINT #OUTPUT.CH%, Y2$;LEFT(Y1$+Y0$,Y%-1%);Y$; 		&
+			RIGHT(Y1$+Y0$,Y3%+3%); 				&
+\		PAGE%=Y2% 						&
+\	FNEND 								&
+
+30650	DEF FNPAGE%=PAGE%+1% 						&
+
+30660	DEF FNLINE%=PAGE.LINE% 						&
+
+31000	! Chain entry &
+	M$=SYS(CHR$(7%)) &
+\	REP.NUM$=MID(M$,INSTR(1%,M$,'~')+1%,6%) &
+\	GOTO 30 &
+
+32767	END &
+

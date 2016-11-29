@@ -1,0 +1,711 @@
+10	! CR1MNT.B2S	V1.0	MAY 1987 &
+	! &
+	! Author - ROBERT PETERSON &
+	! &
+	!	CUSTOM.DAT		-ISAM	Customer File &
+	!	CHART.DAT		-ISAM	Chart of Accounts File &
+	! &
+	!-------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$	= SYS(CHR$(6%)+CHR$(-7%)) 		!^C ERROR TRAPPING &
+	! &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	INSERT.LIN$=ESC$+'[1L'		! Insert a line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erace cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+
+100	DIM FIL.NAM%(30%), SYS.CALL%(30%) &
+\	DEVICE.CH%	= 02% &
+\	CRJ.CH%		= 02% &
+\	CUSTOM.CH%	= 06% &
+\	CHART.CH%	= 08% &
+\	MENU.CH%   	= 12% &
+	&
+\	LOOP.DATA%	= 05% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/RO','')=0% &
+	THEN	CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CHART')=0% &
+\		CUSTOM.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CUSTOM')=0% &
+\		CRJ.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CRJ    ')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+210	PRINT #CH%, COLM.OFF$; &
+\	PRINT #CH%, FNP$('2;1');'FOLLOWING BATCH NUMBERS ARE OPENED:'; &
+\	FILES%=FNFILE%(CRJ.DEVICE$+'CRJ??.DAT') &
+
+300	PRINT #CH%, &
+		FNP$('4;28');'CASH RECEIPTS JOURNAL ENTRY ROUTINE'; &
+		FNP$('6;28');'Batch Number <01> '; &
+\	JUNK$ = FNINP$(CH%, 0%, '_', 2%,0%) &
+\	GOTO 1045 IF JUNK$='%^C' &
+\	JUNK$ = "01" IF JUNK$ = "" &
+\	IF LEN(JUNK$) = 1% &
+	THEN	JUNK$ = '0' + JUNK$ &
+
+310	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75');B.ON$;BLINK.ON$; 	&
+		R.ON$;'WAIT';G.OFF$;FNP$('24;1');			&
+\	BATCH.NUM$ = JUNK$ &
+
+320	V%=FNO%(CRJ.CH%,CRJ.DEVICE$+'CRJ'+BATCH.NUM$+'.DAT','/RW','') &
+\	V%=FNO%(CRJ.CH%,CRJ.DEVICE$+'CRJ'+BATCH.NUM$+'.DAT','/CR:8,64','') &
+								IF FNS% = 5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,'CRJ'+BATCH.NUM$+'.DAT',0%,-1%) &
+\		GOTO 1045 &
+
+390	V%=FNG%(CRJ.CH%,'') &
+\	FIRST.KEY%, FIRST.DATA%=0% &
+\	FIRST.KEY%, FIRST.DATA%=FNT IF FNS%=0% &
+
+395	CHART.FLAG%=FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/SF/NS/RO','') &
+\	CUSTOM.FLAG%=FNO%(CUSTOM.CH%,CUSTOM.DEVICE$+'CUSTOM.DAT','/RO','') &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 64% &
+\	FIELD #12%,	06% AS CRJ.CUSNUM$, &
+			08% AS CRJ.REFNUM$, &
+			02% AS CRJ.DATE$, &
+			08% AS CRJ.CASHACCT$, &
+			08% AS CRJ.CASHAMT$ &
+\	FIELD #12%, 64% AS CRJ.BUF$ &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+	PRINT #CH%, COLM.OFF$;FNSR$('1;24');G.OFF$; &
+\	BASE.TOP%	= 5% &
+\	BASE.BOT%	= 18% &
+\	WINDOW.LIN%	= BASE.BOT%-BASE.TOP% &
+
+1005	GOSUB 1060 &
+
+1030	CHNG.FLAG%,ADD.FLAG%=0% &
+\	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Add Erase Change Blank Quit '; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+\	OPT$='A' IF OPT$='' &
+
+1040	GOTO 1050 IF OPT$<>'Q' &
+
+1045	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+		B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+		FNX%('',0%,''); &
+
+1050	GOTO 2100	IF OPT$='A'		! Add &
+\	GOTO 2200	IF OPT$='C' OR OPT$='B'	! Change, Blank &
+\	GOTO 2200	IF OPT$='E'		! Erase &
+\	GOTO 1030 &
+
+1060	TEMP$     = 'Cash Receipts Journal Maintenance' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+\	PRINT #CH%,	FNP$(NUM1$(LOOP%)+';1');CLRLIN$;R.ON$;' '; &
+			FNP$(NUM1$(LOOP%)+';80');' '; &
+				FOR LOOP%=2% TO 19% &
+\	PRINT #CH%,	FNP$('02;02'); &
+			'       A                      B         C'; &
+			'        D         E                   '; &
+			FNP$('3;2'); &
+			' LIN CUST # NAME          REFERENCE    DATE'; &
+			'  CASH #         AMT               '; &
+			FNP$('20;1');SPACE$(80%);G.OFF$; &
+\	RETURN &
+
+2100	!-----------------------------------------------------ADD RECORD &
+	OPTION$='ADD' &
+\	PRINT #CH%, FNSR$(NUM1$(BASE.TOP%)+';'+NUM1$(BASE.BOT%)); &
+\	LST.CUSNUM$, LST.REFNUM$, LST.DATE$, LST.CASHACCT$ = '' &
+\	IF	CRJ.COUNT%=0% AND SCREEN%=0% &
+	THEN	LINE.NO%=BASE.TOP% &
+\		CUR.LINE%=0% &
+\		CRJ.LINE%=1% &
+\		GOTO 2130 &
+
+2120	LOOP%=CRJ.COUNT%+1% &
+\	TOP.LINE%=CRJ.LINE% &
+\	GOTO 2221 &
+
+2130	LINE.NO$=NUM1$(LINE.NO%) &
+\	PRINT #CH%, G.OFF$; FNSR$(NUM1$(BASE.TOP%)+';'+NUM1$(BASE.BOT%)); &
+			LDS.ON$; &
+			FNP$(LINE.NO$+';1');CLRLIN$; &
+			FNP$(LINE.NO$+';5');CHR$(120%); &
+			FNP$(LINE.NO$+';12');CHR$(120%); &
+			FNP$(LINE.NO$+';28');CHR$(120%); &
+			FNP$(LINE.NO$+';37');CHR$(120%); &
+			FNP$(LINE.NO$+';46');CHR$(120%); &
+			FNP$(LINE.NO$+';55');CHR$(120%); &
+			FNP$(LINE.NO$+';65');CHR$(120%); &
+\	PRINT #CH%, USASCII$;FNP$(LINE.NO$+';1');G.OFF$;R.ON$;" "; &
+			FNP$(LINE.NO$+';80');" "; &
+			FNP$(LINE.NO$+';2');G.OFF$; &
+\	LIN$=NUM1$(CRJ.COUNT%+1%) &
+\	LIN$=STRING$(3%-LEN(LIN$),ASCII('0'))+LIN$ &
+\	PRINT #CH%, LIN$; &
+\	FOR LOOP%=1% TO LOOP.DATA% &
+\		DIFF%=-1% &
+\		GOSUB 6010 &
+\		DIFF%=0% &
+\		IF INP$='%ABORT' &
+		THEN	TOTAL.SALAMT=TOTAL.SALAMT-CVT$F(CRJ.SALAMT$) &
+				IF LOOP%=LOOP.DATA%-1% &
+\			GOSUB 6950 IF LOOP%=LOOP.DATA%-1% &
+\			GOTO 2130 &
+
+2135		ADD.FLAG%=-1% IF INP$='%END' &
+\		GOTO 2190 IF INP$='%END' &
+
+2140	NEXT LOOP% &
+
+2160	CRJ.COUNT%,CUR.LINE%=CRJ.COUNT%+1% &
+\	IF	FNA%(CRJ.CH%,CRJ.BUF$) &
+	THEN	V$=FNMESS$(CH%,FNS%,'CRJ.DAT',0%,-1%) &
+\		GOTO 1000 &
+
+2180	PRINT #CH%, FNP$(NUM1$(LINE.NO%)+';1') &
+\	LINE.NO%=LINE.NO%+1% &
+\	CRJ.LINE%,TOP.LINE%=CRJ.LINE%+1% IF LINE.NO%>BASE.BOT% &
+\	LINE.NO%=BASE.BOT% IF LINE.NO%>BASE.BOT% &
+\	GOTO 2130 &
+
+2190	PRINT #CH%, FNP$(NUM1$(LINE.NO%)+';1');CLRLIN$;G.OFF$;R.ON$;' '; &
+		FNP$(NUM1$(LINE.NO%)+';80');' ';G.OFF$; &
+\	GOTO 1030 &
+
+2200	!----------------------------------------CHANGE OR BLANK RECORD &
+	PRINT #CH%, FNSR$(NUM1$(BASE.TOP%)+';'+NUM1$(BASE.BOT%)); &
+\	LST.LOOP%=0% &
+\	IF	OPT$='E' &
+	THEN	OPTION$ = 'ERASE  ' &
+		ELSE	IF OPT$='B' &
+			THEN	OPTION$ = 'BLANK ' &
+				ELSE	OPTION$ = 'CHANGE ' &
+\					CHNG.FLAG% = -1% &
+
+2210	PRINT #CH%, CLRBOT$; OPTION$+':'; &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',3%,1%),32%) &
+\	GOTO 1030 IF INP$='' &
+\	LOOP%=VAL(INP$) &
+
+2220	TOP.LINE%=CRJ.LINE% &
+\	GOTO 2210 IF LOOP%>CRJ.COUNT% AND OPT$='E' &
+\	GOTO 2210 IF LOOP%=0% &
+
+2221	TEMP.COUNT%=CRJ.COUNT% &
+\	LAST.LOOP% = CRJ.LAST.LOOP% &
+\	FIRST.ROW% = CRJ.FIRST.ROW% &
+\	LAST.ROW% = CRJ.LAST.ROW% &
+\	ALREADY.PTD%=0% &
+\	ALREADY.PTD%=-1% IF LAST.LOOP%=LOOP% &
+\	IF	FIRST.ROW%<>0% AND LAST.LOOP%<>LOOP% &
+	THEN	PRINT #CH%, FNP$(NUM1$(BASE.TOP%-1%)+';1'); CLRLIN$; R.ON$; ' '; &
+		FNP$(NUM1$(BASE.TOP%-1%)+';80'); ' '; G.OFF$; &
+\		FIRST.ROW%=0% &
+
+2222	IF	LAST.ROW%<>0% AND LAST.LOOP%<>LOOP% &
+	THEN	PRINT #CH%, FNP$(NUM1$(BASE.BOT%+1%)+';1'); CLRLIN$; R.ON$; ' '; &
+		FNP$(NUM1$(BASE.BOT%+1%)+';80'); ' '; G.OFF$; &
+\		LAST.ROW%=0% &
+
+2225	LAST.LOOP%=LOOP% &
+\	IF	LOOP%<=TEMP.COUNT% AND &
+			(LOOP%<TOP.LINE% OR LOOP%>TOP.LINE%+WINDOW.LIN%) &
+	THEN	LINE.NO%=BASE.TOP%-1% IF LOOP%<TOP.LINE% &
+\		LINE.NO%=BASE.BOT%+1% IF LOOP%>TOP.LINE%+WINDOW.LIN% &
+\		LAST.ROW%=-1% IF LOOP%>TOP.LINE%+WINDOW.LIN% &
+\		FIRST.ROW%=-1% IF LOOP%<TOP.LINE% &
+\		CUR.LINE%=LOOP% &
+\		GOSUB 6040 &
+\		GOSUB 6060 IF ALREADY.PTD%=0% &
+\		GOTO 2260 &
+
+2230	LOOP.TEMP%=LOOP% &
+\	LOOP.CHNG%=LOOP% &
+\	IF	LOOP%>TEMP.COUNT% &
+	THEN	LINE.NO% = BASE.TOP% + TEMP.COUNT% - TOP.LINE% &
+\		LINE.NO% = BASE.TOP% IF TEMP.COUNT%=0% &
+\		LINE.NO% = BASE.BOT% IF LINE.NO%>BASE.BOT% &
+\		CUR.LINE% = TOP.LINE% + WINDOW.LIN% &
+\		CUR.LINE% = TEMP.COUNT% IF CUR.LINE%>TEMP.COUNT% &
+\		LINE.NO% = BASE.TOP%-1% IF CUR.LINE%<TEMP.COUNT%-WINDOW.LIN% &
+\		CRJ.LINE%,TOP.LINE% = TEMP.COUNT%-WINDOW.LIN%-1% &
+			IF CUR.LINE%<TEMP.COUNT%-WINDOW.LIN% &
+\		CUR.LINE% = TEMP.COUNT%-WINDOW.LINE% &
+			IF CUR.LINE%<TEMP.COUNT%-WINDOW.LIN% &
+\		FOR CUR.LINE%=CUR.LINE%+1% TO TEMP.COUNT% &
+\			LINE.NO%=LINE.NO%+1% &
+\			GOSUB 6040 &
+\			GOSUB 6050 &
+\		NEXT CUR.LINE% &
+\		CHNG.FLAG%=0% &
+\		ADD.FLAG%=-1% &
+\		OPTION$='ADD' &
+\		ARREG.FLAG%=-1% &
+\		CRJ.LAST.LOOP%	= LAST.LOOP% &
+\		CRJ.FIRST.ROW%	= FIRST.ROW% &
+\		CRJ.LAST.ROW%	= LAST.ROW% &
+\		GOTO 2180 &
+
+2240	IF	TOP.LINE%<=LOOP.CHNG% AND &
+		TOP.LINE%+WINDOW.LIN%>=LOOP.CHNG% &
+	THEN	CUR.LINE%=LOOP.CHNG% &
+\		LINE.NO%=BASE.TOP%+CUR.LINE%-TOP.LINE% &
+\		GOSUB 6040 &
+\		GOTO 2260 &
+
+2250	IF	LOOP.CHNG%<TOP.LINE%-BASE.TOP% &
+		OR LOOP.CHNG%>TOP.LINE%+WINDOW.LIN% &
+	THEN	STEP.TEMP%=1% &
+\		LINE.NO%=BASE.TOP%-1% &
+\		CRJ.LINE%,CUR.LINE%,TOP.LINE%=LOOP.CHNG%-WINDOW.LIN% &
+\		STEP.TEMP%=-1% IF LOOP.CHNG%<=WINDOW.LIN%+1% &
+\		LINE.NO%=BASE.BOT% IF LOOP.CHNG%<=WINDOW.LIN%+1% &
+\		CUR.LINE%=LOOP.CHNG%+BASE.TOP% IF LOOP.CHNG%<=WINDOW.LIN%+1% &
+\		CRJ.LINE%,TOP.LINE%=1% IF LOOP.CHNG%<=WINDOW.LIN%+1% &
+\		GOTO 2257 &
+
+2255	STEP.TEMP%=1% &
+\	LINE.NO%=BASE.TOP% &
+\	STEP.TEMP%=-1% IF TOP.LINE%>LOOP.CHNG% &
+\	LINE.NO%=BASE.BOT% IF STEP.TEMP%=1% &
+\	CUR.LINE%=TOP.LINE%+BASE.TOP%+1% &
+\	CUR.LINE%=TOP.LINE%-1% IF STEP.TEMP%<1% &
+
+2257	FOR CUR.LINE% = CUR.LINE% TO LOOP.CHNG% STEP STEP.TEMP% &
+\		LINE.NO%=LINE.NO%+STEP.TEMP% &
+\		GOSUB 6040 &
+\		GOSUB 6050 &
+\	NEXT CUR.LINE% &
+
+2260	CRJ.LAST.LOOP%	= LAST.LOOP% &
+\	CRJ.FIRST.ROW%	= FIRST.ROW% &
+\	CRJ.LAST.ROW%	= LAST.ROW% &
+\	LINE.NO$=NUM1$(LINE.NO%) &
+\	GOTO 2265 IF OPT$='C' OR OPT$='B' &
+\	PRINT #CH%, CLRBOT$; 'Verify erasure of this line (Y/N) <N> '; &
+\	YN$=FNINP$(CH%,128%,'_',1%,1%) &
+\	IF	CVT$$(YN$,1%)<>'Y' &
+	THEN	PRINT #CH%, FNP$('24;1'); CLRLIN$; &
+			'This line has not been erased.'; FNP$('24;55'); &
+			'Hit any key to continue '; &
+\		NW$=FNINP$(CH%,128%,'',1%,1%) &
+\		GOTO 2210 &
+
+2261	GOSUB 6040 &
+\	IF	DEL.LINE.FLAG%=0% &
+	THEN	V%=FND%(CRJ.CH%,'') &
+\		IF FNS% &
+		THEN	V$=FNMESS$(CH%,FNS%,'CRJ',0%,-1%) &
+\			GOTO 1045 &
+
+2262	GOSUB 6040 &
+\	GOSUB 6060 &
+\	PRINT #CH%, FNP$('24;1'); CLRLIN$; &
+		'This line has been erased. '; FNP$('24;55'); &
+		'Hit any key to continue '; &
+\	NW$=FNINP$(CH%,128%,'',1%,1%) &
+\	GOTO 2210 &
+
+2265	IF	DEL.LINE.FLAG% &
+	THEN	PRINT #CH%, FNP$('24;1'); CLRLIN$; &
+			'This line has been erased. '; &
+			'No changes can be made. Hit any key to continue '; &
+\		NW$=FNINP$(CH%,128%,'',1%,1%) &
+\		GOTO 2210 &
+
+2267	PRINT #CH%, CLRBOT$; "Item: A B C D E "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%,1%),32%) &
+\	GOTO 1000 IF INP$="%^C" &
+\	GOTO 2200 IF INP$="" &
+\	LOOP%=(INSTR(1%," A B C D E "," "+INP$+" ")+1%)/2% &
+\	GOTO 2267 IF LOOP%=0% &
+		OR LOOP%=1% AND OPT$='B' &
+\	DIFF%=-1% &
+\	INP$='' &
+\	GOSUB 6010 IF OPT$='C' &
+\	GOSUB 6030 IF OPT$='B' &
+\	DIFF%=0% &
+
+2270	! &
+
+2290	GOSUB 2900 &
+\	IF 	FNS%=0% &
+	THEN	GOTO 2210 &
+		ELSE	V$=FNMESS$(CH%,FNS%,'CRJ',0%,-1%) &
+\			GOTO 1000 &
+
+2900	!-------------------------------------------------UPDATE A RECORD &
+	V%=FNG%(-CRJ.CH%,NUM1$(FIRST.KEY%+CUR.LINE%))+ &
+			FNG%(-CRJ.CH%-1%,NUM1$(FIRST.DATA%+CUR.LINE%)) &
+\	V%=FNU%(-CRJ.CH%,CRJ.BUF$) IF LOOP%=1% &
+\	V%=FNU%(CRJ.CH%,CRJ.BUF$) IF LOOP%>1% AND FNS%=0% &
+
+2930	RETURN &
+
+6000	!------------------------------------------------DATA ENTRY SECTION &
+
+6008	ON LOOP% GOSUB	6220, 6240, 6260, 6280, 6300 &
+\	RETURN &
+
+6010	ON LOOP% GOSUB	6210, 6230, 6250, 6270, 6290 &
+\	RETURN &
+		! INPUT DATA &
+
+6030	ON LOOP% GOSUB	6217, 6237, 6257, 6277, 6297 &
+\	RETURN &
+
+6040	LSET CRJ.BUF$='' &
+\	DEL.LINE.FLAG%=FNG%(-CRJ.CH%,NUM1$(FIRST.KEY%+CUR.LINE%))+ &
+			FNG%(-CRJ.CH%-1%,NUM1$(FIRST.DATA%+CUR.LINE%)) &
+\	LSET CRJ.BUF$=FNL$ IF DEL.LINE.FLAG%=0% &
+\	DEL.LINE.FLAG%=-1% IF LEFT(CRJ.BUF$,8%)='DDDDDDDD' &
+\	RETURN &
+
+6050	TOP.LINE%=CRJ.LINE% &
+\	TOP.LINE%=1% IF TOP.LINE%=0% &
+\	PRINT #CH%, FNP$(NUM1$(BASE.TOP%)+';1'); INSERT.LIN$; &
+		IF LINE.NO%<BASE.TOP% &
+\	PRINT #CH%, FNP$(NUM1$(BASE.BOT%)+';80') &
+		IF LINE.NO%>WINDOW.LIN% &
+\	TOP.LINE%=TOP.LINE%+1% IF LINE.NO%>BASE.BOT% &
+\	LINE.NO%=BASE.BOT% IF LINE.NO%>BASE.BOT% &
+\	TOP.LINE%=TOP.LINE%-1% IF LINE.NO%<BASE.TOP% &
+\	LINE.NO%=BASE.TOP% IF LINE.NO%<BASE.TOP% &
+
+6060	LINE.NO$=NUM1$(LINE.NO%) &
+\	PRINT #CH%, G.OFF$;LDS.ON$; &
+			FNP$(LINE.NO$+';1');CLRLIN$; &
+			FNP$(LINE.NO$+';5');CHR$(120%); &
+			FNP$(LINE.NO$+';12');CHR$(120%); &
+			FNP$(LINE.NO$+';28');CHR$(120%); &
+			FNP$(LINE.NO$+';37');CHR$(120%); &
+			FNP$(LINE.NO$+';46');CHR$(120%); &
+			FNP$(LINE.NO$+';55');CHR$(120%); &
+			FNP$(LINE.NO$+';65');CHR$(120%); &
+\	PRINT #CH%,	USASCII$;FNP$(LINE.NO$+';1');G.OFF$;R.ON$;" "; &
+			FNP$(LINE.NO$+';80');" "; &
+			FNP$(LINE.NO$+';2');G.OFF$; &
+\	LIN$=NUM1$(CUR.LINE%) &
+\	LIN$=STRING$(3%-LEN(LIN$),ASCII('0'))+LIN$ &
+\	IF	DEL.LINE.FLAG%=0% &
+	THEN	PRINT #CH%, LIN$; &
+\		FOR LOOP%=1% TO LOOP.DATA% &
+\			GOSUB 6008 &
+\		NEXT LOOP% &
+\		CRJ.LINE%=TOP.LINE% &
+\		RETURN &
+
+6070	PRINT #CH%, LIN$; &
+		FNP$(LINE.NO$+';6'); STRING$(33%,ASCII('*')); &
+		' ERASED ';STRING$(33%,ASCII('*')); &
+\	CRJ.LINE%=TOP.LINE% &
+\	RETURN &
+
+6200	!-----------------------------------------------DATA ENTRY SECTION &
+
+6210	TEMP$,DEF.CUSNUM$='' IF LST.CUSNUM$='' AND CHNG.FLAG%=0% &
+\	TEMP$,DEF.CUSNUM$=LST.CUSNUM$+'' IF LST.CUSNUM$<>'' AND CHNG.FLAG%=0% &
+\	TEMP$,DEF.CUSNUM$=CRJ.CUSNUM$+'' IF CHNG.FLAG%<>0% &
+\	INP$=FNSIO$('',NUM1$(LINE.NO%)+';6',TEMP$,DEF.CUSNUM$, &
+			CHR$(CH%)+STRING$(2%,LEN(CRJ.CUSNUM$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	RETURN IF INP$='%ABORT' OR INP$='%END' &
+\	LST.CUSNUM$=INP$ &
+\	IF	FNG%(CUSTOM.CH%,INP$)=0% &
+	THEN	FIELD #CUSTOM.CH%+1%,	FNL% AS JUNK$, &
+			06% AS CUSTOM.NUM$, &
+			25% AS CUSTOM.NAME$, &
+			25% AS CUSTOM.ADD1$, &
+			21% AS CUSTOM.ADD2$, &
+			15% AS CUSTOM.CITY$, &
+			02% AS CUSTOM.STATE$, &
+			05% AS CUSTOM.COUNTRY$, &
+			10% AS CUSTOM.ZIP$, &
+			10% AS CUSTOM.PHONE$, &
+			02% AS CUSTOM.SLSMAN$, &
+			02% AS CUSTOM.TERR$, &
+			02% AS CUSTOM.LOC$, &
+			02% AS CUSTOM.TYPE$, &
+			02% AS CUSTOM.CODE$, &
+			01% AS CUSTOM.TAXFLG$, &
+			10% AS CUSTOM.STAXNUM$, &
+			02% AS CUSTOM.STAXLOC$, &
+			01% AS CUSTOM.METHOD$, &
+			01% AS CUSTOM.STMFLG$, &
+			15% AS CUSTOM.ALPSRT$ &
+\		TAXFLG$ = CUSTOM.TAXFLG$ + '' &
+\		STATE$ = CUSTOM.STATE$ + '' &
+\		CUSTYP$ = CUSTOM.TYPE$ + '' &
+
+6217	LSET CRJ.CUSNUM$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6220	CUS.NAME$='** UNDEFINED **' &
+\	CUS.NAME$=MID(FNL$,7%,15%)+'' IF FNG%(CUSTOM.CH%,CRJ.CUSNUM$)=0% &
+\	PRINT #CH%, FNP$(NUM1$(LINE.NO%)+';6');B.ON$;CRJ.CUSNUM$; &
+			FNP$(NUM1$(LINE.NO%)+';13');CUS.NAME$;G.OFF$; &
+\	RETURN &
+
+6230	TEMP$=CRJ.REFNUM$+'' &
+\	DEF.REFNUM$=LST.REFNUM$+'' IF CHNG.FLAG%=0% AND DEF.REFNUM$='' &
+\	TEMP$=DEF.REFNUM$+'' IF CHNG.FLAG%=0% &
+\	INP$=FNSIO$('',NUM1$(LINE.NO%)+';29',TEMP$,DEF.REFNUM$, &
+			CHR$(CH%)+STRING$(2%,LEN(CRJ.REFNUM$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	RETURN IF INP$='%ABORT' OR INP$='%END' &
+\	INP$=SPACE$(8%-LEN(INP$))+INP$ &
+\	LST.REFNUM$=INP$+'' &
+
+6237	RSET CRJ.REFNUM$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6240	PRINT #CH%, FNP$(NUM1$(LINE.NO%)+';29');B.ON$;CRJ.REFNUM$;G.OFF$; &
+\	RETURN &
+
+6250	TEMP$='' &
+\	TEMP$=DEFAULT$(LOOP%) IF CHNG.FLAG%=0% &
+\	LSET CRJ.DATE$=CVT%$(FND6%(TEMP$)) IF CHNG.FLAG%=0% &
+\	INP$=FNSIO$('',NUM1$(LINE.NO%)+';38',CRJ.DATE$, &
+			TEMP$,CHR$(CH%)+ &
+			CHR$(8%)+CHR$(6%)+CHR$(4%)+CHR$(0%)+ &
+			OPTION$+' DATE') &
+\	RETURN IF INP$='%ABORT' OR INP$='%END' &
+\	DEFAULT$(LOOP%)=INP$ IF CHNG.FLAG%=0% &
+
+6257	LSET CRJ.DATE$=CVT%$(FND6%(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6260	PRINT #CH%, FNP$(NUM1$(LINE.NO%)+';38')+B.ON$;FND6$(CVT$%(CRJ.DATE$)); &
+		G.OFF$; &
+\	RETURN &
+
+6270	TEMP$=CRJ.CASHACCT$+'' &
+\	DEF.CASHACCT$=LST.CASHACCT$+'' IF CHNG.FLAG%=0% AND DEF.CASHACCT$='' &
+\	TEMP$=DEF.CASHACCT$+'' IF CHNG.FLAG%=0% &
+\	INP$=FNSIO$('',NUM1$(LINE.NO%)+';47',TEMP$,DEF.CASHACCT$, &
+			CHR$(CH%)+STRING$(2%,LEN(CRJ.CASHACCT$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	RETURN IF INP$='%ABORT' OR INP$='%END' &
+\	INP$=SPACE$(8%-LEN(INP$))+INP$ &
+\	LST.CASHACCT$=INP$+'' &
+\	IF	CHART.FLAG%=0% AND INP$<>'' &
+	THEN	IF	FNG%(CHART.CH%,INP$) &
+		THEN	PRINT #CH%, FNP$('24;1'); CLRLIN$; &
+			'Account # not found. Confirm entry (Y/N) <N> '; &
+\			YN$=FNINP$(CH%,128%,'',1%,1%) &
+\			IF	CVT$$(YN$,-1%)<>'Y' &
+			THEN	GOTO 6270 &
+
+6277	RSET CRJ.CASHACCT$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6280	PRINT #CH%, FNP$(NUM1$(LINE.NO%)+';47');B.ON$;CRJ.CASHACCT$;G.OFF$; &
+\	RETURN &
+
+6290	INP$=FNSIO$('######.##',NUM1$(LINE.NO%)+';56',CRJ.CASHAMT$, &
+			DEFAULT$(LOOP%), &
+			CHR$(CH%)+CHR$(9%)+CHR$(8%)+CHR$(5%)+CHR$(2%)+ &
+			OPTION$+' VALUE') &
+\	RETURN IF INP$='%ABORT' OR INP$='%END' &
+
+6297	LSET CRJ.CASHAMT$=CVTF$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6300	PRINT #CH% USING FNP$(NUM1$(LINE.NO%)+';56')+B.ON$+'######.##'+G.OFF$, &
+			CVT$F(CRJ.CASHAMT$); &
+\	RETURN &
+
+6950	!----------------------------------------PRINT TOTAL HOURS &
+	RETURN &
+\	PRINT #CH% USING FNP$('20;57')+R.ON$+'Total Hours = ##,###.##'+G.OFF$, &
+		TOTAL.HOURS; &
+\	RETURN &
+
+18910	!----------------------------------------------END OF FILE &
+	PRINT #CH%, CLRBOT$;FNP$('24;1');'End of file has been reached.'; &
+		FNP$('24;55');'Hit any key to continue '; &
+\	INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\	GOTO 1000 &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME IF ERR=52% OR ERR=51% &
+\	RESUME 450 IF ERL=400 &
+\	INP$='%^C' IF ERR=54% &
+\	RESUME 1000 IF ERR=54% &
+\	RESUME 30130 IF ERL=30110 &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF	ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR MID(BUFFER$,2%,2%)="OP" &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR MID(BUFFER$,2%,2%)="OQ" &
+
+30010		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30100	!-----------------------------------------FILE LOOKUP FUNCTION &
+	DEF FNFILE%(FILE.SPEC$) &
+\		WLDCNT%=0% &
+\		WLDCRD.FLAG%=0% &
+
+30110	!-----------------WILD CARD LOOKUP------------------------------&
+		CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.SPEC$) TO SYS.CALL% &
+\		SYS.CALL%(0%)=30% &
+\		SYS.CALL%(1%)=6% &
+\		SYS.CALL%(2%)=17% &
+\		SYS.CALL%(3%)=WLDCRD.FLAG% !JUMP &
+\		SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\		WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\		CHANGE SYS.CALL% TO SYS.CALL$ &
+\		CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\		FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\		FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\		WILD.FILE$=CHR$(FIL.NAM%(23%))+CHR$(FIL.NAM%(24%))+ &
+				NUM1$(FIL.NAM%(25%))+':'+ &
+				'['+NUM1$(FIL.NAM%(6%))+','+NUM1$(FIL.NAM%(5%))+']'+ &
+				RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+				RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+'.'+ &
+				RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+
+30120		WLDCNT%=WLDCNT%+1% &
+\		TEMP%=INSTR(1%,CVT$$(WILD.FILE$,-1%),'.') &
+\		BATCH$ = MID(CVT$$(WILD.FILE$,-1%),TEMP%-2%,2%) &
+\		PRINT #CH%, FNP$(NUM1$(WLDCNT%+2%)+';'+NUM1$(10%));BATCH$; &
+
+30125		GOTO 30110 &
+
+30130		FNFILE%=WLDCNT% &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30250	!-----------------------------------------------MESSAGE HANDLER &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30300	DEF*FNSR$(BEGEND$)=ESC$+'['+BEGEND$+'r'	! Scroll control &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 &
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30500	DEF FNZ(Y) &
+\		TEMP=ABS(Y) &
+\		TEMP=INT(TEMP*100.+.51)/100. &
+\		TEMP=-TEMP IF Y<0. &
+\		FNZ=TEMP &
+\	FNEND &
+
+30700	!========================================= DATA INPUT FUNCTIONS &
+	DEF*FNSIO$(FRMAT$,ROWCOL$,VARABLE$,DEFAL$,ITEMS$) &
+\		CHN%=ASCII(MID(ITEMS$,1%,1%)) &
+\		KIND%=ASCII(MID(ITEMS$,4%,1%)) &
+\		DECI=ASCII(MID(ITEMS$,5%,1%)) &
+\		OPT$=MID(ITEMS$,6%,1%) &
+
+30705		PRINT #CHN%, FNP$(ROWCOL$);R.ON$;B.ON$; &
+\		IF OPT$='C' OR DEFAL$<>'' &
+		THEN	ON KIND% GOTO 30710, 30715, 30720, 30725, 30730 &
+		ELSE	PRINT #CHN%, SPACE$(ASCII(MID(ITEMS$,2%,1%))); &
+\			GOTO 30735 &
+
+30710		PRINT #CHN%, VARABLE$;			   ! ALPHA &
+\		GOTO 30735 &
+
+30715		PRINT #CHN% USING FRMAT$,ASCII(VARABLE$);  ! ASCII &
+\		GOTO 30735 &
+
+30720		PRINT #CHN% USING FRMAT$, CVT$%(VARABLE$)/(10.**DECI); &
+\		GOTO 30735				   ! INTEGER &
+
+30725		PRINT #CHN%, FND6$(CVT$%(VARABLE$));	   ! DATE &
+\		GOTO 30735 &
+
+30730		PRINT #CHN% USING FRMAT$,CVT$F(VARABLE$);  ! FLOAT &
+
+30735		PRINT #CHN%,G.OFF$;CLRBOT$;RIGHT(ITEMS$,6%)+':  ';B.ON$; &
+\		FIN$ = FNINP$(CHN%,0%,'_',ASCII(MID(ITEMS$,3%,1%)),1%) &
+\		GOTO 30745 IF FIN$='%END' OR FIN$='%ABORT' &
+\		V% = VAL(FIN$) IF KIND%=3% &
+\		V  = VAL(FIN$) IF KIND%>3% &
+\		GOTO 30705 IF KIND%=4% AND LEN(FIN$)<>6% AND FIN$<>'' &
+\		IF FIN$='' &
+		THEN	FIN$ = DEFAL$ IF INSTR(1%,'CF',OPT$)=0% &
+\			GOTO 30745 &
+
+30740		IF KIND%=3% OR KIND%=5% &
+		THEN	TEMP = 1. &
+\			TEMP = 10.**DECI IF INSTR(1%,FIN$,'.')=0% &
+\			FIN$ = NUM1$(VAL(FIN$)/TEMP) &
+\			FIN$ = FIN$ + '.' IF INSTR(1%,FIN$,'.')=0% &
+
+30745		FNSIO$ = FIN$+'' &
+\	FNEND &
+
+32767	END &
+

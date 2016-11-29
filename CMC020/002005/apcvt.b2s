@@ -1,0 +1,347 @@
+10	!	CONVERT FROM OLD AP TO NEWER AP SYSTEM &
+	!-------------------------------------------------------------------- &
+	! &
+	! &
+	!		COPYRIGHT (c) 1984 BY &
+	!		COMPUTER MANAGEMENT CENTER, IDAHO FALLS, IDAHO &
+	! &
+	! THIS SOFTWARE IS FURNISHED UNDER A LICENSE AND MAY BE USED AND &
+	! COPIED ONLY IN ACCORDANCE WITH THE TERMS OF SUCH LICENSE AND WITH &
+	! THE INCLUSION OF THE ABOVE COPYRIGHT NOTICE.  THIS SOFTWARE OR ANY &
+	! OTHER COPIES THEROF MAY NOT BE PROVIDED OR OTHERWISE MADE AVAIL- &
+	! ABLE TO ANY OTHER PERSON.  NO TITLE TO AND OWNERSHIP OF THE SOFT- &
+	! WARE IS HEREBY TRANSFERRED. &
+	! &
+	! THE INFORMATION IN THIS SOFTWARE IS SUBJECT TO CHANGE WITHOUT NO- &
+	! TICE AND SHOULD NOT BE CONSTRUED AS A COMMITTMENT BY COMPUTER &
+	! MANAGEMENT CENTER. &
+	! &
+	! CMC ASSUMES NO RESPONSIBILITY FOR THE USE OR RELIABILITY OF &
+	! ITS SOFTWARE ON EQUIPMENT WHICH IS NOT SUPPORTED BY CMC. &
+	! &
+	! ++ &
+	! &
+	! ABSTRACT: &
+	! &
+	! &
+	! &
+	! &
+	! ENVIRONMENT: &
+	! &
+	!	PDP-11 UNDER RSTS/E BP2 &
+	! &
+	! AUTHOR: &
+	! &
+	! MODIFIED BY: &
+	! &
+	!----------------------------------------------------------------- &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erace cursor to end of screen &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+
+100	PRINT #CH%, CLSCN$;'Enter the old account number to convert '; &
+\	INP$=FNINP$(CH%,0%,'_',9%) &
+\	V%=FNX%("",0%,"") IF INP$='' OR INP$='%^C' &
+\	OLD.ACC$=INP$ &
+
+110	PRINT #CH%, FNP$('2;1');'Enter the new account number to convert '; &
+\	INP$=FNINP$(CH%,0%,'_',9%) &
+\	V%=FNX%("",0%,"") IF INP$='' OR INP$='%^C' &
+\	NEW.ACC$=INP$ &
+
+120	PRINT #CH%, FNP$('4;1');'Convert the register (y/n)  '; &
+\	INP$=FNINP$(CH%,0%,'_',1%) &
+\	V%=FNX%("",0%,"") IF INP$='' OR INP$='%^C' &
+\	CONVER.REG$=CVT$$(LEFT(INP$,1%),-1%)
+
+130	PRINT #CH%, FNP$('5;1');'Convert vendor file (y/n)  '; &
+\	INP$=FNINP$(CH%,0%,'_',1%) &
+\	V%=FNX%("",0%,"") IF INP$='' OR INP$='%^C' &
+\	CONVER.VEN$=CVT$$(LEFT(INP$,1%),-1%)
+
+140	PRINT #CH%, FNP$('7;1')'Conversion date (MMDDYY)  '; &
+\	INP$=FNINP$(CH%,0%,'_',6%) &
+\	V%=FNX%("",0%,"") IF INP$='' OR INP$='%^C' &
+\	CONVER.DATE$=CVT$$(INP$,-1%)
+
+300	GOTO 350 IF CONVER.VEN$='N' &
+\	IF FNO%(2%,OLD.ACC$+'VENDOR.DAT','/RO','') &
+	THEN	PRINT #CH%, 'UNABLE TO OPEN THE OLD VENDOR FILE'; &
+\		V%=FNX%('',0%,'') &
+
+320	IF FNO%(6%,NEW.ACC$+'VENDES.DAT','/CR:8,256','') &
+	THEN	PRINT #CH%, 'UNABLE TO OPEN THE NEW VENDOR FILE'; &
+\		V%=FNX%('',0%,'') &
+
+350	GOTO 400 IF CONVER.REG$='N' &
+\	IF FNO%(4%,OLD.ACC$+'PAYABL.DAT','/RO','') &
+	THEN	PRINT #CH%, 'UNABLE TO OPEN THE OLD PAYABLE FILE'; &
+\		V%=FNX%('',0%,'') &
+
+360	IF FNO%(8%,NEW.ACC$+'APREG.DAT','/CR:14,128','') &
+	THEN	PRINT #CH%, 'UNABLE TO OPEN THE NEW REGISTER FILE'; &
+\		V%=FNX%('',0%,'') &
+
+400	! &
+
+450	OPEN "NL:" AS FILE 12%, RECORDSIZE 448% &
+\	FIELD #12%,	06% AS VENDES.NUM$, 	&
+			29% AS VENDES.NAM$, 	&
+			29% AS VENDES.ADD$, 	&
+			29% AS VENDES.CST$, 	&
+			29% AS VENDES.ZIP$, 	&
+			05% AS VENDES.XXX$, 	&
+			01% AS VENDES.PURGE$,	&
+			10% AS VENDES.PHN$, 	&
+			13% AS VENDES.FED$, 	&
+			01% AS VENDES.199$, 	&
+			02% AS VENDES.DUE$, 	&
+			02% AS VENDES.DISDAY$, 	&
+			02% AS VENDES.DISC$, 	&
+			08% AS VENDES.BILMTD$, 	&
+			02% AS VENDES.VOUMTD$, 	&
+			08% AS VENDES.BILYTD$, 	&
+			02% AS VENDES.VOUYTD$, 	&
+			08% AS VENDES.PAIDMTD$, &
+			08% AS VENDES.PAIDYTD$, &
+			02% AS VENDES.UPDFLAG$, &
+			02% AS VENDES.UPDCOUNT$,&
+			02% AS VENDES.LMU$, 	&
+			01% AS VENDES.OK.TO.PURGE$, &
+			15% AS VENDES.SORTKEY$ 	&
+\	FIELD #12%, 256% AS E$,			&
+			06% AS APREG.VENO$,	06% AS APREG.JVOUNO$, 	&
+			02% AS APREG.VOUDAT$, 	15% AS APREG.INVOIC$, 	&
+			02% AS APREG.INVDAT$, 	08% AS APREG.INVAMT$, 	&
+			02% AS APREG.CD1099$, 	06% AS APREG.PO.NO$, 	&
+			02% AS APREG.DISDAT$, 	08% AS APREG.DISAMT$, 	&
+			02% AS APREG.DUEDAT$, 	08% AS APREG.APACCT$, 	&
+			06% AS APREG.CKNO$,	02% AS APREG.CKDAT$, 	&
+			08% AS APREG.CASHACCT$,	01% AS APREG.USETAX$, 	&
+			08% AS APREG.AMT1099$, 	08% AS APREG.USEAMT$, 	&
+			20% AS APREG.CKDESC$, 	02% AS APREG.UPDT.MON$, &
+			06% AS APREG.USE.JOB$ &
+\	FIELD #12%, 256% AS VENDES.BUF$, 128% AS APREG.BUF$ &
+
+1000	!CONVERT THE VENDOR FILE &
+	GOTO 2000 IF CONVER.VEN$='N' &
+\	STOP IF FNG%(2%,'') &
+\	PRINT &
+\	PRINT 'STARTING TO CONVERT VENDOR FILE' &
+
+1020	FIELD #3%, FNL% AS TEMP$, &
+		06% AS OLD.NUM$, &
+		29% AS OLD.NAM$, &
+		29% AS OLD.ADD$, &
+		29% AS OLD.CIT$, &
+		29% AS OLD.ZIP$ &
+
+1030	LSET VENDES.NUM$		= OLD.NUM$ &
+\	LSET VENDES.NAM$		= OLD.NAM$ &
+\	LSET VENDES.ADD$		= OLD.ADD$ &
+\	LSET VENDES.CST$		= OLD.CIT$ &
+\	LSET VENDES.ZIP$		= OLD.ZIP$ &
+\	LSET VENDES.XXX$		= '' &
+\	LSET VENDES.PURGE$		= '' &
+\	LSET VENDES.PHN$		= '' &
+\	LSET VENDES.FED$		= '' &
+\	LSET VENDES.199$		= '' &
+\	LSET VENDES.DUE$		= CVT%$(0%) &
+\	LSET VENDES.DISDAY$		= CVT%$(0%) &
+\	LSET VENDES.DISC$		= CVT%$(0%) &
+\	LSET VENDES.BILMTD$		= CVTF$(0.) &
+\	LSET VENDES.VOUMTD$		= CVTF$(0.) &
+\	LSET VENDES.BILYTD$		= CVTF$(0.) &
+\	LSET VENDES.VOUYTD$		= CVTF$(0.) &
+\	LSET VENDES.PAIDMTD$		= CVTF$(0.) &
+\	LSET VENDES.PAIDYTD$		= CVTF$(0.) &
+\	LSET VENDES.UPDFLAG$		= CVT%$(0%) &
+\	LSET VENDES.UPDCOUNT$		= CVT%$(0%) &
+\	LSET VENDES.LMU$		= CVT%$(0%) &
+\	LSET VENDES.OK.TO.PURGE$	= '' &
+\	LSET VENDES.SORTKEY$		= OLD.NAM$ &
+
+1040	STOP IF FNA%(6%,VENDES.BUF$) &
+
+1050	GOTO 1020 IF FNN%(2%)=0% &
+
+2000	!CONVERT PAYABLE TO APREG &
+	GOTO 2060 IF CONVER.REG$='N' &
+\	PRINT &
+\	PRINT "STARTING TO CONVERT THE PAYABLES" &
+\	STOP IF FNG%(4%,'') &
+\	V.N=0.0 &
+
+2020	FIELD #5%,	FNL% AS TEMP$, &
+		06% AS OLD.NUM$, &
+		13% AS OLD.INV$, &
+		06% AS OLD.CHK$, &
+		03% AS OLD.EXP$, &
+		03% AS OLD.AP$,  &
+		01% AS OLD.TAX$, &
+		06% AS OLD.JOB$, &
+		06% AS OLD.PO$,  &
+		08% AS OLD.AMT$, &
+		08% AS OLD.DIS$, &
+		02% AS OLD.INVDAT$, &
+		02% AS OLD.CHKDAT$ &
+\	APACCT$=RIGHT(NUM1$(1000%+CVT$%(OLD.AP$)),2%)+'.'+ &
+		RIGHT(NUM1$(100%+ASCII(RIGHT(Y$,3%))),2%) &
+
+2030	TEMP.INVDAT$=FNSDATE$(FND9$(CVT$%(OLD.INVDAT$))) &
+\	TEMP.CHKDAT$=FNSDATE$(FND9$(CVT$%(OLD.CHKDAT$))) &
+\	V.N=V.N+1.0 &
+\	V.N$=NUM1$(V.N) &
+\	V.N$=STRING$(6%-LEN(V.N$),ASCII('0'))+V.N$ &
+\	LSET APREG.VENO$		= OLD.NUM$ &
+\	LSET APREG.JVOUNO$		= V.N$ &
+\	LSET APREG.VOUDAT$		= TEMP.INVDAT$ &
+\	LSET APREG.INVOIC$		= OLD.INV$ &
+\	LSET APREG.INVDAT$		= TEMP.INVDAT$ &
+\	LSET APREG.INVAMT$		= OLD.AMT$ &
+\	LSET APREG.CD1099$		= '' &
+\	LSET APREG.PO.NO$		= OLD.PO$ &
+\	LSET APREG.DISDAT$		= TEMP.INVDAT$ &
+\	LSET APREG.DISAMT$		= OLD.DIS$ &
+\	LSET APREG.DUEDAT$		= TEMP.INVDAT$ &
+\	RSET APREG.APACCT$		= APACCT$ &
+\	LSET APREG.CKNO$		= OLD.CHK$ &
+\	LSET APREG.CKDAT$		= TEMP.CHKDAT$ &
+\	LSET APREG.CASHACCT$		= '' &
+\	LSET APREG.USETAX$		= '' &
+\	LSET APREG.AMT1099$		= CVTF$(0.) &
+\	LSET APREG.USEAMT$		= CVTF$(0.) &
+\	LSET APREG.CKDESC$		= OLD.DESC$ &
+\	LSET APREG.UPDT.MON$		= FNSDATE$(CONVER.DATE$) &
+\	LSET APREG.USE.JOB$		= OLD.JOB$ &
+
+2040	STOP IF FNA%(8%,APREG.BUF$) &
+
+2050	GOTO 2020 IF FNN%(4%)=0% &
+
+2060	PRINT 'LAST VOUCHER ASSIGNED'; V.N &
+\	V%=FNX%('',0%,'') &
+
+30000	DEF*FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR MID(BUFFER$,2%,2%)="OP" &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$="%^C" IF ASCII(BUFFER$)=3% &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!------------------------------------------------------------ &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!------------------------------------------------------------ &
+	DEF*FNP$(XY$)=ESC$+"["+XY$+'H' &
+
+30060	!----------------------------PRINT A DATE &
+	DEF*FNDATE.CHECK$(Y$) &
+\		Y$=XLATE(Y$,STRING$(48%,0%)+"0123456789") &
+\		IF LEN(Y$)=6% AND VAL(LEFT(Y$,2%))<13% AND &
+			VAL(MID(Y$,3%,2%))<32% &
+		THEN	Y$="" &
+			ELSE	PRINT #CH%, FNP$('24;1');CLRLIN$;G.OFF$; &
+					"Invalid date format.  Please re-enter."; &
+					FNP$('24;55');"Hit any key to continue "; &
+\				Y$=FNINP$(CH%,128%," ",1%) &
+\				Y$="BAD" IF Y$="" &
+
+30070		FNDATE.CHECK$=Y$ &
+\	FNEND &
+
+30080	!-----------------------------------------PRINT A DATE &
+	DEF*FNDATE.PRINT$(Y$) &
+\		PRINT #CH%, LEFT(Y$,2%);"/";MID(Y$,3%,2%);"/";RIGHT(Y$,5%); &
+\	FNEND &
+
+30090	!------------------------------------------------SIMPLIFY PROGRAM &
+	!	LOCATE    = PRINT LOCATION ON SCREEN &
+	!	ATTRIBUTE = TYPE OF DATA &
+	!			1 = ALPHA &
+	!			2 = DATE &
+	!			3 = AMUONT &
+	!	VALUE     = VALUE OF ATTRIBUTE &
+	!	OPTION    = OPTION &
+	!	DEFAULT   = DEFAULT VALUE &
+	DEF*FNASK$(LOCATE$,ATTRIBUTE%,VALUE$,Y$,DEFAULT$) &
+\		PRINT #CH%, LOCATE$;R.ON$;B.ON$; IF ABS(ATTRIBUTE%)<>3% &
+\		FIELD.LEN%,TEMP.LEN%=LEN(VALUE$) &
+\		TEMP.LEN%=FIELD.LEN%+2% IF ABS(ATTRIBUTE%)=2% &
+\		IF ABS(ATTRIBUTE%)<>3% THEN &
+		IF ATTRIBUTE%>0% &
+		THEN	PRINT #CH%, SPACE$(TEMP.LEN%); &
+			ELSE	IF ABS(ATTRIBUTE%)=2% &
+				THEN	PRINT #CH%, FNDATE.PRINT$(VALUE$); &
+					ELSE	PRINT #CH%, VALUE$; &
+
+30091		PRINT #CH%, G.OFF$; CLRBOT$; Y$; B.ON$; &
+\		INP$=FNINP$(CH%,0%,"_",FIELD.LEN%) &
+\		INP$=DEFAULT$ IF INP$="" &
+\		FNASK$=INP$ &
+\	FNEND &
+
+30100	!---------------------------------------------COMPUTE FUTURE DATE &
+	DEF FNDATE.FUTURE$(Y$,Y%) &
+\		MM%=VAL(LEFT(XLATE(Y$,STRING$(48%,0%)+"0123456789"),2%)) &
+\		DD%=VAL(MID(XLATE(Y$,STRING$(48%,0%)+"0123456789"),3%,2%)) &
+\		YY%=VAL(RIGHT(XLATE(Y$,STRING$(48%,0%)+"0123456789"),5%)) &
+\		DD%=DD%+Y% &
+\		IF DD%>30% &
+		THEN	Y%=DD%/30% &
+\			Y%=Y%-1% IF DD%-Y%*30%=0% AND Y%>0% &
+\			DD%=DD%-Y%*30% &
+\			MM%=MM%+Y% &
+\			IF MM%>12% &
+			THEN	Y%=MM%/12% &
+\				MM%=MM%-Y%*12% &
+\				YY%=YY%+Y% &
+
+30110		FNDATE.FUTURE$=RIGHT(NUM1$(MM%+100%),2%)+ &
+			RIGHT(NUM1$(DD%+100%),2%)+ &
+			RIGHT(NUM1$(YY%+100%),2%) &
+\	FNEND &
+
+30120	DEF FNSDATE$(Y$)=CVT%$(VAL(MID(Y$,3%,2%))+VAL(LEFT(Y$,2%))*32%+ &
+		FNI%(VAL(RIGHT(Y$,5%)))*512%) &
+
+30130	DEF FNI%(Y)=Y &
+
+30140	DEF FNRDATE$(Y$) &
+\		Y%=CVT$%(Y$) &
+\		FNRDATE$=RIGHT(NUM1$((Y% AND 480%)/32%+100%),2%)+ &
+			RIGHT(NUM1$((Y% AND 31%)+100%),2%)+ &
+			RIGHT(NUM1$((SWAP%(Y%) AND 254%)/2%+100%),2%) &
+\	FNEND &
+
+30150	DEF*FND9$(Y%)=RIGHT(NUM1$((Y% AND 15%)+100%),2%)+ &
+		RIGHT(NUM1$((Y% AND 31%*16%)/16%+100%),2%)+ &
+		RIGHT(NUM1$(((SWAP%(Y%) AND 254%)/2%)+100%),2%) &
+
+32767	END &
+
+
+

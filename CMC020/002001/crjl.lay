@@ -1,0 +1,67 @@
+
+
+
+           CASH RECEIPTS JOURNAL LINE FILE                              
+           --------------------------------------------------------------------
+
+    Programs: .......
+
+    KEY FILE NAME : CRJL(Batch #).DAT  	KEY = 10 + 2	DATA = 128
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Receipt Number__________  	_08A/01___  	CRJL.RECNUM$
+
+	 2 _Line Number_____________	_02I/09___  	CRJL.LINE$
+
+	 3 _Invoice Number__________  	_08A/11___  	CRJL.INVNUM$
+
+	 4 _Account Number__________  	_08A/19___  	CRJL.ACCT$
+
+	 5 _Amount__________________  	_08F/27___  	CRJL.AMOUNT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =44, FROM 128, FREE = 84
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

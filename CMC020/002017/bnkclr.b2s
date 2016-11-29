@@ -1,0 +1,431 @@
+10	!--------------------------------------------------------------- &
+	!	BANK SYSTEM 	-Customer &
+	! &
+	! &
+	! Files-BANKBL.DAT	-ISAM	Bank Balance File &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+\	DIM DEFAULT$(30%),SEARCH$(30%),REPLCE$(30%) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erace cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DEVICE.CH%	= 02% &
+\	BANKBL.CH%	= 04% &
+\	MENU.CH%   	= 12% &
+\	KEY.LEN%   = 16% &
+\	DATA.LEN%  = 64% &
+	&
+\	LOOP.DATA% = 4% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	BANKBL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'BANKBL')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	PRINT #CH%, CLSCN$;FNP$('4;20');'ENTER CANCELLED CHECKS AND RECEIPTS'; &
+		FNP$('6;25');'C = enter cancelled checks'; &
+		FNP$('8;25');'D = enter deposits credited'; &
+
+310	PRINT #CH%, FNP$('10;25');CLRLIN$; 'Option (C/d)? '; &
+\	INP$=CVT$$(FNINP$(CH%,128%,'_',1%,0%),-1%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+\	V%=FNX%('',0%,'') IF INP$='%^C' &
+\	CHKREC.FLAG$=INP$ &
+\	CHKREC.FLAG$='C' IF CHKREC.FLAG$<>'D' &
+
+320	V%=FNO%(BANKBL.CH%,BANKBL.DEVICE$+"BANKBL.DAT","/RW","") &
+\	V%=FNO%(BANKBL.CH%,BANKBL.DEVICE$+"BANKBL.DAT","/CR:"+NUM1$(KEY.LEN%)+","+ &
+			NUM1$(DATA.LEN%),"") IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,'CUSTOM.DAT',0%,-1%) &
+\		OPT$='Q' &
+\		GOTO 1040 &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 256% &
+\	FIELD #12%, 64% AS BANKBL.BUF$ &
+\	FIELD #12%,	08% AS BANKBL.CHECKNUM$,	&
+			06% AS BANKBL.BANKACC$,		&
+			02% AS BANKBL.FLAG$,		&
+			02% AS BANKBL.CHECKDATE$,	&
+			08% AS BANKBL.CHECKAMT$,	&
+			02% AS BANKBL.CANDATE$,		&
+			08% AS BANKBL.BANKAMT$,		&
+			02% AS BANKBL.GLDATE$		&
+
+500	FRAME$ = FRAME$ + FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+\	COMMAND$  = ' ' &
+\	COMMAND$  = COMMAND$+RIGHT(NUM1$(I%+100%),2%) + ' ' &
+		FOR I%=1% TO LOOP.DATA% &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+
+1010	PRINT #CH%, G.OFF$;COLM.OFF$; &
+\	GOSUB 1060 &
+\	ENTRY.FLAG%=0% &
+\	GOTO 1030 &
+
+1020	GOSUB 6000 &
+
+1030	CHNG.FLAG%=0% &
+\	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Add Change Erase Quit '; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+\	GOTO 1030 IF KEY.POINTER%=0% AND INSTR(1%,'AQD',OPT$)=0% &
+
+1040	IF OPT$='Q' &
+	THEN	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+			FNX%('',0%,''); &
+
+1050	GOTO 2000	IF OPT$='' AND ENTRY.FLAG% &
+\	ENTRY.FLAG%=0%	IF OPT$='A' &
+\	GOTO 2000 	IF OPT$='A'		! Add, Find &
+\	GOTO 2200 	IF OPT$='C'		! Change, Blank &
+\	GOTO 2400 	IF OPT$='E' 		! Erase &
+\	GOTO 1030 &
+
+1060	TEMP$   = 'Enter Cancelled Checks' &
+\	TEMP$	= 'Enter Deposits credited' IF CHKREC.FLAG$='D' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+			FRAME$; FNP$('20;1');SPACE$(80%);G.OFF$; &
+\	PRINT #CH%, 	FNP$('04;21');'(01) Bank Code'; &
+			FNP$('06;21');'(02) Cancel Date'; &
+			FNP$('10;21');'(04) Amount'; &
+\	PRINT #CH%,	FNP$('08;21');'(03) Check #'; IF CHKREC.FLAG$='C' &
+\	PRINT #CH%,	FNP$('08;21');'(03) Deposit #'; &
+			FNP$('11;21');'Deposit amount will automatically be changed'; &
+			FNP$('12;21');'to the correct sign'; &
+				IF CHKREC.FLAG$='D' &
+\	RETURN &
+
+2000	!-------------------------------------------------SEARCH FOR KEYS &
+	OPTION$='ADD ' &
+\	OPT$='A' &
+\	INP$='' &
+\	START.LOOP%=1% &
+\	START.LOOP%=3% IF ENTRY.FLAG% &
+\	INP$='' &
+\	GOSUB 6030 FOR LOOP%=START.LOOP% TO LOOP.DATA% &
+
+2100	!-----------------------------------------------------ADD RECORD &
+	FOR LOOP%=START.LOOP% TO LOOP.DATA% &
+\		GOSUB 6010 &
+\		ENTRY.FLAG%=-1% IF LOOP%>2% &
+\		GOTO 1020 IF INP$='%END' &
+\		GOTO 2000 IF INP$='%ABORT' &
+\	NEXT LOOP% &
+
+2110	LSET BANKBL.CHECKDATE$=CVT%$(0%) &
+\	LSET BANKBL.GLDATE$=BANKBL.CANDATE$ &
+\	LSET BANKBL.CHECKAMT$=CVTF$(0.) &
+\	LSET BANKBL.FLAG$='C' &
+\	LSET BANKBL.FLAG$='D' IF CHKREC.FLAG$='D' &
+\	IF FNA%(BANKBL.CH%,BANKBL.BUF$) &
+	THEN	V$=FNMESS$(CH%,FNS%,'BANKBL.DAT',0%,-1%) &
+\		GOTO 1000 &
+
+2130	KEY.POINTER%=FNR(BANKBL.CH%) &
+\	DATA.POINTER%=FNR(BANKBL.CH%+1%) &
+\	GOTO 2000 &
+
+2200	!----------------------------------------CHANGE OR BLANK RECORD &
+	OPTION$ = 'CHANGE ' &
+\	CHNG.FLAG% = -1% &
+
+2210	PRINT #CH%, CLRBOT$; OPTION$+':'; &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',2%,1%),32%) &
+\	GOTO 1030 IF INP$='' &
+\	LOOP%=(INSTR(1%,COMMAND$,' '+INP$+' ')+2%)/3% &
+\	GOTO 2210 IF (LOOP%=0% OR LOOP%>LOOP.DATA%) AND OPT$='C' &
+\	GOSUB 6010 &
+
+2220	GOSUB 2900 &
+\	IF 	FNS%=0% &
+	THEN	GOTO 2210 &
+	ELSE	V$=FNMESS$(CH%,FNS%,'BANKBL.DAT',0%,-1%) &
+\		GOTO 1010 &
+
+2400	!================================================ DELETE RECORD &
+	PRINT #CH%, CLRBOT$;"Confirm deletion (Yes/No) "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%,1%),32%) &
+\	GOTO 1030 IF INP$<>"Y" &
+
+2420	IF FND%(BANKBL.CH%,"") &
+	THEN	V$=FNMESS$(CH%,FNS%,'BANKBL.DAT',0%,-1%) &
+	ELSE	PRINT #CH%,FNP$('24;1');CLRLIN$;"Record has been erased."; &
+			FNP$('24;55');"Hit any key to continue "; &
+\		NW$=FNINP$(CH%,128%," ",1%,1%) &
+
+2430	KEY.POINTER%=0% &
+\	FOR LOOP%=3% TO LOOP.DATA% &
+\		INP$='' &
+\		GOSUB 6030 &
+\	NEXT LOOP% &
+\	GOTO 1030 &
+
+2900	!=======================================CHANGE RECORD &
+	V%=FNG%(-BANKBL.CH%,NUM1$(KEY.POINTER%))+ &
+		FNG%(-BANKBL.CH%-1%,NUM1$(DATA.POINTER%)) &
+\	V%=FNU%(BANKBL.CH%,BANKBL.BUF$) IF LOOP%=2% AND FNS%=0% OR &
+			LOOP%=4% AND FNS% &
+\	V%=FNU%(-BANKBL.CH%,BANKBL.BUF$) IF LOOP%=1% AND FNS%=0% OR &
+			LOOP%=3% AND FNS% &
+\	RETURN &
+
+6000	!------------------------------------------------DATA ENTRY SECTION &
+	RETURN IF KEY.POINTER%=0% OR FNG%(-BANKBL.CH%,NUM1$(KEY.POINTER%))+ &
+		FNG%(-BANKBL.CH%-1%,NUM1$(DATA.POINTER%)) &
+\	LSET BANKBL.BUF$=FNL$ &
+\	FOR LOOP%=1% TO LOOP.DATA% &
+\		ON LOOP% GOSUB	6220, 6240, 6260, 6280 &
+\	NEXT LOOP% &
+\	RETURN &
+
+6010	ON LOOP% GOSUB	6210, 6230, 6250, 6270 &
+\	RETURN &
+		! INPUT DATA &
+
+6030	ON LOOP% GOSUB	6217, 6237, 6257, 6277 &
+\	RETURN &
+
+6200	!-----------------------------------------------DATA ENTRY SECTION &
+
+6210	INP$=FNSIO$('','4;41',BANKBL.BANKACC$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			STRING$(2%,LEN(BANKBL.BANKACC$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	GOTO 6210 IF INP$='' AND OPT$='A' &
+
+6217	LSET BANKBL.BANKACC$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6220	PRINT #CH%, FNP$('4;41');B.ON$;BANKBL.BANKACC$;G.OFF$; &
+\	RETURN &
+
+6230	INP$=FNSIO$('','6;41',BANKBL.CANDATE$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			CHR$(8%)+CHR$(6%)+ &
+			CHR$(4%)+CHR$(0%)+OPTION$+' DATE') &
+
+6237	LSET BANKBL.CANDATE$=CVT%$(FND6%(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6240	PRINT #CH%, FNP$('6;41');B.ON$;FND6$(CVT$%(BANKBL.CANDATE$));G.OFF$; &
+\	RETURN &
+
+6250	DEFAULT$(LOOP%)='' &
+\	DEFAULT$(LOOP%)=TEMP.CHECKNUM$ IF OPT$='A' &
+\	RSET BANKBL.CHECKNUM$=DEFAULT$(LOOP%) IF OPT$='A' &
+\	INP$=FNSIO$('','8;41',BANKBL.CHECKNUM$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			STRING$(2%,LEN(BANKBL.CHECKNUM$))+CHR$(1%)+CHR$(0%)+ &
+			OPTION$+' ALPHA') &
+\	GOTO 6250 IF INP$='' AND OPT$='A' &
+
+6257	RSET BANKBL.CHECKNUM$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6260	PRINT #CH%, FNP$('8;41');B.ON$;BANKBL.CHECKNUM$;G.OFF$; &
+\	RETURN &
+
+6270	AMOUNT=0. &
+\	GOTO 6275 IF OPT$<>'A' &
+\	IF FNG%(BANKBL.CH%,BANKBL.CHECKNUM$+BANKBL.BANKACC$) &
+	THEN	6275 &
+		ELSE	AMOUNT=0.0 &
+\			TEMP.CHECKNUM$='' &
+
+6271	GOTO 6274 IF LEFT(FNL$,14%)<>BANKBL.CHECKNUM$+BANKBL.BANKACC$ &
+\	IF CVT$$(MID(FNL$,15%,2%),-1%)='C' AND CHKREC.FLAG$='D' &
+			OR CVT$$(MID(FNL$,15%,2%),-1%)='D' AND CHKREC.FLAG$='C' &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$;'Warning. . .  Inconsistent '; &
+			'check/deposit flag usage'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+
+6273	AMOUNT = AMOUNT + CVT$F(MID(FNL$,19%,8%)) &
+\	IF FNN%(BANKBL.CH%)=0% &
+	THEN	6271 &
+
+6274	AMOUNT=AMOUNT*-1. IF CHKREC.FLAG$='D' &
+\	TEMP$=NUM1$(AMOUNT) &
+\	TEMP$=TEMP$+'.' IF INSTR(1%,TEMP$,'.')=0% &
+\	DEFAULT$(LOOP%)=TEMP$ &
+\	LSET BANKBL.BANKAMT$=CVTF$(AMOUNT) &
+\	TEMP.CHECKNUM$ = '' &
+\	TEMP.CHECKNUM$ = LEFT(FNL$,8%)+'' &
+		IF BANKBL.BANKACC$=MID(FNL$,9%,6%) &
+
+6275	INP$=FNSIO$('##,###,###.##','10;41',BANKBL.BANKAMT$,DEFAULT$(LOOP%), &
+			CHR$(CH%)+CHR$(13%)+CHR$(11%)+CHR$(5%)+CHR$(2%)+ &
+			OPTION$+' VALUE') &
+\	RETURN IF INP$='%END' OR INP$='%ABORT' &
+\	IF INP$<>'' AND CHKREC.FLAG$='D' &
+	THEN	INP$=NUM1$(VAL(INP$)*-1.) &
+
+6277	LSET BANKBL.BANKAMT$=CVTF$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6280	AMOUNT=CVT$F(BANKBL.BANKAMT$) &
+\	PRINT #CH% USING FNP$('10;41')+B.ON$+'##,###,###.##'+G.OFF$, &
+		AMOUNT; &
+\	RETURN &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME IF ERR=52% OR ERR=51% &
+\	RESUME 450 IF ERL=400 &
+\	RESUME 1010 IF ERR=54% &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF	ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR MID(BUFFER$,2%,2%)="OP" &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR MID(BUFFER$,2%,2%)="OQ" &
+
+30010		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30250	!-----------------------------------------------MESSAGE HANDLER &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			' '+DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30300	DEF*FNSR$(BEGEND$)=ESC$+'['+BEGEND$+'r'	! Scroll control &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 						&
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% 	&
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% 			&
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) 	&
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) 		&
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) 	&
+
+30500	DEF FNZ(Y) &
+\		TEMP=Y &
+\		TEMP=-Y IF Y<0. &
+\		TEMP=INT(TEMP*100.+.51)/100. &
+\		TEMP=-TEMP IF Y<0. &
+\		FNZ=TEMP &
+\	FNEND &
+
+30700	!========================================= DATA INPUT FUNCTIONS &
+	DEF*FNSIO$(FRMAT$,ROWCOL$,VARABLE$,DEFAL$,ITEMS$) &
+\		CHN%=ASCII(MID(ITEMS$,1%,1%)) &
+\		KIND%=ASCII(MID(ITEMS$,4%,1%)) &
+\		DECI=ASCII(MID(ITEMS$,5%,1%)) &
+\		OPT$=MID(ITEMS$,6%,1%) &
+
+30705		PRINT #CHN%, FNP$(ROWCOL$);R.ON$;B.ON$; &
+\		IF OPT$='C' OR DEFAL$<>'' &
+		THEN	ON KIND% GOTO 30710, 30715, 30720, 30725, 30730 &
+		ELSE	PRINT #CHN%, SPACE$(ASCII(MID(ITEMS$,2%,1%))); &
+\			GOTO 30735 &
+
+30710		PRINT #CHN%, VARABLE$;			   ! ALPHA &
+\		GOTO 30735 &
+
+30715		PRINT #CHN% USING FRMAT$,ASCII(VARABLE$);  ! ASCII &
+\		GOTO 30735 &
+
+30720		PRINT #CHN% USING FRMAT$, CVT$%(VARABLE$)/(10.**DECI); &
+\		GOTO 30735				   ! INTEGER &
+
+30725		GOTO 30735 &
+
+30730		PRINT #CHN% USING FRMAT$,CVT$F(VARABLE$);  ! FLOAT &
+
+30735		PRINT #CHN%,G.OFF$;CLRBOT$;RIGHT(ITEMS$,6%)+':  ';B.ON$; &
+\		FIN$ = FNINP$(CHN%,0%,'_',ASCII(MID(ITEMS$,3%,1%)),1%) &
+\		GOTO 30745 IF FIN$='%END' OR FIN$='%ABORT' &
+\		V% = VAL(FIN$) IF KIND%=3% &
+\		V  = VAL(FIN$) IF KIND%>3% &
+\		GOTO 30705 IF KIND%=4% AND LEN(FIN$)<>6% AND FIN$<>'' &
+\		IF FIN$='' &
+		THEN	FIN$ = DEFAL$ IF INSTR(1%,'CF',OPT$)=0% &
+\			GOTO 30745 &
+
+30740		IF KIND%=3% OR KIND%=5% &
+		THEN	TEMP = 1. &
+\			TEMP = 10.**DECI IF INSTR(1%,FIN$,'.')=0% &
+\			FIN$ = NUM1$(VAL(FIN$)/TEMP) &
+\			FIN$ = FIN$ + '.' IF INSTR(1%,FIN$,'.')=0% &
+
+30745		FNSIO$ = FIN$+'' &
+\	FNEND &
+
+32767	END &
+

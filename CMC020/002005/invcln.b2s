@@ -1,0 +1,262 @@
+10	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+\	TEMP$=SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erace cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%))) &
+\	DATE.TIME$=MID(DATE.TIME$,10%,2%)+MID(DATE.TIME$,7%,2%) &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DEVICE.CH%	= 02% &
+\	INVOIC.CH%	= 04% &
+\	INVNEW.CH%	= 06% &
+\	MENU.CH%   	= 12% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	INVOIC.DEVICE$=CVT$$(MID(FNL$,7%,30%),-1%) &
+			IF FNG%(DEVICE.CH%,"INVOIC")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	PRINT #CH%, CLSCN$;FNP$('4;28');'CLEAN A/P INVOICE REFERENCE FILE'; &
+		FNP$('6;28');'Clean date? <';DATE.TIME$;'> :'; &
+\	INP$=CVT$$(FNINP$(CH%,0%,'_',4%,0%),-1%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,''); &
+			IF INP$='%^C' &
+\	DATE.TIME$=INP$ IF INP$<>'' &
+\	DATE.TIME$=FND6$(FND6%(LEFT(DATE.TIME$,2%)+'00'+ &
+		RIGHT(DATE.TIME$,3%))) &
+\	PRINT #CH%, FNP$('6;56');DATE.TIME$; &
+\	CLEAN.OFF%=FND6%(LEFT(DATE.TIME$,2%)+MID(DATE.TIME$,4%,2%)+ &
+		RIGHT(DATE.TIME$,7%)) &
+
+310	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+
+360	NAME INVOIC.DEVICE$+"INVOIC.DAS" AS INVOIC.DEVICE$+"INVBCK.DAS" &
+
+370	IF FNO%(INVOIC.CH%,INVOIC.DEVICE$+"INVBCK.DAS","/RW/SF","") &
+	THEN	V$=FNMESS$(CH%,FNS%,'INVBCK.DAS',0%,-1%) &
+\		GOTO 1040 &
+
+380	IF FNO%(INVNEW.CH%,INVOIC.DEVICE$+"INVOIC.DAS","/SF/CR:25","") &
+	THEN	V$=FNMESS$(CH%,FNS%,'INVOIC.DAS',0%,-1%) &
+\		GOTO 1040 &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE 12% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE 12% &
+
+450	OPEN "NL:" AS FILE 12%, RECORDSIZE 32% &
+\	FIELD #12%,	06% AS INVOIC.VENNUM$, &
+			15% AS INVOIC.INVOIC$, &
+			02% AS INVOIC.INVDAT$ &
+\		FIELD #12%, 32% AS INVOIC.BUF$ &
+
+500	IF FNG%(INVOIC.CH%,"") &
+	THEN	PRINT #CH%, FNP$('24;1');"INVOICE IF EMPTY";FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,0%) &
+\		GOTO 1040 &
+
+510	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+" "+ &
+		FNP$(NUM1$(I%)+';80')+" " FOR I%=2% TO 19% &
+
+1000	!---------------PROGRAM CONTROL SECTION &
+
+1010	TEMP$="CLEAN A/P INVOICE REFERENCE FILE" &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+		FRAME$;FNP$('20;1');SPACE$(80%);G.OFF$; &
+		FNP$('10;10');"PERCENT COMPLETE";FNP$('11;10'); &
+		"0%   10%  20%  30%  40%  50%"+"  60%  70%  80%  90% 100%"; &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$;"Confirm (y/N) "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%,0%),32%) &
+\	GOTO 1010 IF OPT$="%^C" &
+\	GOTO 3100 IF OPT$='Y' &
+
+1040	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+\	KILL INVOIC.DEVICE$+"INVOIC.DAS" &
+\	NAME INVOIC.DEVICE$+"INVBCK.DAS" AS INVOIC.DEVICE$+"INVOIC.DAS" &
+\	V%=FNX%("",0%,"") &
+
+3100	!REMOVE INVOICES &
+	PRINT #CH%, CLRBOT$;FNP$('24;1');"Processing. . . ";FNP$('24;80'); &
+\	V%=FNG%(INVOIC.CH%,"") &
+\	REC.CNT=FNT &
+\	PC$=FNPC.SPACE$(REC.CNT) &
+\	REC.CNT=FNPC(REC.CNT) &
+\	COUNTER%,PERCENT%=0% &
+\	COL%=10% &
+
+3120	! &
+
+3130	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=REC.CNT &
+	THEN	COUNTER%=0% &
+\		PERCENT%=PERCENT%+LEN(PC$)*2% &
+\		IF PERCENT%<100% &
+		THEN	PRINT #CH%, FNP$('12;'+NUM1$(COL%));R.ON$;PC$; &
+				G.OFF$;FNP$('24;80'); &
+\			COL%=COL%+LEN(PC$) &
+
+3140	LSET INVOIC.BUF$=FNL$+"" &
+\	GOTO 3180 IF CVT$%(INVOIC.INVDAT$)<=CLEAN.OFF% &
+\	IF FNA%(INVNEW.CH%,INVOIC.BUF$) &
+	THEN	V$=FNMESS$(CH%,FNS%,'When adding to file.  Aborting',0%,-1%) &
+\		KILL INVOIC.DEVICE$+"INVOIC.DAS" &
+\		NAME INVOIC.DEVICE$+"INVBCK.DAS" AS INVOIC.DEVICE$+"INVOIC.DAS" &
+\		V%=FNX%('',-1%,'') &
+
+
+3180	IF FNN%(INVOIC.CH%)=0% &
+	THEN	GOTO 3130 &
+
+3200	PRINT #CH%, CLRBOT$;FNP$('24;1');'FINISHED'; &
+\	PRINT #CH%, FNP$('21;1');"Confirm operation (Y/n) "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%,0%),-1%) &
+\	IF INP$="N" OR INP$='%^C' &
+	THEN	PRINT #CH%, CLSCN$;"Aborting. .  ."; &
+\		KILL INVOIC.DEVICE$+"INVOIC.DAS" &
+\		NAME INVOIC.DEVICE$+"INVBCK.DAS" AS INVOIC.DEVICE$+"INVOIC.DAS" &
+\		V%=FNX%("",-1%,"") &
+
+3210	PRINT #CH%, CLSCN$;"Please wait"; &
+\	KILL INVOIC.DEVICE$+"INVBCK.DAS" &
+\	V%=FNX%("",0%,"") &
+
+19000	! &
+
+19010	RESUME 450 IF ERL=400% &
+
+19990	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=CHR$(155%)+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r' ! Scroll control &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 &
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30500	DEF FNZ(Y) &
+\		TEMP=Y &
+\		TEMP=-Y IF Y<0. &
+\		TEMP=INT(TEMP*100.+.51)/100. &
+\		TEMP=-TEMP IF Y<0. &
+\		FNZ=TEMP &
+\	FNEND &
+
+30950	!=============================================================== &
+	! CALCULATE THE NUMBER OF SPACES TO PRINT FOR PERCENT COMPLETE &
+	! ============================================================== &
+	DEF*FNPC.SPACE$(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		SP%=1% &
+\		SP%=2% 	IF TEMP	< .99 &
+\		SP%=5% 	IF TEMP	< .49 &
+\		SP%=10% IF TEMP	< .19 &
+\		SP%=25% IF TEMP	< .09 &
+\		SP%=50% IF TEMP	< .03 &
+\		FNPC.SPACE$=SPACE$(SP%) &
+\	FNEND &
+
+30960	!=============================================================== &
+	! CALCULATE THE NUMBER TO USE TO PRINT NEXT PERCENT COMPLETE &
+	!=============================================================== &
+	DEF*FNPC(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		PC=INT(TOTREC/50.) &
+\		PC=INT(TOTREC/25.) IF TEMP	< .99 &
+\		PC=INT(TOTREC/10.) IF TEMP	< .49 &
+\		PC=INT(TOTREC/5.) IF TEMP	< .19 &
+\		PC=INT(TOTREC/2.) IF TEMP	< .09 &
+\		PC=INT(TOTREC/1.) IF TEMP	< .03 &
+\		FNPC=PC &
+\	FNEND &
+
+32767	END &
+

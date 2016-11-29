@@ -1,0 +1,66 @@
+
+
+
+           SALES JOURNAL HEADER FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: SJ....
+
+    KEY FILE NAME : SJH(BATCH NUMBER).DAT   KEY = 8 + 2   DATA = 128
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Invoice Number__________  	_08A/01___  	SJH.INVNUM$ 
+
+	 2 _Customer Number_________  	_06A/09___  	SJH.CUSNUM$ 
+
+	 3 _Transaction Type________  	_02A/15___  	SJH.TRATYP$
+
+	 4 _Transaction Date________  	_02I/17___  	SJH.TRADAT$
+
+	 5 _Sales Amount/Cash Recvd_  	_08F/19___  	SJH.AMOUNT$
+
+	 6 _AR Account Number_______  	_08A/27___  	SJH.ARACCT$
+
+	 7 _Receipt Number__________  	_08A/35___  	SJH.RECNUM$
+
+	 8 _Check Number____________  	_06A/43___  	SJH.CHECK$
+
+	 9 _Deposit Number__________  	_06A/49___  	SJH.DEPOSIT$
+
+	10 _Description_____________  	_25A/55___  	SJH.DESC$
+
+	11 _Line Count______________  	_02I/80___  	SJH.COUNT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =81, FROM 128, FREE = 47
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

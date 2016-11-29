@@ -1,0 +1,234 @@
+10	!---------------------------------------------------------------&
+	!								&
+	! APREG.B2S	V1.1	January 1985				&
+	!								&
+	! Author - Randall Beard, Computer Management Center, Inc.	&
+	!								&
+	! Files Used -	VENDES.DAT  - ISAM	Vendor Description File	&
+	! 		APREG.DAT(S)- ISAM	Employee Master File	&
+	!								&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies thereof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+
+30	ON ERROR GOTO 19000 &
+
+60	OPEN "KB:" AS FILE 1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLEOS$=ESC$+"[J"		! Cursor to end of screen &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[5;19r"	! Scroll region &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+\	PRINT #CH%, ESC$;"<";		! Enter ANSI mode &
+
+80	DROP.DEAD.DATE$='        ' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	ERR.MES$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, ERR.MES$; &
+\			V$=SYS(CHR$(9%)) &
+
+90	CH%=0% &
+
+100	APREG.CH%	= 02% &
+\	APCLOS.CH%	= 04% &
+\	INVOIC.CH% 	= 06% &
+\	DEVICE.CH%	= 02% &
+\	MENU.CH%	= 12% &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/RO","")=0% &
+	THEN	APCLOS.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"APREG")=0% &
+\		APREG.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"APREG")=0% &
+\		INVOIC.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"INVOIC")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	V%=FNO%(APREG.CH%,APREG.DEVICE$+"APREG.DAT","/RO","") &
+\	V%=FNG%(APREG.CH%,'') &
+\	REC.CNT=FNT &
+\	V%=FNO%(APCLOS.CH%, APCLOS.DEVICE$+'APCLOS.DAT','/RO','') &
+\	V%=FNG%(APCLOS.CH%,'') &
+\	REC.CNT=REC.CNT+FNT &
+\	V%=FNO%(INVOIC.CH%, INVOIC.DEVICE$+'INVOIC.DAS','/CR:25/SF','') &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	! &
+
+500	PC$=FNPC.SPACE$(REC.CNT) &
+\	REC.CNT=FNPC(REC.CNT) &
+\	COUNTER%,PERCENT%=0% &
+\	COL%=10% &
+\	TEMP$     = "CREATE AP INVOICE REFERENCE FILE" &
+\	PRINT #CH%, CLSCN$+R.ON$+LEFT(TEMP$,39%)+SPACE$(40%-LEN(TEMP$))+ &
+			SPACE$(40%-LEN(COMPANY$))+COMPANY$; &
+\	PRINT #CH%, FNP$(NUM1$(I%)+';1')+" "+FNP$(NUM1$(I%)+';80')+" "; &
+		FOR I%=2% TO 19% &
+\	PRINT #CH%, FNP$('20;1')+SPACE$(80%)+G.OFF$ &
+\	PRINT #CH%, FNP$('19;2'); "Creating invoice file"; &
+		FNP$('11;10');"0%   10%  20%  30%  40%  50%"; &
+		"  60%  70%  80%  90% 100%";FNP$('24;80'); &
+
+17000	GOTO 17100 IF FNG%(APREG.CH%,'') &
+
+17030	FIELD #APREG.CH%+1%, FNL% AS TEMP$, &
+			06% AS APREG.VENO$,	06% AS APREG.JVOUNO$, 	&
+			02% AS APREG.VOUDAT$, 	15% AS APREG.INVOIC$, 	&
+			02% AS APREG.INVDAT$, 	08% AS APREG.INVAMT$, 	&
+			02% AS APREG.CD1099$, 	06% AS APREG.PO.NO$, 	&
+			02% AS APREG.DISDAT$, 	08% AS APREG.DISAMT$, 	&
+			02% AS APREG.DUEDAT$, 	08% AS APREG.APACCT$, 	&
+			06% AS APREG.CKNO$,	02% AS APREG.CKDAT$, 	&
+			08% AS APREG.CASHACCT$,	01% AS APREG.USETAX$, 	&
+			08% AS APREG.AMT1099$, 	08% AS APREG.USEAMT$, 	&
+			20% AS APREG.CKDESC$, 	02% AS APREG.UPDT.MON$, &
+			06% AS APREG.USE.JOB$ &
+\	IF APREG.JVOUNO$<>TEST.VOUCH$ &
+	THEN	STOP IF FNA%(INVOIC.CH%,APREG.VENO$+APREG.INVOIC$+ &
+			APREG.UPDT.MON$) &
+
+17040	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=REC.CNT &
+	THEN	COUNTER%=0% &
+\		PERCENT%=PERCENT%+LEN(PC$)*2% &
+\		IF PERCENT%<100% &
+		THEN	PRINT #CH%, FNP$('12;'+NUM1$(COL%));R.ON$;PC$; &
+				G.OFF$;FNP$('24;80'); &
+\			COL%=COL%+LEN(PC$) &
+
+17050	TEST.VOUCH$=APREG.JVOUNO$+'' &
+\	GOTO 17030 IF FNN%(APREG.CH%)=0% &
+
+17100	GOTO 17400 IF FNG%(APCLOS.CH%,'') &
+
+17130	FIELD #APCLOS.CH%+1%, FNL% AS TEMP$, &
+			06% AS APREG.VENO$,	06% AS APREG.JVOUNO$, 	&
+			02% AS APREG.VOUDAT$, 	15% AS APREG.INVOIC$, 	&
+			02% AS APREG.INVDAT$, 	08% AS APREG.INVAMT$, 	&
+			02% AS APREG.CD1099$, 	06% AS APREG.PO.NO$, 	&
+			02% AS APREG.DISDAT$, 	08% AS APREG.DISAMT$, 	&
+			02% AS APREG.DUEDAT$, 	08% AS APREG.APACCT$, 	&
+			06% AS APREG.CKNO$,	02% AS APREG.CKDAT$, 	&
+			08% AS APREG.CASHACCT$,	01% AS APREG.USETAX$, 	&
+			08% AS APREG.AMT1099$, 	08% AS APREG.USEAMT$, 	&
+			20% AS APREG.CKDESC$, 	02% AS APREG.UPDT.MON$, &
+			06% AS APREG.USE.JOB$ &
+\	IF APREG.JVOUNO$<>TEST.VOUCH$ &
+	THEN	STOP IF FNA%(INVOIC.CH%,APREG.VENO$+APREG.INVOIC$+ &
+			APREG.UPDT.MON$) &
+
+17140	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=REC.CNT &
+	THEN	COUNTER%=0% &
+\		PERCENT%=PERCENT%+LEN(PC$)*2% &
+\		IF PERCENT%<100% &
+		THEN	PRINT #CH%, FNP$('12;'+NUM1$(COL%));R.ON$;PC$; &
+				G.OFF$;FNP$('24;80'); &
+\			COL%=COL%+LEN(PC$) &
+
+17150	TEST.VOUCH$=APREG.JVOUNO$+'' &
+\	GOTO 17130 IF FNN%(APCLOS.CH%)=0% &
+
+17400	! &
+
+17540	! &
+
+17550	V%=FNX%('',0%,'') &
+
+19000	!-------------------------------------------------ERROR TRAPPING &
+	IF ERR=28% &
+	THEN	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+\		RESUME 17540 &
+
+19035	IF ERL=400% &
+	THEN	RESUME 450 &
+
+19900	ON ERROR GOTO 0 &
+
+30000	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%, CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		IF ASCII(BUFFER$)=128% OR ASCII(BUFFER$)=8% &
+			OR ASCII(BUFFER$)=23% &
+		THEN	BUFFER$="%END" IF MID(BUFFER$,2%,4%)="[21~" &
+				OR ASCII(BUFFER$)=8% &
+\			BUFFER$="%ABORT" IF MID(BUFFER$,2%,4%)="[19~" &
+				OR ASCII(BUFFER$)=23% &
+
+30010		BUFFER$="%^C" IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\	FNEND &
+
+30050	!------------------------------------------------------------ &
+	! A N S I   D I R E C T   C U R S O R   A D D R E S S I N G &
+	!------------------------------------------------------------ &
+	DEF*FNP$(ROWCOL$)=ESC$+"["+ROWCOL$+'H' &
+
+30950	!=============================================================== &
+	! CALCULATE THE NUMBER OF SPACES TO PRINT FOR PERCENT COMPLETE &
+	! ============================================================== &
+	DEF*FNPC.SPACE$(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		SP%=1% &
+\		SP%=2% 	IF TEMP	< .99 &
+\		SP%=5% 	IF TEMP	< .49 &
+\		SP%=10% IF TEMP	< .19 &
+\		SP%=25% IF TEMP	< .09 &
+\		SP%=50% IF TEMP	< .03 &
+\		FNPC.SPACE$=SPACE$(SP%) &
+\	FNEND &
+
+30960	!=============================================================== &
+	! CALCULATE THE NUMBER TO USE TO PRINT NEXT PERCENT COMPLETE &
+	!=============================================================== &
+	DEF*FNPC(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		PC=INT(TOTREC/50.) &
+\		PC=INT(TOTREC/25.) IF TEMP	< .99 &
+\		PC=INT(TOTREC/10.) IF TEMP	< .49 &
+\		PC=INT(TOTREC/5.) IF TEMP	< .19 &
+\		PC=INT(TOTREC/2.) IF TEMP	< .09 &
+\		PC=INT(TOTREC/1.) IF TEMP	< .03 &
+\		FNPC=PC &
+\	FNEND &
+
+32767	END &
+

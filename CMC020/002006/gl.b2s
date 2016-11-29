@@ -1,0 +1,551 @@
+10	!---------------------------------------------------------------&
+	!	General	Ledger Build Program				&
+	!								&
+	!	GL.B2S	V1.0	February 1985				&
+	!								&
+	! Author - Randall Beard, Computer Management Center, Inc.	&
+	!								&
+	! Files-CONTRL.DAT 	-ISAM  	Control File			&
+	! 	GL(MMM).DAS or GL(MMM).(YY)S				&
+	!			-ISAM	General Ledger File		&
+	!	GL.DAS		-ISAM	Temp. index created and killed	&
+	! 	CHART.DAT     	-ISAM	Chart of Accounts File		&
+	!								&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) &
+\	TEMP$=SYS(CHR$(12%)) &
+\	CHAIN.PRJPRG$,PRJPRG$= &
+		MID(TEMP$,23%,1%) + MID(TEMP$,24%,1%) + NUM1$(ASCII(MID( &
+		TEMP$,25%,1%))) + ':' + &
+		'['+NUM1$(ASCII(MID(TEMP$,6%,1%))) + ',' + &
+		NUM1$(ASCII(MID(TEMP$,5%,1%))) + ']' &
+\	LINE.NO%=0% &
+\	TEMP$=FNX$ &
+\	TEMP%=INSTR(1%,TEMP$,'*') &
+\	IF TEMP% &
+	THEN	PRGRM$=LEFT(TEMP$,TEMP%-1%) &
+		ELSE	PRGRM$='REPORT' &
+\			PRJPRG$='ISM:' &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	CLREL$=ESC$+'[K'		! Cursor to end of line &
+\	INSERT.LIN$=ESC$+'[1L'		! Insert a line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%)) &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(DATE.TIME$),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DEVICE.CH%	= 02% &
+\	GLMMM.CH%   	= 02% &
+\	CONTRL.CH%  	= 04% &
+\	CHART.CH%   	= 06% &
+\	GL.CH%      	= 08% &
+\	GL.TMP%		= 10% &
+\	MENU.CH%    	= 12% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	CONTRL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CONTRL')=0% &
+\		CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CHART')=0% &
+\		GLMMM.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'GLMMM')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	! Figure out what in the world needs done (a whole lot) &
+	IF FNO%(CONTRL.CH%,CONTRL.DEVICE$+'CONTRL.DAT','/RW','') &
+	THEN	V$=FNMESS$(FNS%,'CONTRL.DAT',0%) &
+\		V%=FNX%('',-1%,'') &
+
+310	IF FNG%(CONTRL.CH%,'CHART ') &
+	THEN	V$=FNMESS$(FNS%,'CONTRL.DAT',0%) &
+\		V%=FNX%('',-1%,'') &
+
+330	YEAR%=CVT$%(MID(FNL$,21%,2%)) &
+\	LAST%=CVT$%(MID(FNL$,9%,2%)) &
+\	FF% = CVT$%(MID(FNL$,17%,2%)) &
+\	NEX% = LAST%+1% &
+\	NEX% = 1% IF LAST%=12% &
+\	NEW.YEAR%= (NEX%=FF%) &
+
+340	! A file doesn't exist &
+	V%=FNC%(GL.CH%) &
+\	FILE$='GLJ'+RIGHT(NUM1$(LAST%+100%),2%)+'.DAS' &
+\	IF FNO%(GLMMM.CH%,GLMMM.DEVICE$+FILE$,'/RW/SF/NS','')=0% &
+	THEN	V%=FNG%(GLMMM.CH%,'') &
+\		SIZE%=FNT &
+\		GOTO 400 &
+
+350	TEST.SIZE%=0% &
+\	NEX%=LAST%+1% &
+\	NEX%=1% IF NEX%>12% &
+\	FILE$='GL'+MID('JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC',NEX%*3%-2%,3%)+ &
+		'.DAS' &
+\	IF FNO%(GLMMM.CH%,GLMMM.DEVICE$+FILE$,'/RW/SF/NS','')=0% &
+	THEN	360 &
+		ELSE	IF FNS%<>5% &
+			THEN	V$=FNMESS$(FNS%,'CONTRL.DAT',0%) &
+\				PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; 	&
+					FNP$('1;75');'WAIT';G.OFF$; 			&
+\				V%=FNX%('',-1%,'') &
+
+360	V%=FNG%(GLMMM.CH%,'') &
+\	SIZE%=FNT &
+\	IF FNO%(GL.CH%,GLMMM.DEVICE$+'GL.DAS','/RW/SF','')=0% &
+	THEN	V%=FNG%(GL.CH%,'') &
+\		IF CVT$$(MID(FNL$,2%,10%),-1%)<>FILE$ &
+		THEN	V%=FNC%(GL.CH%) &
+			ELSE	TEST.SIZE%=CVT$%(MID(FNL$,12%,2%)) &
+\				IF TEST.SIZE%=SIZE% &
+				THEN	V%=FNX%(PRJPRG$+PRGRM$,LINE.NO%, &
+						'') &
+					ELSE	IF TEST.SIZE%>SIZE% &
+						THEN	V%=FNC%(GL.CH%) &
+\							TEST.SIZE%=0% &
+
+370	IF FNS%=10% &
+	THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\		PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; 	&
+					FNP$('1;75');'WAIT';G.OFF$; 			&
+\		V%=FNX%('',-1%,'') &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE  MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	DIM HASH%(1050%), AMT(1050%) &
+\	OPEN 'GL.TMP' AS FILE GL.TMP% &
+\	DIM #10%, HASH$(1050%)=8% &
+\	HASH$(I%)=SPACE$(8%) for i% = 1050% TO 1% STEP -1% &
+\	HASH$(0%)=SPACE$(8%) &
+\	KILL 'GL.TMP' &
+
+4500	IF FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RW/NS','') &
+	THEN	V$=FNMESS$(FNS%,'CHART.DAT',0%) &
+\		V%=FNX%('',-1%,'') &
+
+4600	!  COMPUTE THE INCOME SUMMARY FOR NEW YEAR &
+	SUMMARY.TOTAL=0. &
+\	SUMMARY.ACCT$='' &
+\	IF TEST.SIZE% &
+	THEN	4800 &
+		ELSE	IF FNG%(CHART.CH%,'') &
+			THEN	V$=FNMESS$(FNS%,'CHART.DAT',0%) &
+\				V%=FNX%('',0%,'') &
+
+4605	PRINT #CH%, CLSCN$; FNP$('10;6');'Please wait. . .  Calculating '; &
+		'balance for working financial reports'; &
+
+4610	PRINT #CH%, RECORD 256%, CHR$(129%); &
+\	GET #CH%, RECORD 8192% &
+
+4620	FIELD #CH%, RECOUNT AS TEST$ &
+\	V%=FNX%('',0%,'') IF INSTR(1%,TEST$,CHR$(3%)) &
+
+4630	FIELD #CHART.CH%+1%, FNL% AS TEMP$, &
+			08% AS CHART.ACCNO$, &
+			40% AS CHART.DESC$, &
+			02% AS CHART.CODE$, &
+			12% AS CHART.TEMP$, &
+			08% AS CHART.WORK$, &
+			08% AS CHART.TEMP$, &
+			08% AS CHART.BEGBAL$ &
+\	FIELD #CHART.CH%+1%, FNL% AS TEMP$, &
+			62% AS CHART.FIRST$, &
+			08% AS CHART.TEMP$, &
+			186% AS CHART.LAST$ &
+\	LSET CHART.WORK$=CHART.BEGBAL$ &
+\	IF NEW.YEAR% &
+	THEN	SUMMARY.TOTAL=FNZ(SUMMARY.TOTAL+CVT$F(CHART.BEGBAL$)) &
+			IF INSTR(1%,'RE',LEFT(CHART.CODE$,1%)) &
+\		SUMMARY.ACCT$=CHART.ACCNO$+'' &
+			IF INSTR(1%,'OR',CHART.CODE$) &
+\		LSET CHART.WORK$=CVTF$(0.0) &
+			IF INSTR(1%,'RE',LEFT(CHART.CODE$,1%)) &
+
+4640	IF FNU%(CHART.CH%,CHART.FIRST$+CHART.WORK$+CHART.LAST$) &
+	THEN	V$=FNMESS$(FNS%,'CHART.DAT',0%) &
+\		V%=FNX%('',0%,'') &
+
+4690	IF FNN%(CHART.CH%)=0% &
+	THEN	4610 &
+
+4700	IF NEW.YEAR%=0% &
+	THEN	4800 &
+
+4710	IF SUMMARY.ACCT$='' &
+		THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			'Summary account is missing in the chart  '; &
+			'Hit any key to continue '; &
+\			INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\			PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; &
+				FNP$('1;75');'WAIT';G.OFF$; &
+\			V%=FNC%(CHART.CH%) &
+\			V%=FNX%('',0%,'') &
+
+4720	IF FNG%(CONTRL.CH%,'CHART ') &
+	THEN	V$=FNMESS$(FNS%,'CONTRL.DAT',0%) &
+\		V%=FNX%('',0%,'') &
+
+4730	IF FNU%(CONTRL.CH%,LEFT(FNL$,48%)+CVTF$(SUMMARY.TOTAL)+ &
+			SPACE$(8%-LEN(SUMMARY.ACCT$))+SUMMARY.ACCT$) &
+	THEN	V$=FNMESS$(FNS%,'CONTRL.DAT',0%) &
+\		V%=FNX%('',0%,'') &
+
+4740	IF FNG%(CHART.CH%,SUMMARY.ACCT$) &
+	THEN	V$=FNMESS$(FNS%,'CHART.DAT',0%) &
+\		V%=FNX%('',0%,'') &
+
+4750	IF FNU%(CHART.CH%,LEFT(FNL$,62%)+CVTF$(CVT$F(MID(FNL$,63%,8%))+ &
+			SUMMARY.TOTAL)+RIGHT(FNL$,71%)) &
+	THEN	V$=FNMESS$(FNS%,'CHART.DAT',0%) &
+\		V%=FNX%('',0%,'') &
+
+4800	! &
+
+5000	TEMP$     = 'General Ledger' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+\	PRINT #CH%, FNP$(NUM1$(I%)+';1');' ';FNP$(NUM1$(I%)+';80');' '; &
+				FOR I%=2% TO 19% &
+\	PRINT #CH%, FNP$('20;1');SPACE$(80%);G.OFF$; &
+		FNP$('3;12');'(01) Account #'; &
+		FNP$('4;12');'(02) Source'; &
+		FNP$('5;12');'(03) Reference Number'; &
+		FNP$('6;12');'(04) Transaction Date (MM.DD.YY)'; &
+		FNP$('7;12');'(05) Description'; &
+		FNP$('8;12');'(06) Amount'; &
+		FNP$('9;12');'(07) Cust./Vend./Emp. #'; &
+		FNP$('10;12');'(08) Bank Code'; &
+		FNP$('11;12');'(09) Check/Deposit #'; &
+		FNP$('12;12');'(10) Voucher #'; &
+		FNP$('13;12');'(11) Sub-Account #'; &
+		FNP$('14;12');'(12) Phase'; &
+		FNP$('15;12');'(13) Regular Quantity'; &
+		FNP$('16;12');'(14) Premium Quantity'; &
+
+6000	! File creation &
+
+6050	IF TEST.SIZE% &
+	THEN	V%=FNG%(-GLMMM.CH%,NUM1$(TEST.SIZE%+1%)) &
+\		PRINT #CH%, CLRBOT$;'Adding to ledger file for ';FILE$;'.'; &
+			FNP$('18;5');'Percent complete    0% '; &
+\		RECORD.COUNT=FNT-TEST.SIZE% &
+\		GOTO 6070 &
+
+6060	V%=FNG%(GLMMM.CH%,'') &
+\	PRINT #CH%, CLRBOT$;'Creating a ledger file for ';FILE$;'.'; &
+		FNP$('18;5');'Percent complete    0% '; &
+\	RECORD.COUNT=FNT &
+\	IF RECORD.COUNT=0.0 &
+	THEN	PRINT #CH%, CLRBOT$;FNP$('24;1'); &
+			FILE$;' is empty.  Bypass this month.'; &
+			FNP$('24;55');'Type Yes or No'; &
+\		BYPASS$=CVT$$(FNINP$(CH%,128%,' ',1%,0%),-1%) &
+\		IF BYPASS$='Y' &
+		THEN	8000 &
+		ELSE	IF FNO%(GLMMM.CH%,GLMMM.DEVICE$+FILE$,'/SF/CR:128','') &
+		THEN	V$=FNMESS$(FNS%,FILE$,0%) &
+\			GOTO 10000 &
+
+6070	TOTAL.RECORD=RECORD.COUNT/10. IF RECORD.COUNT<>0.0 &
+\	COUNTER%,PERCENT%=0% &
+\	IF TEST.SIZE%=0% &
+	THEN	S$='/CR:16/SF' IF TEST.SIZE%=0% &
+\		IF FNO%(GL.CH%,GLMMM.DEVICE$+'GL.DAS',S$,'') &
+		THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\			V%=FNX%('',-1%,'') &
+
+6090	GOTO 6500 IF RECORD.COUNT=0.0 &
+\	T=0. &
+\	V%=FNG%(GLMMM.CH%,'') IF TEST.SIZE%=0% &
+\	V%=FNG%(-GLMMM.CH%,NUM1$(TEST.SIZE%+1%)) IF TEST.SIZE% &
+\	FIND%=-1% &
+\	USE1$='###,###.##' &
+\	USE2$='##,###.###' &
+
+6100	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=TOTAL.RECORD &
+	THEN	PRINT #CH%, FNP$('18;'+NUM1$(28%+(PERCENT%/10%*5%))); &
+			IF PERCENT%<=100% &
+\		PERCENT%=PERCENT%+10% &
+\		PRINT #CH%  USING '###%',PERCENT%; &
+			IF PERCENT%<=100% &
+\		COUNTER%=0% &
+
+6110	PRINT #CH%, RECORD 256%, CHR$(129%); &
+\	GET #CH%, RECORD 8192% &
+
+6120	FIELD #CH%, RECOUNT AS TEST$ &
+\	V%=FNX%('',-1%,'') IF INSTR(1%,TEST$,CHR$(3%)) &
+
+6130	DATA.POINTER%=FNR(GLMMM.CH%) &
+\	FIELD #GLMMM.CH%,FNL% AS TEMP$, &
+		08% AS GL.ACCNO$, &
+		02% AS GL.SOURCE$, &
+		16% AS GL.REFNO$, &
+		02% AS GL.TRANDAT$, &
+		26% AS GL.DESC$, &
+		08% AS GL.AMOUNT$, &
+		06% AS GL.XREFNO$, &
+		02% AS GL.POSTIM$, &
+		02% AS GL.POSDAT$, &
+		06% AS GL.BNKCDE$, &
+		08% AS GL.CKNO$, &
+		06% AS GL.VCHRNO$, &
+		06% AS GL.SUBACC$, &
+		06% AS GL.PHASE$, &
+		08% AS GL.REGQTY$, &
+		08% AS GL.PREQTY$, &
+		02% AS GL.UPDATE$, &
+		04% AS TEMP$, &
+		02% AS GL.POINTER$ &
+\	IF CVT$%(GL.POINTER$)<0% OR GL.ACCNO$+GL.SOURCE$= &
+			STRING$(10%,ASCII('D'))&
+	THEN	6300 &
+
+6200	GL.WORK$=CVT$$(GL.ACCNO$,-1%)+'' &
+\	GL.WORK$=SPACE$(8%-LEN(GL.WORK$))+GL.WORK$ &
+\	HASH=VAL(XLATE(GL.WORK$,STRING$(48%,0%)+'0123456789'))* &
+		0.61803399 &
+\	HASH%=(HASH-INT(HASH))*1000% &
+
+6202	GOTO 6290 IF HASH$(HASH%)=GL.WORK$ AND HASH%(HASH%)<>0% &
+\	IF HASH%(HASH%) &
+	THEN	HASH%=HASH%+1% &
+\		GOTO 6202 &
+
+6203	IF FNG%(CHART.CH%,GL.WORK$) &
+	THEN	6210 &
+
+6206	HASH$(HASH%)=GL.WORK$ &
+\	HASH%(HASH%)=FNR(CHART.CH%+1%) &
+\	AMT(HASH%)=0.0 &
+\	GOTO 6290 &
+
+6210	PRINT #CH%, FNP$('3;45');B.ON$;GL.ACCNO$; &
+		FNP$('4;45');GL.SOURCE$; &
+		FNP$('5;45');GL.REFNO$; &
+		FNP$('6;45');FND6$(CVT$%(GL.TRANDAT$)); &
+		FNP$('7;45');GL.DESC$; &
+		FNP$('9;45');GL.XREFNO$; &
+		FNP$('10;45');GL.BNKCDE$; &
+		FNP$('11;45');GL.CKNO$; &
+		FNP$('12;45');GL.VCHRNO$; &
+		FNP$('13;45');GL.SUBACC$; &
+		FNP$('14;45');GL.PHASE$; &
+		FNP$('15;45'); &
+		FNP$('8;45'); &
+\	PRINT #CH% USING FNP$('8;45')+USE1$+ &
+		FNP$('15;45')+USE2$+ &
+		FNP$('16;45')+USE2$+G.OFF$, &
+			CVT$F(GL.AMOUNT$), &
+			CVT$F(GL.REGQTY$), &
+			CVT$F(GL.PREQTY$); &
+
+6220	PRINT #CH%, FNP$('3;45');R.ON$;B.ON$;GL.ACCNO$;G.OFF$; &
+		CLRBOT$;'Change: ALPHA '; &
+\	INP$=FNINP$(CH%,0%,'_',8%,0%) &
+\	GOTO 6224 IF INP$<>'%^C' &
+\	V%=FNX%('',-1%,'') &
+
+6223	V%=FNG%(-GL.CH%,NUM1$(DATA.POINTER%)) &
+\	PRINT #CH%, CLRBOT$; &
+\	GOTO 6400 &
+
+6224	IF INP$='' &
+	THEN	PRINT #CH%, FNP$('24;1');'A valid account must be entered '; &
+			FNP$('24;55');'Hit any key to continue '; &
+\		INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\		GOTO 6220 &
+
+6225	RSET GL.ACCNO$=CVT$$(INP$,-1%) &
+\	PRINT #CH%, FNP$('3;45');B.ON$;GL.ACCNO$;CLRBOT$;G.OFF$; &
+\	V%=FNG%(-GLMMM.CH%,NUM1$(DATA.POINTER%)) &
+\	V%=FNU%(-GLMMM.CH%,FNL$) IF FNS%=0% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(FNS%,FILE$,-1%) &
+\		V%=FNX%('',-1%,'') &
+
+6230	GOTO 6200 &
+
+6290	AMT(HASH%)=FNZ(AMT(HASH%)+CVT$F(GL.AMOUNT$)) &
+\	IF FNA%(GL.CH%,GL.WORK$+GL.TRANDAT$+CVT%$(FNR(GLMMM.CH%))) &
+	THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\		V%=FNX%('',-1%,'') &
+
+6295	T%=T%+1% &
+\	TOTAL = FNZ(TOTAL + CVT$F(GL.AMOUNT$)) &
+
+6300	IF FNN%(GLMMM.CH%)=0% &
+	THEN	6100 &
+
+6400	PRINT #CH%, FNP$('24;1');'Please wait'; &
+\	FOR LOOP% = 0% TO 1050% &
+\		IF HASH%(LOOP%) AND FNZ(AMT(LOOP%))<>0. &
+		THEN	IF FNG%(CHART.CH%,HASH$(LOOP%))=0% &
+			THEN	FIELD #CHART.CH%+1%, FNL% AS TEMP$, &
+					62% AS CHART$, &
+					08% AS TEMP$, &
+					186% AS CHART1$ &
+\				BAL$=CVTF$(FNZ(CVT$F(TEMP$)+AMT(LOOP%))) &
+\				IF FNU%(CHART.CH%,CHART$+BAL$+CHART1$) &
+				THEN	V$=FNMESS$(FNS%,'CHART.DAT',0%) &
+\					V%=FNX%('',-1%,'') &
+
+6410	NEXT LOOP% &
+
+6500	A%=(LEN(G$)-1%)/(LEN(R1$)+1%) &
+\	A%=-1% IF LEN(G$)>REC.SIZE%-9% &
+\	PRINT #CH%  USING CLRBOT$+'TOTAL (all transactions) ##,###,###.##', &
+		INT(TOTAL*100.+.51)/100. &
+\	IF INP$<>'%^C' &
+	THEN	PRINT #CH%, FNP$('24;1');'All accounts confirmed.'; &
+		FNP$('24;55');'Hit any key to continue '; &
+\		INP$=FNINP$(CH%,128%,' ',1%,0%) &
+
+6520	IF TEST.SIZE%=0% &
+	THEN	IF FNA%(GL.CH%,CHR$(0%)+SPACE$(10%-LEN(FILE$))+FILE$+CVT%$(SIZE%)) &
+		THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\			V%=FNX%('',-1%,'') &
+
+6530	IF TEST.SIZE% &
+	THEN	V%=FNG%(GL.CH%,'') &
+\		V%=FNU%(-GL.CH%,CHR$(0%)+SPACE$(10%-LEN(FILE$))+FILE$+ &
+			CVT%$(SIZE%)) IF FNS%=0% &
+\		IF FNS% &
+		THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\			V%=FNX%('',-1%,'') &
+
+6590	PRINT #CH%, FNP$('24;1');CLRLIN$;'Please wait'; &
+\	IF INP$='%^C' &
+	THEN	V%=FNX%('',0%,'') &
+
+6600	IF LINE.NO%<>0% &
+	THEN	TEMP$ = '   Processing' &
+\		PRINT #CH%, COLM.OFF$;CLSCN$;R.ON$;LEFT(TEMP$,39%); &
+			SPACE$(40%-LEN(TEMP$));SPACE$(40%-LEN(COMPANY$)); &
+			COMPANY$;FNP$('20;1');SPACE$(80%);G.OFF$;FNP$('24;1'); &
+			FNP$('10;1');'Processing.  Please wait'; &
+
+6610	V%=FNX%(PRJPRG$+PRGRM$,LINE.NO%,'') &
+
+8000	! &
+	! BYPASS THIS MONTH &
+	! &
+	V%=FNC%(GL.CH%) &
+\	S$='/CR:16/SF' IF TEST.SIZE%=0% &
+\	IF FNO%(GL.CH%,GLMMM.DEVICE$+'GL.DAS',S$,'') &
+	THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\		V%=FNX%('',-1%,'') &
+
+8010	IF FNA%(GL.CH%,CHR$(0%)+SPACE$(10%-LEN(FILE$))+FILE$+CVT%$(SIZE%)) &
+	THEN	V$=FNMESS$(FNS%,'GL.DAS',0%) &
+\		V%=FNX%('',-1%,'') &
+
+8020	V%=FNC%(GLMMM.CH%) &
+\	IF FNO%(GLMMM.CH%,GLMMM.DEVICE$+FILE$,'/SF/CR:128','') &
+	THEN	V$=FNMESS$(FNS%,FILE$,0%) &
+\		GOTO 10000 &
+
+8030	V%=FNX%(CHAIN.PRJPRG$+'GLCLOS',31000%,'') &
+
+10000	! &
+	!	PROGRAM TERMINATION SECTION &
+	! &
+
+10010	KILL GLMMM.DEVICE$+'GL.DAS' &
+
+10030	PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; &
+		FNP$('1;75');'WAIT';G.OFF$;FNP$('24;1'); &
+\	V%=FNC%(CHART.CH%) &
+\	V%=FNX%('',-1%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 450 IF ERL=400% 					&
+\	RESUME 4630 IF ERL=4610%					&
+\	RESUME 6130 IF ERL=6110%					&
+\	RESUME 10030 IF ERL=10010% 					&	
+\	RESUME 10000 IF ERR=54% 					&
+
+19999	ON ERROR GOTO 0 						&
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H'	! Direct Cursor Address &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(ERRNUM%,DESC$,TO.ERR%)				&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						&
+\		PRINT #CH%, FNP$('24;1');CLRLIN$;MESG$;FNP$('24;55');	&
+			'Hit any key to continue.';			&
+\		NW$=FNINP$(CH%,128%,' ',1%,TO.ERR%)			&
+\	FNEND 								&
+
+30350	DEF*FNZ(Z)=INT(ABS(Z)*100.+.51)/100.*SGN(Z)			&
+
+30400	!--------------------------------------------------DATE HANDLER &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) 	&
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) 		&
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) 	&
+
+32767	END &
+

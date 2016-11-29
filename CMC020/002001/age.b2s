@@ -1,0 +1,37 @@
+18800	!------------------------------------------------------------------ &
+	! AGE SUBROUTINE &
+	!------------------------------------------------------------------ &
+	ACC.BAL = 0.0 &
+\	FOR LOOP%=1% TO 5% &
+\		ACC.BAL=ACC.BAL+AGE(LOOP%) IF AGE(LOOP%)<0. &
+\		AGE(LOOP%)=0. IF AGE(LOOP%)<0. &
+\	NEXT LOOP% &
+\	GOTO 18820 IF ACC.BAL=0. &
+\	FOR LOOP%=5% TO 1% STEP -1% &
+\		IF AGE(LOOP%)<>0. &
+		THEN	AGE(LOOP%)=AGE(LOOP%)+ACC.BAL &
+\			IF AGE(LOOP%)>0. &
+			THEN	ACC.BAL=0. &
+				ELSE	ACC.BAL=AGE(LOOP%) &
+\					AGE(LOOP%)=0. &
+
+18810	NEXT LOOP% &
+\	AGE(1%)=AGE(1%)+ACC.BAL &
+
+18820	FOR LOOP% = 5% TO 2% STEP -1% &
+\		GOTO 18890 IF ROA = 0.0 &
+\		TEMP = AGE(LOOP%) &
+\		IF TEMP <> 0.0 &
+		THEN	AGE(LOOP%) = AGE(LOOP%) - ROA &
+\			ROA = ROA - TEMP &
+\			IF AGE(LOOP%) <= 0.0 &
+			THEN	AGE(LOOP%) = 0.0 &
+				ELSE	ROA = 0.0 &
+
+18830	NEXT LOOP% &
+\	AGE(1%) = AGE(1%) - ROA
+
+18890	RETURN &
+
+32767	END &
+

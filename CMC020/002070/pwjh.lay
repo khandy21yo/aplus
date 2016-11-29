@@ -1,0 +1,66 @@
+
+
+
+
+
+           WAREHOUSE INVOICE JOURNAL
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : PWJMNT
+
+    KEY FILE NAME : PWJH(BATCH NUMBER).DAT  KEY = 8 + 2   DATA = 128
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _ORDER #_________________  __6A/1____  PWJH.ORDER$_____ : 
+
+      2 _SOLD TO $_______________  __6A/7____  PWJH.SOLDTO_____ : 
+
+      3 _SHIP TO #_______________  __6A/13___  PWJH.SHIPTO_____ : 
+
+      4 _INVOICE #_______________  __8A/19___  PWJH.INVNUM_____ : RSET
+
+      5 _INVOICE DATE____________  __2I/27___  PWJH.INVDAT_____ : 
+
+      6 _SHIP DATE_______________  __2I/29___  PWJH.SHPDAT_____ : 
+
+      7 _SHIP LOCATION___________  __8A/31___  PWJH.SHPLOC_____ : 
+
+      8 _CARRIER #_______________  __6A/39___  PWJH.CARNUM_____ : 
+
+      9 _BROKER #________________  __6A/45___  PWJH.BRONUM_____ : 
+
+     10 _LABEL #_________________  __6A/51___  PWJH.LABNUM_____ : 
+
+     11 _SOLD BY_________________  __8A/57___  PWJH.SOLDBY_____ : 
+
+     12 _CUSTOMER PO_____________  __8A/65___  PWJH.CUSPO_____ : 
+
+     13 _TERMS___________________  __8A/73___  PWJH.TERMS$_____ : 
+
+     14 _LINE COUNT______________  __2I/81___  PWJH.LINE$_____ : 
+
+     15 _________________________  __________  _________ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 82, FROM 128, FREE = 46
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

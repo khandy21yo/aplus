@@ -1,0 +1,80 @@
+
+
+
+           MASTER  FILE - INVENTORY SYSTEM
+           --------------------------------------------------------------------
+
+
+    KEY FILE NAME : INVMST.DAT          KEY = 6 + 2	DATA = 128
+
+           NAME                         SIZE            VARIABLE     
+
+	 1 _PRODUCT CODE____________  	_06A/01___     INVMST.CODE$ 
+
+	 2 _DESCRIPTION_____________  	_35A/07___     INVMST.DESC$
+
+	 3 _CATEGORIE_______________  	_02A/42___     INVMST.CAT$
+
+	 4 _PRODUCT TYPE____________  	_02A/44___     INVMST.TYPE$
+	 
+	 5 _UNIT OF MEASURE_________  	_07A/46___     INVMST.MEAS$
+
+	 6 _GALLON FACTOR___________  	_08F/53___     INVMST.GALLF$
+
+	 7 _POUND FACTOR____________  	_08F/61___     INVMST.POUNDF$
+
+	 8 _CASE FACTOR_____________  	_08F/69___     INVMST.CASEF$
+
+	 9 _UNITS IN CASE___________  	_08F/77___     INVMST.INCASE$
+
+        10 _BEGINNING BALANCE_______  	_08F/85___     INVMST.BEGBAL$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 92, FROM 128, FREE = 36
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

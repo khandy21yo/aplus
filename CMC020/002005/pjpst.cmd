@@ -1,0 +1,7 @@
+SY:PJPST/ID=SY:[2,5]PJPST/MP
+UNITS = 13
+ASG = SY:5:6:7:8:9:10:11:12
+EXTTSK =  1024
+STACK = 512
+libr=be2res:ro
+//

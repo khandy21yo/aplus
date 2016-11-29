@@ -1,0 +1,68 @@
+
+
+
+           PRICE CUSTOMER  FILE - INVENTORY SYSTEM
+           --------------------------------------------------------------------
+
+
+    KEY FILE NAME : INVPRI.DAS          		DATA = 32
+
+           NAME                         SIZE            VARIABLE     
+
+	 1 _PRODUCT CODE____________  	_06A/01___     INVPRI.CODE$ 
+
+	 2 _CUSTOMER TYPE___________  	_02A/07___     INVPRI.CUST$
+
+	 3 _DATE____________________  	_02I/09___     INVPRI.DATE$
+	 
+	 4 _PRICE___________________  	_08F/11___     INVPRI.PRICE$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 18, FROM 32, FREE = 14
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,54 @@
+
+
+
+           ACCOUNTS RECEIVABLE FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: REG...
+
+    KEY FILE NAME : ARREG.B2S               KEY = 16 + 2   DATA = 256
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Customer Number_________  	_06A/01___  	ARREG.CUSNUM$ 
+
+	 2 _Invoice Number__________  	_08A/07___  	ARREG.INVNUM$ 
+
+	 3 _Transaction Type________  	_02A/15___  	ARREG.TRATYP$
+
+	 4 _Transaction Date________  	_02I/17___  	ARREG.TRADAT$ 
+
+	 5 _Sales amt/Cash received_  	_08F/19___  	ARREG.SALAMT$ 
+
+	 6 _Discount Amount_________  	_08F/27___  	ARREG.DISAMT$ 
+
+	 7 _Other Charges___________  	_08F/35___  	ARREG.OTHCHG$ 
+
+	 8 _Receipt Number__________  	_08F/43___  	ARREG.RECNUM$ 
+
+	 9 _Check Number____________  	_06F/51___  	ARREG.CHKNUM$
+
+	10 _AR Account Number_______  	_08F/57___  	ARREG.ARACCT$
+
+	11 _Cross Reference_________  	_06A/65___  	ARREG.CROSS$
+
+	12 _Description_____________	_25A/71___	ARREG.DESC$
+
+	13 _Update Month____________	_02I/96___	ARREG.UPDDAT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =97, FROM 128, FREE =  31
+
+
+  
+
+
+
+
+
+
+
+
+
+
+

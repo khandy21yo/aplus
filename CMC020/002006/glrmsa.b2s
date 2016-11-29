@@ -1,0 +1,419 @@
+1	!---------------------------------------------------------------
+	!	General	Ledger Build Program				
+	!								
+	!	GLRMS.B2S	V1.0	January 1986			
+	!								
+	! Author - Rick Owen,   Computer Management Center, Inc.	
+	!								
+	! FILEs-CONTRL.DAT 	-ISAM  	Control FILE			
+	! 	GL(MMM).DAS	-ISAM	General Ledger FILE		
+	!	GLRMS.DAT       -RMS    Yearly FILE			
+	!								
+	!---------------------------------------------------------------
+	! 								
+	! 								
+	!		      Copyright (c) 1986 by 			
+	!	  Computer Management Center, Idaho Falls, Idaho	
+	! 								
+	! This software is furnished under a license and may be used	
+	! and copied only in accordance with the terms of such license 	
+	! and with the inclusion of the above copyright notice.  This 	
+	! software or any other copies therof may not be provided or 	
+	! otherwise made available to any other person.  No title to 	
+	! and ownership of the software is hereby transferred.		
+	! 								
+	! The information in this software is subject to change without 
+	! notice and should not be construed as a committment by 	
+	! Computer Management Center. 					
+	! 								
+	! CMC assumes no responsibility for the use or reliability of 	
+	! its software on equipment which is not supported by CMC. 	
+	! 								
+	!---------------------------------------------------------------
+	!
+
+5	!----------------------PROGRAM FUNCTIONS------------------------
+	!------------------------------------------------TERMINAL INPUT 
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		
+		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); 			
+		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;
+		GET #CHN% 						
+		FIELD #CHN%, RECOUNT AS BUFFER$ 			
+		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		
+		FNINP$=CVT$$(BUFFER$,4%) 				
+		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	
+	FNEND 								
+
+7	DEF FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H'	! Direct Cursor Address 
+
+9	!-----------------------------------------------SYSTEM MESSAGES	
+	DEF FNMESS$(ERRNUM%,DESC$,TO.ERR%)				
+		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						
+		PRINT #CH%, FNP$('24;1');CLRLIN$;MESG$;FNP$('24;55'); &
+			'Hit any key to continue.';			
+		NW$=FNINP$(CH%,128%,' ',1%,TO.ERR%)			
+	FNEND 								
+
+11	DEF*FNZ(Z)=INT(ABS(Z)*100.+.51)/100.*SGN(Z)			
+
+13	!--------------------------------------------------DATE HANDLER 
+
+15	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%)
+
+17	DEF FNCHANGE.DATE$(SMALL.DATE$)
+		TEMP.DATE$ = FND6$(CVT$%(SMALL.DATE$))
+		FNCHANGE.DATE$ = "19" + MID$(TEMP.DATE$,7%,2%) + &
+			MID$(TEMP.DATE$,1%,2%) + &
+			MID$(TEMP.DATE$,4%,2%)
+	FNEND
+
+20	!
+	!	This routine performs two functions-
+	!	1. It will validate the argument as being a valid RSTS/E
+	!	file name.
+	!	2. It does a directory lookup to see if the file already
+	!	exists on the account.
+	!
+	!	Argument: File name
+	!	Returned: 0% or error #.  Also the string QQDIR$ will
+	!		contain the value returned by the directory
+	!		lookup if the file exists.
+	!
+	DEF WORD FNFILE(STRING QQ1)
+		ON ERROR GOTO 22
+		V$ = SYS(CHR$(6) + CHR$(-10) + QQ1)
+		!
+		!	If we made it this far then QQ1$ contains a valid file name.
+		!	Now let's do a directory lookup to see if it exists.
+		!
+		QQDIR$ = SYS(CHR$(6) + CHR$(17) + STRING$(2,255) +  &
+			MID(V$,5,8) + STRING$(10,0) + MID(V$,23,4) +  &
+			STRING$(4,0))
+		!
+		!	If we made it this far then the file exists.  Return 0% and
+		!	end.
+		!
+		FNFILE = 0%
+		GOTO 24
+22		!
+		!	An error occurred.  Return the error # as the function value
+		!	and end.
+		!
+		!	Errors returned:
+		!
+		!	2% - ?Illegal file name
+		!	5% - ?Can't find file or account
+		!	6% - ?Not a valid device
+		!
+		FNFILE = ERR
+		RESUME 24
+24	FNEND
+
+30	ON ERROR GOTO 19000 
+
+60	CH%=1%				! Keyboard channel 
+	OPEN 'KB:' AS FILE #1%, MODE 8%+256% 
+					!    8% - Echo Control 
+					!   16% - Disable hibernation, Cntl-C 
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control 
+	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen 
+	CLRLIN$=ESC$+'[2K'		! Erase entire line 
+	CLREL$=ESC$+'[K'		! Cursor to end of line 
+	INSERT.LIN$=ESC$+'[1L'		! Insert a line 
+	G.OFF$=ESC$+'[m'		! Select graphic off 
+	B.ON$=ESC$+'[1m'		! Bold face on 
+	BLINK.ON$=ESC$+'[5m'		! Blinking 
+	R.ON$=ESC$+'[7m'		! Reverse video 
+	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode 
+	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen 
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 
+	DROP.DEAD.DATE$='        ' 
+	VERSION.NO$='V1.0' 
+	DATE.TIME$=CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%)) 
+	IF DROP.DEAD.DATE$<>'' 
+	THEN
+		IF DROP.DEAD.DATE$<MID(SYS(DATE.TIME$),7%,8%) 
+		THEN
+			MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) 
+			PRINT #CH%, MESG$;
+			V$=SYS(CHR$(9%))
+		END IF
+	END IF
+
+100	DECLARE INTEGER CONSTANT &
+		DEVICE.CH	= 02, &
+		GLMMM.CH   	= 03, &
+		CONTRL.CH  	= 04, &
+		GLRMS.CH   	= 06, &
+		MENU.CH    	= 12, &
+		NL.CH          	= 12
+
+	DECLARE STRING EXTENSION(12)
+
+200	OPEN 'DEVICE.DA1/RO' FOR INPUT AS FILE DEVICE.CH
+	DIM #DEVICE.CH,DEVICES$(32767%)=64%
+	NUMBER_OF_DEVICES% = CVT$%(DEVICES$(0%))
+	FOR LOOP% = 1% TO NUMBER_OF_DEVICES%
+		FILE_NAME$ = EDIT$(LEFT$(DEVICES$(LOOP%),6%),-1%)
+		SELECT FILE_NAME$
+
+			CASE 'CONTRL'
+			  CONTRL.DEVICE$=CVT$$(MID(DEVICES$(LOOP%),7%,20%),-1%)
+	
+			CASE 'GLMMM'
+			  GLMMM.DEVICE$=CVT$$(MID(DEVICES$(LOOP%),7%,20%),-1%) 
+	
+			CASE 'GLRMS'
+			  GLRMS.DEVICE$=CVT$$(MID(DEVICES$(LOOP%),7%,20%),-1%)
+
+		END SELECT
+	NEXT LOOP%
+	CLOSE DEVICE.CH
+
+300	! 
+	!	Open the control FILE to determine when the fiscal year starts, and what years to look for
+	!
+	OPEN CONTRL.DEVICE$ + 'CONTRL.DA1/RO' FOR INPUT AS FILE CONTRL.CH
+	DIM #CONTRL.CH,CONTROL$(32767%) = 64%
+	NUMBER_OF_CONTROLS% = CVT$%(CONTROL$(0%))
+	FOUND_IT% = 0%
+	FOR LOOP% = 1% TO NUMBER_OF_CONTROLS%
+		IF LEFT$(CONTROL$(LOOP%),6%) = 'CHART '
+		THEN
+			FOUND_IT% = -1%
+
+			FF% = CVT$%(MID(CONTROL$(LOOP%),17%,2%))
+
+			IF FF% > CVT$%(MID(CONTROL$(LOOP%), 9%, 2%))
+			THEN
+				YEAR$ = FORMAT$(CVT$%(MID(CONTROL$(LOOP%), &
+					21%, 2%)) - 1%, "<0>#")
+			ELSE
+				YEAR$ = FORMAT$(CVT$%(MID(CONTROL$(LOOP%), &
+					21%,2%)), "<0>#")
+			END IF
+
+			LAST% = FF% - 1%
+			IF LAST% = 0%
+			THEN
+				LAST% = 12% 
+			END IF
+			NEX% = FF% - 1%
+			POINTER% = 0%
+		END IF
+	NEXT LOOP%
+
+	IF NOT(FOUND_IT%)
+	THEN
+		V$=FNMESS$(0%,'CONTRL.DAT',0%) 
+		CHAIN "ISM:MENU"
+	END IF
+	YEAR_TO_USE$ = YEAR$ + ''
+
+350	NEX% = NEX% + 1%
+	IF NEX% > 12%
+	THEN
+		NEX%=1% 
+		YEAR_TO_USE$ = NUM1$(VAL(YEAR_TO_USE$) + 1%)
+		IF LEN(YEAR_TO_USE$) = 1
+		THEN
+			YEAR_TO_USE$ = '0' + YEAR_TO_USE$
+		END IF
+	END IF
+	POINTER% = POINTER% + 1%
+	GOTO 360 IF POINTER% > 12% 
+	FILE$='GL'+MID('JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC',NEX%*3%-2%,3%)
+	EXT$ = '.DAS'
+	YEAR_EXT$ = '.' + YEAR_TO_USE$ + 'S'
+	IO_RESULT% = FNFILE(GLMMM.DEVICE$ + FILE$ + YEAR_EXT$)
+	IF IO_RESULT% = 0%
+	THEN
+		EXTENSION(POINTER%) = YEAR_EXT$ + '/MO:256'
+	ELSE
+		IO_RESULT% = FNFILE(GLMMM.DEVICE$ + FILE$ + EXT$)
+		IF IO_RESULT% = 0%
+		THEN
+			EXTENSION(POINTER%) = EXT$ + '/MO:256'
+		ELSE
+			PRINT #CH%, FNP$('24;1');CLRLIN$; &
+				GLMMM.DEVICE$ + FILE$;' not found - ' + &
+				'Please restore before continuing.'; &
+				FNP$('24;55');'Press any key'; 
+			INP$=FNINP$(CH%,128%,' ',1%,0%)
+			PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; &
+				FNP$('1;75');'WAIT';G.OFF$;
+			CHAIN "ISM:MENU"
+		END IF
+	END IF
+	GOTO 350 
+
+360	MAP (GLYEAR) &
+		GL.ACCNO$=8,  GL.SOURCE$=2, GL.REFNO$=16, GL.TRANDAT$=8, &
+		GL.DESC$=26,  GL.AMOUNT,    GL.XREFNO$=6, GL.POSTIM$=2,  &
+		GL.POSDAT$=8, GL.BNKCDE$=6, GL.CKNO$=8,   GL.VCHRNO$=6, &
+		GL.SUBACC$=6, GL.PHASE$=6,  GL.REGQTY,    GL.PREQTY, &
+		GL.UPDATE%
+
+370	OPEN "GLSEQ.DAT/MO:256" FOR OUTPUT AS FILE GLRMS.CH, &
+		ORGANIZATION SEQUENTIAL FIXED, &
+		MAP GLYEAR, &
+		ACCESS MODIFY, &
+		BUFFER 16 &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE  MENU.CH 
+	DIM #12%, A0$(1%)=64% 
+	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) 
+	CLOSE MENU.CH 
+
+500	OPEN 'NL:' AS FILE NL.CH, RECORDSIZE 128%
+	FIELD #NL.CH, &
+		08% AS ISAM.GL.ACCNO$, &
+		02% AS ISAM.GL.SOURCE$, &
+		16% AS ISAM.GL.REFNO$, &
+		02% AS ISAM.GL.TRANDAT$, &
+		26% AS ISAM.GL.DESC$, &
+		08% AS ISAM.GL.AMOUNT$, &
+		06% AS ISAM.GL.XREFNO$, &
+		02% AS ISAM.GL.POSTIM$, &
+		02% AS ISAM.GL.POSDAT$, &
+		06% AS ISAM.GL.BNKCDE$, &
+		08% AS ISAM.GL.CKNO$, &
+		06% AS ISAM.GL.VCHRNO$, &
+		06% AS ISAM.GL.SUBACC$, &
+		06% AS ISAM.GL.PHASE$, &
+		08% AS ISAM.GL.REGQTY$, &
+		08% AS ISAM.GL.PREQTY$, &
+		02% AS ISAM.GL.UPDATE$
+	FIELD #NL.CH, 128% AS GLMMM.BUFFER$
+
+1000	!
+	!	Now we will process the FILEs
+	!
+	PRINT #CH%,CLSCN$;FNP$('10;5');"Now processing:";
+	PRINT #CH%,FNP$('11;5');
+	NEX% = FF% - 1%
+	POINTER% = 0%
+
+1010	NEX% = NEX% + 1%
+	IF NEX% > 12%
+	THEN
+		NEX% = 1%
+	END IF
+	POINTER% = POINTER% + 1%
+	GOTO 1020 IF POINTER% > 12%
+	PRINT #CH%,MID('JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC',NEX%*3%-2%,3%)+ &
+		'   '; 
+	GOTO 1010
+
+1020	POINTER% = 0%
+	NEX% = FF% - 1%
+
+2000	!
+	!	Process loop
+	!
+	NEX% = NEX% + 1%
+	IF NEX% > 12%
+	THEN
+		NEX% = 1%
+		YEAR_TO_USE$ = NUM1$(VAL(YEAR_TO_USE$) + 1%)
+		IF LEN(YEAR_TO_USE$) = 1
+		THEN
+			YEAR_TO_USE$ = '0' + YEAR_TO_USE$
+		END IF
+	END IF
+	POINTER% = POINTER% + 1%
+	GOTO 9000 IF POINTER% > 12%
+	FILE$='GL'+MID('JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC',NEX%*3%-2%,3%) + &
+		EXTENSION(POINTER%)
+	PRINT #CH%,FNP$("12;5");
+	PRINT #CH%,SPACE$((POINTER%-1%) * 6%);R.ON$;" ^ ";G.OFF$;
+	PRINT #CH%,FNP$('1;75');R.ON$;BLINK.ON$;"WAIT";G.OFF$;FNP$('24;1');
+	OPEN GLMMM.DEVICE$ + FILE$ FOR INPUT AS FILE GLMMM.CH
+	DIM #GLMMM.CH,GLMMM$(32767%) = 128%
+	NUMBER_OF_GL_ENTRIES% = CVT$%(GLMMM$(0%))
+
+2010	FOR GL.LOOP% = 1% TO NUMBER_OF_GL_ENTRIES%
+		IF LEFT(GLMMM$(GL.LOOP%),20%) <> STRING$(20%,68%)
+		THEN			
+			LSET GLMMM.BUFFER$ = GLMMM$(GL.LOOP%)
+			!
+			!	Put data into RMS buffer
+			!
+			GL.ACCNO$ = ISAM.GL.ACCNO$
+			GL.SOURCE$ = ISAM.GL.SOURCE$
+			GL.REFNO$ = ISAM.GL.REFNO$
+			GL.TRANDAT$ = FNCHANGE.DATE$(ISAM.GL.TRANDAT$)
+			GL.DESC$ = ISAM.GL.DESC$
+			GL.AMOUNT = CVT$F(ISAM.GL.AMOUNT$)
+			GL.XREFNO$ = ISAM.GL.XREFNO$
+			GL.POSTIM$ = ISAM.GL.POSTIM$
+			GL.POSDAT$ = FNCHANGE.DATE$(ISAM.GL.POSDAT$)
+			GL.BNKCDE$ = ISAM.GL.BNKCDE$
+			GL.CKNO$ = ISAM.GL.CKNO$
+			GL.VCHRNO$ = ISAM.GL.VCHRNO$
+			GL.SUBACC$ = ISAM.GL.SUBACC$
+			GL.PHASE$ = ISAM.GL.PHASE$
+			GL.REGQTY = CVT$F(ISAM.GL.REGQTY$)
+			GL.PREQTY = CVT$F(ISAM.GL.PREQTY$)
+			GL.UPDATE$ = ISAM.GL.UPDATE$
+			PUT #GLRMS.CH
+		END IF
+3000	NEXT GL.LOOP%
+	CLOSE GLMMM.CH
+	GOTO 2000
+
+9000	!
+	!	We come here when we have created the
+	!	sequential file and we now need to convert
+	!	it to a sequential file
+	!
+	PRINT #CH%,COLM.OFF$;CLSCN$
+	PRINT #CH%,"Please wait while the consolidated file "; &
+		"is being formatted..."
+	PRINT #CH%,"When the formatting is finished use the "; &
+		"menu option 'GLYEAR' to"
+	PRINT #CH%,"print the consolidated G/L"
+	CHAIN "[2,6]BUILD.TSK" LINE 30000
+
+10000	! 
+	!	PROGRAM TERMINATION SECTION 
+	! 
+
+10030	PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; &
+		FNP$('1;75');'WAIT';G.OFF$;FNP$('24;1');
+	CHAIN "ISM:MENU"
+
+19000	!------------------------------------------------ERROR TRAPPING 
+	SELECT ERR
+
+	CASE 5
+		SELECT ERL
+
+		CASE 200
+			RESUME 300
+
+		CASE 300
+			V$=FNMESS$(5%,'CONTRL.DAT',0%) 
+			CHAIN "ISM:MENU"
+
+		CASE 2000
+			V$=FNMESS$(5%,FILE$,0%) 
+			PRINT #CH%, COLM.OFF$;CLSCN$;B.ON$;R.ON$;BLINK.ON$; &
+				FNP$('1;75');'WAIT';G.OFF$;
+			CHAIN "ISM:MENU"
+		END SELECT
+
+	END SELECT
+
+19999	ON ERROR GOTO 0 						
+
+32767	END 

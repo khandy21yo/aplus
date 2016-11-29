@@ -1,0 +1,51 @@
+100	STOP IF FNO%(2%, "BANKBL.DAT", "/RO", "") &
+
+110	OPEN "BANKBL.RMS" FOR OUTPUT AS FILE 1% &
+
+200	STOP IF FNG%(2%, "") &
+
+300	FIELD #3%, FNL% AS X$, &
+		08% AS BANKBL.CHECKNUM$, &
+		06% AS BANKBL.BANKACC$, &
+		02% AS BANKBL.FLAG$, &
+		02% AS BANKBL.CHECKDATE$, &
+		08% AS BANKBL.CHECKAMT$, &
+		02% AS BANKBL.CANDATE$, &
+		08% AS BANKBL.BANKAMT$, &
+		02% AS BANKBL.GLDATE$ &
+
+310	V$ = FNPRT$(1%,BANKBL.CHECKNUM$) &
+\	V$ = FNPRT$(2%,BANKBL.BANKACC$) &
+\	V$ = FNPRT$(3%,BANKBL.FLAG$) &
+\	V$ = FNPRT$(4%,FND6$(BANKBL.CHECKDATE$)) &
+\	V$ = FNPRT$(5%,NUM1$(CVT$F(BANKBL.CHECKAMT$))) &
+\	V$ = FNPRT$(6%,FND6$(BANKBL.CANDATE$)) &
+\	V$ = FNPRT$(7%,NUM1$(CVT$F(BANKBL.BANKAMT$))) &
+\	V$ = FNPRT$(8%,FND6$(BANKBL.GLDATE$)) &
+
+380	Z% = Z% + 1% &
+\	PRINT "!"; IF (Z% / 100%) * 100% = Z% &
+\	PRINT IF CCPOS(0%) >= 50% &
+
+390	GOTO 300 UNLESS FNN%(2%) &
+
+900	CLOSE 1% &
+\	V% = FNC%(2%) &
+\	GOTO 32767 &
+
+20000	DEF FNPRT$(X%, X$) &
+\		GOTO 20090 IF X$ = "" AND X%<>1% &
+\		GOTO 20090 IF X$ = "00/00/00" &
+\		GOTO 20090 IF X$ = "0" AND (X% = 5% OR X% = 7%) &
+\		PRINT #1%, "<" + NUM1$(X%)+">"+CVT$$(X$,136%) &
+
+20090	FNEND &
+
+30090	  DEF FND6$(D9$) &
+\		D9% = CVT$%(D9$) &
+\		FND6$ =RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+			+ "/"+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+			+ "/"+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+\	FNEND &
+
+32767	END

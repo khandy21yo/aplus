@@ -1,0 +1,227 @@
+10	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	! Author - Glenn Carl Hillam					&
+	!					 			&
+	!---------------------------------------------------------------&
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[4;19r"	! Scroll region &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+\	BELL$=CHR$(7%)			! BELL &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DIM SYS.CALL%(30%), FIL.NAM%(30%), Y%(32%), Y1%(32%),NAM$(100%) &
+\	DEVICE.CH%		= 02% &
+\	WILD.CH%    		= 12% &
+\	MENU.CH%		= 12% &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(A0$(1%),128%) &
+\	CLOSE MENU.CH% &
+
+450	! RESUME ON ERROR LINE &
+
+500	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+
+1000	!-------------------------Setting up screen-----------&
+	COUNTER%=0% &
+\	TEMP$='MAINTAIN STATEMENT COMMAND FILES' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,40%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(41%-LEN(COMPANY$));COMPANY$;FRAME$; &
+		FNP$('20;1');SPACE$(80%);SCROLL.REGION$; &
+	G.OFF$;FNP$('2;3');"NUMBER";FNP$('2;13');"COMMAND FILE NAME" ; &
+	LDS.ON$;FNP$('3;2');STRING$(78%,113%); &
+		FNP$('3;10');CHR$(110%);&
+		FNP$('2;10');CHR$(120%); &
+		USASCII$;G.OFF$; &
+\	DISPLAY.LINE%=0% &
+\	PRINT.LINE%=4% &
+	!-------------Work over the WILD file---&
+\	WLDCRD.FLAG%=0%	&
+\	FILE.NAME$='??????.FS'  &
+
+1100	!---------------WILD CARD LOOKUP---------------------&
+	CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.NAME$) TO SYS.CALL% &
+\	SYS.CALL%(0%)=30% &
+\	SYS.CALL%(1%)=6% &
+\	SYS.CALL%(2%)=17% &
+\	SYS.CALL%(3%)=WLDCRD.FLAG% ! JUMP &
+\	SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\	WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\	CHANGE SYS.CALL% TO SYS.CALL$ &
+\	CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\	FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\	FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\	WILD.FILE$=RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+		RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+"."+ &
+		RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+\	COUNTER%=COUNTER%+1%  & 
+\	NAM$(COUNTER%)=WILD.FILE$ &
+	!-------------Printing wild file---------------&
+\	PRINT #CH%,FNP$(NUM1$(PRINT.LINE%)+';3'); &
+		RIGHT(NUM1$(COUNTER%+100%),2%); &
+		FNP$(NUM1$(PRINT.LINE%)+';13');CVT$$(NAM$(COUNTER%),-1%); &
+\	I%=PRINT.LINE% &
+\	PRINT #CH%, LDS.ON$;FNP$(NUM1$(I%)+';10');CHR$(120%); &
+			USASCII$;G.OFF$; &
+\	PRINT.LINE%=PRINT.LINE%+1% IF PRINT.LINE%<19% &
+\	NEXT.SCREEN$='' &
+\	IF DISPLAY.LINE% > 14% &
+	THEN	NEXT.SCREEN$='Next-screen ' &
+\		GOTO 3000  &
+
+1110	PRINT #CH%     &
+\	DISPLAY.LINE%=DISPLAY.LINE%+1% &
+\	PRINT #CH%, FNP$(NUM1$(PRINT.LINE%)+';1');R.ON$;" "; &
+		FNP$(NUM1$(PRINT.LINE%)+';80');" ";G.OFF$; &
+			IF PRINT.LINE%=19% &
+\	GOTO 1100 &
+
+3000	!-----------------Program restart point----------------&
+	PRINT #CH%, CLRBOT$;"COMMAND: Add Select Erase ";NEXT.SCREEN$; &
+		"Restore Quit ";  &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+\	GOTO 4000 IF INP$="S" &
+\	IF INP$="N" AND NEXT.SCREEN$<>'' &
+	THEN	DISPLAY.LINE%=1% &
+\		PRINT.LINE%=19%  &
+\		PRINT #CH%, FNP$('19;80'); &
+\		NEXT.SCREEN$='' &
+\		GOTO 1110 &
+
+3010	GOTO 3040 IF INP$<>'E' &
+\	PRINT #CH%, CLRBOT$;"Number to erase "; &
+\	INP$=FNINP$(CH%,128%,"_",2%,1%) &
+\	HP%=VAL(INP$)  &
+\	GOTO 3000 IF INP$='' &
+\	PRINT #CH%, FNP$('24;1');CLRLIN$;'Confirm (y/N) '; &
+\	INP$=CVT$$(FNINP$(CH%,128%,"_",1%,1%),-1%) &
+\	GOTO 3000 IF INP$<>'Y' &
+\	KILL NAM$(HP%) &
+\	GOTO 1000 &
+
+3040	IF INP$='R' &
+	THEN	1000 &
+
+3060	IF INP$='Q' THEN &
+		PRINT #CH%,CLSCN$;B.ON$;R.ON$;BLINK.ON$;SCROLL.ON$; &
+		FNP$('1;75');'WAIT';G.OFF$;SCROLL.REGION$;FNP$('24;1'); &
+\		CHAIN "ISM:MENU" 8100% &
+
+3070	IF INP$<>'A' &
+	THEN	GOTO 3000  &
+
+3080	PRINT #CH%, CLRBOT$;'Command file name to add '; &
+\	INP$=FNINP$(CH%,0%,'_',20%,1%) &
+\	GOTO 3000 IF INP$='' &
+\	TEMP%=INSTR(1%,INP$,'.') &
+\	IF TEMP% &
+	THEN	IF RIGHT(INP$,TEMP%+1%)<>'FS' &
+		THEN	PRINT #CH%, FNP$('24;1');'FILE MUST END WITH A '; &
+				'"FS" EXTENSION'; &
+\			PRINT #CH%, FNP$('24;55');'Hit any key to continue'; &
+\			INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\			GOTO 3080 &
+
+3090	INP$=INP$+'.FS' IF TEMP% = 0% &
+\	HP%=COUNTER%+1% &
+\	NAM$(HP%)=INP$ &
+\	GOTO 4010 &
+
+4000	PRINT #CH%, CLRBOT$;"Number to select "; &
+\	INP$=FNINP$(CH%,128%,"_",2%,1%) &
+\	HP%=VAL(INP$)  &
+\	GOTO 3000 IF INP$='' &
+
+4010	PRINT #CH%,CLSCN$;B.ON$;R.ON$;BLINK.ON$;SCROLL.ON$; &
+		FNP$('1;75');'WAIT';G.OFF$;SCROLL.REGION$;FNP$('24;1'); &
+\	Q0$=SYS(CHR$(7%)) &
+\	Q5%=INSTR(1%,Q0$,CHR$(255%)) &
+\	Q2%=INSTR(1%,Q0$,CHR$(14%)) &
+\	Q2%=Q5%+12% IF Q2%=0% &
+\	Q0$=MID(Q0$+SPACE$(12%),Q5%,Q2%-Q5%) IF Q5% &
+\	Q0$="" IF Q5%=0% &
+\	JUNK$=SYS(CHR$(8%)+'EDT '+ CVT$$(NAM$(HP%),-1%)+ &
+		' /CHAIN="ISM:MENU;8100;'+ &
+		Q0$+'"')  &
+\	CHAIN '[1,2]EDT.TSK' LINE 30000%    &
+
+4020	PRINT #CH%, CLRBOT$;FNP$('24;1');"Unable to find EDITOR'; &
+		FNP$('24;55');'Hit any key to continue'; &
+\	INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\	V% = FNX%('',0%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 4000 IF ERL=4000						&
+\	RESUME 4020 IF ERL=4010						&
+\	RESUME 1000 IF ERR=52% OR ERR=51% 				&
+\	RESUME 450 IF ERL=400 						&
+\	RESUME 1000 IF ERR=54% 						&
+\	RESUME 3000 IF ERR=5%						&
+
+19999	ON ERROR GOTO 0 						&
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+32767	END &
+

@@ -1,0 +1,94 @@
+1	! &
+	! SPECIAL PROGRAM TO CONVERT VERSION 1 CUSTOMER BALANCES &
+	! TO ASCII FORMAT. &
+	! &
+	!	01/20/93 - Kevin Handy &
+	! &
+
+100	IF FNO%(2%, "CUSTOM.DAT", "/RO", "") <> 0% &
+	THEN	PRINT "Unable to open customer file!" &
+\		GOTO 32767 &
+
+110	ASCII.CH% = 4% &
+\	OPEN "ARSYS.ASC" FOR OUTPUT AS FILE ASCII.CH% &
+
+1000	IF FNG%(2%, "") &
+	THEN	PRINT "CUSTOM is empty!" &
+\		GOTO 32767 &
+
+1100	FIELD #3%, FNL% AS JUNK$, &
+		6% AS CUSNUM$, &
+		172% AS JUNK$, &
+		8% AS AMT.CURRENT$, &
+		8% AS AMT.30$, &
+		8% AS AMT.60$, &
+		8% AS AMT.90$, &
+		8% AS AMT.PAST$, &
+		8% AS JUNK$, &
+		8% AS AMT.SERVICE$ &
+
+1110	TRATYP$ = "01" &
+\	DESCR$ = "Balance Foreward" &
+	&
+\	AMOUNT = CVT$F(AMT.CURRENT$) &
+\	DTE$   = "19930131" &
+\	GOSUB 4000 &
+	&
+\	AMOUNT = CVT$F(AMT.30$) &
+\	DTE$   = "19921231" &
+\	GOSUB 4000 &
+	&
+\	AMOUNT = CVT$F(AMT.60$) &
+\	DTE$   = "19921130" &
+\	GOSUB 4000 &
+	&
+\	AMOUNT = CVT$F(AMT.90$) &
+\	DTE$   = "19921031" &
+\	GOSUB 4000 &
+	&
+\	AMOUNT = CVT$F(AMT.PAST$) &
+\	DTE$   = "19920930" &
+\	GOSUB 4000 &
+	&
+\	TRATYP$ = "04" &
+\	DESCR$ = "Service Charge" &
+	&
+\	AMOUNT = CVT$F(AMT.SERVICE$) &
+\	DTE$   = "19930131" &
+\	GOSUB 4000 &
+
+1190	GOTO 1100 UNLESS FNN%(2%) &
+\	V% = FNC%(2%) &
+\	CLOSE ASCII.CH% &
+\	GOTO 32767 &
+
+4000	! &
+	RETURN IF AMOUNT=0.0 &
+\	PRINT #ASCII.CH%, '<CUSNUM>';	CUSNUM$ &
+\	PRINT #ASCII.CH%, '<INVNUM>';	DTE$ &
+\	PRINT #ASCII.CH%, '<TRATYP>';	TRATYP$ &
+\	PRINT #ASCII.CH%, '<TRADAT>';	DTE$ &
+\	PRINT #ASCII.CH%, '<SALAMT>';	FNREFORM$(AMOUNT,11%) &
+ !\	PRINT #ASCII.CH%, '<DISAMT>';	FNREFORM$(0.0,11%) &
+ !\	PRINT #ASCII.CH%, '<OTHCHG>';	FNREFORM$(0.0,11%) &
+ !\	PRINT #ASCII.CH%, '<RECNUM>';	"" &
+ !\	PRINT #ASCII.CH%, '<CHKNUM>';	"" &
+\	PRINT #ASCII.CH%, '<ARACCT>';	"130.00" &
+ !\	PRINT #ASCII.CH%, '<SUBACC>';	"" &
+\	PRINT #ASCII.CH%, '<DESCR>';	DESCR$ &
+ !\	PRINT #ASCII.CH%, '<BATCH>';	"" &
+\	PRINT #ASCII.CH%, '<UPDATED>';	DTE$ &
+\	PRINT #ASCII.CH%, '<CLOSEDATE>';"00000000" &
+\	PRINT #ASCII.CH%, '<>' &
+\	RETURN &
+
+8000	DEF FNREFORM$(AMOUNT,STR.LEN%) &
+\		WORK$ = "+" &
+\		WORK$ = "-" IF AMOUNT<0.0 &
+\		AMOUNT = 100.0 * ABS(AMOUNT) &
+\		DOLLARS$ = CVT$$(NUM1$(INT(AMOUNT + .5001)),128%) &
+\		DOLLARS$ = "0" + DOLLARS$ UNTIL LEN(DOLLARS$) >= STR.LEN% &
+\		FNREFORM$ = WORK$+DOLLARS$ &
+\	FNEND &
+
+32767	END

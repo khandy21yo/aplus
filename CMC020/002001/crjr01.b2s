@@ -1,0 +1,591 @@
+1	%TITLE "CRJR01 - Cash Receipts Listing Program"
+	%SBTTL ""
+	%IDENT "V 1.0"
+
+10	!---------------------------------------------------------------|
+	!	Cash Receipts Listing Program				|
+	!								|
+	!	CRJR01.B2S	V1.0	FEBRUARY 1985			|
+	!								|
+	! Author - Randall Beard, Computer Management Center, Inc.	|
+	!								|
+	! Files-CRHEAD.DAT	: RMS	: Cash Receipts Header File	|
+	!	CRLINE.DAT	: RMS	: Cash Receipts Line File	|
+	!	PPRINT.DAT	: VIR	: Report Description File	|
+	!								|
+	!---------------------------------------------------------------|
+	!								|
+	!								|
+	!		      Copyright (c) 1984 by			|
+	!	  Computer Management Center, Idaho Falls, Idaho	|
+	!								|
+	! This software is furnished under a license and may be used	|
+	! and copied only in accordance with the terms of such license	|
+	! and with the inclusion of the above copyright notice.  This	|
+	! software or any other copies therof may not be provided or	|
+	! otherwise made available to any other person.  No title to	|
+	! and ownership of the software is hereby transferred.		|
+	!								|
+	! The information in this software is subject to change without	|
+	! notice and should not be construed as a committment by	|
+	! Computer Management Center.					|
+	!								|
+	! CMC assumes no responsibility for the use or reliability of	|
+	! its software on equipment which is not supported by CMC.	|
+	!								|
+	!---------------------------------------------------------------|
+
+20	!
+	!	Declare program variables and set program parameters
+	!
+	OPTION SIZE = (REAL DOUBLE, INTEGER WORD)
+	DECLARE STRING CONSTANT &
+		ESCAPE		 =  ('155'C), 		! CS introducer &
+		CLSCN		 =  (ESCAPE + '[2J' ), 	! Clear screen &
+		COLM.ON		 =  (ESCAPE + '[?3h'), 	! 132 column &
+		COLM.OFF	 =  (ESCAPE + '[?3l'),	! 80 column &
+		CLRLIN		 =  (ESCAPE + '[2K'), 	! Erase line &
+		ENTER.COPY	 =  (ESCAPE + '[5i'), 	! Enter copy mode &
+		EXIT.COPY	 =  (ESCAPE + '[4i') 	! Exit copy mode
+	!
+	!	Define channel numbers for the various files
+	!
+	DECLARE INTEGER CONSTANT &
+		PPRINT.CH	 =  02, &
+		CRHEAD.CH	 =  04, &
+		CRLINE.CH	 =  06, &
+		MENU.CH		 =  12
+
+	!
+	!	Declare the program functions
+	!
+	DECLARE STRING  FUNCTION FNINP(WORD, WORD, STRING, WORD)
+	DECLARE STRING  FUNCTION FNSR(STRING)
+	DECLARE STRING  FUNCTION FNP(WORD, WORD)
+	DECLARE STRING  FUNCTION FNPAGE(WORD, WORD, WORD, STRING, STRING)
+	DECLARE STRING  FUNCTION FND6(INTEGER)
+	DECLARE INTEGER FUNCTION FNX(STRING, WORD, STRING)
+	DECLARE REAL    FUNCTION FNZ(REAL)
+	DECLARE WORD    FUNCTION FNPAGE.CNT
+	DECLARE WORD    FUNCTION FNLINE
+
+	!
+	!	Declare the program variables
+	!
+	DECLARE WORD PPAGE, PAGE.LINE, KB.CH, LOOP, PPRINT.REC, VPITCH, &
+		HPITCH, LIN.PER.PAGE, SPAGE, EPAGE, COPIES, CHAIN.FLAG, JUNK, &
+		BOT.MARGIN, MORE.LINES, PAGE.BREAK, LINE.COUNT, END.FLAG, &
+		PAGE.EARLY
+
+	DECLARE REAL CASH.ACC.TOT.AR(20),LINE.ACC.TOT.AR(100),CR.TOTAL, &
+		APLAMNT.TOT,AMNT.TOT
+
+	DECLARE STRING TRASH, PRJPRG, REP.NUM, PPRINT.REPDESC, PPRINT.HPIT, &
+		PPRINT.VPIT, PPRINT.LPAGE, PPRINT.OUTDEV, PPRINT.SPOOLR, &
+		PPRINT.SPAGE, PPRINT.EPAGE, PPRINT.COPIES, PPRINT.REPDATE, &
+		PPRINT.UDF(5), PPRINT.SYSNAM, PPRINT.DISPLAY, FROM.ITEM, &
+		TO.ITEM, COMPANY, TITLE, PAGE.TOP, PAGE.BOT, KB.INP, REPDATE, &
+		CASH.ACC.AR(20),LINE.ACC.AR(100),MESGE,BATCHNO
+
+	!
+	!	RUN entry
+	!
+	OPEN 'KB:' AS FILE 1
+	PRINT #1,"Please run ISM:REPORT"
+	CLOSE #1
+	GOTO 32767
+
+30	ON ERROR GOTO 19000
+	TRASH = SYS(CHR$(6) + CHR$(-7))
+
+60	!
+	!	Open Keyboard with the following switches
+	!
+	!
+	!    8 - Echo Control
+	!   16 - Disable hibernation, Cntl-C
+	!
+	KB.CH = 1			! Keyboard channel
+	OPEN "KB:" AS FILE KB.CH, MODE 8 + 256
+
+150	!
+	!	Get printing information
+	!
+	!	Note: We are treating PPRINT.DA1 as a virtual file, when
+	!		in reality it is an ISAM data file.  Future 
+	!		revisions of this program should include PPRINT.DAT
+	!		as an RMS indexed file.
+	!
+	DIM #PPRINT.CH, STRING PPRINT(32767) = 512
+	OPEN "PPRINT.DA1" FOR INPUT AS FILE PPRINT.CH, &
+		VIRTUAL
+	!
+	!	See if we can find the report
+	!
+	PPRINT.REC = CVT$%(PPRINT(0))
+	FOR LOOP = 1 TO PPRINT.REC
+		GOTO EXIT.LOOP IF LEFT$(PPRINT(LOOP),6) = REP.NUM
+	NEXT LOOP
+	PRINT #KB.CH, "Can't find report # ";REP.NUM;'in PPRINT.DAT'
+	GOTO 32000
+
+ EXIT.LOOP:
+	!
+	!	Pull the data from the pprint record
+	!
+	PPRINT.REPDESC	=  MID$(PPRINT(LOOP),7,20)
+	PPRINT.HPIT	=  MID$(PPRINT(LOOP),57,1)
+	PPRINT.VPIT	=  MID$(PPRINT(LOOP),58,1)
+	PPRINT.LPAGE	=  MID$(PPRINT(LOOP),59,1)
+	PPRINT.OUTDEV	=  MID$(PPRINT(LOOP),60,20)
+	PPRINT.SPOOLR	=  MID$(PPRINT(LOOP),80,6)
+	PPRINT.SPAGE	=  MID$(PPRINT(LOOP),86,2)
+	PPRINT.EPAGE	=  MID$(PPRINT(LOOP),88,2)
+	PPRINT.COPIES	=  MID$(PPRINT(LOOP),90,2)
+	PPRINT.REPDATE	=  MID$(PPRINT(LOOP),92,20)
+	PPRINT.DISPLAY	=  MID$(PPRINT(LOOP),453,1)
+	!
+	!	Now convert some values
+	!
+	HPITCH		= ASCII(PPRINT.HPIT)
+	VPITCH		= ASCII(PPRINT.VPIT)
+	LIN.PER.PAGE	= ASCII(PPRINT.LPAGE)
+	SPAGE		= CVT$%(PPRINT.SPAGE)
+	EPAGE		= CVT$%(PPRINT.EPAGE)
+	COPIES		= CVT$%(PPRINT.COPIES)
+	REPDATE		= EDIT$(PPRINT.REPDATE,132)
+
+190	CLOSE PPRINT.CH
+
+300	!	MAP definitions for the CRHEAD AND CRLINE FILES
+	!
+	MAP (CRHEAD) &
+	STRING &
+		CRH.RECNUM	= 08, 	!	Receipt #		&
+		CRH.CUSNUM	= 06, 	!	Customer # 		&
+		CRH.DEPNUM	= 08, 	!	Deposit #		&
+	WORD &
+		CRH.TRADAT,	      	!	Receipt Date		&
+	STRING &
+		CRH.ACCT,	= 08, 	!	Account #		&
+	REAL &
+		CRH.AMNT	 	!	Receipt Amount		&
+
+310	MAP (CRLINE) &
+	STRING &
+		CRL.RECNUM	= 08, 	!	Receipt # 		&
+		CRL.LINNUM	= 07,	!	Line # (Item)		&
+	STRING &
+		CRL.CUSNUM	= 06, 	!	Customer # 		&
+	REAL &
+		CRL.APLAMNT,	      	!	Amount to apply		&
+	STRING &
+		CRL.INVNUM	= 08,	!	Invoice #		&
+		CRL.ACCT	= 08, 	!	Account # 		&
+		CRL.TYPE	= 02 	!	Type:			&
+							02=Cash Receipt &
+							03=Adjustment	&
+320	!	OPEN CRHEAD AND CRLINE Files
+	!
+	OPEN "CRH"+BATCHNO+".DAT" FOR INPUT AS FILE CRHEAD.CH, &
+		MAP CRHEAD, &
+		INDEXED FIXED, &
+		ALLOW MODIFY, &
+		PRIMARY KEY CRH.RECNUM 
+
+330	OPEN "CRL"+BATCHNO+".DAT" FOR INPUT AS FILE CRLINE.CH, &
+		MAP CRLINE, &
+		INDEXED FIXED, &
+		ALLOW MODIFY, &
+		PRIMARY KEY (CRL.RECNUM, CRL.LINNUM) 
+
+400	!	Get the company name for the report header
+	!
+	OPEN "MENU.FIL/RO" FOR INPUT AS FILE MENU.CH, &
+		VIRTUAL
+	DIM #MENU.CH, STRING A0(32767) = 64
+	COMPANY = EDIT$(RIGHT$(A0(1),2),128)
+	CLOSE MENU.CH
+
+450	!	Resume here if no MENU.FIL is found at line 400
+
+510	TITLE = 'Cash Receipts Journal' &
+	PAGE.TOP = STRING$(2,10) + CHR$(13) + &
+		"Date: " + DATE$(0) + SPACE$(25-LEN(COMPANY)/2) + &
+		COMPANY + SPACE$(32-LEN(COMPANY)/2) + "Page <<###>>" + &
+		CHR$(10) + CHR$(13) + &
+		"Time: " + TIME$(0) + SPACE$(26-LEN(TITLE)/2) + &
+		TITLE + SPACE$(32-LEN(TITLE)/2) + "V1.0" + &
+		CHR$(10) + CHR$(13) + SPACE$(40-LEN(REPDATE)/2) + REPDATE + &
+		STRING$(2,10) + CHR$(13) 
+	HEADINGS=	'  Rcpt #   Cust #   Customer Name'+SPACE$(20)+ &
+			'Chk #    Dep #    Trn Date     Line   Typ' + &
+			'  Invce #    Acct #           Amount'
+	USE1    =	'  \    \   \    \   \                            \'+ &
+			'   \    \   \    \   \      \     \  \   \\' + &
+			'   \      \   \      \   #,###,###.##'
+	PAGE.BOT = STRING$(6,10)
+	BOT.MARGIN = 6
+	MORE.LINES = 2
+
+10000	REP.NUM = '000000' IF REP.NUM = ''
+	IF PPRINT.DISPLAY <> 'Y'
+	THEN	CLOSE #KB.CH
+		OUTPUT.CH,RESET.CH = 1
+		TEMP.CH = 12
+		OPEN PPRINT.OUTDEV AS FILE OUTPUT.CH, MODE 2
+		IF SPAGE>1
+		THEN
+			OPEN "NL:" AS FILE TEMP.CH
+			OUTPUT.CH = TEMP.CH
+		END IF
+	END IF
+
+17000	!
+	!	Output report
+	!
+	PAGE.BREAK = LIN.PER.PAGE - BOT.MARGIN
+	RESET #CRHEAD.CH
+	GET #CRHEAD.CH 
+	IF PPRINT.DISPLAY = "Y"
+	THEN
+		OUTPUT.CH = KB.CH
+		PRINT #OUTPUT.CH, CLSCN;COLM.ON;FNSR("2;19");HEADINGS;FNP(19,1);
+	ELSE
+		PRINT #OUTPUT.CH, ENTER.COPY; &
+				FNPAGE(LIN.PER.PAGE,0,1,PAGE.TOP+HEADINGS+ &
+					CHR$(10)+CHR$(13),"");
+		LINE.COUNT = FNLINE
+	END IF
+
+17030	PRINT #OUTPUT.CH USING USE1,	CRH.RECNUM,
+					CRH.CUSNUM,
+					CJ.CUS.NAME,
+					CRH.CHKNUM,
+					CRH.DEPNUM,
+					FND6(CRH.TRADAT),
+					'','','',
+					CRH.ACCT,
+					CRH.AMNT
+	LINE.COUNT=LINE.COUNT+1
+	GOSUB 17600
+	GOTO 17400 IF END.FLAG
+	AMNT.TOTAL=AMNT.TOTAL+CRH.AMNT
+	GET #CRLINE.CH, KEY #0 EQ CRH.RECNUM
+
+17130	IF 	CRL.RECNUM<>CRH.RECNUM 
+	THEN 	
+		GOTO 18100
+	ELSE	
+		PRINT #OUTPUT.CH USING USE1,	'','','','','','',
+						CRL.LINNUM,
+						CRL.TYP,
+						CRL.INVNUM,
+						CRL.ACCT,
+						CRL.APLAMNT
+		GOSUB 17600
+		GOTO 17400 IF END.FLAG
+		CR.TOTAL=CR.TOTAL+CRL.APLAMNT
+		APLAMNT.TOTAL=APLAMNT.TOTAL+CRL.APLAMNT
+	END IF
+
+17250	GET #CRLINE.CH 
+	GOTO 17130
+
+17350	GET #CRHEAD.CH
+	GOTO 17030
+
+17400	!	PRINT transmitals
+	IF END.FLAG = 0
+	THEN
+		GOSUB 17600 ! Check the pagination
+	END IF
+
+17500	IF PPRINT.DISPLAY <> "Y"
+	THEN
+		PRINT #OUTPUT.CH, FNPAGE(LIN.PER.PAGE,LINE.COUNT,FNPAGE.CNT, &
+			"",PAGE.BOT);
+	ELSE	PRINT #OUTPUT.CH, FNP(24,1);"End of report"; &
+			FNP(24,105);"Hit any key to continue";
+		KB.INP = FNINP(KB.CH,128," ",1)
+	END IF
+
+17540	PRINT #OUTPUT.CH, EXIT.COPY; IF PPRINT.DISPLAY <> 'Y'
+	PRINT #OUTPUT.CH, FNSR("1;24");COLM.OFF; IF PPRINT.DISPLAY = 'Y'
+	CLOSE OUTPUT.CH
+	JUNK = FNX('ISM:REPORT',0,'')
+
+17600	!
+	!	Perform the pagination
+	!
+	IF PPRINT.DISPLAY<>"Y" AND LINE.COUNT + MORE.LINES>PAGE.BREAK
+	THEN
+		END.FLAG = -1 IF PPAGE >= EPAGE AND EPAGE <> 0
+		RETURN IF END.FLAG
+		PRINT #OUTPUT.CH, FNPAGE(LIN.PER.PAGE,LINE.COUNT, &
+			FNPAGE.CNT,PAGE.TOP +HEADINGS,PAGE.BOT);
+		LINE.COUNT = FNLINE
+		IF SPAGE>1
+		THEN
+			IF SPAGE <= PPAGE
+			THEN
+				OUTPUT.CH = RESET.CH
+				PRINT #OUTPUT.CH, ENTER.COPY; &
+					FNPAGE(LIN.PER.PAGE, &
+					0,PPAGE,PAGE.TOP + HEADINGS,'');
+ 				LINE.COUNT = FNLINE
+				SPAGE = 0
+			END IF
+		END IF
+	END IF
+
+17650	IF PPRINT.DISPLAY = "Y" AND LINE.COUNT > 16
+	THEN
+		PRINT #OUTPUT.CH, FNP(24,105);"Hit any key to continue";
+		KB.INP = FNINP(KB.CH,128," ",1)
+		GOTO 17540 IF KB.INP = "%^C"
+		LINE.COUNT = 0
+		PRINT #OUTPUT.CH, FNP(24,1);CLRLIN;FNP(18,132)
+	END IF
+
+17670	RETURN
+
+18000	!	PRINT MESSAGE FOR NO MATCHING CASH RECEIPT RECORD
+	PRINT #OUTPUT.CH, SPACE$(5);"No line items for this Cash Receipt'; &
+				SPACE$(10);'OUT OF BALANCE'
+	PRINT #OUTPUT.CH
+	LINE.COUNT=LINE.COUNT+2
+	GOSUB 17600
+	GOTO 17400 IF END.FLAG
+	GOTO 17350
+
+18100	!	PRINT CASH RECEIPT TOTALS 
+	MESGE=''
+	MESGE='**OUT OF BALANCE**' IF CR.TOTAL+CRH.AMNT<>0.
+	PRINT #OUTPUT.CH USING USE1,	CRH.RECNUM,
+					'Totals',
+					MESGE,
+					'','','','','','','',
+					CR.TOTAL;'**'
+	PRINT #OUTPUT.CH
+	LINE.COUNT=LINE.COUNT+3
+	GOSUB 17600
+	GOTO 17400 IF END.FLAG
+	CR.TOTAL=0.
+	GOTO 17350
+
+19000	!	--- E R R O R   T R A P P I N G  S E C T I O N ---
+	!
+	SELECT ERR
+	CASE 28
+		TRASH = SYS(CHR$(6) + CHR$(-7))
+		RESUME 17500 IF OUTPUT.CH = KB.CH
+		RESUME 17540
+
+	CASE 52
+		RESUME
+
+	CASE 5
+		SELECT ERL
+
+			!
+			!	No MENU.FIL
+			!
+			CASE 400
+				RESUME 450
+	
+			!
+			!	PPRINT.DA1 missing
+			!
+			CASE 150
+				PRINT #KB.CH,"Can't open PPRINT.DAT^G"
+				PRINT #KB.CH, FNP(24,10); &
+					"Hit any key to continue";
+				KB.INP = FNINP(KB.CH,128," ",1)
+				RESUME 32000
+
+			!
+			!	Cash Receipts Header File missing
+			!
+			CASE 320
+				PRINT #KB.CH,"Can't open CRH"+BATCHNO+".DAT"
+				PRINT #KB.CH, FNP(24,10); &
+					"Hit any key to continue";
+				KB.INP = FNINP(KB.CH,128," ",1)
+				RESUME 32000
+
+			!
+			!	Cash Receipts Line File missing
+			!
+			CASE 330
+				PRINT #KB.CH,"Can't open CRL"+BATCHNO+".DAT"
+				PRINT #KB.CH, FNP(24,10); &
+					"Hit any key to continue";
+				KB.INP = FNINP(KB.CH,128," ",1)
+				RESUME 32000
+		END SELECT
+
+	!	No matching Receipt # was found in the line file
+	!
+	CASE 155 
+		IF ERL=17030
+		THEN
+			RESUME 18000
+
+	!
+	!	End of file 
+	!
+	CASE 11 
+		SELECT ERL
+			!	End of Cash Receipts Line File
+			!
+			CASE 17250
+				RESUME 18100
+			!	End of Cash Receipts Header File
+			!
+			CASE 17350
+				RESUME 17400
+		END SELECT
+
+		ON ERROR GOTO 0
+
+	END SELECT
+	!
+	!	-- End of error processing --
+	!
+
+21700	!
+	!	FNX	CMC Standard Menu Access
+	!		Exit Function
+	!
+	DEF INTEGER FNX(STRING CHAIN.PROG,WORD CHAIN.LINE,STRING CORE.COM)
+	DECLARE STRING TRASH1,TRASH2
+	DECLARE WORD FLAG1,FLAG2
+		ON ERROR GOTO 21730
+		TRASH1 = SYS(CHR$(7))
+		FLAG1 = INSTR(1,TRASH1,CHR$(255))
+		FLAG2 = INSTR(1,TRASH1,CHR$(14))
+		FLAG2 = FLAG1 + 12 IF FLAG2 = 0
+		TRASH1 = MID(TRASH1 + SPACE$(12),FLAG1,FLAG2 - FLAG1) IF FLAG1
+		TRASH1 = "" IF FLAG1 = 0
+		CHAIN.LINE = -CHAIN.LINE IF CHAIN.LINE < 0
+		IF FLAG1 AND CHAIN.PROG = ""
+		THEN
+			CHAIN "ISM:MENU" LINE 8100
+		END IF
+		TRASH2 = SYS(CHR$(8) + TRASH1 + "   " + CHR$(14) + CORE.COM)
+		IF CHAIN.PROG<>""
+		THEN
+			CHAIN CHAIN.PROG LINE CHAIN.LINE
+		END IF
+		TRASH = SYS(CHR$(9))
+
+21730		!
+		!	Error processing for the FNX function
+		!
+		IF (ERR = 71 OR ERR = 5)
+		THEN
+			PRINT #KB.CH,"Error";ERR; &
+				"in menu chain.  Statement, file or " + &
+				"account not found."
+			TRASH = SYS(CHR$(5%))
+			STOP
+		END IF
+		PRINT #KB.CH,"Untrapped error";ERR;"at line";ERL
+		PRINT #KB.CH,"DO NOT PROCEED!  CALL CMC IMMEDIATELY.";
+		TRASH = SYS(CHR$(5%))
+		STOP
+
+21750	END DEF
+
+30000	!-------------------------PROGRAM FUNCTIONS----------------------- &
+
+30100	!-----------------------------------------------------TERMINAL INPUT &
+	DEF STRING FNINP(WORD CHN,WORD KYP,STRING FILLCHAR,WORD INPUTLEN)
+	DECLARE STRING INP.BUFFER
+		PRINT #CHN, STRING$(INPUTLEN,ASCII(FILLCHAR)); &
+			  STRING$(INPUTLEN,8);
+		PRINT #CHN, RECORD 256, CHR$(KYP + INPUTLEN) + FILLCHAR;
+		GET #CHN
+		FIELD #CHN, RECOUNT AS INP.BUFFER
+		IF ASCII(INP.BUFFER) = 128 OR ASCII(INP.BUFFER) = 8 &
+			OR ASCII(INP.BUFFER) = 23
+		THEN
+			INP.BUFFER = "%END" IF MID$(INP.BUFFER,2,4) = "[21~" &
+				OR ASCII(INP.BUFFER) = 8
+			INP.BUFFER = "%ABORT" IF MID$(INP.BUFFER,2,4) = "[19~" &
+				OR ASCII(INP.BUFFER) = 23
+		END IF
+
+30110		INP.BUFFER = "%^C" IF INSTR(1,INP.BUFFER,CHR$(3))
+		FNINP = EDIT$(INP.BUFFER,4)
+	END DEF
+
+30200	!------------------------------------------ANSI DIRECT CURSOR ASSRESS &
+	DEF STRING FNP(WORD ROW,WORD COL) = &
+		ESCAPE + "[" + NUM1$(ROW) + ";" + NUM1$(COL) + "H"
+
+30300	!------------------------------------------SCROLL CONTROL &
+	DEF STRING FNSR(STRING BEGEND) = &
+		ESCAPE + "["+ BEGEND + "r" ! Scroll
+
+30400	!---------------------------------------------------DATE HANDLERS &
+
+30410	!	Date decompression function
+	!
+	DEF STRING FND6(INTEGER D9) = &
+		RIGHT$(NUM1$((D9 AND 15% * 32%) / 32% + 100%),2) + &
+		"/" + RIGHT$(NUM1$((D9 AND 31%) + 100%),2) + &
+		"/" + RIGHT$(NUM1$(((SWAP%(D9) AND 254%) / 2%) + 100%),2)
+
+30600	!
+	!	Print top and bottom of page
+	!	Format :
+	!	PRINT FNPAGE(<LINES/PAGE>,<CURRENT LINE COUNT>,<PAGE COUNT>,
+	!		<TOP OF PAGE>,<BOTTOM OF PAGE>)
+	!	FNPAGE.CNT = PAGE COUNT
+	!	FNLINE     = LINE COUNT
+	!
+	!	Written by Robert Peterson - July 1981
+	!	Version 1 Edition 0
+	!
+	DEF STRING FNPAGE(WORD Y0,WORD Y1,WORD Y2,STRING Y00,STRING Y11)
+		DECLARE STRING Y22,Y4
+		DECLARE WORD Y,Y3
+		Y22 = ""
+		Y22 = STRING$(Y0 - (Y1 + LEN(XLATE(Y11,STRING$(10,0) + &
+			CHR$(10)))),10) IF Y11 <> ""
+		PAGE.LINE = LEN(XLATE(Y00,STRING$(10,0) + CHR$(10)))
+		Y = INSTR(1,Y11 + Y00,"<<#")
+		Y3 = INSTR(1,Y11 + Y00,"#>>")
+		Y4 = RIGHT$(NUM1$(100000 + Y2),8-(Y3-Y))
+		Y3 = -3 IF Y = 0
+		PRINT #OUTPUT.CH, Y22;LEFT$(Y11 + Y00,Y - 1);Y4; &
+			RIGHT$(Y11 + Y00,Y3 + 3);
+		PPAGE = Y2
+	END DEF
+
+30650	!
+	!	Function to return page number
+	!
+	DEF WORD FNPAGE.CNT = PPAGE + 1
+
+30660	!
+	!	Function to return current line
+	!
+	DEF WORD FNLINE = PAGE.LINE
+
+31000	!
+	!	Chain entry
+	!
+	TRASH = SYS(CHR$(7))
+	REP.NUM = MID$(TRASH,INSTR(1,TRASH,'~') + 1,6)
+	GOTO 30
+
+32000	!
+	!	Exit to menu
+	!
+	JUNK = FNX("",0,"")
+
+32767	END
+

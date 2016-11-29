@@ -1,0 +1,66 @@
+
+
+
+           CASH RECEIPTS JOURNAL HAND CHECK FILE                              
+           --------------------------------------------------------------------
+
+    Programs: .......
+
+    KEY FILE NAME : CRJHND.DAT  	KEY = 8 + 2	DATA = 128
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Receipt Number__________  	_08A/01___  	CRJHND.RECNUM$
+
+	 2 _Customer Number_________  	_06A/09___  	CRJHND.CUSNUM$
+
+	 3 _Check Number____________  	_06A/15___  	CRJHND.CHECK$
+
+	 4 _Deposit Number__________  	_06A/21___  	CRJHND.DEPOSIT$
+
+	 5 _Transaction Date________  	_02I/27___  	CRJHND.TRADAT$
+
+	 6 _Account Number__________  	_08A/29___  	CRJHND.ACCT$
+
+	 7 _Amount__________________  	_08F/37___  	CRJHND.AMNT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =44, FROM 128, FREE = 84
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

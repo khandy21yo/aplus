@@ -1,0 +1,280 @@
+10	!---------------------------------------------------------------&
+	!	Program to Reset General Ledger				&
+	!								&
+	!	CHARST.B2S	V1.0	February 1985			&
+	!								&
+	! Author - Randall Beard, Computer Management Center, Inc.	&
+	!								&
+	! Files-CONTRL.DAT	-ISAM	Control File			&
+	!	CHART.DAT     	-ISAM	Chart of Accounts File		&
+	!	GL(MMM).(YY)S and GL(MMM).DAS				&
+	!			-ISAM	General Ledger File		&	
+	!								&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+
+50	ON ERROR GOTO 19000 &
+\	DIM CHART.MON$(12%) &
+\	JUNK$ = SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%))) &
+\	IF 	DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(DATE.TIME$,7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DEVICE.CH%	= 02% &
+\	CHART.CH%   	= 02% &
+\	CONTRL.CH%  	= 04% &
+\	GLPRIOR.CH% 	= 06% &
+\	GLCURR.CH%  	= 08% &
+\	MENU.CH%    	= 12% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	CONTRL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CONTRL')=0% &
+\		CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CHART')=0% &
+\		GL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'GLMMM')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+210	IF FNO%(CONTRL.CH%,CONTRL.DEVICE$+'CONTRL.DAT','/RW','') &
+	THEN	V$=FNMESS$(CH%,FNS%,' CONTRL.DAT',0%,-1%) &
+\		V%=FNX%('',0%,'') &
+
+220	IF FNG%(CONTRL.CH%,'CHART ') &
+	THEN	V$=FNMESS$(CH%,FNS%,' CONTRL.DAT',0%,-1%) &
+\		V%=FNX%('',0%,'') &
+
+230	LAST%=CVT$%(MID(FNL$,9%,2%)) &
+\	RESET.YEAR%,YEAR%=CVT$%(MID(FNL$,21%,2%)) &
+\	FF%=CVT$%(MID(FNL$,17%,2%)) &
+\	LOOP.MONTH%=LAST%-2% &
+\	LOOP.MONTH%=LOOP.MONTH%+12% IF LOOP.MONTH%<1% &
+\	RESET.MONTH%=LAST%-1% &
+\	RESET.MONTH%=12% IF RESET.MONTH%<1% &
+\	RESET.YEAR%=RESET.YEAR%-1% IF RESET.MONTH%=12% &
+\	RESET.YEAR%=99% IF RESET.YEAR%<0% &
+\	NEW.YEAR%=-1% IF RESET.MONTH%=FF%-1% OR RESET.MONTH%=12% AND FF%=1% &
+
+240	IF FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RW','') &
+	THEN	V$=FNMESS$(CH%,FNS%,' CHART.DAT',0%,-1%) &
+\		V%=FNX%('',0%,'') &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 256% &
+\	FIELD #12%, 256% AS CHART.BUF$ &
+\	FIELD #12%,	08% AS CHART.ACCNO$, &
+			40% AS CHART.DESC$, &
+			02% AS CHART.ACCTYP$, &
+			02% AS CHART.MONTH$, &
+			18% AS TEMP$, &
+			08% AS CHART.LAST$, &
+			08% AS CHART.CURR$, &
+			08% AS CHART.BACKUP$, &
+			08%*13% AS TEMP$, &
+			32% AS TEMP$, &
+			01% AS CHART.FLAG$, &
+			01% AS CHART.PRTFLAG$, &
+			04% AS CHART.TYP$, &
+			02% AS CHART.DIV$, &
+			02% AS CHART.DEP$, &
+			02% AS CHART.LOC$ &
+\	FIELD #12%,	86%+8%*M% AS TEMP$, &
+			08% AS CHART.MON$(M%) &
+				FOR M%=1% TO 12% &
+
+600	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+						FOR I%=2% TO 19% &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+	IF FNG%(CHART.CH%,'') &
+	THEN	V$=FNMESS$(CH%,FNS%,' CHART.DAT',0%,-1%) &
+\		V%=FNX%('',0%,'') &
+
+1020	GOSUB 1060 &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'Confirm: (Y/N) '; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,0%),32%) &
+
+1040	IF OPT$<>'Y' &
+	THEN	PRINT #CH%, ;FNSR$('1;24'); &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT';G.OFF$; &
+\		V%=FNX%('',0%,'') &
+
+1050	GOTO 4000 &
+
+1060	TEMP$     = 'General ledger reset' &
+\	PRINT #CH%, FNSR$('1;24');COLM.OFF$;G.OFF$; &
+		CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(40%-LEN(COMPANY$));COMPANY$;FRAME$; &
+		FNP$('20;1');SPACE$(80%);G.OFF$; &
+\	PRINT #CH%, FNP$('11;10');'0%   10%  20%  30%  40%  50%'; &
+		'  60%  70%  80%  90% 100%';FNP$('24;80'); &
+\	PRINT #CH%, FNP$('6;5'); &
+		FNM1$(LAST%);' ';NUM1$(YEAR%);' WAS THE LAST MONTH '; &
+		'CLOSED.  WILL BE RESET TO ';FNM1$(LAST%);' ';NUM1$(YEAR%);'.'; &
+		FNP$('7;5');FNM1$(RESET.MONTH%);' '; &
+		NUM1$(RESET.YEAR%);' WILL THEN BE THE LAST MONTH CLOSED.'; &
+\	RETURN &
+
+4000	&
+	! &
+	! RESET &
+	! &
+	PRINT #CH%, CLRBOT$; &
+\	S$=RIGHT(NUM1$(100%+YEAR%),2%) &
+\	IF FNO%(GLPRIOR.CH%,GL.DEVICE$+'GL'+FNM1$(LAST%)+'.'+S$+'S', &
+			'/SF/NS','')<>0% &
+	THEN	V$=FNMESS$(CH%,FNS%,' GL'+FNM1$(LAST%)+'.'+S$+'S',0%,-1%) &
+\		GOTO 4080 &
+
+4070	IF FNO%(GLCURR.CH%,GL.DEVICE$+'GL'+FNM1$(LAST%)+'.DAS','/SF/NS','')<>5% &
+	THEN	V$=FNMESS$(CH%,16%,' GL'+FNM1$(LAST%)+'.'+S$+'S',0%,-1%) &
+\		V%=FNX%('',0%,'') &
+
+4080	PRINT #CH%, FNP$('19;2'); 'Starting to reset the general ledger'; &
+		FNP$('24;1'); &
+\	V%=FNG%(CHART.CH%,'') &
+\	REC.CNT=INT(FNT/10.)-1. &
+\	COUNTER%,PERCENT%=0% &
+\	COL%=10% &
+
+4090	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=REC.CNT &
+	THEN	COUNTER%=0% &
+\		PERCENT%=PERCENT%+10% &
+\		IF PERCENT%<=100% &
+		THEN	PRINT #CH%, FNP$('12;'+NUM1$(COL%));R.ON$;'     '; &
+			G.OFF$;FNP$('24;1'); &
+			IF PERCOM%<100% &
+\			COL%=COL%+5% &
+
+4100	LSET CHART.BUF$=FNL$+'' &
+\	IF CVT$%(CHART.MONTH$)<>LAST% &
+	THEN	4200 &
+		ELSE	LSET CHART.CURR$=CHART.LAST$ &
+\			LSET CHART.LAST$=CHART.MON$(LOOP.MONTH%) &
+\			LSET CHART.MON$(LOOP.MONTH%)=CHART.BACKUP$ &
+\			LSET CHART.BACKUP$=CHR$(0%) &
+\			LSET CHART.MONTH$=CVT%$(RESET.MONTH%) &
+
+4110	IF YEAR.NEW% &
+	THEN	LSET CHART.BACKUP$=CHART.YR1$ &
+\		LSET CHART.YR1$=CHART.YR2$ &
+\		LSET CHART.YR2$=CHART.YR3$ &
+\		LSET CHART.YR3$=CHART.YR4$ &
+
+4120	IF FNU%(CHART.CH%,CHART.BUF$) &
+	THEN	V$=FNMESS$(CH%,FNS%,' CHART.DAT',0%,-1%) &
+\		V%=FNX%('',0%,'') &
+
+4200	IF FNN%(CHART.CH%)=0% &
+	THEN	4090 &
+
+4240	V%=FNG%(CONTRL.CH%,'CHART ') &
+\	V%=FNU%[CONTRL.CH%,LEFT(FNL$,8%)+CVT%$(RESET.MONTH%)+ &
+		MID(FNL$,11%,4%)+CVT%$(0%)+ &
+		MID(FNL$,17%,4%)+CVT%$(RESET.YEAR%)+RIGHT(FNL$,23%)] &
+\	V%=FNC%(CONTRL.CH%)+FNC%(CHART.CH%) &
+
+4250	NAME GL.DEVICE$+'GL'+FNM1$(LAST%)+'.'+S$+'S' AS &
+		GL.DEVICE$+'GL'+FNM1$(LAST%)+'.DAS' &
+
+4270	PRINT #CH%, FNP$('24;1');CLRLIN$;'Reset completed'; &
+			FNP$('24;55');'Hit any key to continue '; &
+\		INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\		PRINT #CH%, ;FNSR$('1;24'); &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1'); &
+\		V%=FNX%('',0%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 4270 IF ERL=4250% 					&
+\	RESUME IF ERR=52% OR ERR=51% 					&
+\	RESUME 450 IF ERL=400 						&
+\	RESUME 1000 IF ERR=54% 						&
+
+19900	ON ERROR GOTO 0 						&
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=CHR$(155%)+'['+ROWCOL$+'H' ! Direct Cursor Address &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						&
+\		IF PRINT.TEST%						&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+				FNP$('24;55');				&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30300	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r'	! Scroll control &
+
+30500	DEF FNM1$(M%)=							&
+		MID('JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC',M%*3%-2%,3%) &
+
+32767	END &
+

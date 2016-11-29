@@ -1,0 +1,66 @@
+
+
+
+           SERVICE CHARGE FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: STX....
+
+    KEY FILE NAME : SERCHG.DAS   			DATA = 32
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _State___________________  	_02A/01___  	SERCHG.STATE$
+
+	 2 _Monthly Service Charge__  	_08F/03___  	SERCHG.SERCHRG$
+
+	 3 _SC Minimum______________	_08F/11___	SERCHG.MINIMUM
+
+	 4 _Dollar Minimum__________	_08F/19___	SERCHG.DOLLAR
+
+	 5 _AR Account Number_______	_08A/27___	SERCHG.ARACCT$
+
+	 6 _SC Revenue Acc Number___	_08A/35___	SERCHG.SCREV$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =42, FROM 64, FREE = 22
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

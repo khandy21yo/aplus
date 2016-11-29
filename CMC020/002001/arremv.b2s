@@ -1,0 +1,259 @@
+10	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	!	10/22/90 - Kevin Handy &
+	!		Removed unecessary variables and functions &
+	! &
+	!	10/22/90 - Kevin Handy &
+	!		Fixed so didn't lset into a buffer fielded into &
+	!		the disk buffer so records won't be magically &
+	!		changed. &
+	! &
+	!	10/22/90 - Kevin Handy &
+	!		Initilized TEST.NUM$ to "" &
+
+50	ON ERROR GOTO 19000 &
+\	TEMP$=SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erace cursor to end of screen &
+\	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+
+100	DEVICE.CH%	= 02% &
+\	ARREG.CH%	= 02% &
+\	CUSTOM.CH%	= 10% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	ARREG.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'ARREG')=0% &
+\		CUSTOM.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CUSTOM')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	IF	FNO%(CUSTOM.CH%,CUSTOM.DEVICE$+'CUSTOM.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'CUSTOM.DAT',0%,-1%) &
+\		GOTO 1040 &
+
+370	IF FNO%(ARREG.CH%,ARREG.DEVICE$+"ARREG.DAT","/RW","") &
+	THEN	V$=FNMESS$(CH%,FNS%,'ARREG.DAT',0%,-1%) &
+\		GOTO 1040 &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE 12% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE 12% &
+
+450	! &
+
+500	IF FNG%(ARREG.CH%,"") &
+	THEN	PRINT #CH%, FNP$('24;1');"ARREG IF EMPTY";FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,0%) &
+\		GOTO 1040 &
+
+510	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+" "+&
+		FNP$(NUM1$(I%)+';80')+" " FOR I%=2% TO 19% &
+
+1000	!---------------PROGRAM CONTROL SECTION &
+
+1010	TEMP$="REMOVE CLOSED JOBS" &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+		FRAME$;FNP$('20;1');SPACE$(80%);G.OFF$; &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Remove Quit '; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+\	GOTO 1050 IF OPT$<>'Q' &
+
+1040	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+		B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+			FNX%('',0%,''); &
+
+1050	GOTO 3100 	IF OPT$='R' 		! Remove &
+\	GOTO 1030 &
+
+3100	! ============================================================== &
+	! REMOVE PAID INVOICES &
+	! ============================================================== &
+	PRINT #CH%, CLRBOT$;'Customer # '; &
+\	INP$=FNINP$(CH%,0%,'_',6%,1%) &
+\	GOTO 1030 IF INP$='' &
+\	CUSTOM.NAME$='** UNDEFINED **' &
+\	CUSTOM.NUM$=LEFT(INP$+SPACE$(6%),6%) &
+\	CUSTOM.NAME$=MID(FNL$,7%,25%)+'' IF FNG%(CUSTOM.CH%,CUSTOM.NUM$)=0% &
+\	PRINT #CH%, FNP$('8;10');CUSTOM.NUM$; '  '; CUSTOM.NAME$; &
+\	PRINT #CH%, CLRBOT$;'Job # '; &
+\	INP$=FNINP$(CH%, 0%, '_',6%,1%) &
+\	GOTO 3100 IF INP$='' &
+\	SUBCOD.NUM$=LEFT(INP$+SPACE$(6%),6%) &
+\	PRINT #CH%, FNP$('10;10');SUBCOD.NUM$; &
+\	BALANCE = 0.0 &
+\	TEST.INVNUM$ = '' &
+\	REC.COUNT% = 0% &
+\	TEST.NUM$ = "" &
+\	IF FNG%(ARREG.CH%,CUSTOM.NUM$) &
+	THEN	V$=FNMESS$(CH%,FNS%,' ARREG.DAT',0%,-1%) &
+\		GOTO 3100 &
+
+3130	FIELD #ARREG.CH%+1%, FNL% AS TEMP$,	&
+			06% AS ARREG.CUSNUM$,	&
+			08% AS ARREG.INVNUM$,	&
+			02% AS ARREG.TRATYP$,	&
+			02% AS ARREG.TRADAT$,	&
+			08% AS ARREG.SALAMT$,	&
+			08% AS ARREG.DISAMT$,	&
+			08% AS ARREG.OTHCHG$,	&
+			08% AS ARREG.RECNUM$,	&
+			06% AS ARREG.CHKNUM$,	&
+			08% AS ARREG.ARACCT$,	&
+			06% AS ARREG.CROSS$,	&
+			25% AS ARREG.DESC$,	&
+			02% AS ARREG.UPDATE$	&
+\	TEMP.CROSS$ = ARREG.CROSS$ + "" &
+\	LSET TEMP.CROSS$ = TEST.NUM$ &
+		IF ARREG.CROSS$ = '' &
+\	GOTO 3200 IF CUSTOM.NUM$ <> ARREG.CUSNUM$ &
+\	IF CVT$$(TEMP.CROSS$,-1%) = CVT$$(SUBCOD.NUM$,-1%) &
+	THEN	IF ARREG.TRATYP$<>'02' &
+		THEN	BALANCE = FNZ(BALANCE + CVT$F(ARREG.SALAMT$)) &
+\			REC.COUNT% = REC.COUNT% + 1% &
+
+3140	TEST.NUM$ = TEMP.CROSS$ + '' &
+		IF TEST.INVNUM$ <> ARREG.INVNUM$ &
+		OR TEST.NUM$ <> TEMP.CROSS$ AND TEST.NUM$<>'' &
+\	TEST.INVNUM$ = ARREG.INVNUM$ + '' &
+\	GOTO 3130 IF FNN%(ARREG.CH%)=0% &
+
+3200	!================================================================= &
+	! PRINT ENDING BALANCE &
+	!================================================================= &
+	IF REC.COUNT%=0% &
+	THEN	PRINT #CH%, CLRBOT$,FNP$('24;1');'Unable to find that job'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\		GOTO 3100 &
+
+3205	PRINT #CH% USING FNP$('12;10')+'Balance ###,###,###.##',BALANCE; &
+\	IF FNZ(BALANCE)<>0.0 &
+	THEN	PRINT #CH%, CLRBOT$;FNP$('24;1');'Balance must be zero'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,1%) &
+\		GOTO 3100 &
+
+3210	PRINT #CH%, CLRBOT$;'Confirm removal (Y/n) '; &
+\	INP$=CVT$$(FNINP$(CH%,128%,'_',1%,1%),-1%) &
+\	IF INP$='N' &
+	THEN	3100 &
+
+3220	V% = FNG%(ARREG.CH%,CUSTOM.NUM$) &
+\	TEST.INVNUM$ = '' &
+\	TEST.NUM$ = "" &
+
+3230	FIELD #ARREG.CH%+1%, FNL% AS TEMP$,	&
+			06% AS ARREG.CUSNUM$,	&
+			08% AS ARREG.INVNUM$,	&
+			02% AS ARREG.TRATYP$,	&
+			02% AS ARREG.TRADAT$,	&
+			08% AS ARREG.SALAMT$,	&
+			08% AS ARREG.DISAMT$,	&
+			08% AS ARREG.OTHCHG$,	&
+			08% AS ARREG.RECNUM$,	&
+			06% AS ARREG.CHKNUM$,	&
+			08% AS ARREG.ARACCT$,	&
+			06% AS ARREG.CROSS$,	&
+			25% AS ARREG.DESC$,	&
+			02% AS ARREG.UPDATE$	&
+\	TEMP.CROSS$ = ARREG.CROSS$ + "" &
+\	LSET TEMP.CROSS$ = TEST.NUM$ &
+		IF ARREG.CROSS$ = '' &
+\	GOTO 3100 IF CUSTOM.NUM$ <> ARREG.CUSNUM$ &
+\	IF CVT$$(TEMP.CROSS$,-1%) = CVT$$(SUBCOD.NUM$,-1%) &
+	THEN	IF FND%(ARREG.CH%,'') &
+		THEN	V$=FNMESS$(CH%,FNS%,' ARREG.DAT',0%,-1%) &
+\			GOTO 1030 &
+
+3240	TEST.NUM$ = TEMP.CROSS$ + '' &
+		IF TEST.INVNUM$ <> ARREG.INVNUM$ &
+		OR TEST.NUM$ <> TEMP.CROSS$ AND TEST.NUM$<>'' &
+\	TEST.INVNUM$ = ARREG.INVNUM$ + '' &
+\	GOTO 3230 IF FNN%(ARREG.CH%)=0% &
+
+19000	! &
+
+19010	RESUME 450 IF ERL=400% &
+
+19990	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1.0) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=CHR$(155%)+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r' ! Scroll control &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						&
+\		IF PRINT.TEST%						&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+				FNP$('24;55');				&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30400	!-------------------------------------------------DATE HANDLERS &
+
+30500	DEF FNZ(Y) &
+\		TEMP=Y &
+\		TEMP=-Y IF Y<0. &
+\		TEMP=INT(TEMP*100.+0.51)/100. &
+\		TEMP=-TEMP IF Y<0. &
+\		FNZ=TEMP &
+\	FNEND &
+
+32767	END &
+

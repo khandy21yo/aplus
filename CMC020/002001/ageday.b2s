@@ -1,0 +1,311 @@
+10	!---------------------------------------------------------------&
+	!	Accounts Receivable		-AGE			&
+	!	Maintain Aging Definition File				&
+	!								&
+	!	AGEDAY.B2S	V1.0	April 1985			&
+	!								&
+	! Author - Mike Feinauer, Computer Management Center, Inc.	&
+	!								&
+	! Files-AGEDAY.DAS	-ISAM	Aging Definition File 		&
+	!								&
+	!---------------------------------------------------------------&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	!      The information in this software is subject to change	&
+	! without notice and should not be construed as a committment 	&
+	! by Computer Management Center. 				&
+	!      CMC assumes no responsibility for the use or reliability &
+	! of its software on equipment which is not supported by CMC. 	&
+	!---------------------------------------------------------------&
+
+50	ON ERROR GOTO 19000 &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% 	! Echo Cntl,Disbl Hibrn,Cntl-C &
+\	CH%=1%				! Keyboard channel 	&
+\	ESC$=CHR$(155%)			! Escape code for VT100 &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear entire screen 	&
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line 	&
+\	G.OFF$=ESC$+'[m'		! Select graphic off 	&
+\	B.ON$=ESC$+'[1m'		! Bold lettering  	&
+\	BLINK.ON$=ESC$+'[5m'		! Blinking cursor 	&
+\	R.ON$=ESC$+'[7m'		! Reverse video 	&
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode 	&
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode 	&
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase to end of screen&
+\	LDS.ON$=ESC$+'(0'		! Line drawing set 	&
+\	USASCII$=ESC$+'(B'		! United States ASCII 	&
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%))) &
+\	IF 	DROP.DEAD.DATE$<>'' &
+	THEN	IF 	DROP.DEAD.DATE$<MID(DATE.TIME$,7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)),3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DEVICE.CH%	= 02% &
+\	AGEDAY.CH%	= 04% &
+\	MENU.CH%   	= 12% &
+\	LOOP.DATA% = 5% &
+\	KEY.LEN%   = 8% &
+
+200	IF 	FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	AGEDAY.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'AGEDAY')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	V%=FNO%(AGEDAY.CH%,AGEDAY.DEVICE$+'AGEDAY.DAS','/SF/RW','') &
+\	V%=FNO%(AGEDAY.CH%,AGEDAY.DEVICE$+'AGEDAY.DAS','/SF/CR:8','') &
+						IF FNS% = 5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,'AGEDAY.DAS',0%,-1%) &
+\		GOTO 1045 &
+
+350	IF	FNG%(AGEDAY.CH%,'') &
+	THEN	IF	FNA%(AGEDAY.CH%,STRING$(5%,0%)) &
+		THEN	V$=FNMESS$(CH%,FNS%,' AGEDAY.DAS',0%,-1%) &
+\			GOTO 1045 &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN 'NL:' AS FILE 11%, RECORDSIZE 8% &
+\	FIELD #11%,		01% AS AGE1.DAYS$,	&
+				01% AS AGE2.DAYS$,	&
+				01% AS AGE3.DAYS$,	&
+				01% AS AGE4.DAYS$,	&
+				01% AS SRVC.DAYS$	&
+\	FIELD #11%, 	8% AS AGEDAY.BUF$ 	&
+
+500	FRAME$ = FRAME$ + FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+\	COMMAND$=' ' &
+\	COMMAND$=COMMAND$+RIGHT(NUM1$(I%+100%),2%)+' ' FOR I%=1% TO LOOP.DATA% &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+	IF 	FNG%(AGEDAY.CH%,'')=0% &
+	THEN	KEY.POINTER%=FNR(AGEDAY.CH%) &
+\		DATA.POINTER%=FNR(AGEDAY.CH%+1%) &
+\		GOTO 1010 &
+
+1002	PRINT #CH%, G.OFF$; &
+\	GOSUB 1060 &
+\	GOTO 1030 &
+
+1010	PRINT #CH%, COLM.OFF$;FNSR$('1;24');G.OFF$; &
+\	GOSUB 1060 &
+
+1015	GOSUB 6000 &
+
+1030	CHNG.FLAG%=0% &
+\	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Change Blank Quit'; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+\	OPT$='A' IF OPT$='' &
+\	GOTO 1030 IF KEY.POINTER%=0% AND INSTR(1%,'AQD',OPT$)=0% &
+
+1040	GOTO 1050 IF OPT$<>'Q' &
+
+1045	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75');B.ON$;BLINK.ON$; &
+		R.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,''); &
+
+1050	GOTO 2200 	IF OPT$='C' OR OPT$='B' ! Change, Blank	&
+\	GOTO 1030 		    		&
+
+1060	TITLE$     = 'AGING INTERVALS DAY MAINTENANCE' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TITLE$,39%);SPACE$(40%-LEN(TITLE$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+			FRAME$; FNP$('20;1');SPACE$(80%);G.OFF$; &
+\	PRINT #CH%, 	FNP$('06;20');'(01) AGING INTERVAL # 1 DAYS '; &
+			FNP$('08;20');'(02) AGING INTERVAL # 2 DAYS '; &
+			FNP$('10;20');'(03) AGING INTERVAL # 3 DAYS '; &
+			FNP$('12;20');'(04) AGING INTERVAL # 4 DAYS '; &
+			FNP$('14;20');'(05) DAYS BEFORE SRVC CHARGE '; &
+\	RETURN &
+
+2200	!----------------------------------------CHANGE OR BLANK RECORD	&
+	IF 	OPT$='B' &
+	THEN	OPTION$ = 'BLANK ' &
+	ELSE	OPTION$ = 'CHANGE ' &
+\		CHNG.FLAG% = -1% &
+
+2210	PRINT #CH%, CLRBOT$; OPTION$+':'; &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',2%,1%),32%) &
+\	GOTO 1030 IF INP$='' &
+\	LOOP%=(INSTR(1%,COMMAND$,' '+INP$+' ')+2%)/3% &
+\	GOTO 2210 IF (LOOP%=0% AND OPT$='C') OR (LOOP%<AFTER.KEY% AND OPT$='B') &
+\	IF 	OPT$='C' &
+	THEN	GOSUB 6010 &
+	ELSE	INP$='' &
+\		GOSUB 6030 &
+
+2220	GOSUB 2900 &
+\	GOTO 2210 IF FNS%=0% &
+\	V$=FNMESS$(CH%,FNS%,'PRIM.FILE.ID',0%,-1%) &
+\	GOTO 1010 &
+
+2900	!-------------------------------------------------UPDATE A RECORD &
+	V%=FNG%(-AGEDAY.CH%,NUM1$(KEY.POINTER%)) &
+\	V%=FNU%(-AGEDAY.CH%,AGEDAY.BUF$) &
+\	RETURN &
+
+6000	!------------------------------------------------DATA ENTRY SECTION &
+	RETURN IF FNG%(-AGEDAY.CH%,NUM1$(KEY.POINTER%)) &
+\	LSET AGEDAY.BUF$=FNL$+'' &
+\	ON LOOP% GOSUB	6220, 6240, 6260, 6280, 6300 & 
+		FOR LOOP%=1% TO LOOP.DATA% &
+\	RETURN &
+
+6010	ON LOOP% GOSUB	6210, 6230, 6250, 6270, 6290 &
+\	RETURN &
+
+6030	ON LOOP% GOSUB	6217, 6237, 6257, 6277, 6297 &
+\	RETURN &
+
+6200	!-----------------------------------------------DATA ENTRY SECTION &
+
+6210	INP$=FNSIO$('###','6;50',AGE1.DAYS$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			CHR$(3%)+CHR$(3%)+CHR$(2%)+CHR$(0%)+ &
+			OPTION$+' VALUE') &
+
+6217	LSET AGE1.DAYS$=CHR$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6220	PRINT #CH% USING FNP$('6;50')+B.ON$+'###'+G.OFF$,ASCII(AGE1.DAYS$); &
+\	RETURN &
+
+6230	INP$=FNSIO$('###','8;50',AGE2.DAYS$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			CHR$(3%)+CHR$(3%)+CHR$(2%)+CHR$(0%)+ &
+			OPTION$+' VALUE') &
+
+6237	LSET AGE2.DAYS$=CHR$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6240	PRINT #CH% USING FNP$('8;50')+B.ON$+'###'+G.OFF$,ASCII(AGE2.DAYS$); &
+\	RETURN &
+
+6250	INP$=FNSIO$('###','10;50',AGE3.DAYS$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			CHR$(3%)+CHR$(3%)+CHR$(2%)+CHR$(0%)+ &
+			OPTION$+' VALUE') &
+
+6257	LSET AGE3.DAYS$=CHR$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6260	PRINT #CH% USING FNP$('10;50')+B.ON$+'###'+G.OFF$,ASCII(AGE3.DAYS$); &
+\	RETURN &
+
+6270	INP$=FNSIO$('###','12;50',AGE4.DAYS$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			CHR$(3%)+CHR$(3%)+CHR$(2%)+CHR$(0%)+ &
+			OPTION$+' VALUE') &
+
+6277	LSET AGE4.DAYS$=CHR$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6280	PRINT #CH% USING FNP$('12;50')+B.ON$+'###'+G.OFF$,ASCII(AGE4.DAYS$); &
+\	RETURN &
+
+6290	INP$=FNSIO$('###','14;50',SRVC.DAYS$,DEFAULT$(LOOP%),CHR$(CH%)+ &
+			CHR$(3%)+CHR$(3%)+CHR$(2%)+CHR$(0%)+ &
+			OPTION$+' VALUE') &
+
+6297	LSET SRVC.DAYS$=CHR$(VAL(INP$)) IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6300	PRINT #CH% USING FNP$('14;50')+B.ON$+'###'+G.OFF$,ASCII(SRVC.DAYS$); &
+\	RETURN &
+
+18910	!---------------------------------------------------END OF FILE &
+	PRINT #CH%,CLRBOT$;FNP$('24;1');'End of file has been reached.';&
+		FNP$('24;55');'Hit any key to continue '; 	 	&
+\	INP$=FNINP$(CH%,128%,' ',1%,0%) 				&
+\	GOTO 1000 							&
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME IF ERR=52% OR ERR=51% 					&
+\	RESUME 450 IF ERL=400 						&
+\	RESUME 1010 IF ERR=54% 						&
+
+19999	ON ERROR GOTO 0 						&
+
+30000	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30250	!-----------------------------------------------MESSAGE HANDLER	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			DESC$						&
+\		IF PRINT.TEST%						&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+				FNP$('24;55');'Hit any key to continue';&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30280	DEF*FNSR$(BEGEND$)=ESC$+'['+BEGEND$+'r'	! Scroll control 	&
+
+30700	!------------------------------------------DATA INPUT FUNCTIONS	&
+	DEF*FNSIO$(FRMAT$,ROWCOL$,VARABLE$,DEFAL$,ITEMS$)		&
+\		CHN%=ASCII(MID(ITEMS$,1%,1%))				&
+\		KIND%=ASCII(MID(ITEMS$,4%,1%))				&
+\		DECI=ASCII(MID(ITEMS$,5%,1%))				&
+\		OPT$=MID(ITEMS$,6%,1%)					&
+
+30705		PRINT #CHN%, FNP$(ROWCOL$);R.ON$;B.ON$;			&
+\		IF 	OPT$='C'					&
+		THEN	ON KIND% GOTO 30710, 30715, 30720, 30725, 30730	&
+		ELSE	PRINT #CHN%, SPACE$(ASCII(MID(ITEMS$,2%,1%)));	&
+\			GOTO 30735					&
+
+30710		PRINT #CHN%, VARABLE$;			   ! ALPHA	&
+\		GOTO 30735						&
+
+30715		PRINT #CHN% USING FRMAT$,ASCII(VARABLE$);  ! ASCII	&
+\		GOTO 30735						&
+
+30720		PRINT #CHN% USING FRMAT$, CVT$%(VARABLE$)/(10.**DECI);	&
+\		GOTO 30735				   ! INTEGER	&
+
+30725		PRINT #CHN%, FND6$(CVT$%(VARABLE$));	   ! DATE	&
+\		GOTO 30735						&
+
+30730		PRINT #CHN% USING FRMAT$,CVT$F(VARABLE$);  ! FLOAT	&
+
+30735		PRINT #CHN%,G.OFF$;CLRBOT$;RIGHT(ITEMS$,6%)+':  ';B.ON$;&
+\		FIN$ = FNINP$(CHN%,0%,'_',ASCII(MID(ITEMS$,3%,1%)),1%)	&
+\		V% = VAL(FIN$) IF KIND%=3%				&
+\		V  = VAL(FIN$) IF KIND%>3%				&
+\		IF 	FIN$=''						&
+		THEN	FIN$ = DEFAL$ IF INSTR(1%,'CF',OPT$)=0%		&
+\			GOTO 30745					&
+
+30740		IF 	KIND%=3% OR KIND%=5%				&
+		THEN	TEMP = 1.					&
+\			TEMP = 10.**DECI IF INSTR(1%,FIN$,'.')=0%	&
+\			FIN$ = NUM1$(VAL(FIN$)/TEMP)			&
+\			FIN$ = FIN$ + '.' IF INSTR(1%,FIN$,'.')=0%	&
+
+30745		FNSIO$ = FIN$+''					&
+\	FNEND								&
+
+32767	END &
+

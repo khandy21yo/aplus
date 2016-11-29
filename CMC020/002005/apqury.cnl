@@ -1,0 +1,5 @@
+$ sw basic
+old [2,5]apclos.b2s
+append ism:isamrd
+compile [2,5]<104>
+$ sw

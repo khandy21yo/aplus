@@ -1,0 +1,68 @@
+
+
+
+           SALES TAX ZIPCODE FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: STX....
+
+    KEY FILE NAME : STXZIP.DAT   	KEY = 12 + 2	DATA = 64
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _State Abbr._____________  	_01A/02___  	STXZIP.STATE$
+
+	 2 _From ZipCode____________  	_10A/03___  	STXZIP.FRZIP$
+
+	 3 _To ZipCode______________  	_10A/13___  	STXZIP.TOZIP$
+
+	 4 _Location Description____  	_20A/23___  	STXZIP.LOCAT$
+
+	 5 _Sales Tax Number________  	_11A/43___  	STXZIP.TAXNUM$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =53, FROM 64, FREE = 11
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

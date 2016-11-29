@@ -1,0 +1,1151 @@
+10	! FINANCIAL REPORT WRITER					&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+	! &
+	! GENFIN - GENERAL FINANCIAL &
+	! &
+	!	12/21/88 - Kevin Handy &
+	!		Removed garbage character on front of company name &
+	! &
+	!	03/18/91 - Kevin Handy &
+	!		removed drop dead date stuff &
+	! &
+	!	06/25/91 - Kevin Handy &
+	!		Changed CHR$(xxx) to 'xxx'C to hopefully gain a slight &
+	!		increase in speed.  Reformatted if-then-else. &
+	! &
+	!	03/26/92 - Kevin Handy &
+	!		Changed FNZ to round the same as all other GL &
+	!		programs. &
+
+30	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS('6'C+CHR$(-7%)) &
+\	JUNK$ = SYS('6'C + '9'C) &
+\	JJ%  = ASCII(LEFT(JUNK$,1%))/2% &
+\	JJ$  = RIGHT(NUM1$(JJ%+100%),2%) &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$='155'C			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	ENTER.COPY$=ESC$+'[5i'		! Enter media copy &
+\	EXIT.COPY$=ESC$+'[4i'		! Exit media copy &
+
+80	! &
+
+100	DIM Y%(63%), Y1%(63%) &
+\	DIM A(20%,15%) &
+\	DIM T$(3%),T%(2%),T(22%),A1(15%),F$(27%),T0$(15%),F0$(9%),I9$(10%), &
+		L9$(4%,4%),BUDGET$(13%) &
+\	DEVICE.CH% = 02% &
+\	PRNT.TMP%  = 02% &
+\	CONTRL.CH% = 02% &
+\	CHART.CH%  = 02% &
+\	BUDGET.CH% = 08% &
+\	CMD.CH%    = 10% &
+\	FINSTA.WRK%= 11% &
+\	MENU.CH%   = 12% &
+
+150	OPEN 'PRNT'+JJ$+'.TMP' FOR INPUT AS FILE PRNT.TMP% &
+\	KILL 'PRNT'+JJ$+'.TMP' &
+\	NEXT.REPORT%=0% &
+\	CHAIN.PROGRAM$='' &
+\	CHAIN.LINE%=0% &
+
+160	INPUT LINE #PRNT.TMP%, A$ &
+\	PR$=LEFT(A$,2%) &
+\	CMD$=CVT$$(RIGHT(A$,4%),140%) &
+\	IF PR$='RN' &
+	THEN	IF NEXT.REPORT% &
+		THEN	GOTO 170 &
+		ELSE	NEXT.REPORT%=-1% &
+
+165	LIN.PER.PAGE%	= VAL(CMD$) IF PR$='LP' &
+\	SPAGE%		= VAL(CMD$) IF PR$='SP' &
+\	EPAGE%		= VAL(CMD$) IF PR$='EP' &
+\	COPIES%		= VAL(CMD$) IF PR$='CP' &
+\	REPDATE$	= CMD$ IF PR$='RD' &
+\	DISPLAY$	= CMD$ IF PR$='DP' &
+\	AUTOSCROLL$	= CMD$ IF PR$='AS' &
+\	SPOOLR$		= CMD$ IF PR$='SL' &
+\	OUTDEV$		= CMD$ IF PR$='OD' &
+\	MS$		= CMD$ IF PR$='MS' &
+\	WORK$		= CMD$ IF PR$='U1' &
+\	ZERO$		= CMD$ IF PR$='U2' &
+\	GOTO 160 &
+
+170	OPEN 'PRNT'+JJ$+'.TMP' FOR OUTPUT AS FILE PRNT.TMP%+1% &
+\	CHAIN.LINE%=31000% &
+
+180	PRINT #PRNT.TMP%+1%, A$ &
+\	INPUT LINE #PRNT.TMP%, A$ &
+\	CHAIN.PROGRAM$=CVT$$(RIGHT(A$,4%),140%) IF LEFT(A$,2%)='PG' &
+\	GOTO 180 &
+
+200	CLOSE PRNT.TMP%,PRNT.TMP%+1% &
+\	D$=REPDATE$ &
+\	WORK%=-1% IF WORK$='W' &
+\	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	CONTRL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"CONTRL")=0% &
+\		BUDGET.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,"BUDGET")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	MM%,M1%=1% &
+\	YY%=VAL(RIGHT(DATE$(0%),8%)) &
+\	IF FNO%(CONTRL.CH%,CONTRL.DEVICE$+"CONTRL.DAT","/RO","")=0% &
+	THEN	IF FNG%(CONTRL.CH%,"CHART ")=0% &
+		THEN	MM%       = CVT$%(MID(FNL$,9%,2%)) &
+\			YY%       = CVT$%(MID(FNL$,21%,2%)) &
+\			M1%       = CVT$%(MID(FNL$,17%,2%)) &
+\			BB%       = CVT$%(MID(FNL$,23%,2%)) &
+\			NEX%      = MM%+1% &
+\			NEX%      = 1% IF MM%=12% &
+\			YY%       = YY% + 1% IF NEX%=1% &
+\			BEFORE%   = MM%-1% &
+\			BEFORE%   = BEFORE%+12% IF BEFORE%<1% &
+\			NEW.YEAR% = (NEX%=M1%) &
+\			MM%	  = NEX% IF WORK% &
+
+320	V%=FNC%(CONTRL.CH%) &
+\	BUDGET.PER% = -12%*((MM%-M1%+1%)<=0%)+MM%-M1%+1% &
+\	BUDGET$="BDGT"+RIGHT(NUM1$(BB%+100%),2%)+".DAT" &
+
+340	BUDGET.FLAG%=FNO%(BUDGET.CH%,BUDGET.DEVICE$+BUDGET$,"/RO","") &
+
+400	DIM #12%, A0$(1%)=64% &
+\	OPEN "MENU.FIL/RO" FOR INPUT AS FILE #MENU.CH% &
+\	C9$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE #MENU.CH% &
+
+450	! RESUME FOR ERROR TRAPING &
+
+500	OUTPUT.CH%=1% &
+\	CLOSE CH% &
+\	OPEN OUTDEV$ AS FILE OUTPUT.CH%, MODE 2% &
+\	PRINT #CH%, ENTER.COPY$; IF DISPLAY$<>'Y' &
+
+1000	! &
+	! PROGRAM CONTROL &
+	! &
+
+1010	OPEN CHART.DEVICE$+'FINSTA.WRK' FOR INPUT AS FILE FINSTA.WRK% &
+\	LOOP%=1% &
+\	I9%=0% &
+
+1020	INPUT LINE #FINSTA.WRK%, CMD$ &
+\	CMD$=CVT$$(CMD$,140%) &
+\	GOTO 1050 IF CMD$='<>' AND FIRST.TEST% &
+\	FIRST.TEST%=-1% IF CMD$='<>' &
+\	TEMP%=INSTR(1%,CMD$,'>')+1% &
+\	TEST$=MID(CMD$,2%,TEMP%-3%) &
+\	FINSTA.CMD$=RIGHT(CMD$,TEMP%) IF TEST$='CMD' &
+\	C8$=RIGHT(CMD$,TEMP%) IF TEST$='TITLE' &
+\	IF TEST$='TYPE' &
+	THEN	V%=FNC%(CHART.CH%) &
+\		TYP$=RIGHT(CMD$,TEMP%) IF TEST$='TYPE' &
+\		TYP$='O' IF TYP$<>'C' AND TYP$<>'W' &
+\		IF FNO%(CHART.CH%,CHART.DEVICE$+"CHART.DA"+TYP$,"/RO","") &
+		THEN	V$=FNMESS$(CH%,FNS%,'CHART',-1%,-1%) &
+\			GOTO 17500 &
+
+1030	I9%=I9%+1% IF TEST$='INP' &
+\	I9$(I9%)=RIGHT(CMD$,TEMP%) IF TEST$='INP' &
+\	GOTO 1020 &
+
+1040	PRINT #OUTPUT.CH%, STRING$(LIN.PER.PAGE%-P2%,10%); &
+\	LOOP%=1% &
+\	FIRST.TEST%=0% &
+\	A(I%,J%)=0.0 FOR J%=1% TO 15% FOR I%=1% TO 20% &
+\	T(I%)=0.0 FOR I%=0% TO 22% &
+\	WRK=0.0 &
+\	A1(I%)=0.0 FOR I%=1% TO 15% &
+\	T0$(I%)='' FOR I%=1% TO 15% &
+\	F0$(I%)='' FOR I%=1% TO 9% &
+\	I9$(I%)='' FOR I%=1% TO 10% &
+\	L9$(I%,J%)='' FOR J%=1% TO 4% FOR I%=1% TO 4% &
+\	P2%,I9%=0% &
+\	GOTO 1020 &
+
+1050	OPEN FINSTA.CMD$ FOR INPUT AS FILE #CMD.CH% &
+\	GOSUB 18005 &
+\	FLAG%=0% &
+
+1056	W%=80% &
+\	W%=130% IF INSTR(1%,Z$,"WIDE") &
+\	P3%=1% &
+
+1060	GOSUB 2300 IF P2%>LIN.PER.PAGE%-7% &
+\	INPUT LINE #CMD.CH%,Z$ &
+
+1070	Z$=CVT$$(Z$,140%) &
+\	GOTO 1060 IF Z$="L" OR Z$="" &
+\	GOSUB 18100 &
+\	S5%=(RIGHT(Z$,LEN(Z$))=";") &
+\	Z$=LEFT(Z$,LEN(Z$)+S5%) &
+\	I%=INSTR(1%,Z$,"UNLESS") &
+\	I%=INSTR(1%,Z$," IF ") IF I%=0% &
+\	IF I%<>0% &
+	THEN	Z4$=RIGHT(Z$,I%) &
+\		Z$=LEFT(Z$,I%-1%) &
+
+1080	Z3$=Z$ &
+\	I%=INSTR(1%,Z$,",") &
+\	IF I%=0% &
+	THEN	Z$=Z$+" " IF RIGHT(Z$,LEN(Z$))<>" " &
+\		Z1$="" &
+\		GOTO 1100 &
+
+1090	Z1$=RIGHT(Z$,I%+1%)+"," &
+\	Z$=LEFT(Z$,I%-1%) &
+\	Z$=Z$+" " IF RIGHT(Z$,LEN(Z$))<>" " &
+
+1100	I%=INSTR(1%,Z$," ") &
+\	C$=LEFT(Z$,I%-1%) &
+\	A%=(INSTR(1%,"TITLE  PRINT  FORMAT SUM    ADD    LOOP  ",C$)+6%)/7% &
+\	GOTO 1060 IF A%=0% &
+\	S%,S0%,S2%,N%=0% &
+\	ON A% GOTO 3000,4000,5000,6000,7000,8000 &
+
+1110	STOP &
+\	GOTO 1060 &
+
+2300	! &
+	! AUTO PAGE &
+	! &
+
+2310	PRINT #OUTPUT.CH%, STRING$(LIN.PER.PAGE%-P2%,10%); &
+\	P2%=0% &
+\	Z1$=F7$ &
+\	P3%=P3%+1% &
+\	A%=-1% &
+\	GOSUB 4100 &
+\	A%=0% &
+\	RETURN &
+
+2400	! &
+	! PRINT DATA IN P() USING FORMAT NUMBER F% &
+	! &
+
+2410	GOSUB 2300 IF P2%>LIN.PER.PAGE%-7% &
+\	P0$="" &
+\	P4%=0% &
+\	LOOP.COUNT%=0% &
+\	ZERO%=-1% &
+\	ZERO%=0% IF ZERO$='N' &
+\	GOTO 2490 IF F0$(F%)="" &
+\	F$=F0$(F%) &
+\	WRKCAP.FLAG%=0% &
+\	WRKCAP.FLAG%=-1% IF LEFT(F$,6%)='WRKCAP' &
+\	F$=RIGHT(F$,7%) IF WRKCAP.FLAG% &
+\	I%=INSTR(1%,F$,'255'C) &
+\	IF I%<>0% &
+	THEN	F1$=CVT$$(RIGHT(F$,I%+1%)+",",2%) &
+\		F$=LEFT(F$,I%-1%) &
+\		F1$=RIGHT(F1$,2%) IF LEFT(F1$,1%)="," &
+
+2420	P0$=P0$+MID(F$,L%,1%) UNLESS S2%=-1% FOR L%=1% UNTIL L%=LEN(F$)+ &
+		1% OR INSTR(1%,"\$#",MID(F$,L%,1%))<>0% &
+\	F$=RIGHT(F$,L%) &
+\	GOTO 2490 IF F$="" &
+\	LOOP.COUNT%=LOOP.COUNT%+1% &
+\	I1%=INSTR(1%,F1$,",") &
+\	T$=LEFT(F1$,I1%-1%) &
+\	F1$=RIGHT(F1$,I1%+1%) &
+\	IF LEFT(F$,1%)="\" &
+	THEN	I%=INSTR(2%,F$,"\") &
+\		T%=VAL(T$) UNLESS T$="X" &
+\		IF T$="X" &
+		THEN	I3%=INSTR(1%,Z1$,",") &
+\			T$=LEFT(Z1$,I3%-1%) &
+\			Z1$=RIGHT(Z1$,I3%+1%) &
+\			P0$=P0$+LEFT(T$+SPACE$(I%-LEN(T$)),I%) IF S2%<>-1% &
+\			F$=RIGHT(F$,I%+1%) &
+\			ZERO%=-1% &
+\			GOTO 2420 &
+
+2430	IF LEFT(F$,1%)="\" AND T%=0% &
+	THEN	P0$=P0$+LEFT(Z$+SPACE$(I%-LEN(Z$)),I%) UNLESS S2%=-1% &
+\		F$=RIGHT(F$,I%+1%) &
+\		GOTO 2420 &
+
+2440	IF LEFT(F$,1%)="\" AND T%<>0% &
+	THEN	P0$=P0$+LEFT(T$(T%)+SPACE$(I%-LEN(T$(T%))),I%) UNLESS S2%=-1% &
+\		F$=RIGHT(F$,I%+1%) &
+\		GOTO 2420 &
+
+2450	I%=L% FOR L%=1% UNTIL INSTR(1%,"$#,.-^~",MID(F$,L%, &
+		1%))=0% OR L%=LEN(F$)+1% &
+\	L%=L%-1% &
+\	IF T$="X" &
+	THEN	I%=INSTR(1%,Z1$,",") &
+\		N$=LEFT(Z1$,I%-1%) &
+\		Z1$=RIGHT(Z1$,I%+1%) &
+\		GOSUB 2600 &
+\		P=N1 &
+\		ZERO%=-1% &
+\		GOTO 2470 &
+
+2460	N$=T$ &
+\	GOSUB 2600 &
+\	P=N1 &
+
+2470	RETURN IF P<=0. AND WRKCAP.FLAG% &
+\	WRKCAP.FLAG%=0% &
+\	UF%=INSTR(1%,LEFT(F$,L%),'~') &
+\	P=INT(P+.51) IF INSTR(1%,LEFT(F$,L%),".")=0% &
+\	ZERO%=-1% IF P<>0. &
+\	P$=NUM1$(INT(ABS(P)*100.+.51)) &
+\	P$="000" IF P$="0" &
+\	P$="0"+P$ IF LEN(P$)=1% &
+\	P1$=SPACE$(12%) &
+\	RSET P1$=P$ &
+\	P$=LEFT(P1$,1%)+","+MID(P1$,2%,3%)+","+MID(P1$,5%,3%)+","+RIGHT(P1$, &
+		8%) IF INSTR(1%,LEFT(F$,L%),",") &
+\	P$=P1$ UNLESS INSTR(1%,LEFT(F$,L%),",") &
+\	P$=CVT$$(P$,-1%) &
+\	P$=RIGHT(P$,2%) UNTIL LEFT(P$,1%)<>"," &
+\	P$=LEFT(P$,LEN(P$)-2%)+"."+RIGHT(P$,LEN(P$)-1%) &
+\	P$=LEFT(P$,LEN(P$)-3%) IF INSTR(1%,LEFT(F$,L%),".")=0% &
+\	P$="$"+P$ IF INSTR(1%,LEFT(F$,L%),"$")<>0% &
+\	P$="("+P$+")" IF P<0. AND UF%=0% &
+\	P$=P$+" " IF P>=0. AND UF%=0% &
+\	P$=P$+'F' IF P>=0. AND UF%<>0% &
+\	P$=P$+'U' IF P<0. AND UF%<>0% &
+\	P1$=SPACE$(L%) &
+\	RSET P1$=P$ &
+\	P$=P1$ &
+\	P0$=P0$+LEFT(P$+SPACE$(L%-LEN(P$)),L%) UNLESS S2%=-1% &
+\	F$=RIGHT(F$,L%+1%) &
+\	IF S%=-1% &
+	THEN	P4%=P4%+1% &
+\		A(S0%,P4%)=A(S0%,P4%)+P &
+
+2480	GOTO 2420 &
+
+2490	GOSUB 2500 &
+\	ZERO%=-1% IF LOOP.COUNT%=0% &
+\	RETURN IF S2%=-1% OR P7%=0% OR ZERO%=0% &
+\	PRINT #OUTPUT.CH%, P0$; &
+\	RETURN IF S5%=-1% &
+\	PRINT #OUTPUT.CH%, &
+\	P2%=P2%+1% &
+\	RETURN &
+
+2500	! &
+	! IF, UNLESS CONDITIONS &
+	! &
+
+2510	P7%=-1% &
+\	Z$=LEFT(Z4$,1%) &
+\	Z4$=RIGHT(Z4$,INSTR(1%,Z4$," ")+1%) &
+
+2520	IF Z4$="" &
+	THEN	P7%=NOT(P7%) IF Z$="U" &
+\		RETURN &
+
+2530	I%=INSTR(1%,Z4$,"AND") &
+\	I%=LEN(Z4$)+1% IF I%=0% &
+\	Z5$=LEFT(Z4$,I%-1%) &
+\	Z4$=RIGHT(Z4$,I%+4%) &
+
+2540	I%=INSTR(1%,Z5$,"=") &
+\	IF I%=0% &
+	THEN	I%=INSTR(1%,Z5$,"<>") &
+\		IF I%=0% &
+		THEN	Z5$=Z5$+"<>0" &
+\			GOTO 2540 &
+
+2550	GOTO 2570 IF INSTR(1%," +-T()0123456789<>=",MID(Z5$,L%, &
+		1%))=0% FOR L%=1% TO LEN(Z5$) &
+\	N$=LEFT(Z5$,I%-1%) &
+\	GOSUB 2600 &
+\	A1=N1 &
+\	N$=RIGHT(Z5$,I%+1%) &
+\	N$=RIGHT(N$,2%) IF LEFT(N$,1%)=">" &
+\	GOSUB 2600 &
+\	A2=N1 &
+\	IF MID(Z5$,I%,1%)="=" &
+	THEN	P7%=P7% AND (A1=A2) &
+\		GOTO 2520 &
+
+2560	P7%=P7% AND (A1<>A2) &
+\	GOTO 2520 &
+
+2570	IF MID(Z5$,I%,1%)="=" &
+	THEN	P7%=P7% AND LEFT(Z5$,I%-1%)=RIGHT(Z5$,I%+1%) &
+\	GOTO 2520 &
+
+2580	P7%=P7% AND LEFT(Z5$,I%-1%)<>RIGHT(Z5$,I%+2%) &
+\	GOTO 2520 &
+
+2600	! &
+	! GET NUMBER FORM ARITHMETIC STRING &
+	! &
+
+2605	I3%=INSTR(1%,N$,"X") &
+\	IF I3%<>0% &
+	THEN	I4%=INSTR(1%,Z1$,",") &
+\		N$=LEFT(N$,I3%-1%)+LEFT(Z1$,I4%-1%)+RIGHT(N$,I3%+1%) &
+\		Z1$=RIGHT(Z1$,I4%+1%) &
+\		GOTO 2605 &
+
+2610	I3%=INSTR(1%,N$,"T") &
+\	IF I3%<>0% &
+	THEN	I4%=INSTR(I3%,N$,"(") &
+\		I5%=VAL(MID(N$,I3%+1%,I4%-I3%-1%)) &
+\		I7%=INSTR(I4%,N$,")") &
+\		I6%=VAL(MID(N$,I4%+1%,I7%-I4%-1%)) &
+\		N$=LEFT(N$,I3%-1%)+NUM1$(A(I5%,I6%))+RIGHT(N$,I7%+1%) &
+\		GOTO 2610 &
+
+2615	I3%=1% &
+
+2620	I4%=INSTR(I3%,N$,"(") &
+\	GOTO 2630 IF I4%=0% &
+\	I5%=INSTR(I4%,N$,")") &
+\	GOTO 2625 IF INSTR(1%,"0123456789-",MID(N$,I6%,1%))=0%FOR I6%=I4%+ &
+		1% TO I5%-1% &
+\	N=T(FNM%(VAL(MID(N$,I4%+1%,I5%-I4%-1%)))) &
+\	N$=LEFT(N$,I4%-1%)+NUM1$(FNZ(N))+RIGHT(N$,I5%+1%) &
+\	I3%=I4% &
+\	GOTO 2620 &
+
+2625	I3%=I4%+1% &
+\	GOTO 2620 &
+
+2630	I3%=0% &
+\	I3%=I3% FOR I3%=1% UNTIL INSTR(I3%,N$,"(")=0% &
+\	GOTO 2665 IF I3%<2% &
+\	I4%=INSTR(I3%,N$,")") &
+\	N1$=MID(N$,I3%,I4%-I3%) &
+
+2635	I5%=INSTR(1%,N1$,"/") &
+\	I6%=INSTR(1%,N1$,"*") &
+\	I5%=I6% IF I6%<I5% AND I6%<>0% OR I5%=0% &
+\	IF I5%<>0% &
+	THEN	I6%=I5%-1% &
+\		I6%=I6% FOR I6%=I5%-1% STEP -1% UNTIL I6%=0% OR INSTR(1%, &
+			"0123456789-.",MID(N1$,I6%,1%))=0% &
+\		I7%=I5%+1% &
+\		I7%=I7% FOR I7%=I5%+1% UNTIL I7%=LEN(N1$)+1% OR INSTR(1%, &
+			"0123456789-.",MID(N1$,I7%,1%))=0% &
+\		N1=VAL(MID(N1$,I6%+1%,I5%-I6%-1%)) &
+\		N2=VAL(MID(N1$,I5%+1%,I7%-I5%-1%)) &
+\		N1=N1*N2 IF MID(N1$,I5%,1%)="*" &
+\		N1=N1/N2 UNLESS N2=0. OR MID(N1$,I5%,1%)="*" &
+\		N1=0. IF N2=0. AND MID(N1$,I5%,1%)="/" &
+\		N1$=LEFT(N1$,I6%)+NUM1$(FNZ(N1))+RIGHT(N1$,I7%) &
+\		GOTO 2635 &
+
+2640	N1=0. &
+
+2645	N%=1% &
+
+2650	IF LEFT(N1$,1%)="-" &
+	THEN	N%=-N% &
+\		N1$=RIGHT(N1$,2%) &
+\		GOTO 2650 &
+
+2655	N1$=RIGHT(N1$,2%) IF LEFT(N1$,1%)="+" &
+\	I5%=INSTR(1%,N1$,"+") &
+\	I6%=INSTR(1%,N1$,"-") &
+\	I6%=LEN(N1$)+1% IF I6%=0% &
+\	I5%=I6% IF I5%=0% OR I6%<I5% &
+\	N1=N1+N%*VAL(LEFT(N1$,I5%-1%)) &
+\	N1$=RIGHT(N1$,I5%) &
+\	GOTO 2645 UNLESS N1$="" &
+\	IF MID(N$,I3%-4%,3%)="ABS" &
+	THEN	I3%=I3%-3% &
+\		N1=ABS(N1) &
+
+2660	RETURN IF N$="" &
+\	N$=LEFT(N$,I3%-2%)+NUM1$(FNZ(N1))+RIGHT(N$,I4%+1%) &
+\	GOTO 2630 &
+
+2665	N1$=N$ &
+\	N$="" &
+\	GOTO 2635 &
+
+3000	! &
+	! TITLE &
+	! &
+
+3010	T0%=0% &
+\	F7$="" &
+
+3020	INPUT LINE #CMD.CH%,Z$ &
+\	Z$=CVT$$(Z$,4%) &
+\	GOSUB 18100 &
+\	GOTO 1060 IF Z$="END" &
+\	T0%=T0%+1% &
+\	T0$(T0%)=FNF$(Z$) &
+\	GOTO 3020 &
+
+4000	! &
+	! PRINT &
+	! &
+
+4010	Z$=RIGHT(Z$,I%+1%) &
+\	IF Z$="" &
+	THEN	GOTO 1060 IF S5%=-1% &
+\		PRINT #OUTPUT.CH%, &
+\		P2%=P2%+1% &
+\		GOTO 1060 &
+
+4020	IF LEFT(Z$,4%)="PAGE" &
+	THEN	P7%=-1% &
+\		GOSUB 2500 IF Z4$<>"" &
+\		GOTO 1060 IF P7%=0% &
+\		PRINT #OUTPUT.CH%, STRING$(LIN.PER.PAGE%-P2%,10%);'13'C; &
+\		P2%=0 &
+\		P3%=P3%+1% &
+\		GOTO 1060 &
+
+4030	GOTO 4150 IF LEFT(Z$,5%)<>"TITLE" &
+\	F7$=Z1$ &
+
+4100	FOR L%=1% TO T0% &
+\		T0$(0%)=T0$(L%) &
+
+4110		I%=INSTR(1%,T0$(0%),"<") &
+\		IF I%=0% &
+		THEN	PRINT #OUTPUT.CH%, T0$(0%) &
+\			P2%=P2%+1% &
+\			GOTO 4140 &
+
+4120		PRINT #OUTPUT.CH%, LEFT(T0$(0%),I%-1%); &
+\		T0$(0%)=RIGHT(T0$(0%),I%) &
+\		I%=INSTR(1%,T0$(0%),">") &
+\		IF LEFT(T0$(0%),I%)="<P>" &
+		THEN	PRINT #OUTPUT.CH% USING "###",P3%; &
+		ELSE	IF LEFT(T0$(0%),5%)="<DATE" &
+			THEN	PRINT #OUTPUT.CH% USING &
+					"\"+SPACE$(I%-2%)+"\",D$; &
+			ELSE	I1%=INSTR(1%,Z1$,",") &
+\				PRINT #OUTPUT.CH% USING &
+					"\"+SPACE$(I%-2%)+"\", &
+					LEFT(Z1$,I1%-1%); &
+\				Z1$=RIGHT(Z1$,I1%+1%) &
+
+4130		T0$(0%)=RIGHT(T0$(0%),I%+1%) &
+\		GOTO 4110 &
+
+4140	NEXT L% &
+\	RETURN IF A%=-1% &
+\	GOTO 1060 &
+	!  A%=-1% ==> SUBROUTINE &
+
+4150	IF LEFT(Z$,1%)='"' OR LEFT(Z$,3%)="TAB" &
+	THEN	Z$=Z3$ &
+\		Z$=RIGHT(Z$,INSTR(1%,Z$," ")+1%) &
+\		PRINT #OUTPUT.CH%, FNF$(Z$); &
+\		PRINT #OUTPUT.CH%, IF S5%<>-1% &
+\		P2%=P2%+1% IF S5%<>-1% &
+\		GOTO 1060 &
+
+4160	S%=0% &
+\	IF LEFT(Z$,12%)="AND SUM INTO" &
+	THEN	S%=-1% &
+\		Z$=RIGHT(Z$,14%) &
+\		I%=INSTR(1%,Z$," ") &
+\		S0%=VAL(MID(Z$,2%,I%-2%)) &
+\		Z$=RIGHT(Z$,I%+1%) &
+
+4210	GOTO 1060 IF LEFT(Z$,1%)<>"F" &
+\	F%=VAL(MID(Z$,2%,1%)) &
+\	Z$=RIGHT(Z$,4%) &
+\	IF Z$="" &
+	THEN	GOSUB 2400 &
+\		GOTO 1060 &
+
+4220	W$=CVT$$(Z$,-1%)+"" &
+\	W$=W$+","+LEFT(Z1$,LEN(Z1$)-1%) IF Z1$<>"" &
+
+4230	WHILE W$<>"" &
+\		I1%=INSTR(1%,W$,",")-1% &
+\		I1%=LEN(W$) IF I1%=-1% &
+\		W1$,W2$=LEFT(W$,I1%) &
+\		W$=RIGHT(W$,I1%+2%) &
+\		I1%=INSTR(1%,W2$,"-") &
+\		W1$=LEFT(W2$,I1%-1%) IF I1% &
+\		I1%=INSTR(1%,W1$,"?") &
+\		W1$=LEFT(W1$,I1%-1%) IF I1% &
+\		I1%=INSTR(1%,W1$,"*") &
+\		W1$=LEFT(W1$,I1%-1%) IF I1% &
+\		CHANGE LEFT(W2$,10%) TO W1% &
+\		FLAG%=0% &
+\		FLAG%=-1% IF W1%(I%)=42% FOR I%=1% TO W1%(0%) &
+\		TEMP$,TEMP1$="" &
+\		W2$=LEFT(W2$,I%-1%)+"?"+RIGHT(W2$,I%+1%) IF MID(W2$,I%, &
+			1%)="*" FOR I%=1% TO LEN(W2$) &
+\		TEST%=INSTR(1%,W2$,"?")-1% &
+\		TEST%=LEN(W2$) IF TEST%<0% &
+
+4240		IF TYP$='C' OR TYP$='W' &
+		THEN	IND.FLAG$=LEFT(W2$,1%) &
+\			W2$=RIGHT(W2$,2%) &
+\			W1$=RIGHT(W1$,2%) &
+\			TEST%=0% &
+
+4250		I%=FNG%(CHART.CH%,CVT$$(W1$,-1%)) &
+\		I%=FNG%(CHART.CH%,'') IF INSTR(1%,'CW',TYP$) &
+
+4255		CHART.FL%=FNL% &
+
+4260		FIELD #CHART.CH%+1%, &
+			CHART.FL% AS E$, &
+			8% AS F$(1%), &
+			40% AS F$(2%), &
+			2% AS F$(3%), &
+			2% AS F$(4%), &
+			2% AS F$(5%) &
+\		FIELD #CHART.CH%+1%, &
+			CHART.FL%+54%+(L%*8%-8%) AS E$, &
+			8% AS F$(L%+5%) &
+				FOR L%=1% TO 22% &
+\		FIELD #CHART.CH%+1%, &
+			CHART.FL%+232% AS E$, &
+			10% AS TEST$,	 	&
+			04% AS CF.CODE$,	&
+			04% AS WC.CODE$		&
+
+4264		LSET TEST$=CF.CODE$ IF TYP$='C' &
+\		LSET TEST$=WC.CODE$ IF TYP$='W' &
+\		YEAR.BUD,MON.BUD=0.0 &
+\		IF BUDGET.FLAG%=0% &
+		THEN	IF FNG%(BUDGET.CH%,F$(1%))=0% &
+			THEN	FL%=FNL% &
+\				FIELD #BUDGET.CH%+1%, &
+					FL%+8% AS E$, &
+					8% AS BEGBAL$ &
+\				FIELD #BUDGET.CH%+1%, &
+					FL%+8%+8%*I% AS E$, &
+					8% AS BUDGET$(I%) &
+						FOR I%=1% TO 13% &
+\				TEMP=CVT$F(BEGBAL$) &
+\				TEMP=TEMP+CVT$F(BUDGET$(I%)) &
+					FOR I%=1% TO BUDGET.PER% &
+\				YEAR.BUD=TEMP &
+\				MON.BUD=CVT$F(BUDGET$(BUDGET.PER%)) &
+
+4265		IF FLAG%=-1% &
+		THEN	CHANGE TEST$ TO W2% &
+\			TEMP%=INSTR(1%,F$(2%),"-") &
+\			LSET F$(2%)=LEFT(F$(2%),TEMP%-1%) IF TEMP%>2% &
+\			TEMP1$="" &
+\			TEMP1$=TEMP1$+ &
+				CHR$(W2%(I%)) IF W1%(I%)<>42% FOR I%=1% TO W1%(0%) &
+\			IF TEMP$<>"" &
+			THEN	GOSUB 18250 &
+\				IF TEMP$=TEMP1$ &
+				THEN	GOTO 4280 &
+				ELSE	IF FNCOMP%(TEST1$,W2$) &
+					THEN	Z7$=Z1$ &
+\						GOSUB 18300 IF WORK% &
+\						GOSUB 2400 &
+\						Z1$=Z7$ &
+
+4270		T$(L%)=F$(L%)+"" FOR L%=1% TO 3% &
+\		T%(L%)=CVT$%(F$(L%+3%)) FOR L%=1% TO 2% &
+\		GOSUB 18200 &
+\		GOSUB 18300 IF WORK% AND FLAG%=0% &
+\		TEST1$=TEST$+"" &
+\		IF FLAG%=-1% &
+		THEN	TEMP$=TEMP1$ &
+		ELSE	IF FNCOMP%(TEST$,W2$) &
+			THEN	Z7$=Z1$ &
+\				GOSUB 2400 &
+\				Z1$=Z7$ &
+
+4280		GOTO 4255 IF FNN%(CHART.CH%)=0% &
+			AND LEFT(TEST$,TEST%)=LEFT(W2$,TEST%) &
+\		IF FLAG%=-1% &
+		THEN	IF FNCOMP%(TEST$,W2$) &
+			THEN	Z7$=Z1$ &
+\				GOSUB 18300 IF WORK% &
+\				GOSUB 2400 &
+\				Z1$=Z7$ &
+
+4290	NEXT &
+\	GOTO 1060 &
+
+5000	! &
+	! FORMAT &
+	! &
+
+5010	Z$=Z3$ &
+\	F%=VAL(MID(Z$,I%+1%,1%)) &
+\	Z$=RIGHT(Z$,I%+3%) &
+\	F1%=-1% &
+\	F0$(F%)=FNF$(Z$) &
+\	F1%=0% &
+\	GOTO 1060 &
+
+6000	! &
+	! SUM &
+	! &
+
+6010	GOTO 1060 IF LEFT(Z$,8%)<>"SUM INTO" &
+\	S%=-1% &
+\	Z$=RIGHT(Z$,10%) &
+\	I%=INSTR(1%,Z$," ") &
+\	GOTO 1060 IF I%=0% &
+\	S0%=VAL(MID(Z$,2%,I%-2%)) &
+\	Z$=RIGHT(Z$,I%+1%) &
+\	S2%=-1% &
+\	GOTO 4210 &
+
+7000	! &
+	! ADD &
+	! &
+
+7010	Z$=RIGHT(Z$,5%) &
+\	GOTO 1060 IF Z$="" &
+\	I%=INSTR(1%,Z$,"=") &
+\	GOTO 1060 IF I%=0% &
+\	Z2$=RIGHT(Z$,I%+1%) &
+\	Z$=LEFT(Z$,I%-1%) &
+\	I%=INSTR(1%,Z$,"(") &
+\	GOTO 7050 IF I%<>0% &
+\	A1(L%)=0. FOR L%=1% TO 15% &
+\	I2%=VAL(RIGHT(Z$,2%)) &
+
+7020	GOTO 7040 IF Z2$="" &
+\	Z2$=RIGHT(Z2$,2%) IF LEFT(Z2$,1%)="+" &
+\	N%=1% &
+\	IF LEFT(Z2$,1%)="-" &
+	THEN	N%=-1% &
+\		Z2$=RIGHT(Z2$,2%) &
+
+7030	Z2$=RIGHT(Z2$,2%) IF LEFT(Z2$,1%)="+" &
+\	I%=INSTR(1%,Z2$,"+") &
+\	I1%=INSTR(1%,Z2$,"-") &
+\	I%=I1% IF I1%<I% AND I1%<>0% OR I%=0% &
+\	I%=LEN(Z2$)+1% IF I%=0% &
+\	V1%=VAL(MID(Z2$,2%,I%-2%)) &
+\	Z2$=RIGHT(Z2$,I%) &
+\	A1(L%)=A1(L%)+N%*A(V1%,L%) FOR L%=1% TO 15% &
+\	GOTO 7020 &
+
+7040	A(I2%,I%)=A1(I%) FOR I%=1% TO 15% &
+\	GOTO 1060 &
+
+7050	! INDIVIDUAL TOTALS &
+
+7060	I1%=INSTR(1%,Z$,")") &
+\	N$=Z2$ &
+\	GOSUB 2600 &
+\	A(VAL(MID(Z$,2%,I%-2%)),VAL(MID(Z$,I%+1%,I1%-I%-1%)))=N1 &
+\	GOTO 1060 &
+
+8000	! &
+	! LOOP &
+	! &
+
+8010	Z$=Z3$ &
+\	Z$=RIGHT(Z$,I%+1%) &
+\	I%=INSTR(1%,Z$," ") &
+\	R$=LEFT(Z$,I%-1%) &
+\	GOTO 8050 IF RIGHT(Z$,I%+1%)<>"END" &
+\	FOR L1%=0% UNTIL L9$(L9%-1%,L1%)="" &
+\		I%=INSTR(1%,L9$(L9%-1%,L1%),",") &
+\		I%=INSTR(1%,L9$(L9%-1%,L1%),'255'C) IF I%=0% &
+\		I%=INSTR(2%,L9$(L9%-1%,L1%), &
+			'"')+1% IF LEFT(L9$(L9%-1%,L1%),1%)='"' &
+\		L9$(L9%-1%,L1%)=RIGHT(L9$(L9%-1%,L1%),I%+1%) &
+\		IF INSTR(1%,L9$(L9%-1%,L1%),",")=0% AND INSTR(1%,L9$(L9%-1%, &
+				L1%),'255'C)=0% &
+		THEN	L9%=L9%-1% &
+\			L9$(L9%,L%)="" FOR L%=0% TO 4% &
+\			GOTO 1060 &
+
+8020	NEXT L1% &
+\	CLOSE #CMD.CH% &
+\	OPEN FINSTA.CMD$ FOR INPUT AS FILE #CMD.CH% &
+\	K$="" &
+\	INPUT LINE #CMD.CH%,K$ UNTIL LEFT(CVT$$(K$,12%),5%+LEN(R$))="LOOP "+R$ &
+\	IF RIGHT(CVT$$(K$,12%),LEN(CVT$$(K$,12%)))="/" &
+	THEN	INPUT LINE #CMD.CH%,R$ &
+\		K$=CVT$$(K$,12%) &
+\		K$=LEFT(K$,LEN(K$)-1%)+R$ &
+
+8030	INPUT LINE #CMD.CH%,K$ &
+\	IF RIGHT(CVT$$(K$,12%),LEN(CVT$$(K$,12%)))="/" &
+	THEN	INPUT LINE #CMD.CH%,R$ &
+\		K$=CVT$$(K$,12%) &
+\		K$=LEFT(K$,LEN(K$)-1%)+R$ &
+
+8040	K$=CVT$$(K$,12%) &
+\	GOTO 8030 UNLESS LEFT(K$,13%)<>"LOOP VARIABLE" AND LEFT(K$,5%+ &
+		LEN(R$))<>"LOOP "+R$ &
+\	Z$=K$ &
+\	GOTO 1070 &
+
+8050	L9%=L9%+1% &
+\	L9$(L9%-1%,0%)=RIGHT(Z$,I%+1%)+'255'C+R$ &
+\	I%=0% &
+
+8060	INPUT LINE #CMD.CH%,K$ &
+\	IF RIGHT(CVT$$(K$,12%),LEN(CVT$$(K$,12%)))="/" &
+	THEN	INPUT LINE #CMD.CH%,R$ &
+\		K$=CVT$$(K$,12%) &
+\		K$=LEFT(K$,LEN(K$)-1%)+CVT$$(R$,12%) &
+
+8070	K$=CVT$$(K$,12%) &
+\	IF LEFT(K$,13%)="LOOP VARIABLE" &
+	THEN	Z$=K$ &
+\		GOSUB 18100 &
+\		K$=Z$ &
+\		I%=I%+1% &
+\		K$=RIGHT(CVT$$(K$,12%),15%) &
+\		I1%=INSTR(1%,K$," ") &
+\		L9$(L9%-1%,I%)=RIGHT(K$,I1%+1%)+'255'C+LEFT(K$,I1%-1%) &
+\		GOTO 8060 &
+
+8080	Z$=K$ &
+\	GOTO 1070 &
+
+17500	!============================================================ &
+	!	END PROGRAM &
+	!============================================================ &
+	KILL CHART.DEVICE$+'CHART.DAO' &
+
+17501	KILL CHART.DEVICE$+'CHART.DAW' &
+
+17502	KILL CHART.DEVICE$+'CHART.DAC' &
+
+17503	KILL CHART.DEVICE$+'FINSTA.WRK' &
+
+17540	PRINT #OUTPUT.CH%, EXIT.COPY$; IF DISPLAY$<>'Y' &
+\	PRINT #OUTPUT.CH%, COLM.OFF$; IF DISPLAY$='Y' &
+\	CLOSE OUTPUT.CH% &
+\	V%=FNX%(CHAIN.PROGRAM$,CHAIN.LINE%,'') &
+
+18000	!============================================================ &
+	! SUBROUTINE SECTION &
+	!============================================================ &
+
+18005	! &
+	!  INPUT QUESTIONS--ALWAYS BEFORE "FORM" &
+	! &
+	I9%=0% &
+
+18010	INPUT LINE #CMD.CH%,Z$ &
+\	Z$=CVT$$(Z$,4%) &
+\	RETURN IF LEFT(Z$,4%)="FORM" OR LEFT(Z$,5%)='TITLE' &
+\	I%=INSTR(1%,Z$,'"') &
+\	I1%=INSTR(I%+1%,Z$,'"') &
+\	R$=MID(Z$,I%+1%,I1%-I%-1%) &
+\	V$=CVT$$(RIGHT(Z$,I1%+1%),-1%) &
+\	V$=RIGHT(V$,2%) IF LEFT(V$,1%)=";" OR LEFT(V$,1%)="," &
+\	I9%=I9%+1% &
+\	K$=I9$(I9%) &
+\	I9$(I9%)="" &
+\	I9$(I9%)=V$+'255'C+K$ &
+\	GOTO 18010 &
+&
+&
+&
+
+18100	!================================================================ &
+	! REPLACE VARIABLES &
+	!================================================================ &
+
+18110	IF RIGHT(Z$,LEN(Z$))="/" &
+	THEN	INPUT LINE #CMD.CH%,Z6$ &
+\		Z6$=CVT$$(Z6$,12%) &
+\		Z$=LEFT(Z$,LEN(Z$)-1%)+Z6$ &
+\		GOTO 18110 &
+
+18120	FOR L%=1% TO I9% &
+\		I1%=INSTR(1%,I9$(L%),'255'C) &
+\		I9$=LEFT(I9$(L%),I1%-1%) &
+\		I8$=RIGHT(I9$(L%),I1%+1%) &
+
+18130		I6%=INSTR(1%,Z$,I9$) &
+\		IF I6%<>0% &
+		THEN	Z$=LEFT(Z$,I6%-1%)+I8$+RIGHT(Z$,I6%+LEN(I9$)) &
+\			GOTO 18130 &
+
+18140	NEXT L% &
+\	I7%=INSTR(1%,Z$,"<DATE") &
+\	IF I7%<>0% &
+	THEN	I8%=INSTR(I7%,Z$,">") &
+\		Z$=LEFT(Z$,I7%-1%)+D$+SPACE$(I7%-I8%-LEN(D$)+1%)+RIGHT(Z$, &
+			I8%+1%) &
+
+18150	I7%=INSTR(1%,Z$,"<COMPANY") &
+\	IF I7%<>0% &
+	THEN	I8%=INSTR(I7%,Z$,">") &
+\		W1%=VAL(XLATE(MID(Z$,I7%,I8%-I7%),STRING$(48%,0%)+ &
+			"0123456789")) &
+\		W%=W1% IF W1%<>0% &
+\		Z$='"'+SPACE$(W%/2%-LEN(C9$)/2%)+C9$+'"' &
+
+18152	I7%=INSTR(1%,Z$,"<REPORT") &
+\	IF I7%<>0% &
+	THEN	I8%=INSTR(I7%,Z$,">") &
+\		W1%=VAL(XLATE(MID(Z$,I7%,I8%-I7%),STRING$(48%,0%)+ &
+			"0123456789")) &
+\		W%=W1% IF W1%<>0% &
+\		Z$='"'+SPACE$(W%/2%-LEN(C8$)/2%)+C8$+'"' &
+
+18160	I7%=INSTR(1%,Z$,"<TIME") &
+\	IF I7%<>0% &
+	THEN	I8%=INSTR(I7%,Z$,">") &
+\		Z$=LEFT(Z$,I7%-1%)+TIME$(0%)+SPACE$(I7%-I8%-LEN(TIME$(0%))+ &
+			1%)+RIGHT(Z$,I8%+1%) &
+
+18170	I7%=INSTR(1%,Z$,"<ADATE") &
+\	IF I7%<>0% &
+	THEN	I8%=INSTR(I7%,Z$,">") &
+\		Z$=LEFT(Z$,I7%-1%)+DATE$(0%)+SPACE$(I7%-I8%-9%+1%)+RIGHT(Z$, &
+			I8%+1%) &
+
+18180	FOR L%=0% TO L9%-1% &
+\		FOR L1%=0% UNTIL L9$(L%,L1%)="" &
+\			I1%=INSTR(1%,L9$(L%,L1%),",") &
+\			I1%=INSTR(1%,L9$(L%,L1%),'255'C) IF I1%=0% &
+\			I1%=INSTR(2%,L9$(L%,L1%), &
+				'"')+1% IF LEFT(L9$(L%,L1%),1%)='"' &
+\			L8$=LEFT(L9$(L%,L1%),I1%-1%) &
+\			L7$=RIGHT(L9$(L%,L1%),INSTR(1%,L9$(L%,L1%), &
+				'255'C)+1%) &
+\			L8$=MID(L8$,2%,LEN(L8$)-2%) IF LEFT(L8$,1%)='"' &
+\			GOTO 18195 IF(LEFT(Z$,4%)="LOOP" AND INSTR(1%,Z$, &
+				"END")<>0%) OR L8$="" &
+
+18190			I6%=INSTR(1%,Z$,L7$) &
+\			IF I6%<>0% &
+			THEN	Z$=LEFT(Z$,I6%-1%)+L8$+RIGHT(Z$,I6%+LEN(L7$)) &
+\				GOTO 18190 &
+
+18195		NEXT L1% &
+\	NEXT L% &
+\	RETURN &
+&
+&
+&
+
+18200	! ============================================================== &
+	! TOTAL MONTHS &
+	! ============================================================== &
+	T(L%)=0.0 FOR L%=0% TO 22% &
+\	WRK=0.0 &
+\	GOTO 18260 &
+
+18250	IF TEMP$<>TEMP1$ &
+	THEN	RETURN &
+
+18260	GOTO 18280 IF INSTR(1%,'CW',TYP$)=0% &
+		OR INSTR(1%,'ID',IND.FLAG$)=0% &
+\	IF IND.FLAG$='I' &
+	THEN	T(1%)=T(1%)+MON.BUD IF MON.BUD>0. &
+\		TEMP=CVT$F(F$(9%))-CVT$F(F$(8%)) &
+\		T(4%)=T(4%)+TEMP IF TEMP>0. &
+\		TEMP=CVT$F(F$(9%))-CVT$F(F$(7%)) &
+\		WRK  =WRK  +TEMP IF TEMP>0. &
+\		GOTO 18290 &
+
+18270	T(1%)=T(1%)+MON.BUD IF MON.BUD<0. &
+\	TEMP=CVT$F(F$(9%))-CVT$F(F$(8%)) &
+\	T(4%)=T(4%)+TEMP IF TEMP<0. &
+\	TEMP=CVT$F(F$(9%))-CVT$F(F$(7%)) &
+\	WRK  =WRK  +TEMP IF TEMP<0. &
+\	GOTO 18290 &
+
+18280	T(1%)=T(1%)+MON.BUD &
+\	T(2%)=T(2%)+YEAR.BUD &
+\	WRK  =WRK  +CVT$F(F$(7%)) &
+\	T(L%)=T(L%)+CVT$F(F$(L%+5%)) FOR L%=3% TO 22% &
+
+18290	RETURN &
+
+18300	! ============================================================== &
+	! WORKING FINSTA SUBROUTINE &
+	! ============================================================== &
+	IF NEW.YEAR% &
+	THEN	T(22%) = T(21%) &
+\		T(21%) = T(20%) &
+\		T(20%) = T(19%) &
+\		T(19%) = T(5%) &
+
+18310	T(5%)          = T(BEFORE%+5%) &
+\	T(BEFORE%+5%)  = T(3%) &
+\	T(3%)          = T(4%) &
+\	T(4%)          = WRK &
+\	T%(1%)         = NEX% &
+\	RETURN &
+
+19000	! =============================================================== &
+	! ERRORS &
+	! =============================================================== &
+	IF ERR=28% &
+	THEN	JUNK$ = SYS('6'C+CHR$(-7%)) &
+\		RESUME 17500 &
+
+19020	RESUME 200 IF ERL=160% OR ERL=170% OR ERL=180% &
+\	RESUME 1020 IF ERL=1050% &
+\	RESUME 1040 IF ERL=1060% AND ERR=11% &
+\	RESUME 1020 IF ERL=1060% &
+\	RESUME 17500 IF ERR=11% AND ERL=1020% &
+\	RESUME 17501 IF ERL=17500% &
+\	RESUME 17502 IF ERL=17501% &
+\	RESUME 17503 IF ERL=17502% &
+\	RESUME 17540 IF ERL=17503% &
+\	RESUME 70 IF ERL=60% &
+
+19100	IF ERL=150% &
+	THEN	PRINT #CH%, FNP$('24;1');CLRLIN$; &
+			'Unable to find print control file.  Aborting'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\		RESUME 17500 &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,'3'C) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+"["+ROWCOL$+"H"	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=ESC$+"["+BEGEND$+"r"	! Scroll control 	&
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)		&
+\		MESG$=MID(SYS('6'C+'9'C+CHR$(ERRNUM%)),3%,30%)+	&
+			' '+DESC$					&
+\		IF PRINT.TEST%						&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+			FNP$('24;55');	'Hit any key to continue.';	&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30270	DEF FNZ(N)=INT(ABS(N)*100.+.51)/100.*SGN(N) &
+
+30300	DEF FNM%(N) &
+\		M%,M2%=N &
+\		GOTO 30320 IF M%<100% &
+\		M%=M%+M1%-101% &
+\		IF T%(1%)-M%=0% &
+		THEN    M%=4% &
+		ELSE	IF T%(1%)-M%=1% &
+			THEN	M%=3% &
+			ELSE	M%=M%+5% &
+
+30310		GOTO 30330 &
+
+30320		IF M%=0% &
+		THEN	M%=4% &
+		ELSE	IF M%=1% &
+			THEN	M%=3% &
+			ELSE	IF M%<0% &
+				THEN	M%=ABS(M%) &
+				ELSE	M%=T%(1%)-M%+5% &
+\					M%=M%+12% IF M%<6% &
+\					M%=17% IF T%(1%)=1% AND M%=5% &
+
+30325		IF T%(1%)=M1% &
+		THEN	IF M%=3% OR M2%=13% &
+			THEN	IF LEFT(T$(3%),1%)="R" OR LEFT(T$(3%),1%)="E" &
+				THEN	M%=0% &
+
+30330		FNM%=M% &
+\	FNEND &
+
+30400	DEF FNF$(Z$) &
+\		T0$(0%)="" &
+
+30410		GOTO 30450 IF Z$="" &
+\		IF LEFT(Z$,1%)='"' THEN I%=INSTR(2%,Z$,'"') &
+\		I%=LEN(Z$)+1% IF I%=0% &
+\		T0$(0%)=T0$(0%)+MID(Z$,2%,I%-2%) &
+\		Z$=RIGHT(Z$,I%+1%) &
+\		GOTO 30410 &
+
+30420		IF LEFT(Z$,1%)=";" &
+		THEN	Z$=RIGHT(Z$,2%) &
+\			GOTO 30410 &
+
+30430		IF LEFT(Z$,3%)="TAB" &
+		THEN	I%=INSTR(1%,Z$,")") &
+\			I2%=VAL(MID(Z$,5%,I%-5%)) &
+\			T0$(0%)=T0$(0%)+SPACE$(I2%-LEN(T0$(0%))) &
+\			Z$=RIGHT(Z$,I%+1%) &
+\			GOTO 30410 &
+
+30440		T0$(0%)=T0$(0%)+'255'C+Z$ IF F1% &
+
+30450		FNF$=T0$(0%) &
+\	FNEND &
+
+30900	!-------------------------------------------------COMPARE &
+	DEF FNCOMP%(Y$,Y2$) &
+\		Y9%=0% &
+\		Y9%=-1% IF Y2$='*' &
+\		Y2$=Y2$+',' &
+
+30920		IF Y9%=0% &
+		THEN	Y1$=LEFT(Y2$,INSTR(1%,Y2$,',')-1%) &
+\			Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+\			Y1%=INSTR(1%,Y1$,'/') &
+\			IF Y1%+INSTR(1%,Y1$,'?')=0% &
+			THEN	Y9%=Y$=Y1$ &
+			ELSE	IF Y1% &
+				THEN	Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND Y$<=RIGHT(Y1$, &
+						Y1%+1%) &
+				ELSE	CHANGE CVT$$(LEFT(Y$,30%),-1%) TO Y% &
+\					CHANGE CVT$$(LEFT(Y1$,30%),-1%) TO Y1% &
+\					GOTO 30930 IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%) &
+						=63%) FOR Y3%=1% TO Y1%(0%) &
+\					Y9%=-1% &
+
+30930		IF Y2$<>'' AND Y9%=0% &
+		THEN	GOTO 30920 &
+		ELSE	FNCOMP%=Y9% &
+
+30940	FNEND &
+
+31000	! Chain entry &
+	M$=SYS('7'C) &
+\	REP.NUM$=MID(M$,INSTR(1%,M$,'~')+1%,6%) &
+\	GOTO 30 &
+
+32767	END

@@ -1,0 +1,66 @@
+
+
+
+           GAS JOURNAL LINE FILE
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : GSJ....
+
+    KEY FILE NAME : GSJL(Batch #).DAT		KEY = 10 + 2   DATA = 128
+
+           NAME                         SIZE            VARIABLE     
+
+	 1 _Invoice Number_______  	_08A/01___  	GSJL.INVNUM$
+
+	 2 _Line Number__________  	_02I/09___  	GSJL.LINE$ 
+
+	 3 _Product Code_________  	_10A/11___  	GSJL.PRODCDE$
+
+	 4 _Description__________  	_26A/21___  	GSJL.DESC$
+
+	 5 _Type ________________  	_01A/47___  	GSJL.TYPE$
+
+	 6 _Fed Excise Tax Flag__  	_01A/48___  	GSJL.FET.FLAG$
+
+	 7 _St Excise Tax Flag___  	_01A/49___  	GSJL.SET.FLAG$
+
+	 8 _Loc Excise Tax Flag__  	_01A/50___  	GSJL.LET.FLAG$
+
+	 9 _Sales Tax Flag_______  	_01A/51___  	GSJL.STX.FLAG$
+
+	10 _Quantity_____________	_08F/52___  	GSJL.QTY$
+
+	11 _Price________________  	_08F/60___  	GSJL.PRICE$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 67, FROM 128, FREE = 61
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

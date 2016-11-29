@@ -1,0 +1,67 @@
+
+
+
+           SALES JOURNAL LINE FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: SJ....
+
+    KEY FILE NAME : SJL(BATCH NUMBER).DAT   KEY = 10 + 2   DATA = 128
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Invoice Number__________  	_08A/01___  	SJL.INVNUM$ 
+
+	 2 _Line Number_____________  	_02I/09___  	SJL.LINE$
+
+	 3 _Account Number__________  	_08A/11___  	SJL.ACCT$
+
+	 4 _Sub Account Number______  	_06A/19___  	SJL.SUBACCT$
+
+	 5 _Type Code_______________  	_01A/25___  	SJL.TYPE$
+						(BLANK)	=Not Recorded
+						D	=Discount Amount
+						O	=Other
+
+	 6 _Description_____________  	_26A/26___  	SJL.DESC$
+						
+	 7 _Amount__________________  	_08F/52___  	SJL.AMOUNT$
+
+	 8 _Quantity________________  	_08F/60___  	SJL.QTY$
+
+	 9 _Tax Type________________    _01A/68___	SJL.TAXTYP$
+							(1,2,3,4,5)
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =68, FROM 128, FREE = 60
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,273 @@
+10	  ! &
+	  ! Program name: progr5		Compiled with SCALE 0 on V09.3 &
+	  ! Decompiled on 28-Nov-16 at 05:11 PM
+30	  ON ERROR GOTO 19000 &
+	\ JUNK$=SYS(CHR$(6%)+CHR$(-7%)) &
+	\ TEMP$=SYS(CHR$(12%)) &
+	\ PRJPRG$=MID(TEMP$,23%,1%)+MID(TEMP$,24%,1%)+NUM1$(ASCII(MID(TEMP$,25%,1%)))+":"+"["+NUM1$(ASCII(MID(TEMP$,6%,1%)))+","+NUM1$(ASCII(MID(TEMP$,5%,1%)))+"]"+RAD$(ASCII(MID(TEMP$,7%,1%))+SWAP%(ASCII(MID(TEMP$,8%,1%))))+RAD$(ASCII(MID(TEMP$,9%,1%))+SWAP%(ASCII(MID(TEMP$,10%,1%)))) &
+	\ JUNK$=SYS(CHR$(6%)+CHR$(9%)) &
+	\ JJ%=ASCII(LEFT(JUNK$,1%))/2% &
+	\ JJ$=RIGHT(NUM1$(JJ%+100%),2%)
+60	  CH%=1% &
+	\ OPEN "KB:" AS FILE 1%, MODE 8%+256%
+70	  ESC$=CHR$(155%) &
+	\ COLM.ON$=ESC$+"[?3h" &
+	\ COLM.OFF$=ESC$+"[?3l" &
+	\ R.ON$=ESC$+"[7m" &
+	\ G.OFF$=ESC$+"[m" &
+	\ CLRLIN$=ESC$+"[2K" &
+	\ CLSCN$=ESC$+"[H"+ESC$+"[J" &
+	\ ENTER.COPY$=ESC$+"[5i" &
+	\ EXIT.COPY$=ESC$+"[4i"
+80	  DROP.DEAD.DATE$="        " &
+	\ VERSION.NO$="V1.0" &
+	\ IF DROP.DEAD.DATE$<>"" THEN  &
+		  IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) THEN  &
+			  MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)),3%,30%) &
+			\ PRINT #CH%, MESG$; &
+			\ V$=SYS(CHR$(9%))
+100	  DIM FILE.NAME$(300%), FILE.DATE$(300%), SYS.CALL%(30%), FIL.NAM%(30%), Y%(32%), Y1%(32%) &
+	\ PROGRAM.CH%=2% &
+	\ LOG.CH%=4% &
+	\ HELP.CH%=5% &
+	\ MAX%=7%
+1000	  PRINT #CH%, COLM.OFF$;FNP$("4;28");"PROGRAM ANALYSIS 5";FNP$("6;28");"Program to search for "; &
+	\ PROGRAM$=CVT$$(FNINP$(CH%,0%,"_",20%,0%),-1%) &
+	\ GOTO 10000 IF PROGRAM$="" &
+	\ PRINT #CH%, CLSCN$;FNP$("24;1");CLRLIN$;"Searching. . .";R.ON$; &
+	\ LIN%=1% &
+	\ COL%=-11% &
+	\ FILES%=FNFILE%(PROGRAM$)
+1010	  PRINT #CH%, G.OFF$;FNP$("24;1");CLRLIN$;"Log file name "; &
+	\ LOG.FILE$=CVT$$(FNINP$(CH%,0%,"_",20%,0%),-1%)
+1020	  PRINT #CH%, FNP$("24;1");CLRLIN$;"CR/WR (CR) "; &
+	\ OI$=CVT$$(FNINP$(CH%,0%,"_",2%,0%),-1%) &
+	\ OPEN LOG.FILE$ FOR INPUT AS FILE LOG.CH%, MODE 2% IF OI$="WR" &
+	\ OPEN LOG.FILE$ FOR OUTPUT AS FILE LOG.CH% IF OI$<>"WR"
+1100	  PRINT #CH%, G.OFF$;FNP$("24;1");CLRLIN$;"Select Option [H,0,1,2,3,4,5,6,7] "; &
+	\ OPTION$=CVT$$(FNINP$(CH%,128%,"_",1%,0%),-1%) &
+	\ SLEEP 1% &
+	\ GOTO 18000 IF OPTION$="H" &
+	\ OPTION%=VAL(XLATE(OPTION$,STRING$(48%,0%)+"0123456789")) &
+	\ GOTO 10000 IF OPTION%>MAX% &
+	\ ABC$=MID("1011200",OPTION%,1%) &
+	\ BCD$=MID("1111001",OPTION%,1%) &
+	\ IF OPTION%=0% THEN  &
+		  CLOSE LOG.CH% &
+		\ GOTO 1000
+2000	  JI%,J%=0% &
+	\ PRINT #CH%, COLM.OFF$;G.OFF$;FNP$("23;70");FILES%;" FILES"; &
+	\ GOTO 4000 IF OPTION%=1%
+2020	  PRINT #CH%, FNP$("24;1");CLRLIN$;"Search from the line "; &
+	\ SEARCH$=FNINP$(CH%,0%,"_",5%,0%) &
+	\ GOTO 2040 IF SEARCH$="" &
+	\ J%=J%+1% &
+	\ SEARCH$=XLATE(SEARCH$,STRING$(48%,0%)+"0123456789") &
+	\ SEARCH%(J%,1%)=VAL(SEARCH$) &
+	\ PRINT #CH%, FNP$(NUM1$(J%+1%)+";60");SEARCH$; &
+	\ LINE.LOOP%=J%
+2030	  PRINT #CH%, FNP$("24;30");"to the line "; &
+	\ SEARCH$=FNINP$(CH%,0%,"_",5%,0%) &
+	\ SEARCH$=XLATE(SEARCH$,STRING$(48%,0%)+"0123456789") &
+	\ SEARCH%(J%,2%)=VAL(SEARCH$) &
+	\ PRINT #CH%, FNP$(NUM1$(J%+1%)+";74");SEARCH$; &
+	\ GOTO 2020
+2040	  PRINT #CH%, FNP$("24;1");CLRLIN$;"Search for "; &
+	\ SEARCH$=FNINP$(CH%,0%,"_",20%,0%) &
+	\ GOTO 2050 IF SEARCH$="" &
+	\ J%=J%+1% &
+	\ JI%=JI%+1% &
+	\ WORDS.LOOP%=JI% &
+	\ WORDS$(JI%)=SEARCH$ &
+	\ PRINT #CH%, FNP$(NUM1$(J%+1%)+";60");SEARCH$; &
+	\ GOTO 2040
+2050	  PRINT #CH%, FNP$("24;1");CLRLIN$;"Stop Sign "; &
+	\ SEARCH$=FNINP$(CH%,0%,"_",20%,0%) &
+	\ GOTO 2100 IF SEARCH$="" &
+	\ J%=J%+1% &
+	\ STOP.SN$=SEARCH$ &
+	\ PRINT #CH%, FNP$(NUM1$(J%+1%)+";60");SEARCH$;
+2100	  LIN%=1% &
+	\ COL%=-11% &
+	\ GOSUB 4500 IF ABC$="2"
+2200	  FOR LOOP%=1% TO FILES% &
+		\ OPEN FILE.NAME$(LOOP%) FOR INPUT AS FILE PROGRAM.CH% &
+		\ R.BRACK%=INSTR(1%,FILE.NAME$(LOOP%),"]") &
+		\ LIN%=LIN%+1% &
+		\ LIN%=2% IF LIN%=23% &
+		\ COL%=COL%+13% IF LIN%=2% &
+		\ PRINT #CH%, FNP$(NUM1$(LIN%)+";"+NUM1$(COL%))+RIGHT(FILE.NAME$(LOOP%),R.BRACK%+1%); &
+		\ PRINT #CH%, FNP$("24;1");CLRLIN$;"Searching. . . ";NUM1$(LOOP%);" ";FILE.NAME$(LOOP%);" "; &
+		\ WORDS%,JUMP.OUT%,STORE%,OPT5%,OPT2%=0% &
+		\ J%=1% &
+		\ IF BCD$="1" THEN  &
+			  PRINT #LOG.CH% &
+			\ PRINT #LOG.CH%, NUM1$(LOOP%)+" "+FILE.NAME$(LOOP%); &
+			\ IF ABC$="1" THEN  &
+				  PRINT #LOG.CH%
+2300		  INPUT LINE #PROGRAM.CH%, A$ &
+		\ LINNE%=VAL(XLATE(LEFT(A$,5%),STRING$(48%,0%)+"0123456789")) &
+		\ PASS.LINE%=LINNE% IF LINNE%<>0% &
+		\ IF SEARCH%(J%,2%)<LINNE% THEN  &
+			  J%=J%+1% &
+			\ WORDS%,STORE%=0%
+2310		  GOTO 2900 IF J%>LINE.LOOP% &
+		\ IF SEARCH%(J%,1%)<=LINNE% AND LINNE%<=SEARCH%(J%,2%) THEN  &
+			  STORE%=-1%
+2320		  IF STORE% THEN  &
+			  WORDS%=0% &
+			\ WORDS%=WORDS%+INSTR(1%,A$,WORDS$(JI%)) FOR JI%=1% TO WORDS.LOOP% &
+			\ WORDS%=-1% IF WORDS.LOOP%=0% &
+			\ OPT2%=-1% IF WORDS%
+2400		  ON OPTION%-1% GOSUB 3010,3020,3030,3040,3050,3060
+2600		  PRINT #CH%, RECORD 256%,CHR$(129%); &
+		\ GET #CH%, RECORD 8192%
+2700		  FIELD #CH%, RECOUNT AS TEST$ &
+		\ GOTO 10000 IF INSTR(1%,TEST$,CHR$(3%))
+2800		  GOTO 2300 IF JUMP.OUT%=0%
+2900		  GOSUB 4600 IF ABC$="2" &
+		\ CLOSE PROGRAM.CH% &
+	\ NEXT LOOP% &
+	\ GOTO 1100
+3010	  RETURN IF WORDS%=0% &
+	\ STOP.SN%=INSTR(1%,A$,STOP.SN$) &
+	\ PRINT #LOG.CH%, RIGHT(A$,STOP.SN%); &
+	\ JUMP.OUT%=-1% &
+	\ RETURN
+3020	  RETURN IF WORDS%=0% &
+	\ STOP.SN%=INSTR(1%,A$,STOP.SN$) &
+	\ PRINT #LOG.CH%, RIGHT(A$,STOP.SN%); &
+	\ RETURN
+3030	  IF STORE% AND OPT2% AND J%=LINE.LOOP% THEN  &
+		  PRINT #LOG.CH%, A$;
+3035	  RETURN
+3040	  RETURN IF WORDS%=0% &
+	\ IF LINNE%=0% THEN &
+		  PRINT #LOG.CH%, A$; IF LINNE%=0% &
+	  ELSE &
+		  PRINT #LOG.CH%, NUM1$(LOOP%)+"00	    COMPANY$ = '"+NUM1$(LOOP%)+" "+FILE.NAME$(LOOP%)+"' &" &
+		\ PRINT #LOG.CH%, "\	"+RIGHT(A$,5%); &
+		\ OPT5%=-1%
+3045	  RETURN
+3050	  IF STORE% THEN  &
+		  PRINT #LOG.CH%, A$;
+3055	  RETURN
+3060	  RETURN IF WORDS%=0% &
+	\ PRINT #LOG.CH%, NUM1$(PASS.LINE%)+SPACE$(6%-LEN(NUM1$(PASS.LINE%)))+LEFT(A$,73%); &
+	\ RETURN
+3800	  !
+3900	  !
+4000	  PRINT #LOG.CH%, OPTION%;"**********"
+4010	  FOR LOOP%=1% TO FILES% &
+		\ PRINT #LOG.CH%, SPACE$(2%-LEN(NUM1$(LOOP%)))+NUM1$(LOOP%)+" "+FILE.NAME$(LOOP%)+" "+FILE.DATE$(LOOP%) &
+	\ NEXT LOOP% &
+	\ GOTO 1100
+4500	  PRINT #LOG.CH%, "99    ON OPTION% GOSUB 100, &" &
+	\ FOR LOOP%=2% TO FILES%-1% &
+		\ PRINT #LOG.CH%, "		"+NUM1$(LOOP%)+"00,  &" &
+	\ NEXT LOOP% &
+	\ PRINT #LOG.CH%, "		"+NUM1$(FILES%)+"00"+"   &" &
+	\ PRINT #LOG.CH%, "\	GOTO 13 &" &
+	\ PRINT #LOG.CH% &
+	\ RETURN
+4600	  RETURN IF OPT5%<>0% &
+	\ PRINT #LOG.CH%, NUM1$(LOOP%)+"00"+"	 "+"PRINT #CH%,COLM.OFF$;'"+NUM1$(LOOP%)+" "+FILE.NAME$(LOOP%)+"; &" &
+	\ PRINT #LOG.CH%, "\	RETURN &" &
+	\ PRINT #LOG.CH% &
+	\ RETURN
+10000	  CLOSE LOG.CH% &
+	\ CLOSE PROGRAM.CH% &
+	\ PRINT #CH%, CLSCN$;FNSR$("1;24"); &
+	\ GOTO 32767
+18000	  OPEN "HELP.005" FOR INPUT AS FILE HELP.CH% &
+	\ LINE.OPTION%=0%
+18005	  INPUT LINE #HELP.CH%, A$ &
+	\ PRINT #CH%, FNP$("24;1");CLRLIN$;CVT$$(A$,4%); &
+	\ OPTION$=CVT$$(FNINP$(CH%,128%,"_",1%,0%),-1%) &
+	\ GOTO 1100 IF OPTION$<>"" &
+	\ LINE.OPTION%=LINE.OPTION%+1% &
+	\ GOTO 18005 IF LINE.OPTION%<>MAX%+1% &
+	\ CLOSE HELP.CH% &
+	\ GOTO 18000
+19000	  RESUME 2900 IF ERL=2300% &
+	\ RESUME 3900 IF ERL=3300% &
+	\ RESUME 2800 IF ERL=2600% &
+	\ RESUME 3800 IF ERL=3600% &
+	\ RESUME 30130 IF ERL=30110%
+19900	  ON ERROR GOTO 0
+30000	  DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+	\ PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$));STRING$(INPUTLEN%,8%); &
+	\ PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+	\ GET #CHN% &
+	\ FIELD #CHN%, RECOUNT AS BUFFER$ &
+	\ BUFFER$="%^C" IF INSTR(1%,BUFFER$,CHR$(3%)) &
+	\ FNINP$=CVT$$(BUFFER$,4%) &
+	\ V=SQR(-1.) IF BUFFER$="%^C" AND TO.ERR% &
+	\ FNEND
+30100	  DEF FNFILE%(FILE.SPEC$) &
+	\ WLDCNT%=0% &
+	\ WLDCRD.FLAG%=0%
+30110	  NEXXT%=0% &
+	\ CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.SPEC$) TO SYS.CALL% &
+	\ SYS.CALL%(0%)=30% &
+	\ SYS.CALL%(1%)=6% &
+	\ SYS.CALL%(2%)=17% &
+	\ SYS.CALL%(3%)=WLDCRD.FLAG% &
+	\ SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+	\ WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+	\ CHANGE SYS.CALL% TO SYS.CALL$ &
+	\ CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+	\ FIL.NAM%(23%)=ASCII("S") IF FIL.NAM%(23%)=0% &
+	\ FIL.NAM%(24%)=ASCII("Y") IF FIL.NAM%(24%)=0% &
+	\ WILD.FILE$=CHR$(FIL.NAM%(23%))+CHR$(FIL.NAM%(24%))+NUM1$(FIL.NAM%(25%))+":"+"["+NUM1$(FIL.NAM%(6%))+","+NUM1$(FIL.NAM%(5%))+"]" &
+	\ WILD.NAME$=RAD$(FIL.NAM%(7%)+SWAP%(FIL.NAM%(8%)))+RAD$(FIL.NAM%(9%)+SWAP%(FIL.NAM%(10%)))+"."+RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+	\ DD$=DATE$(FIL.NAM%(19%)+SWAP%(FIL.NAM%(20%))) &
+	\ SZ$=NUM1$(FIL.NAM%(13%)+SWAP%(FIL.NAM%(14%)))
+30120	  WLDCNT%=WLDCNT%+1% &
+	\ FILE.NAME$(WLDCNT%)=WILD.FILE$+WILD.NAME$ &
+	\ FILE.DATE$(WLDCNT%)=DD$+" "+SZ$ &
+	\ LIN%=LIN%+1% &
+	\ LIN%=2% IF LIN%=23% &
+	\ COL%=COL%+13% IF LIN%=2% &
+	\ PRINT #CH%, FNP$(NUM1$(LIN%)+";"+NUM1$(COL%))+WILD.NAME$;
+30125	  GOTO 30110
+30130	  FNFILE%=WLDCNT% &
+	\ FNEND
+30200	  DEF FNP$(ROWCOL$) &
+	\ FNP$=ESC$+"["+ROWCOL$+"H" &
+	\ FNEND
+30250	  DEF FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%) &
+	\ MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+DESC$ &
+	\ PRINT #CHN%, FNP$("24;1");MESG$;FNP$("24;55");"Hit any key to continue."; &
+	\ NW$=FNINP$(CHN%,128%," ",1%,TO.ERR%) &
+	\ FNEND
+30300	  DEF FNSR$(BEGEND$) &
+	\ FNSR$=ESC$+"["+BEGEND$+"r" &
+	\ FNEND
+30500	  DEF FNZER$(Z%) &
+	\ FNZER$=RIGHT(NUM1$(100%+Z%),2%) &
+	\ FNEND
+30900	  DEF FNCOMP%(Y$,Y2$) &
+	\ Y9%=0% &
+	\ Y9%=-1% IF Y2$="*" &
+	\ Y2$=Y2$+","
+30920	  IF Y9%=0% THEN  &
+		  Y1$=LEFT(Y2$,INSTR(1%,Y2$,",")-1%) &
+		\ Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+		\ Y1%=INSTR(1%,Y1$,"/") &
+		\ IF Y1%+INSTR(1%,Y1$,"?")=0% THEN &
+			  Y9%=Y$=Y1$ &
+		  ELSE &
+			  IF Y1% THEN &
+				  Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND Y$<=RIGHT(Y1$,Y1%+1%) &
+			  ELSE &
+				  CHANGE CVT$$(LEFT(Y$,30%),-1%) TO Y% &
+				\ CHANGE CVT$$(LEFT(Y1$,30%),-1%) TO Y1% &
+				\ GOTO 30930 IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%)=63%) FOR Y3%=1% TO Y1%(0%) &
+				\ Y9%=-1%
+30930	  IF Y2$<>"" AND Y9%=0% THEN &
+		  GOTO 30920 &
+	  ELSE &
+		  FNCOMP%=Y9%
+30940	  FNEND
+32767	  END

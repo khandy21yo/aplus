@@ -1,0 +1,26 @@
+/-----------------------------------------------------------------------------\
+2
+3             (01) PARENT #              XXXXXXXXXXXXXXX
+4                                              XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+5             (02) ITEM #                #####
+6
+7             (03) COMPENENT #           XXXXXXXXXXXXXXX
+8                                              XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+9             (04) QTY REQUIRED          #####.###
+0
+1             (05) ATTACHING OPERATION   XXXXXX
+2
+3             (06) SCRAP FACTOR          ###.##%
+4
+5             (07) ACTIVITY FLAG         X  XXXXXXXXXXXXXXXXXXXXXXXXX
+6
+7
+8
+9
+\------------------------------------------------------------------------------/
+COMMAND: Add Erase Change Blank Initialize Default Global Find Next Restore
+         View cOpy Quit
+
+
+Special instructions:
+COPY OPTION ALLOWS THE USER TO COPY ONE PARENT ITEM INTO ANOTHER PARENT ITEM

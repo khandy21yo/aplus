@@ -1,0 +1,80 @@
+40	INPUT 'A/R ACCOUNT NUMBER ',k$ &
+\	AR.ACCT$=K$ &
+\	STOP IF FNO%(2%,'CUSOLD.DAT','','') &
+\	STOP IF FNO%(4%,'ARREG.DAT','/RW','') &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 128% &
+\	FIELD #12%,	06% AS ARREG.CUSNUM$,	&
+			08% AS ARREG.INVNUM$,	&
+			02% AS ARREG.TRATYP$,	&
+			02% AS ARREG.TRADAT$,	&
+			08% AS ARREG.SALAMT$,	&
+			08% AS ARREG.DISAMT$,	&
+			08% AS ARREG.OTHCHG$,	&
+			08% AS ARREG.RECNUM$,	&
+			06% AS ARREG.CHKNUM$,	&
+			08% AS ARREG.ARACCT$,	&
+			06% AS ARREG.CROSS$,	&
+			25% AS ARREG.DESC$,	&
+			02% AS ARREG.UPDATE$	&
+\	FIELD #12%,	128 AS ARREG.BUF$ &
+
+500	STOP IF FNG%(2%,'') &
+
+600	FIELD #3%, 	FNL% AS TEMP$,		&
+			006% AS CUSTOM.NUM$, &
+			172% AS TEMP$, &
+			008% AS T$(1%), &
+			008% AS T$(2%), &
+			008% AS T$(3%), &
+			008% AS T$(4%), &
+			008% AS T$(5%), &
+			008% AS TEMP$, &
+			008% AS T$(6%) &
+\	T(I%)=CVT$F(T$(I%)) FOR I%=1% TO 6% &
+\	FLAG%=0% &
+\	FLAG%=-1% IF T(I%)<>0.0 FOR I%=1% TO 6% &
+\	GOTO 700 IF FLAG%=0% &
+\	PRINT CUSTOM.NUM$ &
+\	FOR LOOP%=1% TO 6% &
+\		GOTO 650 IF T(LOOP%)=0.0 &
+\		PRINT USING "#######.##",T(LOOP%) &
+\		INVNUM$='023185' &
+\		INVNUM$='013085' IF LOOP%=2% &
+\		INVNUM$='123185' IF LOOP%=3% &
+\		INVNUM$='113085' IF LOOP%=4% &
+\		INVNUM$='103185' IF LOOP%=5% &
+\		INV.DATE$=INVNUM$ &
+\		INVNUM$='SERCHG' IF LOOP%=6% &
+\		LSET ARREG.CUSNUM$	=	CUSTOM.NUM$ &
+\		RSET ARREG.INVNUM$	=	INVNUM$ &
+\		LSET ARREG.TRATYP$	=	'01' &
+\		LSET ARREG.TRADAT$	=	CVT%$(FND6%(INV.DATE$)) &
+\		LSET ARREG.SALAMT$	=	CVTF$(T(LOOP%)) &
+\		LSET ARREG.DISAMT$	=	CVTF$(0.0) &
+\		LSET ARREG.OTHCHG$	=	CVTF$(0.0) &
+\		LSET ARREG.RECNUM$	=	'' &
+\		LSET ARREG.CHKNUM$	=	'' &
+\		RSET ARREG.ARACCT$	=	AR.ACCT$ &
+\		LSET ARREG.CROSS$	=	'' &
+\		LSET ARREG.DESC$	=	'' &
+\		LSET ARREG.UPDATE$	=	CVT%$(FND6%('120085')) &
+\		STOP IF FNA%(4%,ARREG.BUF$) &
+
+650	NEXT LOOP% &
+
+700	GOTO 600 IF FNN%(2%)=0% &
+\	V%=FNX%('',0%,'') &
+
+30060	DEF FND8%(D8)=D8						&
+
+30070	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% 	&
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% 			&
+
+30080	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ "/"+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ "/"+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+32767	END &
+
+

@@ -1,0 +1,545 @@
+10	!---------------------------------------------------------------&
+	!	Financial Statement Writer				&
+	!								&
+	!	FINSTA.B2S	V1.0	February 1985			&
+	!								&
+	! Author - Glenn C. Hillam, Computer Management Center, Inc.	&
+	!								&
+	! Files-CHART.DAT	-ISAM	Chart of Accounts File  	&
+	!	CHART.DAS	-ISAM	Temp. Index File		&
+	!	FINSTA.DAT	-ISAM	Financial Statement File	&
+	!								&
+	!---------------------------------------------------------------&
+	! 								&
+	! 								&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	! 								&
+	!---------------------------------------------------------------&
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%)+CHR$(-7%)) &
+\	TEMP$=SYS(CHR$(12%)) &
+\	PRJPRG$=MID(TEMP$,23%,1%) + MID(TEMP$,24%,1%) + NUM1$(ASCII(MID( &
+		TEMP$,25%,1%))) + ":" + &
+		"["+NUM1$(ASCII(MID(TEMP$,6%,1%))) + "," + &
+		NUM1$(ASCII(MID(TEMP$,5%,1%))) + "]" + &
+		RAD$(ASCII(MID(TEMP$,7%,1%))+SWAP%(ASCII(MID(TEMP$,8%,1%)))) + &
+		RAD$(ASCII(MID(TEMP$,9%,1%))+SWAP%(ASCII(MID(TEMP$,10%,1%)))) &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column mode &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column mode &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erace cursor to end of screen &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DIM SYS.CALL%(30%), FIL.NAM%(30%), Y%(32%), Y1%(32%),REP$(200%), &
+		DESC$(200%),POINTER%(200%),DISPLAY%(200%),SELECTED%(200%) &
+\	DEVICE.CH%		= 02% &
+\	PPRINT.CH%		= 02% &
+\	FINSTA.CH%		= 02% &
+\	FINSTA.WRK%		= 04% &
+\	CHART.CH%		= 10% &
+\	CHART.O%		= 06% &
+\	CHART.WC%		= 07% &
+\	CHART.CASH%		= 08% &
+\	MENU.CH%		= 12% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/RO','')=0% &
+	THEN	FINSTA.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'FINSTA')=0% &
+\		CHART.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'CHART')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+210	IF FLAG% &
+	THEN	300 &
+
+215	IF FNO%(CHART.CH%,CHART.DEVICE$+'CHART.DAT','/RW','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'CHART.DAT',0%,-1%) &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1'); &
+\		V%=FNX%('',0%,'') &
+
+220	OPEN CHART.DEVICE$+'CHART.DAO' FOR OUTPUT AS FILE CHART.O% &
+\	DIM #6%, CHART.O$(32767%)=32% &
+\	OPEN CHART.DEVICE$+'CHART.DAW' FOR OUTPUT AS FILE CHART.WC% &
+\	DIM #7%, CHART.WC$(32767%)=16% &
+\	OPEN CHART.DEVICE$+'CHART.DAC' FOR OUTPUT AS FILE CHART.CASH% &
+\	DIM #8%, CHART.CASH$(32767%)=16% &
+\	IF FNG%(CHART.CH%,'') &
+	THEN	V$=FNMESS$(CH%,FNS%,'CHART.DAT',0%,-1%) &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1'); &
+\		V%=FNX%('',0%,'') &
+
+225	COMMAND$=' !! !! !! 04 05 06 07 08 09 ' &
+\	TEMP$='FINANCIAL STATEMENT SELECTION' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+\	PRINT #CH%, FNP$(NUM1$(I%)+';1');' ';FNP$(NUM1$(I%)+';80');' '; &
+				FOR I%=2% TO 19% &
+\	PRINT #CH%, FNP$('20;1');SPACE$(80%);G.OFF$; &
+		FNP$('03;12');'(01) Account #'; &
+		FNP$('04;12');'(02) Description'; &
+		FNP$('05;12');'(03) Account Type'; &
+		FNP$('06;12'); &
+		'-----------Financial Codes-----------'; &
+		FNP$('07;12');'(04) Type'; &
+		FNP$('08;12');'(05) Division'; &
+		FNP$('09;12');'(06) Department'; &
+		FNP$('10;12');'(07) Location'; &
+		FNP$('11;12');'(08) Cash Flow Code'; &
+		FNP$('12;12');'(09) Work Capital Code'; &
+\	PRINT #CH%, FNP$('24;1'); &
+		'Please wait.  Creating indexes'; &
+		FNP$('14;10');"0%   10%  20%  30%  40%  50%"; &
+		"  60%  70%  80%  90% 100%";FNP$('24;80'); &
+\	TEMP.REC%,TEMP%,REC.CNT=FNT &
+\	PC$=FNPC.SPACE$(REC.CNT) &
+\	REC.CNT=FNPC(REC.CNT) &
+\	COUNTER%,PERCENT%=0% &
+\	COL%=10% &
+\	CHART.O$(TEMP%),CHART.WC$(TEMP%),CHART.CASH$(TEMP%)='' &
+
+230	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=REC.CNT &
+	THEN	COUNTER%=0% &
+\		PERCENT%=PERCENT%+LEN(PC$)*2% &
+\		IF PERCENT%<100% &
+		THEN	PRINT #CH%, FNP$('15;'+NUM1$(COL%));R.ON$;PC$; &
+				G.OFF$;FNP$('24;80'); &
+\			COL%=COL%+LEN(PC$) &
+
+235	FIELD #CHART.CH%+1%, FNL% AS TEMP$,	&
+			256% AS CHART.BUF$	&
+\	FIELD #CHART.CH%+1%, FNL% AS TEMP$,	&
+		  	08% AS CHART.ACCNO$,	&
+			40% AS CHART.DESC$,	&
+			02% AS CHART.ACCTYP$,	&
+			02% AS CHART.MONTH$,	&
+			02% AS CHART.OVHDAL$,	&
+			08% AS CHART.WORK$,	&
+			08% AS CHART.ANNBUD$,	&
+			08% AS CHART.LAST$,	&
+			08% AS CHART.CURR$,	&
+			08% AS CHART.BACKUP$,	&
+			13%*8% AS MUNG$,	&
+			08% AS CHART.YR1$,	&
+			08% AS CHART.YR2$,	&
+			08% AS CHART.YR3$,	&
+			08% AS CHART.YR4$,	&
+			01% AS CHART.FLAG$,	&
+			01% AS CHART.PRTFLG$,	&
+			04% AS CHART.TYPE$,	&
+			02% AS CHART.DIV$,	&
+			02% AS CHART.DEPT$,	&
+			02% AS CHART.LOC$,	&
+			04% AS CHART.CF.CODE$,	&
+			04% AS CHART.WC.CODE$	&
+\	TEMP%=FNR(CHART.CH%+1%) &
+\	CHART.WC$(RECORD.COUNT%)=CHART.WC.CODE$+CHART.ACCNO$+CVT%$(TEMP%) &
+\	CHART.CASH$(RECORD.COUNT%)=CHART.CF.CODE$+CHART.ACCNO$+CVT%$(TEMP%) &
+\	GOTO 270 IF CHART.TYPE$<>'' &
+\	PRINT #CH% USING &
+		FNP$('03;35')+'\      \'+ &
+		FNP$('04;35')+'\'+SPACE$(28%)+'\'+ &
+		FNP$('05;35')+'\\'+ &
+		FNP$('07;35')+'\  \'+ &
+		FNP$('08;35')+'\\'+ &
+		FNP$('09;35')+'\\'+ &
+		FNP$('10;35')+'\\'+ &
+		FNP$('11;35')+'\  \'+ &
+		FNP$('12;35')+'\  \', &
+			CHART.ACCNO$,	&
+			CHART.DESC$,	&
+			CHART.ACCTYP$,	&
+			CHART.TYPE$,	&
+			CHART.DIV$,	&
+			CHART.DEPT$,	&
+			CHART.LOC$,	&
+			CHART.CF.CODE$,	&
+			CHART.WC.CODE$;	&
+
+240	PRINT #CH%, CLRBOT$; 'Change:'; &
+\	INP$=CVT$$(FNINP$(CH%,128%,' ',2%,0%),32%) &
+\	GOTO 265 IF INP$='' OR INP$='%^C' &
+\	LOOP%=VAL(INP$) &
+\	IF LOOP%=4% &
+	THEN	PRINT #CH% USING FNP$('07;35')+R.ON$+'\  \'+G.OFF$+ &
+			CLRBOT$+'Change type',CHART.TYPE$; &
+\		INP$=FNINP$(CH%,0%,'_',4%,0%) &
+\		LSET CHART.TYPE$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		PRINT #CH% USING FNP$('07;35')+'\  \',CHART.TYPE$; &
+
+242	IF LOOP%=5% &
+	THEN	PRINT #CH% USING FNP$('08;35')+R.ON$+'\\'+G.OFF$+ &
+			CLRBOT$+'Change div ',CHART.DIV$; &
+\		INP$=FNINP$(CH%,0%,'_',2%,0%) &
+\		LSET CHART.DIV$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		PRINT #CH% USING FNP$('08;35')+'\\',CHART.DIV$; &
+
+244	IF LOOP%=6% &
+	THEN	PRINT #CH% USING FNP$('09;35')+R.ON$+'\\'+G.OFF$+ &
+			CLRBOT$+ 'Change dept ',CHART.DEPT$; &
+\		INP$=FNINP$(CH%,0%,'_',2%,0%) &
+\		LSET CHART.DEPT$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		PRINT #CH% USING FNP$('09;35')+'\\',CHART.DEPT$; &
+
+246	IF LOOP%=7% &
+	THEN	PRINT #CH% USING FNP$('10;35')+R.ON$+'\\'+G.OFF$+ &
+			CLRBOT$+ 'Change loc ',CHART.LOC$; &
+\		INP$=FNINP$(CH%,0%,'_',2%,0%) &
+\		LSET CHART.LOC$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		PRINT #CH% USING FNP$('10;35')+'\\',CHART.LOC$; &
+
+248	IF LOOP%=8% &
+	THEN	PRINT #CH% USING FNP$('11;35')+R.ON$+'\  \'+G.OFF$+ &
+			CLRBOT$+ 'Change CF code ',CHART.CF.CODE$; &
+\		INP$=FNINP$(CH%,0%,'_',4%,0%) &
+\		LSET CHART.CF.CODE$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		PRINT #CH% USING FNP$('11;35')+'\  \',CHART.CF.CODE$; &
+
+250	IF LOOP%=9% &
+	THEN	PRINT #CH% USING FNP$('12;35')+R.ON$+'\  \'+G.OFF$+ &
+			CLRBOT$+ 'Change WC code ',CHART.WC.CODE$; &
+\		INP$=FNINP$(CH%,0%,'_',4%,0%) &
+\		LSET CHART.WC.CODE$=INP$ IF INP$<>'' AND INP$<>'%^C' &
+\		PRINT #CH% USING FNP$('12;35')+'\  \',CHART.WC.CODE$; &
+
+255	IF FNU%(CHART.CH%,CHART.BUF$) &
+	THEN	V$=FNMESS$(CH%,FNS%,' CHART.DAT',0%,-1%) &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1'); &
+\		V%=FNX%('',0%,'') &
+
+260	GOTO 240 &
+
+265	PRINT #CH%, CLRBOT$;FNP$('24;1'); &
+		'Please wait.  Creating indexes'; &
+
+270	RECORD.COUNT%=RECORD.COUNT%+1% &
+\	CHART.O$(RECORD.COUNT%)=CHART.TYPE$+CHART.DIV$+CHART.DEPT$+ &
+			CHART.LOC$+CHART.ACCNO$+CVT%$(TEMP%) &
+
+290	GOTO 230 IF FNN%(CHART.CH%)=0% &
+\	CHART.O$(LOOP%)=STRING$(18%,ASCII('D'))+CVT%$(-1%) &
+		FOR LOOP%=RECORD.COUNT%+1% TO TEMP.REC% &
+\	CHART.WC$(LOOP%),CHART.CASH$(LOOP%)=STRING$(12%,ASCII('D'))+CVT%$(-1%) &
+		FOR LOOP%=RECORD.COUNT%+1% TO TEMP.REC% &
+
+295	CHART.O$(0%)=CVT%$(TEMP.REC%)+CVT%$(20%)+'U'+CHR$(128%) &
+\	CHART.WC$(0%)=CVT%$(TEMP.REC%)+CVT%$(14%)+'U'+CHR$(128%) &
+\	CHART.CASH$(0%)=CVT%$(TEMP.REC%)+CVT%$(14%)+'U'+CHR$(128%) &
+\	CLOSE CHART.O%,CHART.WC%,CHART.CASH% &
+\	Q0$=SYS(CHR$(7%)) &
+\	Q5%=INSTR(1%,Q0$,CHR$(255%)) &
+\	Q2%=INSTR(1%,Q0$,CHR$(14%)) &
+\	Q2%=Q5%+12% IF Q2%=0% &
+\	Q0$=MID(Q0$+SPACE$(12%),Q5%,Q2%-Q5%) IF Q5% &
+\	Q0$="" IF Q5%=0% &
+\	Q3$=CVT%$(31000%)+PRJPRG$ &
+\	Q3$=Q3$+"  " &
+\	Q9$=CHR$(13%)+CHART.DEVICE$+"CHART.DAO"+ &
+		CHR$(13%)+CHART.DEVICE$+"CHART.DAC"+ &
+		CHR$(13%)+CHART.DEVICE$+"CHART.DAW"+ &
+		CHR$(13%)+CHR$(13%)+Q0$+ &
+		CHR$(14%) &
+\	Q$=LEFT(CHR$(LEN(Q3$))+Q3$+Q9$,127%) &
+\	Q$=SYS(CHR$(8%)+Q$) &
+\	CHAIN "ISM:FSTSRS.TSK" &
+
+300	IF FNO%(FINSTA.CH%,FINSTA.DEVICE$+'FINSTA.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'FINSTA.DAT',0%,-1%) &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1'); &
+\		V%=FNX%('',0%,'') &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(A0$(1%),128%) &
+\	CLOSE MENU.CH% &
+
+450	! &
+
+500	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+\	TEMP$='FINANCIAL STATEMENT SELECTION' &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,40%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(41%-LEN(COMPANY$));COMPANY$; &
+		FRAME$;FNP$('20;1');SPACE$(80%);G.OFF$;FNSR$('2;19'); &
+
+510	OPEN 'FINSTA.WRK' FOR OUTPUT AS FILE FINSTA.WRK% &
+
+600	IF FNG%(FINSTA.CH%,'') &
+	THEN	V$=FNMESS$(CH%,FNS%,'FINSTA.DAT',0%,-1%) &
+\		PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNP$('24;1'); &
+\		V%=FNX%('',0%,'') &
+
+610	FIELD #FINSTA.CH%+1%, FNL% AS TEMP$, &
+			04% AS FINSTA.PROMPT$, &
+			30% AS FINSTA.DESC$ &
+\	FINSTA.LOOP%=FINSTA.LOOP%+1% &
+\	POINTER%(FINSTA.LOOP%)=FNR(FINSTA.CH%+1%) &
+\	REP$(FINSTA.LOOP%)=CVT$$(FINSTA.PROMPT$,-1%) &
+\	DESC$(FINSTA.LOOP%)=CVT$$(FINSTA.DESC$,32%) &
+\	SELECTED%(FINSTA.LOOP%)=0% &
+
+620	IF FNN%(FINSTA.CH%)=0% &
+	THEN	GOTO 610 &
+
+1000	!-----------------------------------------------PROGRAM RESTART POINT &
+	LOOP.START%=1% &
+
+1010	DISPLAY%=2% &
+\	MORE$='' &
+\	PRINT #CH%, FNSR$('2;19');CLRBOT$; &
+\	FOR LOOP%=LOOP.START% TO FINSTA.LOOP% &
+\		IF DISPLAY%>19% &
+		THEN	MORE$='Next ' &
+\			GOTO 1025 &
+
+1015		IF LOOP.START%<>1% AND OPT$='N' &
+		THEN	PRINT #CH%, FNP$('19;80') &
+\			PRINT #CH%, FNP$('19;1'); &
+				R.ON$;' ';FNP$('19;80');' ';G.OFF$; &
+
+1020		TEMP%=DISPLAY% &
+\		TEMP%=19% IF LOOP.START%<>1% &
+\		PRINT #CH%, B.ON$; IF SELECTED%(LOOP%) &
+\		PRINT #CH%, FNP$(NUM1$(TEMP%)+';20'); &
+				'(';REP$(LOOP%);')'; &
+				FNP$(NUM1$(TEMP%)+';28'); &
+				DESC$(LOOP%); &
+\		PRINT #CH%, G.OFF$; IF SELECTED%(LOOP%) &
+\		DISPLAY%=DISPLAY%+1% &
+\	NEXT LOOP% &
+
+1025	SCREEN.START%=LOOP.START% &
+\	LOOP.START%=LOOP% &
+\	LOOP.START%=1% IF LOOP%=FINSTA.LOOP% &
+\	SCREEN.END%=LOOP.START%-1% &
+\	SCREEN.END%=FINSTA.LOOP% IF LOOP%=FINSTA.LOOP% &
+\	SCREEN.START%=FINSTA.LOOP%-17% IF LOOP%=FINSTA.LOOP% AND &
+		FINSTA.LOOP%>17% &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$; &
+		'COMMAND: Select Clear Print ';MORE$;'Restore Quit '; &
+\	OPT$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+
+1040	IF OPT$='Q' &
+	THEN	PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNSR$('1;24');FNP$('24;1'); &
+\		GOSUB 18200 !	KILL TEMP FILES &
+\		V%=FNX%('',0%,'') &
+
+1045	IF OPT$='P' &
+	THEN	PRINT #CH%, &
+			CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');'WAIT'; &
+			G.OFF$;FNSR$('1;24');FNP$('24;1'); &
+\		CLOSE FINSTA.WRK% &
+\		V%=FNX%('ISM:REPORT',0%,'FINSTA') &
+
+1050	GOTO 1000 IF OPT$='R' &
+\	GOTO 3000 IF OPT$='S' &
+\	GOTO 4000 IF OPT$='C' &
+\	GOTO 1010 IF OPT$='N' AND MORE$<>'' &
+\	GOTO 1030 &
+
+3000	!================================================================= &
+	! SELECT STATEMENT &
+	!================================================================= &
+	PRINT #CH%, CLRBOT$;FNP$('24;1');"Type 'ALL' to select all reports"; &
+		FNP$('21;1');'Select '; &
+\	INP$=FNINP$(CH%,0%,'_',4%,-1%) &
+\	GOTO 1030 IF INP$='' &
+\	GOTO 3020 IF CVT$$(INP$,-1%)='ALL' &
+\	GOTO 3010 IF REP$(TEST.LOOP%)=INP$ FOR TEST.LOOP% = 1% TO FINSTA.LOOP% &
+\	PRINT #CH%, FNP$('24;1');CLRLIN$;'Unable to find that statement'; &
+		FNP$('24;55');'Hit any key to continue'; &
+\	INP$=FNINP$(CH%,128%,' ',1%,-1%) &
+\	GOTO 3000 &
+
+3010	GOSUB 3100 &
+\	GOTO 3000 &
+
+3020	GOSUB 3100 FOR TEST.LOOP%=1% TO FINSTA.LOOP% &
+\	GOTO 3000 &
+
+3100	!-------------SELECT SUBROUTINE--------------------- &
+	RETURN IF SELECTED%(TEST.LOOP%) &
+\	IF FNG%(-FINSTA.CH%-1%, NUM1$(POINTER%(TEST.LOOP%))) &
+	THEN	V$=FNMESS$(CH%,FNS%,'FINSTA.DAT',0%,-1%) &
+\		GOTO 3000 &
+
+3120	FIELD #FINSTA.CH%+1%, FNL% AS TEMP$, &
+			04% AS FINSTA.PROMPT$, &
+			30% AS FINSTA.DESC$, &
+			50% AS FINSTA.REPTITLE$, &
+			20% AS FINSTA.CMDFIL$, &
+			01% AS FINSTA.TYPE$ &
+\	FIELD #FINSTA.CH%+1%, FNL% AS TEMP$, &
+			105%+(LOOP%-1%)*16% AS TEMP$,  &
+			16% AS FINSTA.INP$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+
+3130	PRINT #FINSTA.WRK%, '<>' &
+\	PRINT #FINSTA.WRK%, '<CMD>';CVT$$(FINSTA.CMDFIL$,-1%) &
+\	PRINT #FINSTA.WRK%, '<TITLE>';CVT$$(FINSTA.REPTITLE$,132%) &
+\	PRINT #FINSTA.WRK%, '<TYPE>';CVT$$(FINSTA.TYPE$,-1%) &
+\	FOR LOOP% = 1% TO 8% &
+\		IF FINSTA.INP$(LOOP%)<>'' &
+		THEN	PRINT #FINSTA.WRK%, '<INP>'; &
+				CVT$$(FINSTA.INP$(LOOP%),-1%) &
+
+3140	NEXT LOOP% &
+\	PRINT #FINSTA.WRK%, '<>' &
+
+3150	IF SCREEN.START%<=TEST.LOOP% AND TEST.LOOP%<=SCREEN.END% &
+	THEN	TEMP%=(TEST.LOOP%+2%)-SCREEN.START% &
+\		PRINT #CH%, B.ON$;FNP$(NUM1$(TEMP%)+';20'); &
+			'(';REP$(TEST.LOOP%);')'; &
+			FNP$(NUM1$(TEMP%)+';28'); &
+			FINSTA.DESC$;G.OFF$; &
+
+3160	SELECTED%(TEST.LOOP%)=-1% &
+\	RETURN &
+
+4000	!============================================================== &
+	! CLEAR FINSTA.WRK &
+	!============================================================== &
+	OPEN 'FINSTA.WRK' FOR OUTPUT AS FILE FINSTA.WRK% &
+\	SELECTED%(LOOP%)=0% FOR LOOP%=1% TO 200% &
+\	GOTO 1000 &
+
+18200	!============================================================== &
+	! KILL TEMP FILES &
+	!============================================================== &
+	KILL CHART.DEVICE$+'CHART.DAO' &
+
+18210	KILL CHART.DEVICE$+'CHART.DAC' &
+
+18220	KILL CHART.DEVICE$+'CHART.DAW' &
+
+18230	KILL CHART.DEVICE$+'FINSTA.WRK' &
+
+18240	RETURN &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME IF ERR=52% OR ERR=51% 					&
+\	RESUME 450 IF ERL=400 						&
+\	RESUME 1000 IF ERR=54% 						&
+\	RESUME 18210 IF ERL=18200					&
+\	RESUME 18220 IF ERL=18210					&
+\	RESUME 18230 IF ERL=18220					&
+\	RESUME 18240 IF ERL=18230					&
+
+19999	ON ERROR GOTO 0 						&
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=CHR$(155%)+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r' ! Scroll region &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,TEST.PRINT%)		&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+			" "+DESC$					&
+\		IF TEST.PRINT%						&
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$;	&
+			FNP$('24;55');	'Hit any key to continue.';	&
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30950	!=============================================================== &
+	! CALCULATE THE NUMBER OF SPACES TO PRINT FOR PERCENT COMPLETE &
+	! ============================================================== &
+	DEF*FNPC.SPACE$(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		SP%=1% &
+\		SP%=2% 	IF TEMP	< .99 &
+\		SP%=5% 	IF TEMP	< .49 &
+\		SP%=10% IF TEMP	< .19 &
+\		SP%=25% IF TEMP	< .09 &
+\		SP%=50% IF TEMP	< .03 &
+\		FNPC.SPACE$=SPACE$(SP%) &
+\	FNEND &
+
+30960	!=============================================================== &
+	! CALCULATE THE NUMBER TO USE TO PRINT NEXT PERCENT COMPLETE &
+	!=============================================================== &
+	DEF*FNPC(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		PC=INT(TOTREC/50.) &
+\		PC=INT(TOTREC/25.) IF TEMP	< .99 &
+\		PC=INT(TOTREC/10.) IF TEMP	< .49 &
+\		PC=INT(TOTREC/5.) IF TEMP	< .19 &
+\		PC=INT(TOTREC/2.) IF TEMP	< .09 &
+\		PC=INT(TOTREC/1.) IF TEMP	< .03 &
+\		FNPC=PC &
+\	FNEND &
+
+31000	FLAG%=-1% &
+\	GOTO 10 &
+
+32767	END &
+

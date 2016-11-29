@@ -1,0 +1,66 @@
+
+
+
+           SALES TAX FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: SJ....
+
+    KEY FILE NAME : STX(MMM).DAS   			DATA = 32
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Tax Type________________  	_01A/01___  	STX.TAXTYP$
+
+	 2 _Customer Number_________  	_06A/02___  	STX.CUSNUM$
+
+	 3 _Invoice Number__________  	_08A/08___  	STX.INVNUM$
+
+	 4 _Amount__________________  	_08F/16___  	STX.AMOUNT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =23, FROM 32, FREE = 9
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,79 @@
+
+
+
+           LOADSHEET FILE - INVENTORY SYSTEM
+           --------------------------------------------------------------------
+
+
+    KEY FILE NAME : INVmmm.yyT          KEY = 6 + 2	DATA = 64
+
+           NAME                         SIZE            VARIABLE     
+
+	 1 _PRODUCT CODE____________  	_06A/01___     INVROU.CODE$ 
+
+	 2 _DATE____________________  	_02I/07___     INVROU.DATE$
+
+	 3 _LOADSHEET NUMBER________  	_01A/09___     INVROU.LOAD$
+	 
+	 4 _ROUTE___________________  	_02A/10___     INVROU.ROUTE$
+
+	 5 _TYPE____________________  	_01A/12___     INVROU.CUSVEN$  
+						       C-CUSTOMER
+						       P-PRODUCTION	
+						       V-VENDOR
+
+	 6 _CUSTOMER OR VENDOR NUMBER  	_06A/13___     INVROU.CVNUM$
+
+	 7 _QUANTITY_________________  	_08F/19___     INVROU.QTY$
+
+	 8 _COST____________________	_08F/27___     INVROU.COST$
+
+    -------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 34, FROM 64, FREE = 30
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

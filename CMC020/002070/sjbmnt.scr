@@ -1,0 +1,24 @@
+12345678901234567890123456789012345678901234567890123456789012345678901234567890
+2(01)*Order #   XXXXXX                  (11) Inv Date  xx/xx/xx
+3(02) Sold to:  XXXXXX                  (12) Shp Date  XX/XX/XX
+4(03) Name XXXXXXXXXXXXXXXXXXXXXX       (13) Shp Loc   XXXXXXXX
+5(04) Add1 XXXXXXXXXXXXXXXXXXXXX        (14) Carrier#  XXXXXX
+6(05) Add2 XXXXXXXXXXXXXXXXXXXX         (15) Broker #  XXXXXX
+7(06) City XXXXXXXXXXXXXXX              (16) Label #   XXXXXX
+8(07) St   XX  (08) Zip  XXXXXXXXXX     (17) Sold by   XXXXXX
+9(09) Country XXXX                      (18) Cust PO   XXXXXXXXX
+0(10) A/R ACCT XXXXXXXX                 (19) Terms     XXXXXXXXX
+1       A        B          C         D         E         F        G
+2ITM|PROD #|DESCRIPTION |ACCT #  |     QTY|    PRICE|      EXT   BROKER
+3###|XXXXXX|XXXXXXXXXXXX|XXXXXXXX|#####.##|######.##|######.##|#####.##
+4###|XXXXXX|XXXXXXXXXXXX|XXXXXXXX|#####.##|######.##|######.##|#####.##
+5###|XXXXXX|XXXXXXXXXXXX|XXXXXXXX|#####.##|######.##|######.##|#####.##
+6###|XXXXXX|XXXXXXXXXXXX|XXXXXXXX|#####.##|######.##|######.##|#####.##
+7
+8
+9
+023456789012345678901234567890123456  A/R AMT  ######.##       Bal   ######.##
+COMMAND: Add Erase Change Blank Default Find Next Restore Quit
+2
+3
+4

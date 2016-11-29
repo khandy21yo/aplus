@@ -1,0 +1,795 @@
+10	!---------------------------------------------------------------
+	!	General	Ledger Printer	
+	!				
+	!	GLRMPR.B2S	V1.0	February 1985
+	!				
+	! Author - Randall Beard, Computer Management Center, Inc.
+	!          Rick Owen, Computer Management Center, Inc.
+	!
+	! Files-PPRINT.DAT	-ISAM	Printing Info File
+	!	CONTRL.DAT	-ISAM	Control File
+	!	GLRMS.DAT 	-RMS	Temporary Index file
+	!	CHART.DAT     	-ISAM	Chart of Accounts File
+	!
+	!	Note: The ISAM files are opened as virtual arrays and
+	!		processed sequentially as elements of the
+	!		virtual array.
+	!				
+	!---------------------------------------------------------------
+	! 				
+	! 				
+	!		      Copyright (c) 1986 by 
+	!	  Computer Management Center, Idaho Falls, Idaho
+	! 				
+	! This software is furnished under a license and may be used
+	! and copied only in accordance with the terms of such license 
+	! and with the inclusion of the above copyright notice.  This 
+	! software or any other copies therof may not be provided or 
+	! otherwise made available to any other person.  No title to 
+	! and ownership of the software is hereby transferred.
+	! 				
+	! The information in this software is subject to change without
+	! notice and should not be construed as a committment by 
+	! Computer Management Center. 	
+	! 				
+	! CMC assumes no responsibility for the use or reliability of 
+	! its software on equipment which is not supported by CMC. 
+	! 				
+	!---------------------------------------------------------------
+	DECLARE STRING FUNCTION FNINP(WORD, WORD, STRING, WORD, WORD)
+	DECLARE STRING FUNCTION FNP(STRING)
+	DECLARE STRING FUNCTION FNSR(STRING)
+	DECLARE STRING FUNCTION FNMESS(WORD, WORD, STRING, WORD, WORD)
+	DECLARE REAL FUNCTION FNZ(REAL)
+	DECLARE STRING FUNCTION FNM1(WORD)
+	DECLARE STRING FUNCTION FNPAGE(WORD, WORD, WORD, STRING, STRING)
+	DECLARE WORD FUNCTION FNPA.GE
+	DECLARE WORD FUNCTION FNLINE
+	DECLARE WORD FUNCTION FNCOMP(STRING, STRING)
+	DECLARE WORD FUNCTION FNFIND(STRING, WORD)
+
+20	!
+	!	RUN entry
+	!
+	!	PRINT '?Please run REPORT'
+	!	M$ = SYS(CHR$(9%))
+	!
+	M$ = SYS(CHR$(7%)) 		
+	REP.NUM$ = MID(M$,INSTR(1%,M$,'~') + 1%,6%) 
+
+30	ON ERROR GOTO 19000
+	JUNK$ = SYS(CHR$(6%) + CHR$(-7%))
+	JUNK$ = SYS(CHR$(6%) + CHR$(9%))
+	KBN% = ASCII(MID(JUNK$,2%,1%))/2%
+	TEMP$ = SYS(CHR$(12%))
+	PRJPRG$ = MID(TEMP$,23%,1%) + MID(TEMP$,24%,1%) + &
+		NUM1$(ASCII(MID(TEMP$,25%,1%))) + ':' + &
+		'[' + NUM1$(ASCII(MID(TEMP$,6%,1%))) + ',' + &
+		NUM1$(ASCII(MID(TEMP$,5%,1%))) + ']'
+	PRGRM$ = RAD$(ASCII(MID(TEMP$,7%,1%)) + SWAP%(ASCII(MID(TEMP$,8%,1%)))) + &
+		RAD$(ASCII(MID(TEMP$,9%,1%)) + SWAP%(ASCII(MID(TEMP$,10%,1%)))) +  &
+			'.' + &
+		RAD$(ASCII(MID(TEMP$,11%,1%)) + SWAP%(ASCII(MID(TEMP$,12%,1%))))
+
+60	CH%,OUTPUT.CH = 1%		! Keyboard channel
+	OPEN 'KB:' AS FILE 1%, MODE 8% + 256%
+					!    8% - Echo Control
+					!   16% - Disable hibernation, Cntl-C
+
+70	ESC$ = CHR$(155%)			! Escape code for VT100 control
+	CLSCN$ = ESC$ + '[H' + ESC$ + '[J'	! Clear screen
+	COLM.ON$ = ESC$ + '[?3h'		! 132 Column mode
+	COLM.OFF$ = ESC$ + '[?3l'		! 80 Column mode
+	CLRLIN$ = ESC$ + '[2K'		! Erase entire line
+	ENTER.COPY$ = ESC$ + '[5i'		! Enter media copy
+	EXIT.COPY$ = ESC$ + '[4i'		! Exit media copy
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10
+ !	DROP.DEAD.DATE$ = '        '
+ !	VERSION.NO$ = 'V1.0'
+ !	IF DROP.DEAD.DATE$<>''
+ !	THEN
+ !		IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%) + CHR$(20%) + CHR$(0%) +  &
+ !			CHR$(0%) + CHR$(1%) + CHR$(SWAP%(1%))),7%,8%)
+ !		THEN
+ !			MESG$ = MID(SYS(CHR$(6%) + CHR$(9%) + CHR$(47%)),3%,30%)
+ !			PRINT #CH%, MESG$;
+ !			V$ = SYS(CHR$(9%))
+ !		END IF
+ !	END IF
+
+100	DECLARE WORD CONSTANT &
+		PPRINT.CH               = 02, &
+		DEVICE.CH               = 03, &
+		GL.CH                   = 06, &
+		CHART.CH                = 07, &
+		CHART.DATA.CH           = 05, &
+		CONTRL.CH               = 08, &
+		MENU.CH	                = 12, &
+		NL.CH                   = 12
+
+110	DECLARE STRING MONTH(15%)
+
+120	GLRMS.CH% = 2%
+
+150	OPEN "PPRINT.DA1" FOR INPUT AS FILE PPRINT.CH, VIRTUAL
+	DIM #PPRINT.CH, PPRINT$(1000) = 512%
+	NUM.PPRINT% = CVT$%(PPRINT$(0%))
+	OPEN "NL:" AS FILE NL.CH, RECORDSIZE 512%
+	FIELD #NL.CH,512% AS PPRINT.BUFFER$
+	FOUND_IT% = 0%
+
+160	FOR LOOP% = 1% TO NUM.PPRINT%
+		IF LEFT$(PPRINT$(LOOP%),LEN(REP.NUM$)) = REP.NUM$
+		THEN
+			FOUND_IT% = LOOP%
+		END IF
+	NEXT LOOP%
+	IF FOUND_IT% = 0%
+	THEN
+		V$ = FNMESS(CH%,5%,'PPRINT.DAT  ' + REP.NUM$,0%,-1%)
+		GOTO Exit_program
+	END IF
+
+170	FIELD #NL.CH, 6% AS PPRINT.MUNG$, &
+		20% AS PPRINT.REPDESC$, &
+		30% AS PPRINT.MUNG$, &
+		01% AS PPRINT.HPITCH$, &
+		01% AS PPRINT.VPITCH$, &
+		01% AS PPRINT.LPAGE$, &
+		20% AS PPRINT.OUTDEV$, &
+		06% AS PPRINT.SPOOLR$, &
+		02% AS PPRINT.SPAGE$, &
+		02% AS PPRINT.EPAGE$, &
+		02% AS PPRINT.COPIES$, &
+		20% AS PPRINT.REPDATE$, &
+		44% AS JUNK$, &
+		20% AS PPRINT.UDF$(1%), &
+		44% AS JUNK$, &
+		20% AS PPRINT.UDF$(2%), &
+		44% AS JUNK$, &
+		20% AS PPRINT.UDF$(3%), &
+		44% AS JUNK$, &
+		20% AS PPRINT.UDF$(4%), &
+		44% AS JUNK$, &
+		20% AS PPRINT.UDF$(5%)
+	FIELD #NL.CH,441% AS JUNK$, &
+			03% AS B.SYSNAM$, &
+			08% AS MUNG$, &
+			01% AS B.DISPLAY$
+	LSET PPRINT.BUFFER$ = PPRINT$(FOUND_IT%)
+	REPDESC$ = PPRINT.REPDESC$ + ''
+	HPITCH% = ASCII(PPRINT.HPITCH$)
+	VPITCH% = ASCII(PPRINT.VPITCH$)
+	LIN.PER.PAGE% = ASCII(PPRINT.LPAGE$)
+	OUTDEV$ = PPRINT.OUTDEV$ + ''
+	SPAGE% = CVT$%(PPRINT.SPAGE$)
+	EPAGE% = CVT$%(PPRINT.EPAGE$)
+	COPIES% = CVT$%(PPRINT.COPIES$)
+	REPDATE$ = EDIT$(PPRINT.REPDATE$,132%)
+	DISPLAY$  = B.DISPLAY$ + ''
+
+180	FROM.ITEM$ =  'ALL'
+	FROM.ITEM$ =  EDIT$(PPRINT.UDF$(1%),132%) IF PPRINT.UDF$(1%)<>''
+	TO.ITEM$ =  EDIT$(PPRINT.UDF$(2%),132%)
+	ZERO.BALANCE$ = EDIT$(PPRINT.UDF$(3%),132%)
+	CNTRL.FLAG$ = EDIT$(PPRINT.UDF$(4%),132%)
+	WLDCRD$ = EDIT$(PPRINT.UDF$(5%),-1%)
+
+190	CLOSE PPRINT.CH
+	CLOSE NL.CH
+	OPEN "NL:" AS FILE NL.CH, RECORDSIZE 256%
+	FIELD #NL.CH, 256% AS CHART.BUFFER$
+	FIELD #NL.CH, &
+		8% AS CHART.ACCNO$, &
+		40% AS CHART.DESC$, &
+		2% AS CHART.CODE$, &
+		2% AS CHART.MONTH$, &
+		18% AS TEMP$, &
+		8% AS CHART.LAST$, &
+		8% AS CHART.CURRENT$, &
+		8% AS BACKUP$, &
+		8%*13% AS TEMP$, &
+		32% AS TEMP$, &
+		1% AS FLAG$, &
+		1% AS CHART.PRTFLAG$, &
+		4% AS TYP$, &
+		2% AS DIV$, &
+		2% AS DEP$, &
+		2% AS LOC$ &
+\	FIELD #NL.CH, 86%+8%*M% AS TEMP$, &
+		8% AS MONTH(M%) FOR M%=1% TO 13% &
+
+195	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH, VIRTUAL
+	DIM #12%, A0$(1%) = 64%
+	COMPANY$ = EDIT$(RIGHT(A0$(1%),2%),128%)
+	CLOSE MENU.CH
+
+200	OPEN 'DEVICE.DA1/RO' FOR INPUT AS FILE DEVICE.CH, VIRTUAL
+	DIM #DEVICE.CH,DEVICES$(32767%) = 64%
+	NUMBER_OF_DEVICES% = CVT$%(DEVICES$(0%))
+	FOR LOOP% = 1% TO NUMBER_OF_DEVICES%
+		FILE_NAME$ = EDIT$(LEFT$(DEVICES$(LOOP%),6%),-1%)
+		SELECT FILE_NAME$
+
+			CASE 'CONTRL'
+			  CONTRL.DEVICE$ = EDIT$(MID(DEVICES$(LOOP%),7%,20%),-1%)
+	
+			CASE 'GLMMM'
+			  GL.DEVICE$ = EDIT$(MID(DEVICES$(LOOP%),7%,20%),-1%) 
+	
+			CASE 'GLRMS'
+			  GLRMS.DEVICE$ = EDIT$(MID(DEVICES$(LOOP%),7%,20%),-1%)
+
+			CASE 'CHART'
+			  CHART.DEVICE$ = EDIT$(MID(DEVICES$(LOOP%),7%,20%),-1%)
+
+		END SELECT
+	NEXT LOOP%
+	CLOSE DEVICE.CH
+
+300	! 
+	!	Open the control FILE to determine when the fiscal year starts, and what years to look for
+	!
+	OPEN CONTRL.DEVICE$ + 'CONTRL.DA1/RO' FOR INPUT AS FILE CONTRL.CH, VIRTUAL
+	DIM #CONTRL.CH,CONTROL$(32767%) = 64%
+	NUMBER_OF_CONTROLS% = CVT$%(CONTROL$(0%))
+	FOUND_IT% = 0%
+	FOR LOOP% = 1% TO NUMBER_OF_CONTROLS%
+		IF LEFT$(CONTROL$(LOOP%),6%) = 'CHART '
+		THEN
+			FOUND_IT% = -1%
+			NEX.YEAR%,YEAR% = CVT$%(MID(CONTROL$(LOOP%),21%,2%))
+			LAST% = CVT$%(MID(CONTROL$(LOOP%),9%,2%))
+			FF% = CVT$%(MID(CONTROL$(LOOP%),17%,2%))
+			BEG.BAL% = FF% - 1%
+			IF BEG.BAL% = 0%
+			THEN
+				BEG.BAL% = 12%
+			END IF
+			SUMMARY.TOTAL = CVT$F(MID(CONTROL$(LOOP%),49%,8%))
+			SUMMARY.ACCT$ = RIGHT(CONTROL$(LOOP%),57%) + ''
+			NEX% = LAST% + 1%
+			NEX% = 1% IF LAST% = 12%
+			NEX.YEAR% = NEX.YEAR% + 1% IF NEX% = 1%
+			NEX.YEAR% = 0% IF NEX.YEAR%>99%
+			NEW.YEAR% =  (NEX% = FF%)
+			FILE$ = EDIT$(GLRMS.DEVICE$ + 'GLRMS.DAT',-1%)
+			SIZE% = CVT$%(MID(CONTROL$(LOOP%),12%,2%))
+			K$ = NUM1$(LAST%)
+			K$ = '0' + K$ IF LEN(K$) = 1%
+		END IF
+	NEXT LOOP%
+	CLOSE CONTRL.CH
+
+	IF NOT(FOUND_IT%)
+	THEN
+		V$ = FNMESS(CH%,5%,'CONTRL.DAT',0%,-1%) 
+		GOTO Exit_program
+	END IF
+
+330	MAP (GLYEAR) &
+	  GL.ACCNO$ = 8,  GL.SOURCE$ = 2, GL.REFNO$ = 16, GL.TRANDAT$ = 8, &
+	  GL.DESC$ = 26,  GL.AMOUNT,    GL.XREFNO$ = 6, GL.POSTIM$ = 2,  &
+	  GL.POSDAT$ = 8, GL.BNKCDE$ = 6, GL.CKNO$ = 8,   GL.VCHRNO$ = 6, &
+	  GL.SUBACC$ = 6, GL.PHASE$ = 6,  GL.REGQTY,    GL.PREQTY, &
+	  GL.UPDATE%
+
+350	OPEN CHART.DEVICE$ + 'CHART.DAT/RO' FOR INPUT AS FILE CHART.CH, VIRTUAL
+	DIM #CHART.CH, CHART.KEY$(32767%) = 16%
+
+	OPEN CHART.DEVICE$ + 'CHART.DA1/RO' FOR INPUT &
+		AS FILE CHART.DATA.CH, VIRTUAL
+	DIM #CHART.DATA.CH, CHART.REC$(32767%) = 256%
+
+	CHART.KEY1% = CVT$%(CHART.KEY$(0%))
+	CHART.REC% = CVT$%(CHART.REC$(0%))
+	IF CHART.KEY1% <> CHART.REC%
+	THEN
+		V$ = FNMESS(CH%,29%,'CHART.DAT/1',0%,-1%)
+		GOTO Exit_program
+	END IF
+	KEY.STATUS$ = MID(CHART.KEY$(0%),5%,1%)
+	IF KEY.STATUS$ = 'X' OR KEY.STATUS$ = 'U'
+	THEN
+		V$ = FNMESS(CH%,138%,'CHART.DAT/1',0%,-1%)
+		GOTO Exit_program
+	END IF
+
+450	! ERROR LINE
+
+	DIM CHART.KEY%(1300%)
+
+	CHART.KEY% = 0%
+
+	START.TEMP$ = ''
+	IF FROM.ITEM$<>'ALL'
+	THEN
+		START.TEMP$ = SPACE$(8%-LEN(FROM.ITEM$)) + FROM.ITEM$
+	END IF
+
+	END.TEMP$ = STRING$(8%, 255%)
+	IF TO.ITEM$<>''
+	THEN
+		END.TEMP$ = SPACE$(8%-LEN(TO.ITEM$)) + TO.ITEM$
+	END IF
+
+	FOR I% = 1% TO CHART.KEY1%
+
+ !		PRINT USING "Dump ### \      \ #####", I%, CHART.KEY$(I%), &
+ !			CVT$%(MID(CHART.KEY$(I%), 9%, 2%))
+
+		TEMP1% = CVT$%(MID(CHART.KEY$(I%), 9%, 2%))
+		TEMP1$ = LEFT(CHART.KEY$(I%), 8%)
+
+		IF (TEMP1% > 0%) AND (TEMP1$ >= START.TEMP$) AND &
+			(TEMP1$ <= END.TEMP$)
+		THEN
+			IF FNCOMP(EDIT$(TEMP1$, -1%), WLDCRD$) <> 0% OR &
+				WLDCRD$ = ''
+			THEN
+				CHART.KEY% = CHART.KEY% + 1%
+				CHART.KEY%(CHART.KEY%) = TEMP1%
+			END IF
+		END IF
+
+	NEXT I%
+
+
+510	TITLE$ = 'G E N E R A L  L E D G E R'
+	REPDATE$ = 'AS OF THE END OF ' + FNM1(NEX%) + ', ' + NUM1$(NEX.YEAR%)
+	PAGE.TOP$ = STRING$(3%,10%) + CHR$(13%) +  &
+		'Date: ' + DATE$(0%) + SPACE$(52-LEN(COMPANY$)/2%) +  &
+		COMPANY$ + SPACE$(55%-LEN(COMPANY$)/2%) + 'Page <<###>>' +  &
+		CHR$(10%) + CHR$(13%) +  &
+		'Time: ' + TIME$(0%) + SPACE$(52%-LEN(TITLE$)/2%) +  &
+		TITLE$ + SPACE$(58%-LEN(TITLE$)/2%) + 'V1.0' +  &
+		CHR$(10%) + CHR$(13%) + SPACE$(66%-LEN(REPDATE$)/2%) + REPDATE$ +  &
+		STRING$(2%,10%) + CHR$(13%) +  &
+		STRING$(131%,61%) + CHR$(10%) + CHR$(13%)
+	PAGE.TOP1$ = 	'ACCT #' +  &
+			'   DATE' +  &
+			'     SC' +  &
+			'  REFERENCE' +  &
+			'       DESCRIPTION' +  &
+			'              SUBACC' +  &
+			' XREF #' +  &
+			' CHECK' +  &
+			'    VOUCHER' +  &
+			'            CURRENT' +  &
+			'     YEAR-TO-DATE'
+	USE.1$ = 		'\      \ ' +  &
+			'\      \ ' +  &
+			'\\  ' +  &
+			'\             \ ' +  &
+			'\                      \ ' +  &
+			'\    \ ' +  &
+			'\    \ ' +  &
+			'\      \ ' +  &
+			'\    \' +  &
+			'      ###,###,###.##-'
+	USE.2$ = 		'\      \' +  &
+			' \                                     \' +  &
+			STRING$(67%,32%) +  &
+			'###,###,###.##-'
+	USE.3$ = 		STRING$(98%,32%) +  &
+			'###,###,###.##- *' +  &
+			'###,###,###.##-!'
+	USE.4$ = 		STRING$(66%,32%) +  &
+			'TOTAL' +  &
+			STRING$(23%,45%) + '>                    ' +  &
+			'###,###,###.##-'
+	PAGE.BOT$ = STRING$(6%,10%)
+	BOT.MARGIN% = 7%
+	MORE.LINES% = 2%
+
+10000	IF DISPLAY$<>'Y'
+	THEN
+		CLOSE CH%
+		RESET.CH = 1%
+		TEMP.CH  = 12%
+		OPEN OUTDEV$ AS FILE OUTPUT.CH, MODE 2%
+		IF SPAGE%>1%
+		THEN
+			OPEN 'NL:' AS FILE TEMP.CH
+			OUTPUT.CH = TEMP.CH
+		END IF
+	END IF
+
+17000	!-------------------------------------------------OUTPUT REPORT
+	PAGE.BREAK% = LIN.PER.PAGE%-BOT.MARGIN%
+	CHART.KEY.RECORD% = 1%
+
+17005	OPEN FILE$ FOR INPUT AS FILE GL.CH, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GLYEAR, &
+		PRIMARY KEY (GL.ACCNO$, GL.TRANDAT$) DUPLICATES, &
+		ACCESS MODIFY &
+		
+17007	CHART.RECORD% = CHART.KEY%(CHART.KEY.RECORD%)
+
+	IF DISPLAY$ = 'Y'
+	THEN
+		PRINT #OUTPUT.CH, CLSCN$;COLM.ON$;FNSR('2;19');PAGE.TOP1$; &
+			FNP('19;1');
+	ELSE
+		PRINT #OUTPUT.CH, ENTER.COPY$; &
+			FNPAGE(LIN.PER.PAGE%,0%,1%,PAGE.TOP$ +  &
+			PAGE.TOP1$ + CHR$(10%) + CHR$(13%),'');
+		LINE.COUNT% = FNLINE
+	END IF
+
+17010	!	GOTO 17350 IF CHART.RECORD% = -1%
+
+17030	LSET CHART.BUFFER$ = CHART.REC$(CHART.RECORD%)
+
+	CHART.BEGBAL$ = MONTH(BEG.BAL%)
+	BEGBAL = CVT$F(CHART.BEGBAL$)
+	BEGBAL = 0. IF NEW.YEAR% AND INSTR(1%,'RE',LEFT$(CHART.CODE$,1%))
+	BEGBAL = BEGBAL + SUMMARY.TOTAL IF CHART.ACCNO$ = SUMMARY.ACCT$ &
+		AND NEW.YEAR%
+	SUMMARY.TOTAL = 0. IF CHART.ACCNO$ = SUMMARY.ACCT$
+	CNGBAL = 0.
+	FOUND% = 0%
+
+17035	GET #GL.CH, KEY #0 GE CHART.ACCNO$
+
+	IF CHART.ACCNO$ = GL.ACCNO$
+	THEN
+		FOUND% = -1%
+		GL.TRANDAT$ = MID$(GL.TRANDAT$,5%,2%) + '/' + &
+			MID$(GL.TRANDAT$,7%,2%) + '/' + &
+			MID$(GL.TRANDAT$,3%,2%)
+	END IF
+
+ Error_resume1:
+
+	GOTO 17350 IF FNZ(BEGBAL) = 0. AND (FOUND% = 0%) AND ZERO.BALANCE$ = 'N'
+
+	PRINT #OUTPUT.CH USING USE.2$, &
+		EDIT$(CHART.ACCNO$,-1%), &
+		EDIT$(CHART.DESC$,4%), &
+		FNZ(BEGBAL)
+	LINE.COUNT% = LINE.COUNT% + 1%
+	GOTO 17300 IF (FOUND% = 0%)
+	LSET CHART.PRTFLAG$ = '' IF CNTRL.FLAG$<>'Y'
+	TEST.DATE$ = ''
+	SUM.AMOUNT = 0.
+	SUM.COUNT% = 0%
+	SUM.ACCNO$ = ''
+	TEST.DATE$ = ''
+
+17050	IF GL.ACCNO$ <> CHART.ACCNO$
+	THEN
+		GOTO 17300
+	ELSE
+		IF INSTR(1%,'23',CHART.PRTFLAG$)
+		THEN
+			GOSUB 17700 IF GL.TRANDAT$<>TEST.DATE$ AND &
+				TEST.DATE$<>'' AND CHART.PRTFLAG$ = '2'
+			GOTO 17400 IF END.FLAG%
+			TEST.DATE$ = GL.TRANDAT$ + ''
+			SUM.AMOUNT = SUM.AMOUNT + GL.AMOUNT
+			SUM.COUNT% = SUM.COUNT% + 1%
+			SUM.ACCNO$ = GL.ACCNO$ + ''
+			GOTO 17200
+		END IF
+	END IF
+
+17100	TRAN = GL.AMOUNT
+	PRINT #OUTPUT.CH USING USE.1$, &
+		EDIT$(GL.ACCNO$,-1%), &
+		GL.TRANDAT$, &
+		EDIT$(GL.SOURCE$,140%), &
+		EDIT$(GL.REFNO$,140%), &
+		EDIT$(GL.DESC$,140%), &
+		EDIT$(GL.SUBACC$,140%), &
+		EDIT$(GL.XREFNO$,140%), &
+		EDIT$(GL.CKNO$,140%), &
+		EDIT$(GL.VCHRNO$,140%), &
+		FNZ(TRAN)
+	CNGBAL = CNGBAL + FNZ(TRAN)
+	LINE.COUNT% = LINE.COUNT% + 1%
+	GOSUB 17600
+	GOTO 17400 IF END.FLAG%
+
+17200	GET #GL.CH
+	GL.TRANDAT$ = MID$(GL.TRANDAT$,5%,2%) + '/' + &
+		      MID$(GL.TRANDAT$,7%,2%) + '/' + &
+		      MID$(GL.TRANDAT$,3%,2%)
+	GOTO 17050
+
+17300	GOSUB 17700 IF INSTR(1%,'23',CHART.PRTFLAG$)
+	PRINT #OUTPUT.CH USING USE.3$,	FNZ(CNGBAL), &
+					FNZ(BEGBAL + CNGBAL), &
+					'*'
+	PRINT #OUTPUT.CH
+	TOTAL = TOTAL + FNZ(BEGBAL + CNGBAL)
+	LINE.COUNT% = LINE.COUNT% + 2%
+	GOSUB 17600
+	GOTO 17400 IF END.FLAG%
+
+17350	CHART.KEY.RECORD% = CHART.KEY.RECORD% + 1%
+	IF CHART.KEY.RECORD% <=  CHART.KEY%
+ 	THEN
+ !		IF (CHART.KEY% < 32%)
+ !		THEN
+ !			JUNK$ = CHART.KEY$(64%)
+ !		ELSE
+ !			JUNK$ = CHART.KEY$(1%)
+ !		END IF
+
+ !		PRINT USING "Test ### \      \ #####", &
+ !			CHART.KEY.RECORD%, CHART.KEY$(CHART.KEY.RECORD%), &
+ !			CVT$%(MID(CHART.KEY$(CHART.KEY.RECORD%), 9%, 2%))
+
+		CHART.RECORD% = CHART.KEY%(CHART.KEY.RECORD%)
+
+		GOTO 17030
+	END IF
+
+17400	IF END.FLAG% = 0%
+	THEN
+		GOSUB 17600
+		PRINT #OUTPUT.CH
+		PRINT #OUTPUT.CH USING USE.4$,TOTAL
+		LINE.COUNT% = LINE.COUNT% + 2%
+	END IF
+
+17500	IF DISPLAY$<>'Y'
+	THEN
+		PRINT #OUTPUT.CH, FNPAGE(LIN.PER.PAGE%,LINE.COUNT%,FNPA.GE, &
+			'',PAGE.BOT$);
+	ELSE
+		PRINT #OUTPUT.CH, FNP('24;1');'End of report'; &
+			FNP('24;105');'Hit any key to continue';
+		INP$ = FNINP(CH%,128%,' ',1%,0%)
+	END IF
+
+17540	PRINT #OUTPUT.CH, EXIT.COPY$; IF DISPLAY$<>'Y'
+	PRINT #OUTPUT.CH, FNSR('1;24');COLM.OFF$; IF DISPLAY$ = 'Y'
+	CLOSE OUTPUT.CH
+	CHAIN "ISM:MENU"
+
+17600	!Perform the pagination
+	IF DISPLAY$<>'Y' AND LINE.COUNT% + MORE.LINES%>PAGE.BREAK%
+	THEN
+		END.FLAG% = -1% IF PAGE% >= EPAGE% AND EPAGE% <> 0%
+		RETURN IF END.FLAG%
+		PRINT #OUTPUT.CH, FNPAGE(LIN.PER.PAGE%,LINE.COUNT%, &
+			FNPA.GE,PAGE.TOP$ + PAGE.TOP1$ + CHR$(10%) + CHR$(13%), &
+			PAGE.BOT$);
+		LINE.COUNT% = FNLINE
+		IF SPAGE%>1%
+		THEN
+			IF SPAGE%<= PAGE%
+			THEN
+				OUTPUT.CH = RESET.CH
+				PRINT #OUTPUT.CH, ENTER.COPY$; &
+					FNPAGE(LIN.PER.PAGE%, &
+					0%,PAGE%,PAGE.TOP$ + PAGE.TOP1$ +  &
+					CHR$(10%) + CHR$(13%),'');
+				LINE.COUNT% = FNLINE
+				SPAGE% = 0%
+			END IF
+		END IF
+	END IF
+
+17650	IF DISPLAY$ = 'Y' AND LINE.COUNT%>15%
+	THEN
+		PRINT #OUTPUT.CH, FNP('24;105');'Hit any key to continue';
+		INP$ = FNINP(CH%,128%,' ',1%,1%)
+		LINE.COUNT% = 0%
+		PRINT #OUTPUT.CH, FNP('24;1');CLRLIN$;FNP('18;132')
+	END IF
+
+17670	RETURN
+
+17700	!----------------------------------PRINT SUMMARY ENTRY
+	PRINT #OUTPUT.CH USING USE.1$, &
+			EDIT$(SUM.ACCNO$,132%), &
+			TEST.DATE$, &
+			'VS', &
+			'', &
+			'NUMBER OF SUM ENTRIES ' + NUM1$(SUM.COUNT%), &
+			'', &
+			'', &
+			'', &
+			'', &
+			FNZ(SUM.AMOUNT)
+	CNGBAL = CNGBAL + FNZ(SUM.AMOUNT)
+	LINE.COUNT% = LINE.COUNT% + 1%
+	GOSUB 17600
+	RETURN
+
+19000	!------------------------------------------------ERROR TRAPPING
+	SELECT ERR
+	  CASE 5%
+	     SELECT ERL
+		CASE 150%
+		  V$ = FNMESS(CH%,5%,'PPRINT.DAT',0%,-1%)
+		  RESUME Exit_program
+		CASE 200%
+		  RESUME 300
+		CASE 335%
+		  V$ = FNMESS(CH%,5%,FILE$,0%,-1%)
+		  RESUME Exit_program
+		CASE 350%
+		  V$ = FNMESS(CH%,5%,'CHART.DAT',0%,-1%)
+		  RESUME Exit_program
+		CASE 195%
+		  V$ = FNMESS(CH%,5%,'MENU.FIL',0%,-1%)
+		  RESUME Exit_program
+	     END SELECT
+
+	  CASE 28%
+             JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) 
+	     RESUME Exit_program
+
+	  CASE 11%
+	     RESUME 17300 IF ERL = 17200%
+
+	  CASE 155%
+	     RESUME Error_resume1 IF ERL=17035%
+
+	  CASE 54%
+	     V$ = FNMESS(CH%,28%,'IN FNINP',0%,-1%)
+	     RESUME Exit_program
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+ Exit_program:
+	  PRINT #OUTPUT.CH, EXIT.COPY$; IF DISPLAY$<>'Y'
+	  PRINT #OUTPUT.CH, FNSR('1;24');COLM.OFF$; IF DISPLAY$ = 'Y'
+	  CLOSE OUTPUT.CH
+	  CHAIN "ISM:MENU" LINE 0%
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------&
+	!------------------------------------------------TERMINAL INPUT
+	DEF FNINP(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)
+		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); 
+		PRINT #CHN%, RECORD 256%,CHR$(KYP% + INPUTLEN%) + FILLCHAR$;
+		GET #CHN% 		
+		FIELD #CHN%, RECOUNT AS BUFFER$ 
+		BUFFER$ = '%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 
+		FNINP = EDIT$(BUFFER$,4%) 
+		V = SQR(-1) IF BUFFER$ = '%^C' AND TO.ERR% !^C Trappping
+	FNEND 				
+
+30200	DEF FNP(ROWCOL$) = ESC$ + "[" + ROWCOL$ + "H"	! Direct Cursor Address
+
+30210	DEF FNSR(BEGEND$) = CHR$(155%) + '[' + BEGEND$ + 'r' ! Scroll control
+
+30250	!-----------------------------------------------SYSTEM MESSAGES
+	DEF FNMESS(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)
+		MESG$ = MID(SYS(CHR$(6%) + CHR$(9%) + CHR$(ERRNUM%)),3%,30%) +  &
+			' ' + DESC$	
+		IF PRINT.TEST%		
+		THEN
+			PRINT #CHN%, FNP('24;1');CLRLIN$;MESG$; &
+				FNP('24;55');'Hit any key to continue.';
+			NW$ = FNINP(CHN%,128%,' ',1%,TO.ERR%)
+		END IF
+
+30260		FNMESS = MESG$		
+	FNEND 				
+
+30300	!-------------------------------------------------MISC FUNCTIONS
+
+30305	DEF WORD FNFIND(SEARCH.STRING$, KEY.NUM.REC%)
+		LSS% = LEN(SEARCH.STRING$)
+
+ Try_again:
+		FOR MID.SPOT% = 1% TO KEY.NUM.REC%
+			   IF LEFT$(CHART.KEY$(MID.SPOT%),LSS%) >= SEARCH.STRING$
+			   THEN
+				GOTO Found_it
+			   END IF
+		NEXT MID.SPOT%
+
+		EXIT_STATUS% = 0%
+		GOTO Exit_spot
+
+ Found_it:
+		EXIT_STATUS% = MID.SPOT%
+		GOTO Exit_spot
+
+ Exit_spot:
+		FNFIND = EXIT_STATUS%
+	FNEND
+
+30400	!-------------------------------------------------DATE HANDLERS
+
+30500	DEF FNZ(Y)
+		TEMP = Y
+		TEMP = -Y IF Y<0.
+		TEMP = INT(TEMP*100. + .51)/100.
+		TEMP = -TEMP IF Y<0.
+		FNZ = TEMP
+	FNEND
+
+30550	DEF FNM1(ARG%) =  &
+		MID('JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC',ARG%*3%-2%,3%)
+
+30600	!	********************************************************&
+	!	Print top and bottom of page 
+	!	Format : 		
+	!	PRINT FNPAGE(<LINES/PAGE>,<CURRENT LINE COUNT>,
+	!		<PAGE COUNT>,<TOP OF PAGE>,<BOTTOM OF PAGE>) 
+	!	FNPA.GE = PAGE COUNT 	
+	!	FNLINE = LINE COUNT 	
+	! 				
+	!	Written by Robert Peterson - July 1981 
+	!	Version 1 Edition 0 	
+	!	********************************************************&
+
+30610	DEF FNPAGE(Y0%,Y1%,Y2%,Y0$,Y1$) 
+		Y2$ = '' 			
+		Y2$ = STRING$(Y0%-(Y1% +  &
+			LEN(XLATE(Y1$,STRING$(10%,0%) + CHR$(10%)))),10%) &
+							IF Y1$<>''
+		PAGE.LINE% = LEN(XLATE(Y0$,STRING$(10%,0%) + CHR$(10%))) 
+		Y% = INSTR(1%,Y1$ + Y0$,'<<#') 
+		Y3% = INSTR(1%,Y1$ + Y0$,'#>>') 
+		Y$ = RIGHT(NUM1$(100000 + Y2%),8%-(Y3%-Y%)) 
+		Y3% = -3% IF Y% = 0% 	
+		PRINT #OUTPUT.CH, Y2$;LEFT$(Y1$ + Y0$,Y%-1%);Y$; &
+			RIGHT(Y1$ + Y0$,Y3% + 3%); 
+		PAGE% = Y2% 		
+	FNEND 				
+
+30650	DEF FNPA.GE = PAGE% + 1% 		
+
+30660	DEF FNLINE = PAGE.LINE% 		
+
+30900	!-------------------------------------------------------COMPARE
+	DEF FNCOMP(Y$,Y2$) 		
+		Y9% = 0% 			
+		Y9% = -1% IF Y2$ = '*' 	
+		Y2$ = Y2$ + ',' 		
+
+30920		IF Y9% = 0% 		
+		THEN
+			Y1$ = LEFT$(Y2$,INSTR(1%,Y2$,',')-1%) 
+			Y2$ = RIGHT(Y2$,LEN(Y1$) + 2%) 
+			Y1% = INSTR(1%,Y1$,'/') 
+			IF Y1% + INSTR(1%,Y1$,'?') = 0% 
+			THEN
+				Y9% = Y$ = Y1$ 
+			ELSE
+				IF Y1% 	
+				THEN
+					Y9% = LEFT$(Y1$,Y1%-1%)<= Y$ AND &
+							Y$<= RIGHT(Y1$, &
+						Y1% + 1%) 
+				ELSE
+					CHANGE EDIT$(LEFT$(Y$,30%),-1%) &
+								TO Y% 
+					CHANGE EDIT$(LEFT$(Y1$,30%),-1%) &
+								TO Y1% 
+					GOTO 30930 IF (Y%(Y3%)<>Y1%(Y3%))- &
+						(Y1%(Y3%) = 63%) &
+						FOR Y3% = 1% TO Y1%(0%) 
+					Y9% = -1% 
+				END IF
+			END IF
+		END IF
+
+30930		IF Y2$<>'' AND Y9% = 0% 	
+		THEN
+			GOTO 30920 	
+		ELSE
+			FNCOMP = Y9%
+		END IF
+
+30940	FNEND 				
+
+31000	! Chain entry 			
+	M$ = SYS(CHR$(7%)) 		
+	REP.NUM$ = MID(M$,INSTR(1%,M$,'~') + 1%,6%) 
+	GOTO 30 			
+
+32767	END

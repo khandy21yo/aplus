@@ -1,0 +1,66 @@
+
+
+
+           CUSTOM FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: CUS...
+
+    KEY FILE NAME : CUSTOM.DAT               KEY = 6 + 2   DATA = 256
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Number__________________  	_06A/01___  	CUSTOM.NUM$ 
+
+	 2 _Name____________________  	_25A/07___  	CUSTOM.NAME$ 
+
+	 3 _Address 1_______________  	_25A/32___  	CUSTOM.ADD1$
+
+	 4 _Address 2_______________  	_21A/57___  	CUSTOM.ADD2$ 
+
+	 5 _City____________________  	_15A/78___  	CUSTOM.CITY$
+
+	 6 _State___________________  	_02A/93___  	CUSTOM.STATE$
+
+	 7 _Country_________________  	_05A/95___  	CUSTOM.COUNTRY$
+
+	 8 _Zip Code________________  	_10A/100__  	CUSTOM.ZIP$
+
+	 9 _Phone Number____________  	_10A/110__  	CUSTOM.PHONE$
+
+	10 _Salesman________________  	_02A/120__  	CUSTOM.SLSMAN$
+
+	11 _Territory_______________  	_02A/122__  	CUSTOM.TERR$
+
+	12 _Location________________  	_02A/124__  	CUSTOM.LOC$
+
+	13 _Type____________________  	_02A/126__  	CUSTOM.TYPE$
+
+	14 _Code____________________  	_02A/128__  	CUSTOM.CODE$
+
+	15 _Tax Flag________________  	_01A/130__  	CUSTOM.TAXFLG$
+
+	16 _Sales Tax Number________  	_10A/131__  	CUSTOM.STAXNUM$
+
+	17 _Sales Tax Location______  	_02A/141__  	CUSTOM.STAXLOC$
+
+	18 _Balance Method__________  	_01A/143__  	CUSTOM.METHOD$
+							'O'=Open Item
+							'B'=Balance Forward
+
+	19 _Statement Flag__________  	_01A/144__  	CUSTOM.STMFLG$
+							'1'=Gets a statement
+							'2'=Doesn't get a 	
+								statement
+
+	20 _Alpha Sort Key__________   	_15A/145__	CUSTOM.ALPSRT$
+
+	21 _Service Charge__________	_01A/160__	CUSTOM.SERVICE$ (Y/N)
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =160, FROM 256, FREE = 96
+  
+
+
+
+

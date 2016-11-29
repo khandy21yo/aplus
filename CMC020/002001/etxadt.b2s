@@ -1,0 +1,388 @@
+10	!--------------------------------------------------------------- &
+	! &
+	! ETXADT.B2S	V1.0	March 1985 &
+	! &
+	! Author - Paul Cazier, Computer Management Center, Inc. &
+	! &
+	! Files Used -	ETXMNT.DAT  - ISAM	&
+	! Files Used -	ETXCRX.DAT  - ISAM	&
+	! Files Used -	GL(MMM.YY)S  - ISAM	&
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies thereof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+\	JUNK% = CTRLC &
+\	JUNK$ = SYS(CHR$(6%) + CHR$(16%) + CHR$(0%) + CHR$(255%) + &
+		CHR$(81%) + STRING$(5%,0%) + CHR$(255%) + &
+		STRING$(14%,0%) + CHR$(255%) + CHR$(128%+26%) + &
+		STRING$(6%,0%)) &
+\	TEMP$ = SYS(CHR$(12%)) &
+\	PRJPRG$ = "[" + NUM1$( ASCII( MID( TEMP$,6%,1%))) + "," + &
+		NUM1$( ASCII( MID( TEMP$,5%,1%))) + "]" &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLREL$=ESC$+"[K"		! Cursor to end of line &
+\ 	B.ON$=ESC$+"[1m"		! Bold face on &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+\	R.ON$=ESC$+"[7m"      		! Reverse video &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	SCROLL.REGION$=ESC$+"[4;19r"	! Scroll region &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column &
+
+100	DIM TAXCAT$(50%), TAXTYP$(50%), PRDNUM$(50%) &
+\	DEVICE.CH%	= 02% &
+\	ETXMNT.CH%	= 02% &
+\	ETXCRX.CH%	= 04% &
+\	GL.CH%		= 06% &
+\	MENU.CH% = 12% &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/RO","")=0% &
+	THEN	ETXMNT.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"ETXMNT")=0% &
+\		ETXCRX.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"ETXCRX")=0% &
+\		GLMMM.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,"GLMMM")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	SYSDAT$=CVT$$(DATE$(0%),-1%) &
+\	YEAR$=RIGHT(SYSDAT$,8%) &
+\	PERIOD$=MID(SYSDAT$,4%,3%) &
+\	PRINT #CH%, CLSCN$;FNP$('4;28');'EXCISE TAX AUDIT'; &
+		FNP$('6;28');'Period? <';PERIOD$;'> :'; &
+\	N.PER$=CVT$$(FNINP$(CH%,0%,'_',3%,0%),-1%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,''); &
+			IF N.PER$='%^C' &
+\	PRINT #CH%, PERIOD$ IF N.PER$='' &
+\	N.PER$=STRING$(3%-LEN(N.PER$),ASCII('0'))+N.PER$ IF N.PER$<>'' &
+\	PRINT #CH%, FNP$('6;43');N.PER$ IF N.PER$<>'' &
+\	PERIOD$=N.PER$ IF N.PER$<>'' &
+
+310	PRINT #CH%, FNP$('8;28');'Year? <';YEAR$;'> :'; &
+\	N.YEAR$=CVT$$(FNINP$(CH%,0%,'_',2%,0%),-1%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,'') &
+			IF N.YEAR$='%^C' &
+\	PRINT #CH%, YEAR$ IF N.YEAR$='' &
+\	IF LEN(N.YEAR$)=2% THEN YEAR$=N.YEAR$ ELSE &
+		IF N.YEAR$<>'' THEN PRINT #CH%, FNP$('10;1');'Illegal format.' &
+\		PRINT #CH%, 'Enter the last two digits of the '+ &
+			'year' &
+\		PRINT #CH%, 'Example: For 1984 use "84"' &
+\		PRINT #CH%, 'Simply hit <RETURN> for this year.' &
+\		GOTO 310 &
+
+360	FILE.NAME$='ETX'+PERIOD$+'.'+YEAR$+'S' &
+\	IF FNO%(ETXMNT.CH%,ETXMNT.DEVICE$+FILE.NAME$,'/SF/CR:64','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'ETXMNT.DAS',0%,-1%) &
+\		GOTO 1045 &
+
+370	FILE.NAME$='GL'+PERIOD$+'.'+YEAR$+'S' &
+\	V%=FNO%(GL.CH%,GLMMM.DEVICE$+FILE.NAME$,'/SF/RO/NS','') &
+\	FILE.NAME$='GL'+PERIOD$+'.DAS' &
+			IF FNS% &
+\	V%=FNO%(GL.CH%,GLMMM.DEVICE$+FILE.NAME$,'/SF/RO/NS','') &
+			IF FNS% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,FILE.NAME$,0%,-1%) &
+\		GOTO 1045 &
+
+380	IF FNO%(ETXCRX.CH%,ETXCRX.DEVICE$+'ETXCRX.DAT','/RO','') &
+	THEN	V$=FNMESS$(CH%,FNS%,'ETXCRX.DAT',0%,-1%) &
+\		GOTO 1045 &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN "NL:" AS FILE 12%, RECORDSIZE 64% &
+\	FIELD #12%,	01% AS ETXMNT.TAXCAT$, &
+			01% AS ETXMNT.TAXTYP$, &
+			15% AS ETXMNT.PRONUM$, &
+			06% AS ETXMNT.CUSVEN$, &
+			08% AS ETXMNT.QTY$, &
+			02% AS ETXMNT.DATE$ &
+\	FIELD #12%, 64% AS ETXMNT.BUF$ &
+
+500	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+" "+FNP$(NUM1$(I%)+';80')+" " FOR I%=2% TO 19% &
+\	FRAME1$=FRAME1$+FNP$(NUM1$(I%)+';1')+" "+FNP$(NUM1$(I%)+';132')+" " FOR I%=2% TO 19% &
+\	COMMAND$  = " " &
+\	COMMAND$  = COMMAND$+RIGHT(NUM1$(I%+100%),2%) + " " &
+		FOR I%=1% TO LOOP.DATA% &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+	GOSUB 1060 &
+
+1030	CHNG.FLAG%=0% &
+\	PRINT #CH%, CLRBOT$;G.OFF$; &
+		FNP$('21;1');"COMMAND: Process Quit "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%,1%),32%) &
+
+1040	GOTO 1050 IF OPT$<>'Q' &
+
+1045	PRINT #CH%, CLSCN$;SCROLL.ON$;FNP$('1;75'); &
+		B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+		FNX%('',0%,''); &
+
+1050	GOTO 17000 IF OPT$="P" &
+\	GOTO 1030 &
+
+1060	TEMP$     = "EXCISE TAX FILE AUDIT" &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+			SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+			FNP$('20;1');SPACE$(80%);FRAME$; &
+			FNP$('21;1');G.OFF$; &
+\	RETURN &
+
+17000	!---------------------------------------------------------------- &
+	! READ CROSS REFERENCE FILE &
+	!---------------------------------------------------------------- &
+	IF FNG%(ETXCRX.CH%,'') &
+	THEN	PRINT #CH%, CLRBOT$; &
+			FNP$('24;1');'Cross reference file is empty.'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$ = FNINP$(CH%,128%,' ',1%,0%) &
+\		GOTO 1045 &
+
+17030	FIELD #ETXCRX.CH%+1%,	FNL% AS TEMP$, &
+				01% AS ETXCRX.TAXCAT$,	&
+				01% AS ETXCRX.TAX.TYPE$,&
+				15% AS ETXCRX.PRDNUM$,	&
+				06% AS ETXCRX.PRDCAT$,	&
+				08% AS ETXCRX.RATE$,	&
+				08% AS ETXCRX.LIAACC$	&
+\	WORK$ = CVT$$(ETXCRX.LIAACC$,-1%)+''  &
+\	IF INSTR(1%,TEST.LIAACC$,'!'+WORK$) = 0% &
+	THEN	TEST.LIAACC$ = TEST.LIAACC$ + '!'+WORK$ &
+
+17040	ETXCRX.LOOP% = ETXCRX.LOOP% + 1% &
+\	TAXCAT$(ETXCRX.LOOP%) = ETXCRX.TAXCAT$ + '' &
+\	TAXTYP$(ETXCRX.LOOP%) = ETXCRX.TAX.TYPE$ + '' &
+\	PRDNUM$(ETXCRX.LOOP%) = WORK$+CVT$$(ETXCRX.PRDNUM$,-1%) + '' &
+
+17090	GOTO 17030 IF FNN%(ETXCRX.CH%)=0% &
+
+17100	!--------------------------------------------------------------- &
+	! READ GL FILE &
+	!--------------------------------------------------------------- &
+	IF FNG%(GL.CH%,'') &
+	THEN	PRINT #CH%, CLRBOT$; &
+			FNP$('24;1');'G/L file is empty.'; &
+			FNP$('24;55');'Hit any key to continue'; &
+\		INP$ = FNINP$(CH%,128%,' ',1%,0%) &
+\		GOTO 1045 &
+
+17110	PRINT #CH%, CLRBOT$; &
+\	REC.CNT=FNT &
+\	PC$=FNPC.SPACE$(REC.CNT) &
+\	REC.CNT=FNPC(REC.CNT) &
+\	COUNTER%,PERCENT%=0% &
+\	COL%=10% &
+\	PRINT #CH%, FNP$('11;10');"0%   10%  20%  30%  40%  50%"; &
+		"  60%  70%  80%  90% 100%";FNP$('24;80'); &
+
+17130	PRINT #CH%, RECORD 256%, CHR$(129%); &
+\	GET #CH%, RECORD 8192% &
+
+17140	FIELD #CH%, RECOUNT AS TEST$ &
+\	GOTO 1000 IF INSTR(1%,TEST$,CHR$(3%)) &
+
+17150	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=REC.CNT &
+	THEN	COUNTER%=0% &
+\		PERCENT%=PERCENT%+LEN(PC$)*2% &
+\		IF PERCENT%<100% &
+		THEN	PRINT #CH%, FNP$('12;'+NUM1$(COL%));R.ON$;PC$; &
+				G.OFF$;FNP$('24;80'); &
+\			COL%=COL%+LEN(PC$) &
+
+17160	FIELD #GL.CH%, FNL% AS TEMP$,	&
+			08% AS GL.ACCNO$,	&
+			02% AS GL.SOURCE$,	&
+			16% AS GL.REFNO$,	&
+			02% AS GL.TRANDAT$,	&
+			26% AS GL.DESC$,	&
+			08% AS GL.AMOUNT$,	&
+			06% AS GL.XREFNO$,	&
+			02% AS GL.POSTIM$,	&
+			02% AS GL.POSDAT$,	&
+			06% AS GL.BNKCDE$,	&
+			08% AS GL.CKNO$,	&
+			06% AS GL.VCHRNO$,	&
+			06% AS GL.SUBACC$,	&
+			06% AS GL.PHASE$,	&
+			08% AS GL.REGQTY$,	&
+			08% AS GL.PREQTY$,	&
+			02% AS GL.UPDATE$,	&
+			04% AS TEMP$,		&
+			02% AS POINTER$		&
+\	GOTO 17190 IF CVT$%(POINTER$)<=0% OR GL.ACCNO$='DDDDDDDD' &
+\	GL.WORK$=CVT$$(GL.ACCNO$,-1%) &
+\	GOTO 17190 IF INSTR(1%,TEST.LIAACC$,GL.WORK$)=0% &
+
+17170	FOR LOOP% = 1% TO ETXCRX.LOOP% &
+\		IF PRDNUM$(LOOP%) = GL.WORK$ + CVT$$(GL.SUBACC$,-1%) &
+		THEN	LSET ETXMNT.TAXCAT$	= TAXCAT$(LOOP%) &
+\			LSET ETXMNT.TAXTYP$	= TAXTYP$(LOOP%) &
+\			LSET ETXMNT.PRONUM$	= GL.SUBACC$ &
+\			LSET ETXMNT.CUSVEN$	= GL.XREFNO$ &
+\			LSET ETXMNT.QTY$	= GL.REGQTY$ &
+\			LSET ETXMNT.DATE$	= GL.TRANDAT$ &
+\			IF FNA%(ETXMNT.CH%,ETXMNT.BUF$) &
+			THEN	PRINT #CH%, CLRBOT$; &
+					FNP$('24;1'); &
+					'Error';FNS%;'while addin to ETXMNT file.'; &
+					FNP$('24;55');'Hit any key to continue'; &
+\				INP$ = FNINP$(CH%,128%,' ',1%,0%) &
+\				GOTO 1045 &
+
+17180	NEXT LOOP% &
+
+17190	GOTO 17130 IF FNN%(GL.CH%)=0% &
+\	V% = FNX%('',0%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	IF ERR=28% &
+	THEN	V$=SYS(CHR$(6%)+CHR$(-7%)) &
+\		RESUME 1000 &
+
+19010	RESUME 450 IF ERL=400 &
+\	RESUME 17140 IF ERL = 17130 &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=CHR$(155%)+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r' ! Scroll control &
+
+30230	DEF*FNZ(Z)=INT(ABS(Z)*100.+.50001)/100.*SGN(Z) &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30500	DEF FNI%(Y)=Y &
+
+30900	!-------------------------------------------------------COMPARE &
+	DEF FNCOMP%(Y$,Y2$) &
+\		Y9%=0% &
+\		Y9%=-1% IF Y2$='*' &
+\		Y2$=Y2$+',' &
+
+30920		IF Y9%=0% &
+		THEN	Y1$=LEFT(Y2$,INSTR(1%,Y2$,',')-1%) &
+\			Y2$=RIGHT(Y2$,LEN(Y1$)+2%) &
+\			Y1%=INSTR(1%,Y1$,'/') &
+\			IF Y1%+INSTR(1%,Y1$,'?')=0% &
+			THEN	Y9%=Y$=Y1$ &
+			ELSE	IF Y1% &
+				THEN	Y9%=LEFT(Y1$,Y1%-1%)<=Y$ AND &
+							Y$<=RIGHT(Y1$, &
+						Y1%+1%) &
+				ELSE	CHANGE CVT$$(LEFT(Y$,30%),-1%) &
+								TO Y% &
+\					CHANGE CVT$$(LEFT(Y1$,30%),-1%) &
+								TO Y1% &
+\					GOTO 30930 &
+					IF (Y%(Y3%)<>Y1%(Y3%))-(Y1%(Y3%) &
+					=63%) FOR Y3%=1% TO Y1%(0%) &
+\					Y9%=-1% &
+
+30930		IF Y2$<>'' AND Y9%=0% &
+		THEN	GOTO 30920 &
+		ELSE	FNCOMP%=Y9% &
+
+30940	FNEND &
+
+30950	!=============================================================== &
+	! CALCULATE THE NUMBER OF SPACES TO PRINT FOR PERCENT COMPLETE &
+	! ============================================================== &
+	DEF*FNPC.SPACE$(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		SP%=1% &
+\		SP%=2% 	IF TEMP	< .99 &
+\		SP%=5% 	IF TEMP	< .49 &
+\		SP%=10% IF TEMP	< .19 &
+\		SP%=25% IF TEMP	< .09 &
+\		SP%=50% IF TEMP	< .03 &
+\		FNPC.SPACE$=SPACE$(SP%) &
+\	FNEND &
+
+30960	!=============================================================== &
+	! CALCULATE THE NUMBER TO USE TO PRINT NEXT PERCENT COMPLETE &
+	!=============================================================== &
+	DEF*FNPC(TOTREC) &
+\		TEMP=TOTREC/50. &
+\		PC=INT(TOTREC/50.) &
+\		PC=INT(TOTREC/25.) IF TEMP	< .99 &
+\		PC=INT(TOTREC/10.) IF TEMP	< .49 &
+\		PC=INT(TOTREC/5.) IF TEMP	< .19 &
+\		PC=INT(TOTREC/2.) IF TEMP	< .09 &
+\		PC=INT(TOTREC/1.) IF TEMP	< .03 &
+\		FNPC=PC &
+\	FNEND &
+
+32767	END &
+

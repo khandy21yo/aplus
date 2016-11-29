@@ -1,0 +1,64 @@
+
+
+
+           CATEGORIES  FILE - INVENTORY SYSTEM
+           --------------------------------------------------------------------
+
+
+    KEY FILE NAME : INVCAT.DAS          		DATA = 32
+
+           NAME                         SIZE            VARIABLE     
+
+	 1 _CATEGORIE CODE__________  	_02A/01___     INVCAT.CAT$ 
+
+	 2 _DESCRIPTION_____________  	_20A/03___     INVCAT.DESC$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 22, FROM 32, FREE = 10
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

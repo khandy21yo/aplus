@@ -1,0 +1,784 @@
+10	! CASH AND ACCOUNTS PAYABLE/RECEIVABLE CONTROL FILE &
+	!-------------------------------------------------------------------- &
+	! &
+	!		       Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used and &
+	! copied only in accordance with the terms of such license and with &
+	! the inclusion of the above copyright notice.  This software or any &
+	! other copies therof may not be provided or otherwise made avail- &
+	! able to any other person.  No title to and ownership of the soft- &
+	! ware is hereby transferred. &
+	! &
+	! The information in this software is subject to change without no- &
+	! tice and should not be construed as a committment by Computer &
+	! Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	! ++ &
+	! &
+	! &
+	!-------------------------------------------------------------------- &
+	! &
+	!	System name - Subsidiary ledger management &
+	!	Program name - APCCTL &
+	!	Function - Maintain the control record in the subsidiary ledger &
+	!		file &
+	! &
+	! &
+	!	Written by Robert Peterson - May 1981 &
+	! &
+	!	Program version V1.1 - The original program May 1981 &
+	! &
+
+50	ON ERROR GOTO 19000 &
+\	TEMP$=SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN "KB:" AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+"[H"+ESC$+"[J"	! Clear screen &
+\	CLRLIN$=ESC$+"[2K"		! Erase entire line &
+\	CLREL$=ESC$+"[K"		! Cursor to end of line &
+\	INSERT.LIN$=ESC$+"[1L"		! Insert a line &
+\	G.OFF$=ESC$+"[m"		! Select graphic off &
+\	B.ON$=ESC$+"[1m"		! Bold face on &
+\	BLINK.ON$=ESC$+"[5m"		! Blinking &
+\	R.ON$=ESC$+"[7m"		! Reverse video &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[5;19r"	! Scroll region &
+\	S.RESET$=ESC$+"c"		! Reset Screen &
+\	COLM.ON$=ESC$+"[?3h"		! 132 Column mode &
+\	COLM.OFF$=ESC$+"[?3l"		! 80 Column mode &
+\	ENTER.COPY$=ESC$+"[?5i"		! Enter media copy &
+\	EXIT.COPY$=ESC$+"[?4i"		! Exit media copy &
+\	CLRBOT$=ESC$+"[21;1H"+ESC$+"[J"	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+"(0"		! Line drawing set &
+\	USASCII$=ESC$+"(B"		! United States ASCII &
+\	HID.CURSOR$=ESC$+"[24;80H"	! Hid the cursor in the corner &
+\	PRINT #CH%, ESC$;"<";		! Enter ANSI mode &
+		CLSCN$;B.ON$;R.ON$;BLINK.ON$;FNP$('1;75');"WAIT";G.OFF$; &
+
+100	APCCTL.CH%   = 2% &
+\	DEVICE.CH% = 2% &
+\	MENU.CH%   = 12% &
+\	LOOP.DATA% = 70% &
+\	LOOP.KEY%  = 1% &
+
+200	IF FNO%(DEVICE.CH%,"DEVICE.DAT","/R0","")=0% &
+	THEN	APCCTL.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+				IF FNG%(DEVICE.CH%,"APCCTL")=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	V%=FNO%(APCCTL.CH%,APCCTL.DEVICE$+'APCCTL.DAS',"/RW/SF","") &
+\	V%=FNO%(APCCTL.CH%,APCCTL.DEVICE$+'APCCTL.DAS',"/SF/CR:512", &
+			"") IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,'APCCTL.DAT',0%,-1%) &
+\		GOTO 1045 &
+
+400	!---------------------------------------------OPEN UNIQUE FILE &
+	OPEN "MENU.FIL/RO" FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN "NL:" AS FILE 12%, RECORDSIZE 512% &
+\	FIELD #12%,	06% AS APCCTL.RECORD.KEY$, &
+			08% AS TEMP$, &
+			02% AS APCCTL.CUR.YR$, &
+			02% AS APCCTL.FIR.MO$ &
+\	FIELD #12%,	16%+LOOP%*2% AS TEMP$, &
+			02% AS APCCTL.MON.UP$(LOOP%) &
+				FOR LOOP%=1% TO 7% &
+\	FIELD #12%, 	30%+LOOP%*2% AS TEMP$, &
+			02% AS APCCTL.REC.CO$(LOOP%) &
+				FOR LOOP%=1% TO 7% &
+\	FIELD #12%, 	46% AS TEMP$, &
+			02% AS APCCTL.START.COUNT$, &
+			02% AS APCCTL.FINISH.COUNT$, &
+			02% AS APCCTL.FUNCTION$, &
+			06% AS APCCTL.TEMP$, &
+			06% AS APCCTL.PASSWORD$ &
+\	FIELD #12%,	64%+30%*(LOOP%-1%) AS TEMP$, &
+			8% AS APCCTL.ACC$(LOOP%), &
+			8% AS APCCTL.CTD$(LOOP%), &
+			8% AS APCCTL.CUR$(LOOP%), &
+			6% AS APCCTL.BANK$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+\	FIELD #12%, 	304% AS TEMP$, &
+			08% AS APCCTL.APCASH$, &
+			08% AS APCCTL.DISLOST$, &
+			06% AS APCCTL.VOUCH$, &
+			06% AS APCCTL.CHECKNUM$ &
+\	FIELD #12%, 	304% AS TEMP$, &
+			01% AS APCCTL.METHOD$ &
+\	FIELD #12%,	332%+16%*(LOOP%-1%) AS TEMP$, &
+			8% AS APCCTL.STARTCHK$(LOOP%), &
+			8% AS APCCTL.ENDCHK$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+\	FIELD #12%, 512% AS APCCTL.BUF$ &
+
+500	TEMP$     = "Sub-ledger cntrl for CASH/AP/AR/SC" &
+\	FRAME$    = CLSCN$+R.ON$+LEFT(TEMP$,39%)+SPACE$(40%-LEN(TEMP$))+ &
+			SPACE$(40%-LEN(COMPANY$))+COMPANY$ &
+\	FRAME$    = FRAME$+FNP$(NUM1$(I%)+';1')+" "+FNP$(NUM1$(I%)+';80')+" " &
+			FOR I%=2% TO 19% &
+\	FRAME$    = FRAME$+FNP$('20;1')+SPACE$(80%)+G.OFF$ &
+\	COMMAND$  = " " &
+\	COMMAND$  = COMMAND$+RIGHT(NUM1$(I%+100%),2%) + " " &
+		FOR I%=1% TO LOOP.DATA% &
+\	MENU.FLAG%=0% &
+\	GOTO 1500 &
+
+1000	!--------------------------------------------PROGRAM RESTART POINT &
+	IF CTL.KEY$<>'' AND MENU.FLAG% THEN &
+	IF FNG%(APCCTL.CH%,CTL.KEY$) &
+	THEN	LSET APCCTL.RECORD.KEY$=CTL.KEY$ &
+\		LSET APCCTL.TEMP$= "" &
+\		LSET APCCTL.CUR.YR$=CVT%$(VAL(RIGHT(DATE$(0%),8%))) &
+\		LSET APCCTL.FIR.MO$=CVT%$(1%) &
+\		LSET APCCTL.MON.UP$(LOOP%),APCCTL.REC.CO$(LOOP%)=CVT%$(0%) &
+			FOR LOOP%=1% TO 7% &
+\		LSET APCCTL.START.COUNT$,APCCTL.FINISH.COUNT$, &
+			APCCTL.FUNCTION$=CVT%$(0%) &
+\		LSET APCCTL.PASSWORD$="" &
+\		LSET APCCTL.ACC$(LOOP%),APCCTL.BANK$(LOOP%)='' &
+			FOR LOOP%=1% TO 8% &
+\		LSET APCCTL.CTD$(LOOP%),APCCTL.CUR$(LOOP%)=CVTF$(0.) &
+			FOR LOOP%=1% TO 8% &
+\		LSET APCCTL.APCASH$,APCCTL.DISLOST$,APCCTL.VOUCH$, &
+			APCCTL.CHECKNUM$,APCCTL.METHOD$='' &
+\		RSET APCCTL.STARTCHK$(LOOP%),APCCTL.ENDCHK$(LOOP%)='' &
+			FOR LOOP%=1% TO 8% &
+\		IF FNA%(APCCTL.CH%,APCCTL.BUF$) &
+		THEN	PRINT #CH%, FNP$('24;1');"Error";FNS%; &
+			"while adding to file.  Aborting"; &
+			FNP$('24;55');"Hit any key to continue"; &
+\			INP$=FNINP$(CH%,128%," ",1%,-1%) &
+\			OPT$="Q" &
+\			GOTO 1040 &
+
+1010	GOSUB 1060 &
+\	GOSUB 6000 &
+
+1030	FLAG%,CHNG.FLAG%=0% &
+\	PRINT #CH%, CLRBOT$;G.OFF$;"COMMAND: Change Blank Next screen "; &
+		"Menu Quit "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%,-1%),32%) &
+\	GOTO 1010 IF OPT$="%^C" &
+
+1040	GOTO 1050 IF OPT$<>'Q' &
+
+1045	PRINT #CH%, CLSCN$;FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+			FNX%('',0%,''); &
+
+1050	OPT$='C' IF OPT$='' &
+\	GOTO 2200 IF OPT$="C" &
+\	GOTO 2300 IF OPT$="B" &
+\	GOTO 1500 IF OPT$="M" &
+\	IF OPT$='N' &
+	THEN	IF NEXT.SCREEN% &
+		THEN	NEXT.SCREEN%=0% &
+			ELSE	NEXT.SCREEN%=-1% &
+
+1055	GOTO 1010 IF OPT$='N' &
+\	GOTO 1030 &
+
+1060	NEXT.LOOP%=0% &
+\	LOOP.DATA%=18% &
+\	LOOP.DATA%=22% IF CTL.KEY$='APL' OR CTL.KEY$='SPL' &
+\	LOOP.DATA%=19% IF CTL.KEY$='ARL' &
+\	GOTO 1070 IF NEXT.SCREEN% &
+\	PRINT #CH%, FRAME$; &
+		FNP$('2;2');CTL.NAME$; &
+		FNP$('3;6');'(01) Current year'; &
+		FNP$('5;6');"(02) Last month reconciled"; &
+		FNP$('6;6');"(03) First month status set"; &
+		FNP$('7;6');"(04) Second month status set"; &
+		FNP$('8;6');"(05) Third month status set"; &
+		FNP$('9;6');"(06) Fourth month status set"; &
+		FNP$('10;6');"(07) Fifth month status set"; &
+		FNP$('11;6');"(08) Sixth month status set"; &
+		FNP$('5;41');"(09) Last month record count"; &
+		FNP$('6;41');"(10) Record count 1st month"; &
+		FNP$('7;41');"(11) Record count 2nd month"; &
+		FNP$('8;41');"(12) Record count 3rd month"; &
+		FNP$('9;41');"(13) Record count 4th month"; &
+		FNP$('10;41');"(14) Record count 5th month"; &
+		FNP$('11;41');"(15) Record count 6th month"; &
+\	PRINT #CH%, &
+		FNP$('14;6');"(16) Start counter"; &
+		FNP$('15;6');"(17) finish counter"; &
+		FNP$('16;6');"(18) Function"; &
+		FNP$('17;10');"1=Setting status set"; &
+		FNP$('18;10');"0=No function specified"; &
+\	IF CTL.KEY$='APL' &
+	THEN	PRINT #CH%, &
+			FNP$('14;41');"(19) A/P Cash Acct"; &
+			FNP$('15;41');"(20) Discount Lost Acct"; &
+			FNP$('16;41');"(21) Last Voucher #"; &
+			FNP$('17;41');"(22) Last check #"; &
+
+1061	IF CTL.KEY$='SPL' &
+	THEN	PRINT #CH%, &
+			FNP$('14;41');"(19) S/P Cash Acct"; &
+			FNP$('15;41');"(20) N/A"; &
+			FNP$('16;41');"(21) Last Voucher #"; &
+			FNP$('17;41');"(22) Last check #"; &
+
+1062	IF CTL.KEY$='ARL' &
+	THEN	PRINT #CH%, &
+			FNP$('14;41');"(19) Method (O/B)"; &
+
+1069	RETURN &
+
+1070	NEXT.LOOP%=24% &
+\	LOOP.DATA%=46% &
+\	PRINT #CH%, FRAME$; &
+		FNP$('2;2');  CTL.NAME$; &
+		FNP$('3;2');  '(01) Acct # 1'; &
+		FNP$('3;30'); "(02) CTD"; &
+		FNP$('3;55'); "(03) Cur"; &
+		FNP$('5;2');  '(04) Acct # 2'; &
+		FNP$('5;30'); "(05) CTD"; &
+		FNP$('5;55'); "(06) Cur"; &
+		FNP$('7;2');  '(07) Acct # 3'; &
+		FNP$('7;30'); "(08) CTD"; &
+		FNP$('7;55'); "(09) Cur"; &
+		FNP$('9;2');  '(10) Acct # 4'; &
+		FNP$('9;30'); "(11) CTD"; &
+		FNP$('9;55'); "(12) Cur"; &
+		FNP$('11;2'); '(13) Acct # 5'; &
+\	PRINT #CH%, &
+		FNP$('11;30');"(14) CTD"; &
+		FNP$('11;55');"(15) Cur"; &
+		FNP$('13;2'); '(16) Acct # 6'; &
+		FNP$('13;30');"(17) CTD"; &
+		FNP$('13;55');"(18) Cur"; &
+		FNP$('15;2'); '(19) Acct # 7'; &
+		FNP$('15;30');"(20) CTD"; &
+		FNP$('15;55');"(21) Cur"; &
+		FNP$('17;2'); '(22) Acct # 8'; &
+		FNP$('17;30');"(23) CTD"; &
+		FNP$('17;55');"(24) Cur"; &
+
+1080	IF CTL.KEY$="BNK" &
+	THEN	NEXT.LOOP%=48% &
+\		LOOP.DATA%=70% &
+\		PRINT #CH%, &
+			FNP$('04;02'); '(25) Bank code'; &
+			FNP$('06;02'); '(28) Bank code'; &
+			FNP$('08;02'); '(31) Bank code'; &
+			FNP$('10;02'); '(34) Bank code'; &
+			FNP$('12;02'); '(37) Bank code'; &
+			FNP$('14;02'); '(40) Bank code'; &
+			FNP$('16;02'); '(43) Bank code'; &
+			FNP$('18;02'); '(46) Bank code'; &
+\		PRINT #CH%, &
+			FNP$('04;30'); '(26) Start chk#'; &
+			FNP$('06;30'); '(29) Start chk#'; &
+			FNP$('08;30'); '(32) Start chk#'; &
+			FNP$('10;30'); '(35) Start chk#'; &
+			FNP$('12;30'); '(38) Start chk#'; &
+			FNP$('14;30'); '(41) Start chk#'; &
+			FNP$('16;30'); '(44) Start chk#'; &
+			FNP$('18;30'); '(47) Start chk#'; &
+			FNP$('04;55'); '(27) Ending chk#'; &
+			FNP$('06;55'); '(30) Ending chk#'; &
+			FNP$('08;55'); '(33) Ending chk#'; &
+			FNP$('10;55'); '(36) Ending chk#'; &
+			FNP$('12;55'); '(39) Ending chk#'; &
+			FNP$('14;55'); '(42) Ending chk#'; &
+			FNP$('16;55'); '(45) Ending chk#'; &
+			FNP$('18;55'); '(48) Ending chk#'; &
+
+1090	RETURN &
+
+1500	!-----------------------------------------PRINT MENU SCREEN &
+	PRINT #CH%, FRAME$; &
+		FNP$('06;20');"(CA) Cash/bank reconcilation"; &
+		FNP$('07;20');"(AP) Accounts payable"; &
+		FNP$('08;20');"(AR) Accounts receivable"; &
+		FNP$('09;20');"(SP) Subcontracts payable"; &
+		FNP$('10;20');"(QT) Quit"; &
+
+1510	PRINT #CH%, CLRBOT$;"Selection "; &
+\	INP$=CVT$$(FNINP$(CH%,128%,"_",2%,-1%),32%) &
+\	IF INP$<>'QT' AND INP$<>"AR" AND INP$<>"AP" AND INP$<>"CA" &
+			AND INP$<>'SP' &
+	THEN	1510 &
+
+1520	OPT$="Q" IF INP$="QT" &
+\	GOTO 1040 IF INP$="QT" &
+\	CTL.NAME$='CASH/BANK RECONCILATION' IF INP$='CA' &
+\	CTL.KEY$="BNK" IF INP$='CA' &
+\	CTL.NAME$='ACCOUNTS PAYABLE' IF INP$='AP' &
+\	CTL.KEY$="APL" IF INP$="AP" &
+\	CTL.NAME$='SUBCONTRACTS PAYABLE' IF INP$='SP' &
+\	CTL.KEY$="SPL" IF INP$="SP" &
+\	CTL.NAME$='ACCOUNTS RECEIVABLE' IF INP$='AR' &
+\	CTL.KEY$="ARL" IF INP$="AR" &
+\	MENU.FLAG%=-1% &
+\	GOTO 1000 &
+
+2200	!--------------------------------------------------CHANGE RECORD &
+	OPTION$ = "CHANGE " &
+\	FLAG%, CHNG.FLAG% = -1% &
+\	PRINT #CH%, CLRBOT$; "Change:"; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",2%,-1%),32%) &
+\	GOTO 1010 IF INP$="%^C" &
+\	GOTO 1030 IF INP$="" &
+\	INP$=NUM1$(VAL(INP$)+(LOOP.DATA%-NEXT.LOOP%)*ABS(NEXT.SCREEN%)) &
+\	INP$=RIGHT(NUM1$(VAL(INP$)+100%),2%) &
+\	LOOP%=(INSTR(1%,COMMAND$," "+INP$+" ")+2%)/3% &
+\	GOTO 2200 IF LOOP%=0% OR LOOP%>LOOP.DATA% &
+\	GOSUB 6010 &
+\	GOTO 1010 IF INP$="%^C" &
+\	GOTO 2200 IF INP$="%ABORT" &
+
+2210	IF FNU%(-APCCTL.CH%,APCCTL.BUF$) &
+	THEN	PRINT #CH%, FNP$('24;1');"Error";FNS%;"while changing the file"; &
+			FNP$('24;55');"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,-1%) &
+\		OPT$="Q" &
+\		GOTO 1040 &
+
+2220	GOTO 2200 &
+
+2300	!--------------------------------------------------CHANGE RECORD &
+	OPTION$ = "BLANK " &
+\	FLAG%, CHNG.FLAG% = 0% &
+\	PRINT #CH%, CLRBOT$; "Blank:"; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",2%,-1%),32%) &
+\	GOTO 1010 IF INP$="%^C" &
+\	GOTO 1030 IF INP$="" &
+\	INP$=NUM1$(VAL(INP$)+(LOOP.DATA%-NEXT.LOOP%)*ABS(NEXT.SCREEN%)) &
+\	LOOP%=(INSTR(1%,COMMAND$," "+INP$+" ")+2%)/3% &
+\	GOTO 2300 IF LOOP%=0% OR LOOP%>LOOP.DATA% &
+\	INP$='' &
+\	GOSUB 6030 &
+\	GOTO 1010 IF INP$="%^C" &
+\	GOTO 2300 IF INP$="%ABORT" &
+
+2310	IF FNU%(-APCCTL.CH%,APCCTL.BUF$) &
+	THEN	PRINT #CH%, FNP$('24;1');"Error";FNS%;"while changing the file"; &
+			FNP$('24;55');"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,-1%) &
+\		OPT$="Q" &
+\		GOTO 1040 &
+
+2320	GOTO 2300 &
+
+6000	!-----------------------------------------------LOOP GOSUB SECTION &
+	LSET APCCTL.BUF$=FNL$+"" &
+\	START%=(LOOP.DATA%-NEXT.LOOP%)*ABS(NEXT.SCREEN%) &
+\	FOR LOOP%=START%+1% TO LOOP.DATA% &
+\		ON LOOP% GOSUB	6220, &
+				6260, 6260, 6260, 6260, 6260, 6260, 6260, &
+				6280, 6280, 6280, 6280, 6280, 6280, 6280, &
+				6300, 6320, 6360, &
+				6500, 6520, 6560, 6580, &
+				6380, 6400, 6420, 6380, 6400, 6420, &
+				6380, 6400, 6420, 6380, 6400, 6420, &
+				6380, 6400, 6420, 6380, 6400, 6420, &
+				6380, 6400, 6420, 6380, 6400, 6420, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620, &
+				6440, 6600, 6620 &
+\	NEXT LOOP% &
+\	RETURN &
+
+6010	ON LOOP% GOSUB	6210, &
+			6250, 6250, 6250, 6250, 6250, 6250, 6250, &
+			6270, 6270, 6270, 6270, 6270, 6270, 6270, &
+			6290, 6310, 6350, &
+			6490, 6510, 6550, 6570, &
+			6370, 6390, 6410, 6370, 6390, 6410, &
+			6370, 6390, 6410, 6370, 6390, 6410, &
+			6370, 6390, 6410, 6370, 6390, 6410, &
+			6370, 6390, 6410, 6370, 6390, 6410, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610, &
+			6430, 6590, 6610 &
+\	RETURN &
+		! INPUT DATA &
+
+6030	ON LOOP% GOSUB	6217, &
+			6257, 6257, 6257, 6257, 6257, 6257, 6257, &
+			6277, 6277, 6277, 6277, 6277, 6277, 6277, &
+			6297, 6317, 6357, &
+			6497, 6517, 6557, 6577, &
+			6377, 6397, 6417, 6377, 6397, 6417, &
+			6377, 6397, 6417, 6377, 6397, 6417, &
+			6377, 6397, 6417, 6377, 6397, 6417, &
+			6377, 6397, 6417, 6377, 6397, 6417, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617, &
+			6437, 6597, 6617 &
+\	RETURN &
+		! RESET DATA &
+
+6200	!----------------------------------------------INPUT DATA &
+
+6210	F.LEN%=2% &
+\	PRINT #CH%, FNP$('3;35');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH% USING "##", CVT$%(APCCTL.CUR.YR$); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	TEMP$=NUM1$(VAL(INP$)) &
+
+6217	LSET APCCTL.CUR.YR$=CVT%$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6220	PRINT #CH%, FNP$('3;35');B.ON$; &
+\	PRINT #CH% USING "##", CVT$%(APCCTL.CUR.YR$); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6250	ROW%=LOOP%+3% &
+\	F.LEN%=2% &
+\	PRINT #CH%, FNP$(NUM1$(ROW%)+';35');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH% USING "##", CVT$%(APCCTL.MON.UP$(LOOP%-1%)); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	TEMP$=NUM1$(VAL(INP$)) &
+
+6257	LSET APCCTL.MON.UP$(LOOP%-1%)=CVT%$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6260	ROW%=LOOP%+3% &
+\	PRINT #CH%, FNP$(NUM1$(ROW%)+';35');B.ON$; &
+\	PRINT #CH% USING "##", CVT$%(APCCTL.MON.UP$(LOOP%-1%)); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6270	ROW%=LOOP%-4% &
+\	F.LEN%=5% &
+\	PRINT #CH%, FNP$(NUM1$(ROW%)+';70');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH% USING "#####", CVT$%(APCCTL.REC.CO$(LOOP%-8%)); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	TEMP$=NUM1$(VAL(INP$)) &
+
+6277	LSET APCCTL.REC.CO$(LOOP%-8%)=CVT%$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6280	ROW%=LOOP%-4% &
+\	PRINT #CH%, FNP$(NUM1$(ROW%)+';70');B.ON$; &
+\	PRINT #CH% USING "#####", CVT$%(APCCTL.REC.CO$(LOOP%-8%)); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6290	F.LEN%=5% &
+\	PRINT #CH%, FNP$('14;26');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH% USING "#####", CVT$%(APCCTL.START.COUNT$); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	TEMP$=NUM1$(VAL(INP$)) &
+
+6297	LSET APCCTL.START.COUNT$=CVT%$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6300	PRINT #CH%, FNP$('14;26');B.ON$; &
+\	PRINT #CH% USING "#####", CVT$%(APCCTL.START.COUNT$); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6310	F.LEN%=5% &
+\	PRINT #CH%, FNP$('15;26');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH% USING "#####", CVT$%(APCCTL.FINISH.COUNT$); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	TEMP$=NUM1$(VAL(INP$)) &
+
+6317	LSET APCCTL.FINISH.COUNT$=CVT%$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6320	PRINT #CH%, FNP$('15;26');B.ON$; &
+\	PRINT #CH% USING "#####", CVT$%(APCCTL.FINISH.COUNT$); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6350	F.LEN%=1% &
+\	PRINT #CH%, FNP$('16;30');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH% USING "#", CVT$%(APCCTL.FUNCTION$); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	INP%=VAL(INP$) &
+\	GOTO 6350 IF INP%<0% OR INP%>1% &
+
+6357	LSET APCCTL.FUNCTION$=CVT%$(VAL(INP$)) IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6360	PRINT #CH%, FNP$('16;30');B.ON$; &
+\	PRINT #CH% USING "#", CVT$%(APCCTL.FUNCTION$); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6370	F.LEN%=8% &
+\	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	PRINT #CH%, FNP$(NUM1$((LT%+2%)/3%*2%+1%)+';17');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.ACC$((LT%+2%)/3%); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"ALPHA: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6377	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	RSET APCCTL.ACC$((LT%+2%)/3%)=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6380	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	PRINT #CH%, FNP$(NUM1$((LT%+2%)/3%*2%+1%)+';17');B.ON$; &
+		APCCTL.ACC$((LT%+2)/3%); G.OFF$; &
+\	RETURN &
+
+6390	F.LEN%=10% &
+\	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	PRINT #CH%, FNP$(NUM1$((LT%+2%)/3%*2%+1%)+';39');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%+1); IF CHNG.FLAG%=0% &
+\	PRINT #CH%  USING "#########.##",CVT$F(APCCTL.CTD$((LT%+2%)/3%)); &
+		IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	GOTO 6400 IF INP$='' &
+\	TEMP%=100% &
+\	TEMP%=1% IF INSTR(1%,INP$,".") &
+\	INP$=NUM1$(VAL(INP$)/TEMP%) &
+\	INP$=INP$+"." IF INSTR(1%,INP$,".")=0% &
+
+6397	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	LSET APCCTL.CTD$((LT%+2%)/3%)=CVTF$(VAL(INP$)) &
+		IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6400	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	PRINT #CH%, FNP$(NUM1$((LT%+2%)/3%*2%+1%)+';39');B.ON$; &
+\	PRINT #CH%  USING "#########.##", &
+		CVT$F(APCCTL.CTD$((LT%+2%)/3%)); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6410	F.LEN%=10% &
+\	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	PRINT #CH%, FNP$(NUM1$((LT%+2%)/3%*2%+1%)+';64');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%+1); IF CHNG.FLAG%=0% &
+\	PRINT #CH%  USING "#########.##",CVT$F(APCCTL.CUR$((LT%+2%)/3%)); &
+		IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\	GOTO 6420 IF INP$='' &
+\	TEMP%=100% &
+\	TEMP%=1% IF INSTR(1%,INP$,".") &
+\	INP$=NUM1$(VAL(INP$)/TEMP%) &
+\	INP$=INP$+"." IF INSTR(1%,INP$,".")=0% &
+
+6417	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	LSET APCCTL.CUR$((LT%+2%)/3%)=CVTF$(VAL(INP$)) &
+		IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6420	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%) &
+\	PRINT #CH%, FNP$(NUM1$((LT%+2%)/3%*2%+1%)+';64');B.ON$; &
+\	PRINT #CH%  USING "#########.##", &
+		CVT$F(APCCTL.CUR$((LT%+2%)/3%)); &
+\	PRINT #CH%, G.OFF$; &
+\	RETURN &
+
+6430	F.LEN%=6% &
+\	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=(LT%+2%)/3% &
+\	PRINT #CH%, FNP$(NUM1$(LT%*2%+2%)+';17');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.BANK$(LT%); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"ALPHA: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6437	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=(LT%+2%)/3% &
+\	LSET APCCTL.BANK$(LT%)=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6440	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=(LT%+2%)/3% &
+\	PRINT #CH%, FNP$(NUM1$(LT%*2%+2%)+';17');B.ON$; &
+		APCCTL.BANK$(LT%); G.OFF$; &
+\	RETURN &
+
+6490	IF CTL.KEY$<>'ARL' &
+	THEN	F.LEN%=8% &
+\		PRINT #CH%, FNP$('14;65');R.ON$;B.ON$; &
+\		PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\		PRINT #CH%, APCCTL.APCASH$; IF CHNG.FLAG% &
+\		PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\		INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6491	IF CTL.KEY$='ARL' &
+	THEN	F.LEN%=1% &
+\		PRINT #CH%, FNP$('14;65');R.ON$;B.ON$; &
+\		PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\		PRINT #CH%, APCCTL.METHOD$; IF CHNG.FLAG% &
+\		PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"ALPHA: ";B.ON$; &
+\		INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+\		IF INP$<>'' &
+		THEN	IF INP$<>'B' AND INP$<>'O' &
+			THEN	PRINT #CH%,CLRBOT$; &
+					FNP$('24;1');'VALID METHODS ARE '; &
+					'O=open item, B=balance forward'; &
+					FNP$('24;55');'Hit any key to '; &
+					'continue'; &
+\				INP$ = FNINP$(CH%,128%,' ',1%,0%) &
+\				GOTO 6490 &
+
+6497	IF CTL.KEY$ <> 'ARL' &
+	THEN	RSET APCCTL.APCASH$=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+		ELSE	LSET APCCTL.METHOD$=INP$ IF INP$<>'' OR CHNG.FLAG%=0% &
+
+6500	IF CTL.KEY$ <> 'ARL' &
+	THEN	PRINT #CH%, FNP$('14;65');B.ON$;APCCTL.APCASH$;G.OFF$; &
+		ELSE	PRINT #CH%, FNP$('14;65');B.ON$;APCCTL.METHOD$;G.OFF$; &
+
+6501	RETURN &
+
+6510	F.LEN%=8% &
+\	PRINT #CH%, FNP$('15;65');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.DISLOST$; IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6517	RSET APCCTL.DISLOST$=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6520	PRINT #CH%, FNP$('15;65');B.ON$;APCCTL.DISLOST$;G.OFF$; &
+\	RETURN &
+
+6550	F.LEN%=6% &
+\	PRINT #CH%, FNP$('16;65');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.VOUCH$; IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6557	LSET APCCTL.VOUCH$=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6560	PRINT #CH%, FNP$('16;65');B.ON$;APCCTL.VOUCH$;G.OFF$; &
+\	RETURN &
+
+6570	F.LEN%=6% &
+\	PRINT #CH%, FNP$('17;65');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.CHECKNUM$; IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"VALUE: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6577	LSET APCCTL.CHECKNUM$=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6580	PRINT #CH%, FNP$('17;65');B.ON$;APCCTL.CHECKNUM$;G.OFF$; &
+\	RETURN &
+
+6590	F.LEN%=8% &
+\	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=(LT%+1%)/3% &
+\	PRINT #CH%, FNP$(NUM1$(LT%*2%+2%)+';46');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.STARTCHK$(LT%); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"ALPHA: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6597	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=(LT%+1%)/3% &
+\	LSET APCCTL.STARTCHK$(LT%)=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6600	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=(LT%+1%)/3% &
+\	PRINT #CH%, FNP$(NUM1$(LT%*2%+2%)+';46');B.ON$; &
+		APCCTL.STARTCHK$(LT%); G.OFF$; &
+\	RETURN &
+
+6610	F.LEN%=8% &
+\	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=LT%/3% &
+\	PRINT #CH%, FNP$(NUM1$(LT%*2%+2%)+';72');R.ON$;B.ON$; &
+\	PRINT #CH%, SPACE$(F.LEN%); IF CHNG.FLAG%=0% &
+\	PRINT #CH%, APCCTL.ENDCHK$(LT%); IF CHNG.FLAG% &
+\	PRINT #CH%, G.OFF$;CLRBOT$;OPTION$;"ALPHA: ";B.ON$; &
+\	INP$=FNINP$(CH%,0%,"_",F.LEN%,-1%) &
+
+6617	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=LT%/3% &
+\	LSET APCCTL.ENDCHK$(LT%)=INP$ IF INP$<>"" OR CHNG.FLAG%=0% &
+
+6620	LT%=LOOP%-(LOOP.DATA%-NEXT.LOOP%)-24% &
+\	LT%=LT%/3% &
+\	PRINT #CH%, FNP$(NUM1$(LT%*2%+2%)+';72');B.ON$; &
+		APCCTL.ENDCHK$(LT%); G.OFF$; &
+\	RETURN &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME IF ERR=52% OR ERR=51% &
+\	RESUME 450 IF ERL=400 &
+\	INP$='%^C' IF ERR=54% &
+\	RESUME 1010 IF ERR=54% &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30250	!-----------------------------------------------MESSAGE HANDLER &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30900	!	******************************************************** &
+	!		Password input routine &
+	!		Format FNPASS%(<PASSWORD>) &
+	!		 0% = If invalid &
+	!		-1% = If valid &
+	!	******************************************************** &
+	DEF FNPASS%(Y$) &
+\		PRINT #CH%, CLNSC$;FNP$('4;1');"Password "; &
+\		INP$=FNINP$(CH%,0%,"*",6%,0%) &
+\		PRINT #CH%, CLNSC$; &
+\		FNPASS% = (CVT$$(LEFT(Y1$,6%),-1%) = Y$) &
+\	FNEND &
+
+32767	END &
+

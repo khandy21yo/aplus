@@ -1,0 +1,38 @@
+	!----------------------------------------------------------------- &
+	! POTATOE WAREHOUSE JOURNAL &
+	! HEADER RECORD &
+	!----------------------------------------------------------------- &
+			06% AS PWJH.ORDER$,		! Order # &
+			06% AS PWJH.SOLDTO$,		! Sold to &
+			06% AS PWJH.SHIPTO$,		! Ship to &
+			08% AS PWJH.INVNUM$,		! Invoice # &
+			02% AS PWJH.INVDAT$,		! Invoice Date &
+			02% AS PWJH.SHPDAT$,		! Ship Date &
+			08% AS PWJH.SHPLOC$,		! Ship Location &
+			06% AS PWJH.CARNUM$,		! Carrier # &
+			06% AS PWJH.DEPOSIT$,		! DEPOSIT # &
+			06% AS PWJH.BRONUM$,		! Broker # &
+			06% AS PWJH.LABNUM$,		! Label # &
+			08% AS PWJH.SOLDBY$,		! Sold by &
+			08% AS PWJH.CUSPO$,		! Customer PO &
+			08% AS PWJH.TERMS$,		! Terms &
+			08% AS PWJH.ACCNUM$,		! A/R Account # &
+			02% AS PWJH.LINE$,		! Line Count &
+			06% AS PWJH.CARVOU$,		! Carrier voucher # &
+			06% AS PWJH.BROVOU$,		! Broker voucher # &
+			06% AS PWJH.LABVOU$		! Label voucher # &
+
+	!----------------------------------------------------------------- &
+	! POTATOE WAREHOUSE JOURNAL &
+	! LINE FILE &
+	!----------------------------------------------------------------- &
+			06% AS PWJL.ORDER$,		! Order # &
+			02% AS PWJL.LINE$,		! Line # &
+			15% AS PWJL.PACK$,		! Pack &
+			26% AS PWJL.DESC$,		! Description &
+			01% AS PWJL.PRTFLG$,		! Print Flag (Y/N) &
+			01% AS PWJL.TYPE$,		! Type &
+			08% AS PWJL.ACCNUM$,		! Account # &
+			08% AS PWJL.QTY$,		! Quanity &
+			08% AS PWJL.PRICE$,		! Price &
+			08% AS PWJL.EXT$		! Extension &

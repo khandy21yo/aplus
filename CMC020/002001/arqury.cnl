@@ -1,0 +1,15 @@
+$ BP2
+OLD [2,1]ARQURY
+APPEND ISM:ISAM19
+COMPILE/DOU/OBJ
+BUILD
+$ TE ARQURY.CMD
+LK
+EX
+$ TKB @ARQURY
+$ PIP [2,1]<104>=ARQURY.TSK/LO
+$ pip arqury.bak/de/lo
+$ pip arqury.cmd/de/lo
+$ pip arqury.odl/de/lo
+$ pip arqury.tsk/de/lo
+$ pip arqury.obj/de/lo

@@ -1,0 +1,7 @@
+$ be2
+old [2,5]apaud2.b2s
+append ism:isam19.b2s
+compile/double/chain/NOWARN
+build
+$ tkb @apaud2
+$ pip [2,5]<104>=apaud2.tsk/lo

@@ -1,0 +1,292 @@
+10	!----------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	!--------------------------------------------------------------- &
+	! &
+	!	03/04/92 - Kevin Handy &
+	!		Cleaned out unused variables. &
+	!		Removed drop dead junk &
+
+50	ON ERROR GOTO 19000 &
+\	TEMP$=SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+\	CH%=1%				! Keyboard channel &
+\	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erace cursor to end of screen &
+
+80	DATE.TIME$=SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%))) &
+\	DATE.TIME$=MID(DATE.TIME$,10%,2%)+MID(DATE.TIME$,7%,2%) &
+
+100	DEVICE.CH%	= 02% &
+\	APREG.CH%	= 02% &
+\	APCLOS.CH%	= 04% &
+\	APNEW.CH%	= 06% &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/R0','')=0% &
+	THEN	APREG.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'APREG')=0% &
+\		APCLOS.DEVICE$=CVT$$(MID(FNL$,7%,20%),-1%) &
+			IF FNG%(DEVICE.CH%,'APCLOS')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	PRINT #CH%, CLSCN$;FNP$('4;28');'ACCOUNTS PAYABLE CLOSE'; &
+		FNP$('6;28');'Close cut off date? <';DATE.TIME$;'> :'; &
+\	INP$=CVT$$(FNINP$(CH%,0%,'_',4%,0%),-1%) &
+\	PRINT #CH%, CLSCN$;COLM.OFF$;FNP$('1;75');R.ON$; &
+		BLINK.ON$;'WAIT';G.OFF$;FNP$('24;1');FNX%('',0%,''); &
+			IF INP$='%^C' &
+\	DATE.TIME$=INP$ IF INP$<>'' &
+\	DATE.TIME$=FND6$(FND6%(LEFT(DATE.TIME$,2%)+'00'+ &
+		RIGHT(DATE.TIME$,3%))) &
+\	PRINT #CH%, FNP$('6;56');DATE.TIME$; &
+\	CUT.OFF%=FND6%(LEFT(DATE.TIME$,2%)+MID(DATE.TIME$,4%,2%)+ &
+		RIGHT(DATE.TIME$,7%)) &
+
+310	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+
+360	NAME APREG.DEVICE$+"APREG.DAT" AS APREG.DEVICE$+"APBCK.DAT" &
+\	NAME APREG.DEVICE$+"APREG.DA1" AS APREG.DEVICE$+"APBCK.DA1" &
+
+370	IF FNO%(APREG.CH%,APREG.DEVICE$+"APBCK.DAT","/RW","") &
+	THEN	V$=FNMESS$(CH%,FNS%,'APBCK.DAT',0%,-1%) &
+\		GOTO 1040 &
+
+380	IF FNO%(APNEW.CH%,APREG.DEVICE$+"APREG.DAT","/CR:14,128","") &
+	THEN	V$=FNMESS$(CH%,FNS%,'APREG.DAT',0%,-1%) &
+\		GOTO 1040 &
+
+390	V%=FNO%(APCLOS.CH%,APCLOS.DEVICE$+"APCLOS.DAT","/RW","") &
+\	V%=FNO%(APCLOS.CH%,APCLOS.DEVICE$+"APCLOS.DAT","/CR:14,128","") IF FNS%=5% &
+\	IF FNS% &
+	THEN	V$=FNMESS$(CH%,FNS%,'APCLOS.DAT',0%,-1%) &
+\		GOTO 1040 &
+
+400	OPEN "MENU.FIL/RO" FOR INPUT AS FILE 12% &
+\	DIM #12%, A0$(255%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE 12% &
+
+450	OPEN "NL:" AS FILE 12%, RECORDSIZE 128% &
+\	FIELD #12%, 	06% AS APVENNUM$, &
+			06% AS APJVOUNUM$, &
+			02% AS VOUDAT$, &
+			15% AS INVOIC$, &
+			02% AS INVDAT$, &
+			08% AS INVAMT$, &
+			02% AS CD1099$, &
+			06% AS PONUM$, &
+			02% AS DISDAT$, &
+			08% AS DISAMT$, &
+			02% AS DUEDAT$, &
+			08% AS APACCT$, &
+			06% AS CKNUM$, &
+			02% AS CKDAT$, &
+			08% AS CASHACCT$, &
+			01% AS USETAX$, &
+			08% AS AMT1099$, &
+			08% AS USEAMT$, &
+			20% AS CKDESC$, &
+			02% AS UPDATE.MON$, &
+			06% AS USE.JOB$ &
+\		FIELD #12%, 128% AS APREG.BUF$ &
+
+500	IF FNG%(APREG.CH%,"") &
+	THEN	PRINT #CH%, FNP$('24;1');"APREG IF EMPTY";FNP$('24;55'); &
+			"Hit any key to continue"; &
+\		INP$=FNINP$(CH%,128%," ",1%,0%) &
+\		GOTO 1040 &
+
+510	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+" "+ &
+		FNP$(NUM1$(I%)+';80')+" " FOR I%=2% TO 19% &
+
+1000	!---------------PROGRAM CONTROL SECTION &
+
+1010	TEMP$="REMOVE PAID INVOICES FROM TO A/P FILE" &
+\	PRINT #CH%, CLSCN$;R.ON$;LEFT(TEMP$,39%);SPACE$(40%-LEN(TEMP$)); &
+		SPACE$(40%-LEN(COMPANY$));COMPANY$; &
+		FRAME$;FNP$('20;1');SPACE$(80%);G.OFF$; &
+		FNP$('10;10');"PERCENT COMPLETE";FNP$('11;10'); &
+		"0%   10%  20%  30%  40%  50%"+"  60%  70%  80%  90% 100%"; &
+
+1030	PRINT #CH%, CLRBOT$;G.OFF$;"Confirm (y/N) "; &
+\	OPT$=CVT$$(FNINP$(CH%,128%," ",1%,0%),32%) &
+\	GOTO 1010 IF OPT$="%^C" &
+\	GOTO 3100 IF OPT$='Y' &
+
+1040	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;75'); &
+			B.ON$;BLINK.ON$;R.ON$;'WAIT';G.OFF$;FNP$('24;1'); &
+\	KILL APREG.DEVICE$+"APREG.DAT" &
+\	KILL APREG.DEVICE$+"APREG.DA1" &
+\	NAME APREG.DEVICE$+"APBCK.DAT" AS APREG.DEVICE$+"APREG.DAT" &
+\	NAME APREG.DEVICE$+"APBCK.DA1" AS APREG.DEVICE$+"APREG.DA1" &
+\	V%=FNX%("",0%,"") &
+
+3100	!REMOVE PAID VOUCHERS &
+	PRINT #CH%, CLRBOT$;FNP$('24;1');"Processing. . . ";FNP$('24;80'); &
+\	TOTAL.CUTOFF, TOTAL.REG = 0. &
+\	V%=FNG%(APREG.CH%,"") &
+\	PERCOM%,COUNTER%=0% &
+\	COL%=10% &
+\	TOTAL.RECORD=FNT/10. &
+
+3120	! &
+
+3130	LSET APREG.BUF$=FNL$+"" &
+\	KEY.POINTER%=FNR(APREG.CH%) &
+\	DATA.POINTER%=FNR(APREG.CH%+1%) &
+\	TOTAL.INV=FNZ(CVT$F(INVAMT$),2%) &
+\	TOTAL.DIS=FNZ(CVT$F(DISAMT$),2%) &
+\	TOTAL.REG=TOTAL.REG+TOTAL.INV-TOTAL.DIS &
+\	UPMON%=CVT$%(UPDATE.MON$) &
+\	IF XLATE(CKNUM$,STRING$(48%,0%)+"0123456789")<>"" AND CUT.OFF%>=UPMON% &
+	THEN	TOTAL.INV=0. &
+\		TOTAL.DIS=0. &
+
+3135	TOTAL.CUTOFF=TOTAL.CUTOFF+TOTAL.INV-TOTAL.DIS &
+
+3140	COUNTER%=COUNTER%+1% &
+\	IF COUNTER%>=TOTAL.RECORD &
+	THEN	PRINT #CH%, FNP$('12;'+NUM1$(COL%));R.ON$;"     ";G.OFF$; IF PERCOM%<100% &
+\		COUNTER%=0% &
+\		COL%=COL%+5% &
+\		PERCOM%=PERCOM%+10% &
+\		PRINT #CH%, FNP$('24;80'); &
+
+3145	N.KEY.POINTER%=FNR(APREG.CH%) &
+\	N.DATA.POINTER%=FNR(APREG.CH%+1%) &
+\	IF FNN%(APREG.CH%)=0% &
+	THEN	IF LEFT(FNL$,12%)=LEFT(APREG.BUF$,12%) &
+		THEN	LSET APREG.BUF$=FNL$+"" &
+\			UPMON%=CVT$%(UPDATE.MON$) &
+\			TOTAL.INV=TOTAL.INV-FNZ(CVT$F(INVAMT$),2%) &
+				IF CUT.OFF%>=UPMON% &
+\			TOTAL.DIS=TOTAL.DIS-FNZ(CVT$F(DISAMT$),2%) &
+				IF CUT.OFF%>=UPMON% &
+\			TOTAL.CUTOFF=TOTAL.CUTOFF-FNZ(CVT$F(DISAMT$),2%)+ &
+				FNZ(CVT$F(INVAMT$),2%) &
+\			TOTAL.REG=TOTAL.REG-FNZ(CVT$F(DISAMT$),2%)+ &
+				FNZ(CVT$F(INVAMT$),2%) &
+\			GOTO 3140 &
+
+3150	V%=FNG%(-APREG.CH%,NUM1$(KEY.POINTER%))+FNG%(-APREG.CH%-1%,NUM1$( &
+		DATA.POINTER%)) &
+\	TEMP.CH%=APNEW.CH% &
+\	TEMP.CH%=APCLOS.CH% IF INT((TOTAL.INV-TOTAL.DIS)*100.+0.51)=0. &
+
+3160	IF FNA%(TEMP.CH%,FNL$) &
+	THEN	V$=FNMESS$(CH%,FNS%,'When adding to file.  Aborting',0%,-1%) &
+\		KILL APREG.DEVICE$+"APREG.DAT" &
+\		KILL APREG.DEVICE$+"APREG.DA1" &
+\		NAME APREG.DEVICE$+"APBCK.DAT" AS APREG.DEVICE$+"APREG.DAT" &
+\		NAME APREG.DEVICE$+"APBCK.DA1" AS APREG.DEVICE$+"APREG.DA1" &
+\		V%=FNX%('',-1%,'') &
+
+3170	IF N.KEY.POINTER%=FNR(APREG.CH%) &
+	THEN	GOTO 3190 &
+
+3180	IF FNN%(APREG.CH%)=0% &
+	THEN	GOTO 3160 &
+
+3190	V%=FNG%(-APREG.CH%,NUM1$(N.KEY.POINTER%))+FNG%(-APREG.CH%-1%,NUM1$( &
+		N.DATA.POINTER%)) &
+\	IF FNN%(APREG.CH%)=0% &
+	THEN	GOTO 3120 &
+
+3200	PRINT #CH%, CLRBOT$;FNP$('24;1'); &
+\	PRINT #CH%, USING "A/P CUTOFF BALANCE ###,###,###.##" + &
+		" A/P REGISTER BALANCE ###,###,###.##", &
+		TOTAL.CUTOFF,TOTAL.REG; &
+\	PRINT #CH%, FNP$('21;1');"Confirm operation (Y/n) "; &
+\	INP$=CVT$$(FNINP$(CH%,128%," ",1%,0%),-1%) &
+\	IF INP$="N" OR INP$='%^C' &
+	THEN	PRINT #CH%, CLSCN$;"Aborting. .  ."; &
+\		KILL APREG.DEVICE$+"APREG.DAT" &
+\		KILL APREG.DEVICE$+"APREG.DA1" &
+\		NAME APREG.DEVICE$+"APBCK.DAT" AS APREG.DEVICE$+"APREG.DAT" &
+\		NAME APREG.DEVICE$+"APBCK.DA1" AS APREG.DEVICE$+"APREG.DA1" &
+\		V%=FNX%("",-1%,"") &
+
+3210	PRINT #CH%, CLSCN$;"Please wait"; &
+\	KILL APREG.DEVICE$+"APBCK.DAT" &
+\	KILL APREG.DEVICE$+"APBCK.DA1" &
+\	V%=FNX%("",0%,"") &
+
+19000	! &
+
+19010	RESUME 450 IF ERL=400% &
+
+19990	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1.0) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=CHR$(155%)+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+30210	DEF*FNSR$(BEGEND$)=CHR$(155%)+'['+BEGEND$+'r' ! Scroll control &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES &
+	DEF*FNMESS$(CHN%,ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%) &
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+ &
+			DESC$ &
+\		IF PRINT.TEST% &
+		THEN	PRINT #CHN%, FNP$('24;1');CLRLIN$;MESG$; &
+				FNP$('24;55'); &
+				'Hit any key to continue.'; &
+\			NW$=FNINP$(CHN%,128%,' ',1%,TO.ERR%) &
+
+30260		FNMESS$=MESG$ &
+\	FNEND &
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 &
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% &
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% &
+
+30420	DEF FND6$(D9%)=RIGHT(NUM1$((D9% AND 15%*32%)/32%+100%),2%) &
+		+ '/'+RIGHT(NUM1$((D9% AND 31%)+100%),2%) &
+		+ '/'+RIGHT(NUM1$(((SWAP%(D9%) AND 254%)/2%)+100%),2%) &
+
+30500   DEF FNZ(Y,N%)=SGN(Y)*10.^(-N%)*INT(ABS(Y)*10.^N%+0.5001)         &
+
+32767	END

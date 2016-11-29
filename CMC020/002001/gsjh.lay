@@ -1,0 +1,66 @@
+
+
+
+           GAS JOURNAL HEADER FILE                                    
+           --------------------------------------------------------------------
+
+    Programs: GS....
+
+    KEY FILE NAME : GSJH(Batch #).DAT 		KEY = 8 + 2   DATA = 128
+
+	   NAME                         SIZE            VARIABLE     
+
+	 1 _Invoice Number__________  	_08A/01___  	GSJH.INVNUM$ 
+
+	 2 _Customer Number_________  	_06A/09___  	GSJH.CUSNUM$ 
+
+	 3 _Transaction Type________  	_02A/15___  	GSJH.TRATYP$
+
+	 4 _Transaction Date________  	_02I/17___  	GSJH.TRADAT$
+
+	 5 _Sales Amount/Cash Recvd_  	_08F/19___  	GSJH.AMOUNT$
+
+	 6 _AR Account Number_______  	_08A/27___  	GSJH.ARACCT$
+
+	 7 _Receipt Number__________  	_08A/35___  	GSJH.RECNUM$
+
+	 8 _Check Number____________  	_06A/43___  	GSJH.CHECK$
+
+	 9 _Deposit Number__________  	_06A/49___  	GSJH.DEPOSIT$
+
+	10 _Description_____________  	_25A/55___  	GSJH.DESC$
+
+	11 _Line Count______________  	_02I/80___  	GSJH.COUNT$
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED =124, FROM 128, FREE =  4
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,66 @@
+
+
+
+
+
+           WAREHOUSE INVOICE JOURNAL
+           --------------------------------------------------------------------
+
+    PROGRAM NAME : PWJMNT
+
+    KEY FILE NAME : PWJL(BATCH NUMBER).DAT  KEY = 10 + 2   DATA = 128
+
+      #  NAME                      SIZE        VARIABLE     REMARK              
+
+      1 _ORDER #_________________  __6A/1____  PWJL.ORDER_____ : 
+
+      2 _LINE #__________________  __2I/7____  PWJL.LINE_____ : 
+
+      3 _PRODUCT #_______________  _15A/9____  PWJL.PRONUM_____ : 
+
+      4 _DESCRIPTION_____________  _26A/24___  PWJL.DESC_____ : 
+
+      5 _PRINT FLAG (Y/N)________  __1A/50___  PWJL.PRTFLG_____ : 
+
+      6 _TYPE____________________  __1A/51___  PWJL.TYPE$_____ : 
+
+      7 _________________________  __________  _________ : 
+
+      8 _ACCOUNT #_______________  __8A/52___  PWJL.ACCNUM_____ : RSET
+
+      9 _QUANTITY________________  __8F/60___  PWJL.QTY_____ : 
+
+     10 _PRICE___________________  __8F/68___  PWJL.PRICE_____ : 
+
+     11 _EXTENSION_______________  __8F/76___  PWJL.EXT_____ : 
+
+     12 _________________________  __________  _________ : 
+
+    ---------------------------------------------------------------------------
+                TOTAL CHARACTERS USED = 83, FROM 128, FREE = 45
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

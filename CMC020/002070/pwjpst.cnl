@@ -1,0 +1,15 @@
+$ BP2
+OLD [2,70]PWJPST
+APPEND ISM:ISAM19
+COMPILE/DOU/OBJ
+BUILD
+$ TE PWJPST.CMD
+LK
+EX
+$ TKB @PWJPST
+$ PIP [2,70]<104>=PWJPST.TSK/LO
+$ pip PWJPST.obj/de/lo
+$ pip PWJPST.tsk/de/lo
+$ pip PWJPST.cmd/de/lo
+$ pip PWJPST.odl/de/lo
+$ pip PWJPST.bak/de/lo

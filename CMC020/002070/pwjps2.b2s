@@ -1,0 +1,590 @@
+10	!---------------------------------------------------------------&
+	!	ACCOUNTS RECEIVABLE SYSTEM				&
+	!								&
+	!	PWJPST.B2S	V1.0	April 1985			&
+	!								&
+	! Author - Randall Beard, Computer Management Center, Inc.	&
+	!								&
+	! Files-PPRINT.DAT    	 -ISAM	Printing Info File		&
+	!---------------------------------------------------------------&
+	!		      Copyright (c) 1984 by 			&
+	!	  Computer Management Center, Idaho Falls, Idaho	&
+	! 								&
+	! This software is furnished under a license and may be used	&
+	! and copied only in accordance with the terms of such license 	&
+	! and with the inclusion of the above copyright notice.  This 	&
+	! software or any other copies therof may not be provided or 	&
+	! otherwise made available to any other person.  No title to 	&
+	! and ownership of the software is hereby transferred.		&
+	! 								&
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by 	&
+	! Computer Management Center. 					&
+	! 								&
+	! CMC assumes no responsibility for the use or reliability of 	&
+	! its software on equipment which is not supported by CMC. 	&
+	!---------------------------------------------------------------&
+	! &
+	! 02/14/95 - Kevin Handy &
+	!	Disabled changing up voucher number in control file &
+	!	since all it did was mangle it. &
+
+30	ON ERROR GOTO 19000 &
+\	ABC$=FNX$ &
+\	BATCH.NO$	= LEFT(ABC$,2%)  &
+\	GL.MONTH$	= MID(ABC$,3%,3%) &
+\	GL.YEAR$	= RIGHT(ABC$,6%) &
+\	MON.NUM$='  01 02 03 04 05 06 07 08 09 10 11 12' &
+\	MON.NAM$='  JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC' &
+\	TEMP$	= SYS(CHR$(12%)) 			!LAST FILE OPENED &
+\	PRJPRG$	= MID(TEMP$,23%,2%)+NUM1$(ASCII(MID(TEMP$,25%,1%))) + ':'+   &
+		'['+NUM1$(ASCII(MID(TEMP$,6%,1%)))+','+NUM1$(ASCII(MID(TEMP$,&
+		5%,1%)))+']' &
+	
+60	CH%=1%				! Keyboard channel &
+!\	OPEN 'KB:' AS FILE 1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	COLM.ON$=ESC$+'[?3h'		! 132 Column mode &
+\	COLM.OFF$=ESC$+'[?3l'		! 80 Column mode &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	ENTER.COPY$=ESC$+'[5i'		! Enter media copy &
+\	EXIT.COPY$=ESC$+'[4i'		! Exit media copy &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	DATE.TIME$=SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+CHR$(1%)+ &
+			CHR$(SWAP%(1%))+STRING$(11%,0%)+CHR$(SWAP%(0%))+ &
+			CHR$(1%)+CHR$(SWAP%(1%))) &
+\	POST.DATE$ = CVT%$(FND6%(MID(DATE.TIME$,10%,2%)+ &
+		MID(DATE.TIME$,13%,2%)+MID(DATE.TIME$,7%,2%))) &
+\	IF 	DROP.DEAD.DATE$<>'' &
+	THEN	IF 	DROP.DEAD.DATE$<MID(DATE.TIME$,7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)),3%,30%) &
+\			V$=SYS(CHR$(9%)) &
+
+100	DIM AMOUNT(25%,7%),TYPE.NUM$(25%,7%),BROKER.AMT(25,7%),STORE$(15%), &
+		STORE.OP$(25%),STORE.ACCOUNT$(15%),STORE.AMT(15%),&
+		STORE.POUND(15%) &
+\	DIM OP.AMOUNT(25%,7%),OP.TYPE.NUM$(25%,7%),OP.LOOP%(25%) &
+\	DEVICE.CH%		= 02% &
+\	PWJH.CH% 		= 02% &
+\	PWJL.CH%		= 04% &
+\	APREG.CH%		= 06% &
+\	ARREG.CH%		= 08% &
+\	INVACT.CH%		= 10% &
+\	APCCTL.CH%		= 11% &
+\	MENU.CH%		= 12% &
+
+200	IF 	FNO%(DEVICE.CH%,'DEVICE.DAT','/RO','')=0% &
+	THEN	PWJH.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'PWJH  ')=0% &
+\		PWJL.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'PWJL  ')=0% &
+\		INVACT.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'INVACT')=0% &
+\		ARREG.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'ARREG ')=0% &
+\		APREG.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'APREG ')=0% &
+\		APCCTL.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'APCCTL')=0% &
+!\		PWJACC.DEVICE$=MID(FNL$,7%,20%)+'' &
+!			IF FNG%(DEVICE.CH%,'PWJACC')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	AP.ACCT$,AR.ACCT$='XXXXXXXX' &
+\	IF FNO%(APCCTL.CH%,APCCTL.DEVICE$+'APCCTL.DAS',"/RW/SF/NS","") &
+	THEN	V$=FNMESS$(FNS%,'APCCTL.DAS',0%,-1%) &
+\		GOTO 18610 &
+
+310	IF FNG%(APCCTL.CH%,'ARL')=0% &
+	THEN	TEMP%=FNL% + 64% &
+\		FIELD #APCCTL.CH%, TEMP%+30%*(LOOP%-1%) AS TEMP$, &
+				8% AS APCCTL.ACC$(LOOP%) &
+					FOR LOOP%=1% TO 8% &
+\		AR.ACCT$=APCCTL.ACC$(1%)+'' &
+
+320	IF FNG%(APCCTL.CH%,'APL')=0% &
+	THEN	TEMP%=FNL% + 64% &
+\		FIELD #APCCTL.CH%, TEMP%+30%*(LOOP%-1%) AS TEMP$, &
+			8% AS APCCTL.ACC$(LOOP%) &
+				FOR LOOP%=1% TO 8% &
+\		AP.ACCT$=APCCTL.ACC$(1%)+'' &
+\		FIELD #APCCTL.CH%,    	FNL%+304% AS TEMP$, &
+			08% AS APCCTL.APCASH$, &
+			08% AS TEMP$, &
+			06% AS APCCTL.VOUCH$ &
+\		VOUCHER.NUM=VAL(XLATE(MID(FNL$,321%,6%),STRING$(48%,0%)+ &
+			'0123456789')) &
+\		VOUCHER.NUM$=NUM1$(VOUCHER.NUM) &
+
+340	V%=FNC%(APCCTL.CH%) &
+!\	V%=FNO%(PWJACC.CH%,PWJACC.DEVICE$+'PWJACC.DAS','/RO/SF','')&
+
+345	IF 	FNO%(PWJH.CH%,PWJH.DEVICE$+'PWJH'+BATCH.NO$+'.DAT','/RO','') &
+	THEN	V$=FNMESS$(FNS%,'PWJH'+BATCH.NO$+'.DAT',0%,-1%) &
+\		GOTO 18610 &
+
+350	IF 	FNO%(PWJL.CH%,PWJL.DEVICE$+'PWJL'+BATCH.NO$+'.DAT','/RO','') &
+	THEN	V$=FNMESS$(FNS%,'PWJL'+BATCH.NO$+'.DAT',0%,-1%) &
+\		GOTO 18610 &
+
+360	V%=FNO%(ARREG.CH%,ARREG.DEVICE$+'ARREG.DAT','/RW','') &
+\	V%=FNO%(ARREG.CH%,ARREG.DEVICE$+'ARREG.DAT','/CR:18,128','') &
+								IF FNS%=5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(FNS%,'ARREG.DAT',0%,-1%) &
+\		GOTO 18610 &
+
+370	V%=FNO%(APREG.CH%,APREG.DEVICE$+'APREG.DAT','/RW','') &
+\	V%=FNO%(APREG.CH%,APREG.DEVICE$+'APREG.DAT','/CR:14,128','') &
+								IF FNS%=5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(FNS%,'APREG.DAT',0%,-1%) &
+\		GOTO 18610 &
+
+380	V%=FNO%(INVACT.CH%,INVACT.DEVICE$+'ACT'+GL.MONTH$+'.DAT','/RW','') &
+\	V%=FNO%(INVACT.CH%,INVACT.DEVICE$+'ACT'+GL.MONTH$+'.DAT','/CR:20,128','') &
+							IF FNS%=5% &
+\	IF 	FNS% &
+	THEN	V$=FNMESS$(FNS%,' ACT'+GL.MONTH$+'.DAT ',0%,-1%) &
+\		GOTO 18610 &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+450	OPEN 'NL:' AS FILE 12%, RECORDSIZE 128%+128%+128% &
+\	FIELD #12%,    	06% AS ARREG.CUSNUM$,	&
+			08% AS ARREG.INVNUM$,	&
+			02% AS ARREG.TRATYP$,	&
+			02% AS ARREG.TRADAT$,	&
+			08% AS ARREG.SALAMT$,	&
+			08% AS ARREG.DISAMT$,	&
+			08% AS ARREG.OTHCHG$,	&
+			08% AS ARREG.RECNUM$,	&
+			06% AS ARREG.CHKNUM$,	&
+			08% AS ARREG.ARACCT$,	&
+			06% AS ARREG.CROSS$,	&
+			25% AS ARREG.DESC$,	&
+			02% AS ARREG.UPDDAT$	&
+\	FIELD #12%,	128% AS JUNK$,		&
+			06% AS APREG.VENNUM$,	&
+			06% AS APREG.VOUNUM$,	&
+			02% AS APREG.VOUDAT$,	&
+			15% AS APREG.INVOIC$,	&
+			02% AS APREG.INVDAT$,	&
+			08% AS APREG.INVAMT$,	&
+			02% AS APREG.CD1099$,	&
+			06% AS APREG.PONUM$,	&
+			02% AS APREG.DISDAT$,	&
+			08% AS APREG.DISAMT$,	&
+			02% AS APREG.DUEDAT$,	&
+			08% AS APREG.APACCT$,	&
+			06% AS APREG.CKNUM$,	&
+			02% AS APREG.CKDAT$,	&
+			08% AS APREG.CASHACCT$,	&
+			01% AS APREG.USETAX$,	&
+			08% AS APREG.AMT1099$,	&
+			08% AS APREG.USEAMT$,	&
+			20% AS APREG.CKDESC$,	&
+			02% AS APREG.UPDATE.MON$,	&
+			06% AS APREG.USE.JOB$	&
+\	FIELD #12%,	256% AS TEMP$,      &
+			15% AS INVACT.INVNUM$, &
+			03% AS INVACT.STORNUM$,	&
+			08% AS INVACT.PRIMREF$, &
+			08% AS INVACT.SECREF$, &
+			06% AS INVACT.XREF$, &
+			06% AS INVACT.SALESMAN$, &
+			08% AS INVACT.INVDOL$,&
+			02% AS INVACT.DATE$, &
+			01% AS INVACT.TRANSA$, &
+			08% AS INVACT.QTYA$,&
+			01% AS INVACT.TRANSB$, &
+			08% AS INVACT.QTYB$, &
+			01% AS INVACT.UPDTFLG$, &
+			08% AS INVACT.SALDOL$ &
+\	FIELD #12%,    128% AS ARREG.BUF$,	&
+		       128% AS APREG.BUF$,	&
+		       128% AS INVACT.BUF$	&
+
+640	!-------------------------------------------PREPARE TO UPDATE &
+	GL.TEMP$=MID(MON.NUM$,INSTR(1%,MON.NAM$,GL.MONTH$),2%) &
+\	UPDATE.TEMP$=CVT%$(FND6%(GL.TEMP$+"00"+GL.YEAR$)) &
+
+17000	!-------------------------------------------------POSTING ROUTINE &
+	V%	= FNG%(PWJH.CH%,'') &
+
+17030	FIELD #PWJH.CH%+1%,FNL% AS JUNK$,	&
+			06% AS PWJH.ORDNUM$,		! Order # &
+			06% AS PWJH.SOLDTO$,		! Sold to &
+			06% AS PWJH.SHIPTO$,		! Ship to &
+			08% AS PWJH.INVNUM$,		! Invoice # &
+			02% AS PWJH.INVDAT$,		! Invoice Date &
+			02% AS PWJH.SHPDAT$,		! Ship Date &
+			12% AS PWJH.CUSPO$,		! Customer PO &
+			08% AS PWJH.SOLDBY$,		! Sold by &
+			08% AS PWJH.TERMS$,		! Terms &
+			15% AS PWJH.CARNAM$,		! Carrier name &
+			01% AS PWJH.FOBFLG$,		! FOB &
+			02% AS PWJH.LINE$(1%),		! Line Count &
+			02% AS PWJH.LINE$(2%)		! Line Count &
+\	STORE.LOOP%=0% &
+\	TOTAL.STORE,TOTAL.POUND,BALANCE=0. &
+\	AMOUNT(I%,J%),BROKER.AMT(I%,J%)=0.    &
+		FOR J%=1% TO 7% FOR I%=0% TO CVT$%(PWJH.LINE$(2%)) &
+\	TYPE.NUM$(I%,J%)='' FOR J%=1% TO 7% FOR I%=0% TO CVT$%(PWJH.LINE$(2%)) &
+\	OP.LOOP%(I%) = 0% FOR I%=0% TO CVT$%(PWJH.LINE$(2%))  &
+\	LAST.BROKER$='' &
+
+17040	GOTO 17075 IF FNG%(PWJL.CH%,PWJH.ORDNUM$) &
+
+17045	FIELD #PWJL.CH%+1%,FNL% AS JUNK$,	&
+			06% AS PWJL.ORDNUM$,		! Order # &
+			01% AS PWJL.WINDOW$,		! Window Flag &
+			02% AS PWJL.LINE$,		! Line # &
+			15% AS PWJL.PRONUM$,		! Pack &
+			03% AS PWJL.STONUM$,		! Store # &
+			06% AS PWJL.LOTNUM$,		! LOT # &
+			26% AS PWJL.DESC$,		! Description &
+			08% AS PWJL.ACCNUM$,		! Account # &
+			08% AS PWJL.QTY$,		! Quanity &
+			08% AS PWJL.PRICE$,		! Price &
+			08% AS PWJL.POUNDS$,		! Weight &
+			08% AS PWJL.EXT$,		! Extension &
+			01% AS PWJL.PRTYPE$		! Price Flag &
+\	GOTO 17080 IF PWJL.ORDNUM$<>PWJH.ORDNUM$ &
+
+17070	IF PWJL.WINDOW$='1' &
+	THEN	GOSUB 17410 &
+	ELSE	GOSUB 17420 &
+\		GOSUB 18170 &
+  
+17075	GOTO 17045 IF FNN%(PWJL.CH%)=0% &
+
+17080	GOSUB 17500 &
+\	GOSUB 17570 &
+ 
+17100	GOTO 17030 IF FNN%(PWJH.CH%)=0% &
+
+17400	GOTO 18300 	!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>&
+
+17410	TYP$   =CVT$$(PWJL.STONUM$,-1%) 	! READ BROKERAGE WINDOW &
+\	IND%    =CVT$F(PWJL.POUNDS$) &
+\	LOP%   =(INSTR(1%,' OP BR BC FR FC SB SF ',TYP$)+1%)/3% &
+\	TYP$ = "BR" IF TYP$="SB" &
+\	TYP$ = "FR" IF TYP$="SF" &
+\	AMOUNT(IND%,LOP%)   =AMOUNT(IND%,LOP%)+FNZ(CVT$F(PWJL.EXT$),2%) &
+\	TYPE.NUM$(IND%,LOP%)=TYP$+PWJL.LOTNUM$+'' &
+\	LAST.BROKER$=PWJL.LOTNUM$+'' IF LOP%=2% OR LOP%=3% &
+\	RETURN IF TYP$<>'OP' 			! ~~~~~&
+
+17415	OP.LOOP%(IND%)=OP.LOOP%(IND%)+1% ! ADDITIONAL INFO FOR OP &
+\	OP.AMOUNT(IND%,OP.LOOP%(IND%))	  = FNZ(CVT$F(PWJL.EXT$),2%) & 
+\	OP.TYPE.NUM$(IND%,OP.LOOP%(IND%)) = PWJL.LOTNUM$+'' &
+\	KEY.POINTER% =FNR(PWJL.CH%) 		 &
+\	DATA.POINTER%=FNR(PWJL.CH%+1%) &
+\	VENDOR.NUM$  =PWJL.LOTNUM$+'' &
+\	VENDOR.AMT   =FNZ(CVT$F(PWJL.EXT$),2%) &
+\	IF FNG%(PWJL.CH%,PWJL.ORDNUM$+'2'+CVT%$(IND%))=0% &
+	THEN	FIELD #PWJL.CH%+1%,FNL% AS JUNK$,	&
+			06% AS PWJL.ORDNUM$,		! Order # &
+			01% AS PWJL.WINDOW$,		! Window Flag &
+			02% AS PWJL.LINE$,		! Line # &
+			15% AS PWJL.PRONUM$,		! Pack &
+			03% AS PWJL.STONUM$,		! Store # &
+			06% AS PWJL.LOTNUM$,		! LOT # &
+			26% AS PWJL.DESC$,		! Description &
+			08% AS PWJL.ACCNUM$,		! Account # &
+			08% AS PWJL.QTY$,		! Quanity &
+			08% AS PWJL.PRICE$,		! Price &
+			08% AS PWJL.POUNDS$,		! Weight &
+			08% AS PWJL.EXT$,		! Extension &
+			01% AS PWJL.PRTYPE$		! Price Flag &
+\		GOSUB 18180 &
+
+17419	V%=FNG%(-PWJL.CH%,NUM1$(KEY.POINTER%))+ &
+		FNG%(-PWJL.CH%-1%,NUM1$(DATA.POINTER%)) &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+	
+17420	FOR I%=2% TO 7% 			! READ PRODUCT WINDOW &
+\		AMOUNT(CVT$%(PWJL.LINE$),I%)=FNZ(AMOUNT(CVT$%(PWJL.LINE$),I%)* &
+			CVT$F(PWJL.POUNDS$)*0.01,2%) &
+\	NEXT I% &
+\	RETURN IF CVT$F(PWJL.QTY$)=0. 		! ~~~~~&
+\	STORE.OP$(CVT$%(PWJL.LINE$))=PWJL.STONUM$+'' &
+\	FOR I%=1% TO STORE.LOOP% &
+\		IF STORE$(I%)=PWJL.STONUM$ &
+		THEN	GOTO 17430 &
+
+17425	NEXT I% &
+\	STORE.LOOP%,I%=STORE.LOOP%+1% &
+\	STORE$(STORE.LOOP%)=PWJL.STONUM$+'' &
+\	STORE.ACCOUNT$(I%)=PWJL.ACCNUM$+'' &
+\	STORE.AMT(I%),STORE.POUND(I%)=0. &
+
+17430	STORE.AMT(I%)=STORE.AMT(I%)+FNZ(CVT$F(PWJL.EXT$),2%) &
+\	STORE.POUND(I%)=STORE.POUND(I%)+CVT$F(PWJL.POUNDS$) &
+\	BROKER.AMT(I%,J%)=BROKER.AMT(I%,J%)+AMOUNT(CVT$%(PWJL.LINE$),J%) &
+		FOR J%=1% TO 7% &
+\	TOTAL.STORE=TOTAL.STORE+FNZ(CVT$F(PWJL.EXT$),2%) &
+\	TOTAL.POUND=TOTAL.POUND+CVT$F(PWJL.POUNDS$) &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+17500	FOR LOP%=1% TO 7% 		! BROKERAGE CALCULATION &
+\	 FOR IND%=0% TO (CVT$%(PWJH.LINE$(2%))-1%)*(1%-SGN(LOP%-1%))+1% &
+\		TOTAL.BROKER=0. &
+\	        TOTAL.BROKER=TOTAL.BROKER+BROKER.AMT(J%,LOP%) &
+			FOR J%=1% TO STORE.LOOP% &
+\		TOTAL.BROKER=AMOUNT(IND%,LOP%) IF LOP%=1% OR IND%=0% &
+\		GOTO 17506 IF TOTAL.BROKER=0. OR TYPE.NUM$(IND%,LOP%)='' &
+\		ACCOUNT$=AP.ACCT$ &
+\		GOTO 17502 IF LOP%=1% &
+\		AMOUNT  =-TOTAL.BROKER &
+\		XREFNO$ =RIGHT(TYPE.NUM$(IND%,LOP%),3%) &
+\		IF AMOUNT<>0. &
+		THEN	IF LOP%=5% &
+			THEN	GOSUB 17580 &
+			ELSE	VOUCHER.NUM=VOUCHER.NUM+1. &
+\				VOUCHER.NUM$=NUM1$(VOUCHER.NUM) &
+\				GOSUB 18150  &
+\				IF LOP% = 3% &
+				THEN	GOSUB 17580 &
+!\					AMOUNT = -AMOUNT &
+\					GOSUB 18150 &
+	
+17501		GOTO 17505 &
+
+17502		FOR II%=1% TO OP.LOOP%(IND%) &
+\			AMOUNT=-OP.AMOUNT(IND%,II%) &
+\			XREFNO$ =OP.TYPE.NUM$(IND%,II%) &
+\			IF AMOUNT<>0. &
+			THEN	VOUCHER.NUM=VOUCHER.NUM+1. &
+\				VOUCHER.NUM$=NUM1$(VOUCHER.NUM) &
+\				GOSUB 18150 &
+
+17503		NEXT II% &
+
+17505		! &
+
+17506	 NEXT IND% &
+\	NEXT LOP% &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+17510	ACCOUNT$='XXXXXXXX' 			! UPDATE OP &
+!\	ACCOUNT$=MID(FNL$,6%,8%) &
+!		IF FNG%(PWJACC.CH%,STORE.OP$(IND%)+'OP')=0% &
+!\	AMOUNT=AMOUNT(IND%,LOP%) &
+!\	GOSUB 18150  IF AMOUNT<>0. &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+17520	TOTAL.TRAN.AMOUNT=0. 			! UPDATE BROKERAGE TO A/P &
+!\	FOR I%=1% TO STORE.LOOP% &
+!\		ACCOUNT$='XXXXXXXX' &
+!\		ACCOUNT$=MID(FNL$,6%,8%) &
+!			IF FNG%(PWJACC.CH%,STORE$(I%)+ &
+!				LEFT(TYPE.NUM$(IND%,LOP%),2%))=0% &
+!\		AMOUNT=BROKER.AMT(I%,LOP%) & 
+!\		AMOUNT=FNZ(STORE.POUND(I%)/TOTAL.POUND*AMOUNT(IND%,LOP%),2%) &
+!				IF TOTAL.POUND<>0. AND IND%=0% &
+!\		AMOUNT=TOTAL.BROKER-TOTAL.TRAN.AMOUNT IF I%=STORE.LOOP% &
+!\		GOSUB 18150  IF AMOUNT<>0. &
+!\		TOTAL.TRAN.AMOUNT=TOTAL.TRAN.AMOUNT+AMOUNT &
+!\	NEXT I% &		
+\	RETURN IF LOP%<>3% 			! ~~~~~&
+
+17530	ACCOUNT$=AP.ACCT$ &
+!\	AMOUNT  =TOTAL.BROKER &
+!\	GOSUB 18150 IF AMOUNT<>0. &
+
+17540   ACCOUNT$=AR.ACCT$ &
+!\	AMOUNT	=-TOTAL.BROKER &
+!\	GOSUB 18100 IF AMOUNT<>0. &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+17570	ACCOUNT$=AR.ACCT$ 			! UPDATE SALES TO A/R &
+\	AMOUNT  =TOTAL.STORE &
+\	XREFNO$ =PWJH.SOLDTO$ &
+\	GOSUB 18100 ! IF AMOUNT<>0. &
+!\	FOR I%=1% TO STORE.LOOP% &
+!\		ACCOUNT$=STORE.ACCOUNT$(I%) &
+!\		AMOUNT  =-STORE.AMT(I%) &
+!\		GOSUB 18100 IF AMOUNT<>0. &
+!\	NEXT I% &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+17580	TOTAL.STORE=TOTAL.STORE+AMOUNT 		! ADD FREIGHT CREDIT TO A/R &
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+17590	TOTAL.TRAN.AMOUNT=0. 			! ADD FREIGHT CREDIT TO STORES &
+!\	FOR I%=1% TO STORE.LOOP% &
+!\		AMOUNT=BROKER.AMT(I%,LOP%) & 
+!\		AMOUNT=FNZ(STORE.POUND(I%)/TOTAL.POUND*AMOUNT(IND%,LOP%),2%) &
+!				IF TOTAL.POUND<>0. AND IND%=0% &
+!\		AMOUNT=TOTAL.BROKER-TOTAL.TRAN.AMOUNT IF I%=STORE.LOOP% &
+!\		STORE.AMT(I%)=STORE.AMT(I%)-AMOUNT  &
+!\		TOTAL.TRAN.AMOUNT=TOTAL.TRAN.AMOUNT+AMOUNT &
+!\	NEXT I% &		
+\	RETURN !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~&
+
+18100				! POST ENTRY TO ACCOUNTS RECEIVABLES FILE &
+	LSET ARREG.CUSNUM$ = XREFNO$		&
+\	RSET ARREG.INVNUM$ = CVT$$(PWJH.INVNUM$,140%) &
+\	LSET ARREG.TRATYP$ = '01'		&
+\	LSET ARREG.TRADAT$ = PWJH.INVDAT$	&
+\	LSET ARREG.SALAMT$ = CVTF$(AMOUNT)	&
+\	LSET ARREG.DISAMT$ = CVTF$(0.0)		&
+\	LSET ARREG.OTHCHG$ = CVTF$(0.0)		&
+\	LSET ARREG.RECNUM$ = ''			&
+\	LSET ARREG.CHKNUM$ = ''			&
+\	RSET ARREG.ARACCT$ = ACCOUNT$		&
+\	LSET ARREG.CROSS$  = PWJH.ORDNUM$	&
+\	LSET ARREG.DESC$   = ''			&
+\	LSET ARREG.UPDDAT$ = UPDATE.TEMP$	&
+\	RETURN IF FNA%(ARREG.CH%,ARREG.BUF$)=0% 	! ~~~~~&
+\	V$=FNMESS$(FNS%,'ARREG.DAT',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18150				! POST ENTRY TO ACCOUNTS PAYABLE FILE &
+	LSET APREG.VENNUM$	= XREFNO$	&
+\	LSET APREG.VOUNUM$	= VOUCHER.NUM$	&
+\	LSET APREG.VOUDAT$	= PWJH.INVDAT$	&
+\	LSET APREG.INVOIC$	= PWJH.INVNUM$  &
+\	LSET APREG.INVDAT$	= PWJH.INVDAT$	&
+\	LSET APREG.INVAMT$	= CVTF$(-AMOUNT) &
+\	LSET APREG.CD1099$	= ''		&
+\	LSET APREG.PONUM$	= PWJH.CUSPO$	&
+\	LSET APREG.DISDAT$	= CVT%$(FND6%('123199')) &
+\	LSET APREG.DISAMT$	= CVTF$(0.0)	&
+\	LSET APREG.DUEDAT$	= CVT%$(FND6%('123199')) &
+\	RSET APREG.APACCT$	= ACCOUNT$	&
+\	LSET APREG.CKNUM$	= ''		&
+\	LSET APREG.CKDAT$	= CVT%$(FND6%('000000')) &
+\	LSET APREG.CASHACCT$	= ''		&
+\	LSET APREG.USETAX$	= ''		&
+\	LSET APREG.AMT1099$	= CVTF$(0.0)	&
+\	LSET APREG.USEAMT$	= CVTF$(0.0)	&
+\	LSET APREG.CKDESC$	= PWJH.SOLDTO$+' '+PWJH.CARNAM$	&
+\	LSET APREG.UPDATE.MON$	= UPDATE.TEMP$	&
+\	LSET APREG.USE.JOB$	= ''		&
+\	RETURN IF FNA%(APREG.CH%,APREG.BUF$)=0% 	! ~~~~~&
+\	V$=FNMESS$(FNS%,'APREG.DAT',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18170						! POST ENTRY TO ACTION FILE &
+	LSET INVACT.INVNUM$	= PWJL.PRONUM$		&
+\	LSET INVACT.STORNUM$	= PWJL.STONUM$		&
+\	LSET INVACT.PRIMREF$	= PWJH.INVNUM$		&
+\	LSET INVACT.SECREF$	= PWJL.LOTNUM$		&
+\	LSET INVACT.XREF$	= PWJH.SOLDTO$		&
+\	LSET INVACT.SALESMAN$	= LAST.BROKER$		&
+\	LSET INVACT.INVDOL$	= CVTF$(0.)		&
+\	LSET INVACT.DATE$	= PWJH.INVDAT$		&
+\	LSET INVACT.TRANSA$	= 'S'			&
+\	LSET INVACT.QTYA$	= CVTF$(-CVT$F(PWJL.QTY$))&
+\	LSET INVACT.TRANSB$	= ''			&
+\	LSET INVACT.QTYB$	= CVTF$(0.)		&
+\	LSET INVACT.UPDTFLG$	= CHR$(0%)		&
+\	LSET INVACT.SALDOL$	= CVTF$(-FNZ(CVT$F(PWJL.EXT$),2%))&
+\	RETURN IF FNA%(INVACT.CH%,INVACT.BUF$)=0% 	! ~~~~~&
+\	V$=FNMESS$(FNS%,'ACT'+GL.MONTH$+'.DAT',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18180						! POST ENTRY TO ACTION FILE &
+	LSET INVACT.INVNUM$	= PWJL.PRONUM$		&
+\	LSET INVACT.STORNUM$	= PWJL.STONUM$		&
+\	LSET INVACT.PRIMREF$	= PWJH.INVNUM$		&
+\	LSET INVACT.SECREF$	= PWJL.LOTNUM$		&
+\	LSET INVACT.XREF$	= VENDOR.NUM$		&
+\	LSET INVACT.SALESMAN$	= ''			&
+\	LSET INVACT.INVDOL$	= CVTF$(VENDOR.AMT)	&
+\	LSET INVACT.DATE$	= PWJH.INVDAT$		&
+\	LSET INVACT.TRANSA$	= 'P'			&
+\	LSET INVACT.QTYA$	= PWJL.QTY$	        &
+\	LSET INVACT.TRANSB$	= ''			&
+\	LSET INVACT.QTYB$	= CVTF$(0.)		&
+\	LSET INVACT.UPDTFLG$	= CHR$(0%)		&
+\	LSET INVACT.SALDOL$	= CVTF$(0.)		&
+\	RETURN IF FNA%(INVACT.CH%,INVACT.BUF$)=0% 	! ~~~~~&
+\	V$=FNMESS$(FNS%,'ACT'+GL.MONTH$+'.DAT',0%,-1%) &
+\	V%=FNX%('',-1%,'') &
+
+18300	!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<PRINT TRANSMITTAL TOTALS &
+
+18505	V%=FNC%(I%) FOR I%=1% TO 12% &
+\	V%=FNO%(APCCTL.CH%,APCCTL.DEVICE$+'APCCTL.DAS','/RW/SF/NS','')&
+\	VOUCHER.NUM$ = LEFT(VOUCHER.NUM$ + "      ", 6%) &
+\	IF FNG%(APCCTL.CH%,'APL')=0% &
+	THEN	V%=FNU%(-APCCTL.CH%,LEFT(FNL$,320%)+VOUCHER.NUM$+ &
+			RIGHT(FNL$,327%)) &
+
+18510	KILL PWJH.DEVICE$+'PWJH'+BATCH.NO$+'.DAT' &
+\	KILL PWJH.DEVICE$+'PWJH'+BATCH.NO$+'.DA1' &
+
+18520	KILL PWJL.DEVICE$+'PWJL'+BATCH.NO$+'.DAT' &
+\	KILL PWJL.DEVICE$+'PWJL'+BATCH.NO$+'.DA1' &
+
+18590	OPEN 'KB:' AS FILE CH%, MODE 8%+256% &
+
+18600	PRINT #CH%, CLSCN$;FNSR$('1;24');FNP$('1;1');'Process complete '; &
+		FNP$('24;55');'Hit any key to continue. . . '; &
+\	INP$=FNINP$(CH%,128%,' ',1%,0%) &
+
+18610	V%=FNX%('',0%,'') &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 450 IF ERL=400% 						&
+\	RESUME 70 IF ERL=60% AND ERR=27% 				&
+\	RESUME 18520 IF ERL=18510 &
+\	RESUME 18600 IF ERL=18520 &
+
+19010	IF 	ERR=28%	THEN	JUNK$ = SYS(CHR$(6%) + CHR$(-7%)) 	&
+\				RESUME 18610 				&
+
+19900	ON ERROR GOTO 0 						&
+
+30000	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%)		&
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); 	&
+			  STRING$(INPUTLEN%,8%); 			&
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$;&
+\		GET #CHN% 						&
+\		FIELD #CHN%, RECOUNT AS BUFFER$ 			&
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) 		&
+\		FNINP$=CVT$$(BUFFER$,4%) 				&
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping	&
+\	FNEND 								&
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+"["+ROWCOL$+"H"	! Direct Cursor Address &
+
+30250	!-----------------------------------------------SYSTEM MESSAGES	&
+	DEF*FNMESS$(ERRNUM%,DESC$,TO.ERR%,PRINT.TEST%)			&
+\		MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(ERRNUM%)),3%,30%)+	&
+								DESC$	&
+\		IF 	PRINT.TEST%					&
+		THEN	PRINT #CH%, FNP$('24;1');MESG$;FNP$('24;55');	&
+				'Hit any key to continue.';		&
+\			NW$=FNINP$(CH%,128%,' ',1%,TO.ERR%)		&
+
+30260		FNMESS$=MESG$						&
+\	FNEND 								&
+
+30270	DEF*FNSR$(BEGEND$)=ESC$+"["+BEGEND$+"r"	! Scroll control 	&
+
+30400	!-------------------------------------------------DATE HANDLERS &
+	DEF FND8%(D8)=D8 						&
+
+30410	DEF FND6%(D9$)=VAL(MID(D9$,3%,2%))+VAL(LEFT(D9$,2%))*32% 	&
+		+ FND8%(VAL(RIGHT(D9$,5%)))*512% 			&
+
+30500	DEF FNZ(Y,N%)=SGN(Y)*10.^(-N%)*INT(ABS(Y)*10.^N%+.5001)  	&
+
+32767	END &
+

@@ -1,0 +1,263 @@
+10	!--------------------------------------------------------------- &
+	! &
+	! &
+	!		      Copyright (c) 1984 by &
+	!	  Computer Management Center, Idaho Falls, Idaho &
+	! &
+	! This software is furnished under a license and may be used &
+	! and copied only in accordance with the terms of such license &
+	! and with the inclusion of the above copyright notice.  This &
+	! software or any other copies therof may not be provided or &
+	! otherwise made available to any other person.  No title to &
+	! and ownership of the software is hereby transferred. &
+	! &
+	! The information in this software is subject to change without &
+	! notice and should not be construed as a committment by &
+	! Computer Management Center. &
+	! &
+	! CMC assumes no responsibility for the use or reliability of &
+	! its software on equipment which is not supported by CMC. &
+	! &
+	! Author - Glenn Carl Hillam &
+	! &
+	!--------------------------------------------------------------- &
+
+50	ON ERROR GOTO 19000 &
+\	JUNK$ = SYS(CHR$(6%)+CHR$(-7%)) &
+
+60	CH%=1%				! Keyboard channel &
+\	OPEN 'KB:' AS FILE #1%, MODE 8%+256% &
+					!    8% - Echo Control &
+					!   16% - Disable hibernation, Cntl-C &
+
+70	ESC$=CHR$(155%)			! Escape code for VT100 control &
+\	CLSCN$=ESC$+'[H'+ESC$+'[J'	! Clear screen &
+\	CLRLIN$=ESC$+'[2K'		! Erase entire line &
+\	G.OFF$=ESC$+'[m'		! Select graphic off &
+\	B.ON$=ESC$+'[1m'		! Bold face on &
+\	SCROLL.ON$=ESC$+"[1;24r"	! Scroll control &
+\	SCROLL.REGION$=ESC$+"[4;19r"	! Scroll region &
+\	BLINK.ON$=ESC$+'[5m'		! Blinking &
+\	R.ON$=ESC$+'[7m'		! Reverse video &
+\	CLRBOT$=ESC$+'[21;1H'+ESC$+'[J'	! Erase cursor to end of screen &
+\	LDS.ON$=ESC$+'(0'		! Line drawing set &
+\	USASCII$=ESC$+'(B'		! United States ASCII &
+\	BELL$=CHR$(7%)			! BELL &
+
+80	!COM(THIS) DROP.DEAD.DATE$ = 8, VERSION.NO$ = 6, SERIAL.NO$ = 10 &
+	DROP.DEAD.DATE$='        ' &
+\	VERSION.NO$='V1.0' &
+\	IF DROP.DEAD.DATE$<>'' &
+	THEN	IF DROP.DEAD.DATE$<MID(SYS(CHR$(6%)+CHR$(20%)+CHR$(0%)+CHR$(0%)+ &
+				CHR$(1%)+CHR$(SWAP%(1%))),7%,8%) &
+		THEN	MESG$=MID(SYS(CHR$(6%)+CHR$(9%)+CHR$(47%)), &
+				3%,30%) &
+\			PRINT #CH%, MESG$; &
+\			V$=SYS(CHR$(9%)) &
+
+100	DEVICE.CH%		= 02% &
+\	WILD.CH%    		= 12% &
+\	MENU.CH%		= 12% &
+\	COUNTER%		= 0% &
+
+120	DIM SYS.CALL%(30%), FIL.NAM%(30%), Y%(32%), Y1%(32%),NAM$(100%) &
+
+200	IF FNO%(DEVICE.CH%,'DEVICE.DAT','/RO','')=0% &
+	THEN	CHART.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'CHART')=0% &
+\		GJ.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'GJ')=0% &
+\		CONTRL.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'CONTRL')=0% &
+\		BUDGET.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'BUDGET')=0% &
+\		FINSTA.DEVICE$=MID(FNL$,7%,20%)+'' &
+			IF FNG%(DEVICE.CH%,'FINSTA')=0% &
+\		V%=FNC%(DEVICE.CH%) &
+
+300	FILE.NAME$(01%) = 'GJ????.DAT' &
+\	FILE.NAME$(02%) = 'CONTRL.DAT' &
+\	FILE.NAME$(03%) = 'GL??? .DAS' &
+\	FILE.NAME$(04%) = 'BDGT??.DAT' &
+\	FILE.NAME$(05%) = 'CHART .DAT' &
+\	FILE.NAME$(06%) = 'FINSTA.DAT' &
+\	FILE.LOOP% = 6% &
+
+400	OPEN 'MENU.FIL/RO' FOR INPUT AS FILE MENU.CH% &
+\	DIM #12%, A0$(1%)=64% &
+\	COMPANY$=CVT$$(RIGHT(A0$(1%),2%),128%) &
+\	CLOSE MENU.CH% &
+
+500	FRAME$=FRAME$+FNP$(NUM1$(I%)+';1')+' '+FNP$(NUM1$(I%)+';80')+' ' &
+							FOR I%=2% TO 19% &
+
+510	COUNTER%=0% &
+\	NEXXT%=0% &
+\	TEST.COUNT%=0% &
+
+1000	!-------------------------Setting up screen----------- &
+	PRINT #CH%, R.ON$;CLSCN$; FNP$('1;1');SPACE$(80%);FRAME$; &
+		FNP$('20;1');SPACE$(80%);SCROLL.REGION$; &
+	G.OFF$;FNP$('2;3');"NUMBER";FNP$('2;13');"WHERE"; &
+	FNP$('2;22');"ACCOUNT";FNP$('2;34');"NAME AND TYPE" ; &
+	LDS.ON$;FNP$('3;2');STRING$(78%,113%); &
+		FNP$('3;10');CHR$(110%);FNP$('3;21');CHR$(110%); &
+	FNP$('3;33');CHR$(110%);FNP$('2;10');CHR$(120%); &
+	FNP$('2;21');CHR$(120%); FNP$('2;33');CHR$(120%);USASCII$;G.OFF$; &
+\	DISPLAY.LINE%=0% &
+\	PRINT.LINE%=4% &
+
+2000	!-------------Work over the WILD file--- &
+	TEST.COUNT%=TEST.COUNT%+1% &
+\	GOTO 3000 IF TEST.COUNT%>FILE.LOOP% &
+\	WLDCRD.FLAG%=0% &
+\	FILE.NAME$=FILE.NAME$(TEST.COUNT%) &
+
+2030	GOSUB 18100 ! Pick up the wildcard file names &
+
+2040	!--------SEPERATING WILD FILE----------------- &
+	WHERE$=MID(WILD.FILE$,1%,4%) &
+\	ACC$=MID(WILD.FILE$,5%,LEN(WILD.FILE$)-14%) &
+\	NAMETY$=MID(WILD.FILE$,LEN(WILD.FILE$)-9%,10%) &
+
+2050	COUNTER%=COUNTER%+1% &
+\	NAM$(COUNTER%)=WILD.FILE$ &
+
+2060	!-------------Printing wild file--------------- &
+	 PRINT #CH%,FNP$(NUM1$(PRINT.LINE%)+';3');COUNTER%; &
+		 FNP$(NUM1$(PRINT.LINE%)+';13');WHERE$; &
+		FNP$(NUM1$(PRINT.LINE%)+';22');ACC$; &
+		FNP$(NUM1$(PRINT.LINE%)+';34');NAMETY$; &
+\	I%=PRINT.LINE% &
+\	PRINT #CH%, LDS.ON$;FNP$(NUM1$(I%)+';10');CHR$(120%); &
+		FNP$(NUM1$(I%)+';21');CHR$(120%);FNP$(NUM1$(I%)+';33'); &
+			CHR$(120%);USASCII$;G.OFF$; &
+\	PRINT.LINE%=PRINT.LINE%+1% IF PRINT.LINE%<19% &
+
+2070	IF DISPLAY.LINE% > 14% &
+	THEN	GOTO 3000 &
+
+2080	PRINT #CH% &
+\	DISPLAY.LINE%=DISPLAY.LINE%+1% &
+\	IF PRINT.LINE%=19% &
+	THEN	PRINT #CH%, FNP$(NUM1$(PRINT.LINE%)+';1');R.ON$;" "; &
+			FNP$(NUM1$(PRINT.LINE%)+';132');" ";G.OFF$; &
+
+2090	GOTO 2030 &
+
+3000	!-----------------Program restart point---------------- &
+	PRINT #CH%, CLRBOT$,FNP$('21;1');"COMMAND: Erase Next-screen Refresh-"+ &
+		"screen Quit "; &
+
+3010	INP$=CVT$$(FNINP$(CH%,128%,' ',1%,1%),32%) &
+\	GOTO 510 IF INP$="R" &
+\	GOTO 4000 IF INP$="E" &
+\	IF INP$="N" THEN DISPLAY.LINE%=1% &
+\	PRINT.LINE%=19% &
+\	GOTO 2070 &
+
+3020	IF INP$='Q' THEN &
+		PRINT #CH%,CLSCN$;B.ON$;R.ON$;BLINK.ON$; &
+		FNP$('1;75');'WAIT';G.OFF$;SCROLL.ON$;FNP$('24;1'); &
+	\	V%=FNX%('',0%,'') &
+
+3030	GOTO 3010 &
+
+4000	PRINT #CH%, CLRBOT$, FNP$('21;2');"ALL (more then one) OR INDIVIDUALLY" &
+\	INP$=FNINP$(CH%,128%," ",1%,1%) &
+\	GOTO 4010  IF INP$="A" &
+\	GOTO 5000 IF INP$="I" &
+\	GOTO 3000 &
+
+4010	!-----------------------Erase all or by number to number---------------- &
+	PRINT #CH%, CLRBOT$, FNP$('21;1');"THIS WILL KILL FROM X TO Y OR ALL FILES." &
+		FNP$('23;1');BELL$;"***REMBER THIS WILL DELETE THE FILE PERMANTLY***"; &
+\	PRINT #CH%,FNP$('23,1');"WHAT NUMBER TO WHAT NUMBER"; &
+\	INP$=FNINP$(CH%,128%," ",1%,1%) &
+\	IF INP$="A" THEN NF%=1% &
+\	NF1%=COUNTER% &
+\	GOTO 4030 &
+
+4020	INP1$=FNINP$(CH%,128%," ",1%,1%) &
+\	NF%=VAL(INP$) &
+\	NF1%=VAL(INP1$) &
+
+4030	KILL NUM$(LOOP%) &
+		FOR LOOP%=NF% TO NF1% &
+\	PRINT #CH%, CLRBOT$, FNP$('21;1');NF%;" THROUGH ";NF1%;" FILES "+ &
+	"HAVE BEEN KILLED" &
+\	GOTO 510 &
+
+5000	!-------------------Erase indevidualy------------------------ &
+	PRINT #CH%, CLRBOT$, FNP$('21;1');"WHICH NUMBER DO YOU WISH TO DELETE" &
+\	INP$=FNINP$(CH%,128%,"_",2%,1%) &
+\	PRINT #CH%, FNP$('22;1');BELL$;"***REMEMBER THIS WILL DELETE THE FILE PERMANENTLY***" &
+\	GOTO 3000 IF INP$="%^C" &
+\	ANSW%=VAL(INP$) &
+\	PRINT #CH%, FNP$('23;1');"CLEAR ";NAM$(ANSW%);" YES/NO "; &
+\	INP$=FNINP$(CH%,128%," ",1%,1%) &
+\	GOTO 3000 IF INP$<>"Y" &
+
+5010	KILL NAM$(ANSW%) &
+
+5020	KILL LEFT(NAM$(ANSW%),LEN(NAM$(ANSW%))-1%)+'1' &
+
+5090	PRINT #CH%,FNP$('25;1');"**FILE HAS BEEN DELETED**"; &
+\	GOTO 510 &
+
+18100	!---------------WILD CARD LOOKUP--------------------- &
+		NEXXT%=0% &
+\		CHANGE SYS(CHR$(6%)+CHR$(-10%)+FILE.NAME$) TO SYS.CALL% &
+\		SYS.CALL%(0%)=30% &
+\		SYS.CALL%(1%)=6% &
+\		SYS.CALL%(2%)=17% &
+\		SYS.CALL%(3%)=WLDCRD.FLAG% ! JUMP &
+\		SYS.CALL%(4%)=SWAP%(WLDCRD.FLAG%) &
+\		WLDCRD.FLAG%=WLDCRD.FLAG%+1% &
+\		CHANGE SYS.CALL% TO SYS.CALL$ &
+\		CHANGE SYS(SYS.CALL$) TO FIL.NAM% &
+\		FIL.NAM%(23%)=ASCII('S') IF FIL.NAM%(23%)=0% &
+\		FIL.NAM%(24%)=ASCII('Y') IF FIL.NAM%(24%)=0% &
+\		WILD.FILE$=CHR$(FIL.NAM%(23%))+CHR$(FIL.NAM%(24%))+ &
+			NUM1$(FIL.NAM%(25%))+":"+ &
+			"["+NUM1$(FIL.NAM%(6%))+","+NUM1$(FIL.NAM%(5%))+"]"+ &
+			RAD$(FIL.NAM%(07%)+SWAP%(FIL.NAM%(08%)))+ &
+			RAD$(FIL.NAM%(09%)+SWAP%(FIL.NAM%(10%)))+"."+ &
+			RAD$(FIL.NAM%(11%)+SWAP%(FIL.NAM%(12%))) &
+\	RETURN &
+
+18110		NEXXT%=1% ! Move on to the next &
+\	RETURN &
+
+18910	!-------------------------------------------------END OF FILE &
+	PRINT #CH%, CLRBOT$;FNP$('24;1');'End of file has been reached.'; &
+		FNP$('24;105');'Hit any key to continue '; &
+\	INP$=FNINP$(CH%,128%,' ',1%,0%) &
+\	GOTO 510 &
+
+19000	!------------------------------------------------ERROR TRAPPING &
+	RESUME 450 IF ERL=400 &
+\	RESUME 510 IF ERR=54% &
+\	RESUME 2000 IF ERR=5% &
+\	RESUME 5020 IF ERL=5010% &
+\	RESUME 5090 IF ERL=5020% &
+
+19999	ON ERROR GOTO 0 &
+
+30000	!----------------------PROGRAM FUNCTIONS------------------------ &
+	!------------------------------------------------TERMINAL INPUT &
+	DEF FNINP$(CHN%,KYP%,FILLCHAR$,INPUTLEN%,TO.ERR%) &
+\		PRINT #CHN%, STRING$(INPUTLEN%,ASCII(FILLCHAR$)); &
+			  STRING$(INPUTLEN%,8%); &
+\		PRINT #CHN%, RECORD 256%,CHR$(KYP%+INPUTLEN%)+FILLCHAR$; &
+\		GET #CHN% &
+\		FIELD #CHN%, RECOUNT AS BUFFER$ &
+\		BUFFER$='%^C' IF INSTR(1%,BUFFER$,CHR$(3%)) &
+\		FNINP$=CVT$$(BUFFER$,4%) &
+\		V=SQR(-1) IF BUFFER$='%^C' AND TO.ERR% !^C Trappping &
+\	FNEND &
+
+30200	DEF*FNP$(ROWCOL$)=ESC$+'['+ROWCOL$+'H' 	! Direct Cursor Address &
+
+32767	END &
+
