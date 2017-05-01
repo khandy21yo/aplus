@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Accounts Payable Open Register File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__OPEN.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Accounts Payable Open Register File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__OPEN.LED\*
+	!	.b
+	!	.lm +5
+	!	Accounts Payable Open Register File.
+	!
+	! Index:
+	!	.x Accounts Payable Open Register File
+	!	.x AP_OPEN
+	!
+	!--

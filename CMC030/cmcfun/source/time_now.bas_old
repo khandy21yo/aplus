@@ -1,0 +1,83 @@
+1	%TITLE "Returns the Current Time in HHMMSS(24-Hour) Form"
+	%SBTTL "TIME_NOW"
+	%IDENT "V3.3"
+
+	FUNCTION STRING TIME_NOW
+	!
+	! COPYRIGHT (C) 1987 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	Returns the current time in the HHMMSS (24-hour) form.
+	!
+	! Parameters:
+	!
+	!	Returns the current time in the HHMMSS form.
+	!
+	! Example:
+	!
+	!	NOW$ = TIME_NOW
+	!
+	! Environment:
+	!
+	!	VAX BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:TIME_NOW/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP TIME_NOW
+	!	$ DELETE TIME_NOW.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	5/28/86 - B. Craig Larsen
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	08/14/90 - Kevin Handy
+	!		Removed unecessary code.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TIME_NOW$
+	!		String variable that receives the current time.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	EXTERNAL INTEGER FUNCTION LIB$DATE_TIME
+
+ !	TIME_NOW$ = SPACE$(32%)		% Unecessary
+
+	JUNK% = LIB$DATE_TIME(TIME_NOW$)
+
+	TIME_NOW = MID(TIME_NOW$, 13%, 2%) + &
+		MID(TIME_NOW$, 16%, 2%) + &
+		MID(TIME_NOW$, 19%, 2%)
+
+	END FUNCTION

@@ -1,0 +1,22 @@
+	!======================================================================
+	! WP_BUYOFF file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_BUYOFF.CH%, STAT%)
+	CALL READ_DEVICE('WP_BUYOFF',WP_BUYOFF.DEV$, STAT%)
+	CALL READ_PROTECTION('WP_BUYOFF',WP_BUYOFF.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(WP_BUYOFF.PRO$, STAT%)
+
+	WP_BUYOFF.NAME$ = WP_BUYOFF.DEV$+"WP_BUYOFF_"+BATCH_NO$+".JRL"
+
+	OPEN WP_BUYOFF.NAME$ AS FILE WP_BUYOFF.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_BUYOFF, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			WP_BUYOFF::JOB, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

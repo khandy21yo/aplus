@@ -1,0 +1,49 @@
+	!======================================================================
+	! PO_REG_LINE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_REG_LINE.CH_ARC%, STAT%)
+	CALL READ_DEVICE('PO_REG_LINE_ARC',PO_REG_LINE.DEV$, STAT%)
+	CALL READ_PROTECTION('PO_REG_LINE_ARC',PO_REG_LINE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PO_REG_LINE.PRO$, STAT%)
+
+	PO_REG_LINE.NAME_ARC$ = PO_REG_LINE.DEV$+"PO_REG_LINE.LED_ARC"
+
+	OPEN PO_REG_LINE.NAME_ARC$ AS FILE PO_REG_LINE.CH_ARC%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_REG_LINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			PO_REG_LINE::PO, &
+			PO_REG_LINE::PO_LINE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			PO_REG_LINE::PO_TYPE, &
+			PO_REG_LINE::PO, &
+			PO_REG_LINE::PO_LINE &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			PO_REG_LINE::VENDOR, &
+			PO_REG_LINE::PO, &
+			PO_REG_LINE::PO_LINE &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			PO_REG_LINE::BATCH, &
+			PO_REG_LINE::PO, &
+			PO_REG_LINE::PO_LINE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			PO_REG_LINE::PRODUCT, &
+			PO_REG_LINE::PO, &
+			PO_REG_LINE::PO_LINE &
+		)	, &
+		ACCESS MODIFY, ALLOW READ
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

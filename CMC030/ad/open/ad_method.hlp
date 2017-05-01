@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Depreciation Method Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__METHOD.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Depreciation Method Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__METHOD.TBL\*
+	!	.p
+	!	Depreciation Method Description.
+	!
+	! Index:
+	!	.x Depreciation Method Description
+	!	.x AD_METHOD
+	!--

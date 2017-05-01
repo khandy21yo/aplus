@@ -1,0 +1,440 @@
+1	%TITLE "Restaurant Entry Transaction Journal"
+	%SBTTL "RM_RPRT_JOURPROD"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM015
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Entry Transaction Journal\* program prints out a list of the Restaurant
+	!	entry transaction journal file. Contained in this list are the following fields:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Description
+	!	.le
+	!	Type
+	!	.le
+	!	Category
+	!	.le
+	!	Unit of Measure
+	!	.le
+	!	Price
+	!	.le
+	!	Day of Week with corresponding Date
+	!	.els
+	!
+	! Index:
+	!	.x Entry Transaction>Print
+	!	.x Print>Entry Transaction
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_JOURPROD/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_JOURPROD, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_JOURPROD.OBJ;*
+	!
+	! Author:
+	!
+	!	11/22/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	04/28/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.HB"
+	MAP	(RM_JOURPROD)	RM_JOURPROD_CDD	RM_JOURPROD
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)	PD_PRODUCT_CDD	PD_PRODUCT
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP	(UTL_TRANSTYPE)	UTL_TRANSTYPE_CDD UTL_TRANSTYPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)	UTL_LOCATION_CDD UTL_LOCATION
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	LOCATION$ = EDIT$(UTL_REPORTX::OPTDEF(0%), -1%)
+	TRANS.TYPE$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(4%), 132%)
+	TODATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+
+	DAY.WEEK$(1%) = "      MON"
+	DAY.WEEK$(2%) = "      TUE"
+	DAY.WEEK$(3%) = "      WED"
+	DAY.WEEK$(4%) = "      THU"
+	DAY.WEEK$(5%) = "      FRI"
+	DAY.WEEK$(6%) = "      SAT"
+	DAY.WEEK$(7%) = "      SUN"
+
+	HEADER.LINE1$,HEADER.LINE2$=""
+	FOR I%=0% TO 6%
+		DAY.CODE%     = DATE_DAYCODE(TODATE$)+I%
+		TEST.DATE$   = DATE_INVDCODE(DAY.CODE%)
+		HEADER.LINE1$ = HEADER.LINE1$+PRNT_DATE(TEST.DATE$,6%)+" "
+		HEADER.LINE2$ = HEADER.LINE2$ + &
+			DAY.WEEK$(DATE_DAYOFWEEK(DAY.CODE%))
+	NEXT I%
+
+300	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+310	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.OPN"
+
+320	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.OPN"
+
+330	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(3%) = "Restaurant Management System"
+	TITLE$(4%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(5%) = SPACE$(132%-LEN(HEADER.LINE1$))+HEADER.LINE1$
+	TITLE$(6%) = "Product#       Description            "+ &
+		"       Tp Cat  UOM      Price "+HEADER.LINE2$
+	TITLE$(7%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	RESET #UTL_LOCATION.CH%
+
+ NextLocation:
+	GET #UTL_LOCATION.CH%, REGARDLESS
+
+	GOTO NextLocation IF LOCATION$ <> "" AND &
+		COMP_STRING(EDIT$(UTL_LOCATION::LOCATION,-1%), LOCATION$) = 0%
+
+17010	FIND #RM_JOURPROD.CH%, KEY#0% GE UTL_LOCATION::LOCATION + &
+		TODATE$,REGARDLESS
+
+	TITLE$(2%) = "  AT LOCATION "+TRM$(UTL_LOCATION::LOCATION) + " "+ &
+		TRM$(UTL_LOCATION::LOCNAME)
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #RM_JOURPROD.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO NextLocation IF RM_JOURPROD::LOCATION+RM_JOURPROD::STARTDATE &
+		<> UTL_LOCATION::LOCATION + TODATE$
+
+	GOTO GetNextRec  IF COMP_STRING(EDIT$(RM_JOURPROD::TRANSTYPE,-1%), &
+		TRANS.TYPE$) = 0% AND TRANS.TYPE$ <> ""
+
+17200	PD_PRODUCT::DESCRIPTION = &
+		STRING$(LEN(PD_PRODUCT::DESCRIPTION),ASCII("?"))
+	PD_PRODUCT::PROD_TYPE = &
+		STRING$(LEN(PD_PRODUCT::PROD_TYPE), ASCII("?"))
+	PD_PRODUCT::CATEGORY  = &
+		STRING$(LEN(PD_PRODUCT::CATEGORY), ASCII("?"))
+	PD_PRODUCT::UOM       = &
+		STRING$(LEN(PD_PRODUCT::UOM),ASCII("?"))
+	GET #PD_PRODUCT.CH%, KEY#0% EQ RM_JOURPROD::PRODUCT,REGARDLESS
+
+17300	!
+	! Print out one line
+	!
+	TEXT.LIN$ = &
+		RM_JOURPROD::PRODUCT + " " + &
+		LEFT(PD_PRODUCT::DESCRIPTION,29%) + " " + &
+		PD_PRODUCT::PROD_TYPE + " " + &
+		PD_PRODUCT::CATEGORY + " " + &
+		PD_PRODUCT::UOM + " " + &
+		FORMAT$(RM_JOURPROD::PRICE, "###,###.###")+ "   " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(0), "###,###")+ "  " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(1), "###,###")+ "  " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(2), "###,###")+ "  " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(3), "###,###")+ "  " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(4), "###,###")+ "  " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(5), "###,###")+ "  " + &
+		FORMAT$(RM_JOURPROD::QUANTITY(6), "###,###")
+
+	LIN% = 0%
+	IF LAST.LOCATION$+TEST.DATE$+TEST.TYPE$ <> &
+		UTL_LOCATION::LOCATION+RM_JOURPROD::STARTDATE+ &
+		RM_JOURPROD::TRANSTYPE
+	THEN
+		IF PRINT.FLAG%
+		THEN
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+			TEXT$ = "               TOTALS:               " + &
+				"                                 " + &
+				FORMAT$(TOTAL(0%),"###,###")+ "  " + &
+				FORMAT$(TOTAL(1%),"###,###")+ "  " + &
+				FORMAT$(TOTAL(2%),"###,###")+ "  " + &
+				FORMAT$(TOTAL(3%),"###,###")+ "  " + &
+				FORMAT$(TOTAL(4%),"###,###")+ "  " + &
+				FORMAT$(TOTAL(5%),"###,###")+ "  " + &
+				FORMAT$(TOTAL(6%),"###,###")
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+			TOTAL(I%) = 0.	FOR I%=0% TO 6%
+			LIN% = 999%
+		END IF
+		LAST.LOCATION$ = UTL_LOCATION::LOCATION
+		!
+		! Read description
+		!
+		GOSUB 18000
+		TITLE$(1%) = TRM$(UTL_TRANSTYPE::DESCRIPTION) + &
+			"  TRANSACTION  JOURNAL  BATCH No. " + BATCH_NO$
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT.LIN$, LIN%)
+	PRINT.FLAG% = -1%
+
+	TEST.DATE$ = RM_JOURPROD::STARTDATE
+	TEST.TYPE$ = RM_JOURPROD::TRANSTYPE
+
+	TOTAL(I%) = TOTAL(I%) + RM_JOURPROD::QUANTITY(I%) &
+		FOR I%=0% TO 6%
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+	IF PRINT.FLAG%
+	THEN
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		TEXT$ = "               TOTALS:               " + &
+			"                                 " + &
+			FORMAT$(TOTAL(0%),"###,###")+ "  " + &
+			FORMAT$(TOTAL(1%),"###,###")+ "  " + &
+			FORMAT$(TOTAL(2%),"###,###")+ "  " + &
+			FORMAT$(TOTAL(3%),"###,###")+ "  " + &
+			FORMAT$(TOTAL(4%),"###,###")+ "  " + &
+			FORMAT$(TOTAL(5%),"###,###")+ "  " + &
+			FORMAT$(TOTAL(6%),"###,###")
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	END IF
+ ExitProgram:
+
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+18000	UTL_TRANSTYPE::DESCRIPTION = &
+		STRING$(LEN(UTL_TRANSTYPE::DESCRIPTION),ASCII("?"))
+	GET  #UTL_TRANSTYPE.CH%, KEY#0% GE RM_JOURPROD::TRANSTYPE, REGARDLESS
+
+ Ret18000:
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 310%
+		FILENAME$ = "RM_JOURPROD"
+
+	CASE 320%
+		RESUME 330 IF ERR = 5%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	CASE 330%
+		RESUME ReportTitle IF ERR = 5%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 17000%
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 17010%
+		RESUME NextLocation IF ERR = 155%
+		FILENAME$ = "RM_JOURPROD"
+
+	CASE 17020%	! End of file
+		RESUME NextLocation IF ERR = 11%
+		FILENAME$ = "RM_JOURPROD"
+
+	CASE 17200%	! Undefined product
+		RESUME 17300 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 18000%	! Undefined type
+		RESUME Ret18000 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Locations\*
+	!	.p
+	!	The ^*Locations\* field provides the means to enter the locations for which
+	!	the journal transactions will be printed.  A blank field causes all locations
+	!	to be printed on the report.
+	!
+	! Index:
+	!	.x Locations
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) Transaction Types\*
+	!	.p
+	!	The ^*Transaction Types\* field provides the means to enter the specific
+	!	transaction types which will be printed on the report.  A blank field causes
+	!	all transactions types to be printed.
+	!
+	! Index:
+	!	.x Transaction Types
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* field provides for entry of the batch of the journal
+	!	which will be printed.  This field requires an entry and accommodates two
+	!	characters.
+	!
+	! Index:
+	!	.x Batch Number
+	!	.x Number>Batch
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD06
+	!	^*(06) Start Date\*
+	!	.p
+	!	The ^*Start Date\* field provides the means to enter the date with which the
+	!	list will begin printing.  The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x Start Date
+	!	.x Date>Start
+	!
+	!--

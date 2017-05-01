@@ -1,0 +1,342 @@
+1	%TITLE "CPT Type File List"
+	%SBTTL "BI_RPRT_CPTTYPE"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BI006
+	!
+	! Abstract:HELP
+	!	.p
+	!	Accessing the ^*Current Procedural Terminology Type\* option in the Master List
+	!	Menu will provide the means to print a report which will provide the
+	!	following information:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Current Procedural Terminology Type
+	!	.le
+	!	Description
+	!	.le
+	!	Account
+	!	.els
+	!
+	! Index:
+	!	.x Current Procedural Terminology Type>Report
+	!	.x Report>Current Procedural Terminology Type
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_RPRT_CPTTYPE/LINE
+	!	$ LINK/EXE=BI_EXE: BI_RPRT_CPTTYPE, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BI_RPRT_CPTTYPE.OBJ;*
+	!
+	! Author:
+	!
+	!	10/08/88 - J. Shad Rydalch
+	!
+	! Modification History:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/03/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	10/16/96 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.HB"
+	MAP	(BI_CPTTYPE)	BI_CPTTYPE_CDD	BI_CPTTYPE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Sort (T,D)\*
+	!	.p
+	!	The value entered in the ^*Sort\* field causes the report
+	!	to print in a selected order by entering that selection in this
+	!	field.
+	!	.p
+	!	Valid settings are:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	T = Type
+	!	.le
+	!	D = Description
+	!	.els
+	!
+	! Index:
+	!	.x Sort
+	!
+	!--
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) From Item\*
+	!	.p
+	!	The value entered in the ^*From Item\* field will cause the
+	!	report to begin with a selected item by entering that selection
+	!	in this field. The value of the selection must be in agreement
+	!	with the Sort value in field (01).
+	!	.p
+	!	A blank setting will cause the report to begin with the first
+	!	item in the file.
+	!
+	! Index:
+	!	.x From Item>Type List
+	!	.x Type List>From Item
+	!	.x Item>From
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) To Item\*
+	!	.p
+	!	The value entered in the ^*To Item\* field will cause the report
+	!	to end with a selected item by entering that selection in this
+	!	field. The value of the selection must be in agreement with
+	!	the Sort value in field (01).
+	!	.p
+	!	A blank setting will cause the report to print to the end
+	!	of the file.
+	!
+	! Index:
+	!	.x To Item>Type List
+	!	.x Type List>To Item
+	!	.x Item>To
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+
+	!++
+	! Abstract:FLD04
+	!	^*(04) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field in the Current Procedural Terminology Type File List
+	!	report setting screen provides the means to select designated types to be
+	!	printed in the report by entering a "wildcard" value in this field.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+
+	SELECT SORT.BY$
+	CASE "T"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  TYPE"
+
+	CASE "D"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  DESCRIPTION"
+	END SELECT
+
+300	%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "CPT  CODE  TYPE  FILE  LIST  " + ADD.TITLE$
+	TITLE$(2%) = "Billing Insurance System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "CPTType  Description                               Account           "
+	TITLE$(5%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BI_CPTTYPE.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #BI_CPTTYPE.CH%, KEY#0% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BI_CPTTYPE.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	SELECT SORT.BY$
+
+	CASE "T"
+		GOTO ExitTotal IF (BI_CPTTYPE::CPTTYPE > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(BI_CPTTYPE::CPTTYPE,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "D"
+		GOTO ExitTotal IF (BI_CPTTYPE::DESCRIPTION > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(BI_CPTTYPE::DESCRIPTION,-1%), &
+			WLDCRD$) = 0%
+
+	END SELECT
+
+17300	!
+	! Print out one line
+	!
+	TEXT$ = BI_CPTTYPE::CPTTYPE + "       " + &
+		BI_CPTTYPE::DESCRIPTION + "  " + &
+		BI_CPTTYPE::ACCOUNT
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "BI_CPTTYPE"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "BI_CPTTYPE"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

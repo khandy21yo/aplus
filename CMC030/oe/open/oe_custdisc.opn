@@ -1,0 +1,21 @@
+	!======================================================================
+	! OE_CUSTDISC file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_CUSTDISC.CH%, STAT%)
+	CALL READ_DEVICE('OE_CUSTDISC',OE_CUSTDISC.DEV$, STAT%)
+
+	OE_CUSTDISC.NAME$ = OE_CUSTDISC.DEV$+"OE_CUSTDISC.TBL"
+
+	OPEN OE_CUSTDISC.NAME$ FOR INPUT AS FILE OE_CUSTDISC.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_CUSTDISC, &
+		PRIMARY KEY &
+		( &
+			OE_CUSTDISC::CUSNUM, &
+			OE_CUSTDISC::PRODUCT, &
+			OE_CUSTDISC::PRODTYPE, &
+			OE_CUSTDISC::PRODCAT &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Pack Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PD__PACK.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*PD\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Product Pack Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PD__PACK.TBL\*
+	!	.p
+	!	Product Pack Description.
+	!
+	! Index:
+	!	.x Product Pack Description
+	!	.x PD_PACK
+	!--

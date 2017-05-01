@@ -1,0 +1,396 @@
+1	%TITLE "Worksheet Transaction Flag List"
+	%SBTTL "RM_RPRT_TRANSFLAG"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM010
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Worksheet Transaction Flag\* program prints out a list of the Product
+	!	Transaction flag description file. Contained in this list are the following
+	!	fields:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Product Description
+	!	.le
+	!	Transaction Type
+	!	.le
+	!	Transaction Description
+	!	.els
+	!
+	! Index:
+	!	.x Worksheet Transaction Flag List
+	!	.x List>Worksheet Transaction Flag
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_TRANSFLAG/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_TRANSFLAG, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_TRANSFLAG.OBJ;*
+	!
+	! Author:
+	!
+	!	10/22/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	01/29/96 - Kevin Handy
+	!		Reformat source code.
+	!		Change STRING$(...,ASCII(" ")) to "" in
+	!		several places.
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSFLAG.HB"
+	MAP	(RM_TRANSFLAG)	RM_TRANSFLAG_CDD	RM_TRANSFLAG
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP	(UTL_TRANSTYPE)	UTL_TRANSTYPE_CDD	UTL_TRANSTYPE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(4%), 132%)
+
+	SELECT SORT.BY$
+	CASE "P"
+		SORT.KEY% = 0%
+
+	CASE "T"
+		SORT.KEY% = 1%
+	END SELECT
+
+300	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSFLAG.OPN"
+
+310	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+320	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "WORKSHEET  TRANSACTION  FLAG  FILE  LIST"
+	TITLE$(2%) = "Restaurant Management System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "Product#       Description              Transtype" + &
+		" Description"
+	TITLE$(5%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+17010	IF FROM.ITEM$ = ""
+	THEN
+		RESET #RM_TRANSFLAG.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #RM_TRANSFLAG.CH%, KEY#SORT.KEY% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #RM_TRANSFLAG.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	SELECT SORT.BY$
+
+	CASE "P"
+		GOTO ExitTotal &
+			IF (RM_TRANSFLAG::PRODUCT > TO.ITEM$) AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_STRING(EDIT$(RM_TRANSFLAG::PRODUCT,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+
+
+	CASE "T"
+		GOTO ExitTotal &
+			IF (RM_TRANSFLAG::TRANSTYPE > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_STRING(EDIT$(RM_TRANSFLAG::TRANSTYPE,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+
+	END SELECT
+
+17200	PD_PRODUCT::DESCRIPTION = &
+		STRING$(LEN(PD_PRODUCT::DESCRIPTION),ASCII("?"))
+	GET #PD_PRODUCT.CH%, KEY#0% EQ RM_TRANSFLAG::PRODUCT,REGARDLESS
+
+17210	UTL_TRANSTYPE::DESCRIPTION = &
+		STRING$(LEN(UTL_TRANSTYPE::DESCRIPTION),ASCII("?"))
+	GET #UTL_TRANSTYPE.CH%, KEY#0% GE RM_TRANSFLAG::TRANSTYPE, &
+		REGARDLESS
+
+17300	!
+	! Print out one line
+	!
+	SELECT SORT.BY$
+
+	CASE "T"
+		IF TEST_TRANSTYPE$ = RM_TRANSFLAG::TRANSTYPE
+		THEN
+			UTL_TRANSTYPE::DESCRIPTION = ""
+		ELSE
+			TEST_TRANSTYPE$ = RM_TRANSFLAG::TRANSTYPE
+		END IF
+
+	CASE "P"
+		IF TEST_PRODUCT$ = RM_TRANSFLAG::PRODUCT
+		THEN
+			PD_PRODUCT::DESCRIPTION = ""
+		ELSE
+			TEST_PRODUCT$ = RM_TRANSFLAG::PRODUCT
+		END IF
+
+	END SELECT
+
+	TEXT$ = RM_TRANSFLAG::PRODUCT+" "+ &
+		LEFT$(PD_PRODUCT::DESCRIPTION,24%) + " " + &
+		RM_TRANSFLAG::TRANSTYPE + "        " + &
+		UTL_TRANSTYPE::DESCRIPTION
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RM_TRANSFLAG"
+
+	CASE 310%
+		RESUME 320 IF ERR = 5%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 320%
+		RESUME ReportTitle IF ERR = 5%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "RM_TRANSFLAG"
+
+	CASE 17200%	! Can't find product
+		RESUME 17210 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 17210%	! Can't find trans type
+		RESUME 17300 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Item\*
+	!	.p
+	!	The value entered in the ^*From Item\* field causes the report to begin with
+	!	the selected item.
+	!	.p
+	!	A blank setting causes the report to begin with the first item in the file.
+	!
+	! Index:
+	!	.x From Item
+	!	.x Item>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Item\*
+	!	.p
+	!	The value entered in the ^*To Item\* field causes the report to end with the
+	!	selected item.
+	!	.p
+	!	A blank setting causes the report to print to the end of the file.
+	!
+	! Index:
+	!	.x To Item
+	!	.x Item>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field is provided to select designated items to be printed by
+	!	entering a "wildcard" value in this field.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Sort (P,T)\*
+	!	.p
+	!	Entry in the ^*Sort (P,T)\* field provides the means to print the report
+	!	in the selected order.
+	!	.p
+	!	Valid settings are:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	P = Product
+	!	.le
+	!	T = Type
+	!	.els
+	!	.lm -10
+	!	A setting is required in this field and only the above are valid.
+	!
+	! Index:
+	!	.x Sort
+	!
+	!--

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Depreciation Object Desription is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__OBJECT.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Depreciation Object Desription
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__OBJECT.TBL\*
+	!	.p
+	!	Depreciation Object Desription.
+	!
+	! Index:
+	!	.x Depreciation Object Desription
+	!	.x AD_OBJECT
+	!--

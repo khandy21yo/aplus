@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Shipping Journal Line File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__SHIPLINE.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Order Entry System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Shipping Journal Line File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__SHIPLINE.JRL\*
+	!	.p
+	!	Shipping Journal Line File.
+	!
+	! Index:
+	!	.x Shipping Journal Line File
+	!	.x OE_SHIPLINE
+	!--

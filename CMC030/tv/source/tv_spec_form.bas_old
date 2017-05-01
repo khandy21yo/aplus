@@ -1,0 +1,164 @@
+10	%TITLE "TV_SPEC_FORM - Maintain TV form command files"
+	%SBTTL "TV program"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_SPEC_FORM/LINE
+	!	$ LINK/EXECUTABLE=TV_EXE: TV_SPEC_FORM, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_SPEC_FORM.OBJ;*
+	!
+	! Author:
+	!
+	!	11/11/86 - Robert Peterson
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION FIND_FILEEXISTS
+	EXTERNAL STRING  FUNCTION LIBR_SELECT
+	EXTERNAL LONG    FUNCTION LIB$SPAWN
+
+	CALL READ_INITIALIZE
+
+	SCOPE::PRG_PROGRAM = "TV_SPEC_FORM"
+
+	!
+	! Other assignments
+	!
+	CALL READ_DEVICE("TV_FORM", TV_FORM.DEV$, STAT%)
+
+ FileExists:
+	IF FIND_FILEEXISTS(TV_FORM.DEV$ + "TV_FORM.TLB", 0%) = 0%
+	THEN
+		SCOPE::PRG_ITEM = "CREATE_TV_FORM"
+
+		INP$ = EDIT$(ENTR_3YESNO(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Confirm creation of new TV forms file - then press <Do> ", &
+			"N", 0%, "", ""), -1%)
+
+		SELECT SCOPE::SCOPE_EXIT
+			!
+			! Exit
+			!
+			CASE 3%, SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+				GOTO ExitProgram
+
+			!
+			! Normal key typed
+			!
+			CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+			!
+			! Bad key typed
+			!
+			CASE ELSE
+				CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+				GOTO FileExists
+
+		END SELECT
+
+		IF INP$ <> "Y"
+		THEN
+			GOTO ExitProgram
+		END IF
+
+		CALL ENTR_3MESSAGE(SCOPE, "Creating TV forms file",1%)
+
+		SMG_STATUS% = SMG$DISABLE_BROADCAST_TRAPPING( SCOPE::SMG_PBID )
+
+		IF FIND_FILEEXISTS("CMC:TV_FORM.TLB", 0%) = 0%
+		THEN
+			SCOPE::PRG_ITEM = "MISSING_TV_FORM"
+
+			CALL ENTR_3MESSAGE(SCOPE, "TV form on CMC is missing",0%)
+
+			GOTO FormEdit
+		END IF
+
+		SMG_STATUS% = LIB$SPAWN("COPY " + &
+			"CMC:TV_FORM.TLB " + &
+			TV_FORM.DEV$ + "TV_FORM.TLB")
+
+		IF SMG_STATUS% <> 1% AND SMG_STATUS% <> 0%
+		THEN
+			CALL HELP_3MESSAGE(SCOPE, NUM1$(SMG_STATUS%) + " Unable to copy file", &
+				"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(SMG_STATUS%))
+			GOTO ExitProgram
+		END IF
+
+		SMG_STATUS% = SMG$REPAINT_SCREEN( SCOPE::SMG_PBID )
+	END IF
+
+ FormEdit:
+	!***************************************************
+	! Edit TV forms
+	!***************************************************
+	TEMP$ = LIBR_SELECT(TV_FORM.DEV$ + "TV_FORM", &
+		"TV Forms", SCOPE::PRG_PROGRAM, &
+		"Maintain Create Help eXit")
+
+ ExitProgram:
+	!*******************************************************************
+	! Exit program
+	!*******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+32767	END

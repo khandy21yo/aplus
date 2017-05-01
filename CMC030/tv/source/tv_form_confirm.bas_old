@@ -1,0 +1,1422 @@
+1	%TITLE "TV_FORM_CONFIRM - Print TV confirmations using a form"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program prints TV confirmations.
+	!	Will print an alignment form.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_FORM_CONFIRM
+	!	$ LINK/EXECUTABLE=TV_EXE:*.EXE TV_FORM_CONFIRM, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_FORM_CONFIRM.OBJ;*
+	!
+	! Author:
+	!
+	!	10/08/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:PRINT.COM"
+
+	!
+	! Define maps
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+	MAP (TV_COMMER) TV_COMMER_CDD TV_COMMER
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.HB"
+	MAP (TV_COMMER_SKED_INSTR) TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED_INSTR
+	DECLARE TV_COMMER_SKED_INSTR_CDD TEMP_INSTR
+
+	DIM TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED(1000%)
+			! Max of 1000 instrucitons
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CHARGE.HB"
+	MAP (TV_COMMER_CHARGE) TV_COMMER_CHARGE_CDD TV_COMMER_CHARGE
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM) AR_CUSTOM_CDD AR_CUSTOM
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORT.HB"
+	MAP (UTL_REPORT) UTL_REPORT_CDD UTL_REPORT
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[UTL.OPEN]FORM_GROUP.HB"
+	DIM FORM_GROUP_CDD FORM_GROUP(10%)	! Max of 10 groups
+
+	%INCLUDE "FUNC_INCLUDE:PRINT35.INC"
+
+	MAP (CONFIRM_FORM) &
+		CUR_DATE, &
+		SPOT_DOLLARS, &
+		GROSS_SALE, &
+		MISC_CHARGES, &
+		COOP_PCT
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION OUTP_FORMINIT
+	EXTERNAL LONG    FUNCTION OUTP_FORMPRINT
+	EXTERNAL LONG	FUNCTION LIB$SET_SYMBOL
+	EXTERNAL LONG	FUNCTION FIND_FILEEXISTS
+	EXTERNAL STRING  FUNCTION READ_SYSJOB
+
+	!
+	! Declare variables
+	!
+	DIM COOP$(50%), COOP_PCT(50%), COOP_AMT(50%) ! Coops
+
+	JJ$ = READ_SYSJOB
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	SCOPE::PRG_IDENT = "PROG"
+	SCOPE::PRG_PROGRAM = "TV_FORM_CONFIRM"
+
+	REPORT$ = "TVCONF"
+
+	!
+	! Allocate channels
+	!
+	CALL ASSG_CHANNEL(PRNT.CH%, STAT%)
+
+	!
+	! Get device info
+	!
+	CALL READ_DEVICE("TV_FORM", TV_FORM.DEV$, STAT%)
+	CALL READ_DEVICE("UTL_WORK", UTL_WORK.DEV$, STAT%)
+
+	!*******************************************************************
+	! Initilize confirmation form
+	!*******************************************************************
+
+	!
+	! Get form from the TV form library
+	!
+	SMG_STATUS% = OUTP_FORMINIT(TV_FORM.DEV$ + "TV_FORM", "CONFIRM", &
+		FORM_TEXT$, FORM_GROUP%, FORM_GROUP())
+
+	!
+	! Was there an error?
+	!
+	IF SMG_STATUS% <> 0%
+	THEN
+		CALL HELP_3MESSAGE(SCOPE, &
+			"Error reading confirmation form " + NUM1$(SMG_STATUS%), &
+			"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(SMG_STATUS%))
+		GOTO ExitProgram
+	END IF
+
+	!
+	! Search for the desired parts of the form
+	!
+	FRM_TOP% = 0%
+	FRM_BODY_SCHED% = 0%
+	FRM_BODY_CHARGE% = 0%
+	FRM_BOT% = 0%
+	FRM_LENGTH% = 0%
+
+	FOR I% = 1% TO FORM_GROUP%
+
+		SELECT FORM_GROUP(I%)::FGROUP
+
+			CASE "FRM-TOP"
+				FRM_TOP% = I%
+
+			CASE "FRM-BODY-SCHED"
+				FRM_BODY_SCHED% = I%
+
+			CASE "FRM-BODY-CHARGE"
+				FRM_BODY_CHARGE% = I%
+
+			CASE "FRM-BOT"
+				FRM_BOT% = I%
+
+			CASE "FRM-LENGTH"
+				FRM_LENGTH% = I%
+
+		END SELECT
+
+	NEXT I%
+
+	!***************************************************************
+	! Open all of the files
+	!***************************************************************
+
+300	!
+	! Open Commercial header file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.OPN"
+
+310	!
+	! Open Commercial instruction file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.OPN"
+
+320	!
+	! Open Commercial charge file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CHARGE.OPN"
+
+330	!
+	! Open customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.OPN"
+
+360	!
+	! Open REPORT file
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORT.MOD"
+
+370	!
+	! Get Report
+	!
+	GET #UTL_REPORT.CH%, KEY#0 EQ REPORT$, REGARDLESS
+
+	GOTO 500
+
+380	!
+	! Open system file if report not found
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_SYSREP.OPN"
+
+	GET #UTL_SYSREP.CH%, KEY #0 EQ REPORT$
+	UNLOCK #UTL_SYSREP.CH%
+
+	CLOSE #UTL_SYSREP.CH%
+	CALL ASSG_FREECHANNEL(UTL_SYSREP.CH%)
+
+390	PUT #UTL_REPORT.CH%
+
+500	!******************************************************************
+	! Set up the report settings screen
+	!******************************************************************
+
+	!
+	! Store original values for the help message
+	!
+	TEMP_IDENT$ = SCOPE::PRG_IDENT
+	TEMP_PROGRAM$ = SCOPE::PRG_PROGRAM
+
+	XLOOP% = 0%
+
+510	!******************************************************************
+	! Set up the report settings screen
+	!******************************************************************
+	XLOOP% = XLOOP% + 1%
+	TEMPFILE$ = "PRNT" + JJ$ + "_" + NUM1$(XLOOP%) + ".TMP"
+
+	IF FIND_FILEEXISTS(UTL_WORK.DEV$ + TEMPFILE$, FLAG%)
+	THEN
+		GOTO 510
+	END IF
+
+	CLOSE PRNT.CH%
+	OPEN UTL_WORK.DEV$ + TEMPFILE$ FOR OUTPUT AS FILE PRNT.CH%
+
+	SYS_STATUS% = LIB$SET_SYMBOL("CMC$REPORT", TEMPFILE$,)
+
+	IF (SYS_STATUS% AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to declare symbol for work file. " + &
+			NUM1$(SYS_STATUS%), 0%)
+		GOTO ExitProgram
+	END IF
+
+520	!
+	! Get the report record
+	!
+	GET #UTL_REPORT.CH%, KEY#0 EQ REPORT$
+
+	!
+	! Set up for the window
+	!
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+	UTL_REPORTX::WINDOW = 0%
+
+	!
+	! Initilize defaults from report file
+	!
+	CALL OUTP_INITSTRUCTURE(UTL_REPORT, UTL_REPORTX)
+
+	!
+	! Ask user to change settings
+	!
+	CALL OUTP_SETTINGS(UTL_REPORT, UTL_REPORTX, UTL_REPORT.CH%, &
+		"DD 01 02 ", "PT ")
+
+	UNLOCK #UTL_REPORT.CH%
+
+	!
+	! Strip off user defined settings
+	!
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 128%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 128%)
+
+	!
+	! Abnormal abort, exit, etc.
+	!
+	IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F10) OR &
+		(SCOPE::SCOPE_EXIT = SMG$K_TRM_CTRLC) OR &
+		(SCOPE::SCOPE_EXIT = SMG$K_TRM_F8)
+	THEN
+		SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(UTL_REPORTX::WINDOW)
+
+		GOSUB KillTempFIle
+
+		GOTO ExitProgram
+	END IF
+
+	!
+	! Erase option and message window
+	!
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+	!
+	! Create a blank display window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(20%, 132%, SMG_BLANK%)
+
+	!
+	! Paste on blank display to hide the width change
+	!
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(SMG_BLANK%, &
+		SCOPE::SMG_PBID, 1%, 1%)
+
+	!
+	! Delete report window
+	!
+	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(UTL_REPORTX::WINDOW)
+
+	!
+	! Write the data out to the ascii file
+	!
+	CALL OUTP_3WRITESTRUCTURE(UTL_REPORTX, PRNT.CH%, PRINTX)
+
+	CLOSE PRNT.CH%
+
+	!
+	! Initilize for output
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Restore original values for the help message
+	!
+	SCOPE::PRG_IDENT = TEMP_IDENT$
+	SCOPE::PRG_PROGRAM = TEMP_PROGRAM$
+
+	!
+	! GOTO aligment routine
+	!
+	GOSUB Alignment
+
+	%PAGE
+
+2000	!*******************************************************************
+	! Read through Commercial header file
+	!*******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #TV_COMMER.CH%, KEY#0%
+	ELSE
+		FIND #TV_COMMER.CH%, KEY#0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+2010	!
+	! Get next commercial order record
+	!
+	GET #TV_COMMER.CH%, REGARDLESS
+
+	!
+	! Handle end of file
+	!
+	IF (TO.ITEM$ <> "") AND (TO.ITEM$ < TV_COMMER::FRMNUM)
+	THEN
+		GOTO 3000
+	END IF
+
+	!
+	! Initilize for this form
+	!
+	COOP% = 0%
+	COOP$(0%) = TV_COMMER::CUSNUM
+	COOP_PCT(0%) = 100.0
+	COOP_AMT(0%) = 0.0
+
+	!
+	! Find out how many coop's there are
+	!
+2013	FIND #TV_COMMER_CHARGE.CH%, KEY#0 GE TV_COMMER::FRMNUM, REGARDLESS
+
+2016	!
+	! Grab next record
+	!
+	GET #TV_COMMER_CHARGE.CH%, REGARDLESS
+
+	GOTO 2020 IF TV_COMMER_CHARGE::FRMNUM <> TV_COMMER::FRMNUM
+
+	GOTO 2018 IF COOP$(LOOP%) = TV_COMMER_CHARGE::COOP &
+		FOR LOOP% = 0% TO COOP%
+
+	COOP%, LOOP% = COOP% + 1%
+	COOP$(COOP%) = TV_COMMER_CHARGE::COOP + ""
+	COOP_PCT(COOP%) = 0.0
+	COOP_AMT(COOP%) = 0.0
+
+2018	IF TV_COMMER_CHARGE::BILL_TYPE = "1"
+	THEN
+		COOP_AMT(LOOP%) = COOP_AMT(LOOP%) + TV_COMMER_CHARGE::AMOUNT
+	END IF
+
+	IF TV_COMMER_CHARGE::BILL_TYPE = "2"
+	THEN
+		COOP_PCT(LOOP%) = COOP_PCT(LOOP%) + TV_COMMER_CHARGE::AMOUNT
+	END IF
+
+	GOTO 2016
+
+2020	!
+	! Make the main record appear to be a coop also
+	!
+	COOP$(0%) = TV_COMMER::CUSNUM
+	COOP_PCT(0%) = 100.0
+	COOP_PCT(0%) = COOP_PCT(0%) - COOP_PCT(I%) FOR I% = 1% TO COOP%
+
+	!
+	! Loop through all records
+	!
+	FOR COOP_LOOP% = 0% TO COOP%
+
+		COOP_PCT = COOP_PCT(COOP_LOOP%)
+		MISC_CHARGES = COOP_AMT(COOP_LOOP%)
+
+		AR_CUSTOM::CUSNUM = COOP$(COOP_LOOP%)
+		AR_CUSTOM::CUSNAM = STRING$(LEN(AR_CUSTOM::CUSNAM), 63%)
+		AR_CUSTOM::ADD1 = STRING$(LEN(AR_CUSTOM::ADD1), 63%)
+		AR_CUSTOM::ADD2 = STRING$(LEN(AR_CUSTOM::ADD2), 63%)
+		AR_CUSTOM::CITY = STRING$(LEN(AR_CUSTOM::CITY), 63%)
+		AR_CUSTOM::STATE = STRING$(LEN(AR_CUSTOM::STATE), 63%)
+		AR_CUSTOM::ZIP = STRING$(LEN(AR_CUSTOM::ZIP), 63%)
+		AR_CUSTOM::COUNTRY = STRING$(LEN(AR_CUSTOM::COUNTRY), 63%)
+		AR_CUSTOM::PHONE = STRING$(LEN(AR_CUSTOM::PHONE), 63%)
+		AR_CUSTOM::METHOD = STRING$(LEN(AR_CUSTOM::METHOD), 63%)
+		AR_CUSTOM::STMTFLG = STRING$(LEN(AR_CUSTOM::STMTFLG), 63%)
+		AR_CUSTOM::ALPSRT = STRING$(LEN(AR_CUSTOM::ALPSRT), 63%)
+		AR_CUSTOM::SERCHRG = STRING$(LEN(AR_CUSTOM::SERCHRG), 63%)
+
+		GET #AR_CUSTOM.CH%, KEY #0 EQ COOP$(COOP_LOOP%), REGARDLESS
+
+2025		GOSUB 2030
+
+	NEXT COOP_LOOP%
+
+	GOTO 2010
+
+2030	!*******************************************************************
+	! Look up all of the commercial instructions for this order
+	!*******************************************************************
+
+	FIND #TV_COMMER_SKED_INSTR.CH%, &
+		KEY #0 GE TV_COMMER::FRMNUM, REGARDLESS
+
+	SKED_LOOP% = 0%
+	SPOT_DOLLARS = 0.0
+
+2040	GET #TV_COMMER_SKED_INSTR.CH%, REGARDLESS
+
+	GOTO 2100 IF TV_COMMER_SKED_INSTR::FRMNUM <> TV_COMMER::FRMNUM
+
+	!
+	! Figure out the starting date for this line
+	!
+	STARTING_DATE$ = TV_COMMER::START_DATE
+	IF (DATE_DAYCODE(STARTING_DATE$) = DATE_DAYCODE("")) OR &
+		(TV_COMMER_SKED_INSTR::START_DATE > STARTING_DATE$)
+	THEN
+		STARTING_DATE$ = TV_COMMER_SKED_INSTR::START_DATE
+	END IF
+
+	!
+	! Figure out the ending date for this line.  If it is TFN,
+	! keep it TFN.
+	!
+	ENDING_DATE$ = TV_COMMER_SKED_INSTR::END_DATE
+	IF (TV_COMMER::END_DATE < ENDING_DATE$) AND &
+		(DATE_DAYCODE(TV_COMMER::END_DATE) <> DATE_DAYCODE(""))
+	THEN
+		ENDING_DATE$ = TV_COMMER::END_DATE
+	END IF
+
+	!
+	! If either the starting date or the ending date is open ended,
+	! then allocate for TFN type order.
+	!
+	IF (STARTING_DATE$ = "") OR (ENDING_DATE$ = "")
+	THEN
+		!
+		! Allocate for a TFN
+		!
+		SKED_LOOP% = SKED_LOOP% + 1%
+		TV_COMMER_SKED(SKED_LOOP%) = TV_COMMER_SKED_INSTR
+		TV_COMMER_SKED(SKED_LOOP%)::START_DATE = STARTING_DATE$
+		TV_COMMER_SKED(SKED_LOOP%)::END_DATE = ENDING_DATE$
+	ELSE
+		!
+		! Try one record for each week that the order
+		! may run on. (Starts on MONDAY of the first week)
+		!
+		FOR ILOOP% = DATE_DAYCODE(STARTING_DATE$) - &
+			DATE_DAYOFWEEK(DATE_DAYCODE(STARTING_DATE$)) + 1% TO &
+			DATE_DAYCODE(ENDING_DATE$) STEP 7%
+
+			TV_COMMER_SKED(SKED_LOOP% + 1%) = TV_COMMER_SKED_INSTR
+			CALL TV_FIND_ROTATION(DATE_INVDCODE(ILOOP%), &
+				TV_COMMER_SKED(SKED_LOOP% + 1%))
+
+			!
+			! Remove any spots before the starting date
+			!
+			ITEMP% = DATE_DAYCODE(STARTING_DATE$)
+			TEMP% = DATE_DAYOFWEEK(ITEMP%)
+
+			IF ITEMP% > ILOOP%
+			THEN
+				FOR LOOP1% = 0% TO TEMP% - 2%
+					TV_COMMER_SKED(SKED_LOOP% + 1%)::TOTAL_SPOTS = &
+						TV_COMMER_SKED(SKED_LOOP% + 1%)::TOTAL_SPOTS - &
+						TV_COMMER_SKED(SKED_LOOP% + 1%)::SPOTS_PER_DAY(LOOP1%)
+					TV_COMMER_SKED(SKED_LOOP% + 1%)::SPOTS_PER_DAY(LOOP1%) = 0%
+				NEXT LOOP1%
+			END IF
+
+			!
+			! Remove any spots after the ending date
+			!
+			ITEMP% = DATE_DAYCODE(ENDING_DATE$)
+			TEMP% = DATE_DAYOFWEEK(ITEMP%)
+
+			IF ITEMP% < ILOOP% + 6%
+			THEN
+				FOR LOOP1% = TEMP% TO 6%
+					TV_COMMER_SKED(SKED_LOOP% + 1%)::TOTAL_SPOTS = &
+						TV_COMMER_SKED(SKED_LOOP% + 1%)::TOTAL_SPOTS - &
+						TV_COMMER_SKED(SKED_LOOP% + 1%)::SPOTS_PER_DAY(LOOP1%)
+					TV_COMMER_SKED(SKED_LOOP% + 1%)::SPOTS_PER_DAY(LOOP1%) = 0%
+				NEXT LOOP1%
+			END IF
+
+			!
+			! If there are any spots to schedule for this week,
+			! then allow them to stay.
+			!
+			IF TV_COMMER_SKED(SKED_LOOP% + 1%)::TOTAL_SPOTS <> 0%
+			THEN
+				SKED_LOOP% = SKED_LOOP% + 1%
+				TEMP$ = DATE_INVDCODE(ILOOP%)
+				TV_COMMER_SKED(SKED_LOOP%)::START_DATE = TEMP$ &
+					IF (TEMP$ > TV_COMMER_SKED(SKED_LOOP%)::START_DATE)
+				TEMP$ = DATE_INVDCODE(ILOOP% + 6%)
+				TV_COMMER_SKED(SKED_LOOP%)::END_DATE = TEMP$ &
+					IF (TEMP$ < TV_COMMER_SKED(SKED_LOOP%)::END_DATE)
+				!
+				! Calculate totals for this order
+				!
+				SPOT_DOLLARS = SPOT_DOLLARS + &
+					TV_COMMER_SKED(SKED_LOOP%)::SPOTS_PER_DAY(J%) * &
+					TV_COMMER_SKED(SKED_LOOP%)::RATE_PER_SPOT &
+					FOR J% = 0% TO 6%
+
+			END IF
+		NEXT ILOOP%
+
+	END IF
+
+	GOTO 2040
+
+2100	!
+	! Sort the instructions (Shell sort)
+	!
+	FOR I% = 1% TO SKED_LOOP%
+
+		FOR J% = 1% TO SKED_LOOP% - I%
+
+			IF TV_COMMER_SKED(J%)::START_DATE + &
+				TV_COMMER_SKED(J%)::START_TIME > &
+				TV_COMMER_SKED(J% + 1%)::START_DATE + &
+					TV_COMMER_SKED(J% + 1%)::START_TIME
+			THEN
+				TEMP_INSTR = TV_COMMER_SKED(J%)
+				TV_COMMER_SKED(J%) = TV_COMMER_SKED(J% + 1%)
+				TV_COMMER_SKED(J% + 1%) = TEMP_INSTR
+
+			END IF
+		NEXT J%
+	NEXT I%
+
+	!
+	! Go to subroutine to print confirmation
+	!
+	GOSUB PrintConfirm
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+
+2200	!
+	! Go get the next commercial header record
+	!
+	RETURN
+
+3000	!*******************************************************************
+	! Found the end of the commercial header file
+	!*******************************************************************
+
+	%PAGE
+
+ ExitProgram:
+	!******************************************************************
+	! Exit the program
+	!******************************************************************
+
+	CALL OUTP_FINISHNOTITLE(UTL_REPORTX)
+
+	GOSUB KillTempFIle
+
+	!
+	! Erase Display
+	!
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_SCREEN_DATA%)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+	!
+	! Change the width
+	!
+	SMG_STATUS% = SMG$CHANGE_PBD_CHARACTERISTICS(SCOPE::SMG_PBID, 80%)
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+ PrintConfirm:
+5000	!***************************************************************
+	! Print the confirm now
+	!***************************************************************
+	UTL_REPORTX::LINENO = 0%
+	UTL_REPORTX::PAGENO = 0%
+	PAGE_COUNT = PAGE_COUNT + 1%
+	TEST_COUNT% = 0%
+
+	!
+	! Print the top of the attachment
+	!
+	SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_TOP%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		0%)
+
+	!
+	! Print the sked array on a form now
+	!
+	FOR PRINT_ARRAY% = 1% TO SKED_LOOP%
+
+		TV_COMMER_SKED_INSTR = TV_COMMER_SKED(PRINT_ARRAY%)
+
+		!
+		! Increment body counter, check to see if need to page
+		!
+		IF TEST_COUNT% >= FORM_GROUP(FRM_BODY_SCHED%)::NUMBER
+		THEN
+			!
+			! Print to the bottom of the form
+			!
+			LINE_COUNT% = UTL_REPORTX::LINENO
+			CALL OUTP_LINENOTITLE(UTL_REPORTX, "", 0%) &
+					FOR LOOP% = LINE_COUNT% + 1% TO &
+						FORM_GROUP(FRM_LENGTH%)::NUMBER
+
+			PAGE_COUNT = PAGE_COUNT + 1%
+			UTL_REPORTX::LINENO = 0%
+			TEST_COUNT% = 0%
+
+			!
+			! Print the top of the attachment
+			!
+			SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+				FRM_TOP%, &
+				FORM_TEXT$, &
+				FORM_GROUPS%, &
+				FORM_GROUP(), &
+				0%)
+		END IF
+
+		!
+		! Print the lines
+		!
+		TEST_COUNT% = TEST_COUNT% + OUTP_FORMPRINT(UTL_REPORTX, &
+			FRM_BODY_SCHED%, &
+			FORM_TEXT$, &
+			FORM_GROUPS%, &
+			FORM_GROUP(), &
+			0%)
+
+	NEXT PRINT_ARRAY%
+
+5100	!*******************************************************************
+	! Handle the various charges
+	!*******************************************************************
+
+	FIND #TV_COMMER_CHARGE.CH%, KEY#0 GE TV_COMMER::FRMNUM, REGARDLESS
+
+5110	!
+	! Grab next record
+	!
+	GET #TV_COMMER_CHARGE.CH%, REGARDLESS
+
+	GOTO 5200 IF (TV_COMMER_CHARGE::FRMNUM <> TV_COMMER::FRMNUM)
+
+	GOTO 5110 IF (TV_COMMER_CHARGE::BILL_TYPE <> "1") OR &
+		(COOP$(COOP_LOOP%) <> TV_COMMER_CHARGE::COOP)
+
+	!
+	! Increment body counter, check to see if need to page
+	!
+	IF TEST_COUNT% >= FORM_GROUP(FRM_BODY_SCHED%)::NUMBER
+	THEN
+		!
+		! Print to the bottom of the form
+		!
+		LINE_COUNT% = UTL_REPORTX::LINENO
+		CALL OUTP_LINENOTITLE(UTL_REPORTX, "", 0%) &
+				FOR LOOP% = LINE_COUNT% + 1% TO &
+					FORM_GROUP(FRM_LENGTH%)::NUMBER
+
+		PAGE_COUNT = PAGE_COUNT + 1%
+		UTL_REPORTX::LINENO = 0%
+		TEST_COUNT% = 0%
+
+		!
+		! Print the top of the attachment
+		!
+		SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+			FRM_TOP%, &
+			FORM_TEXT$, &
+			FORM_GROUPS%, &
+			FORM_GROUP(), &
+			0%)
+	END IF
+
+	TEST_COUNT% = TEST_COUNT% + OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_BODY_CHARGE%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		0%)
+
+	GOTO 5110
+
+5200	!
+	! Print to the bottom of the body
+	!
+	CALL OUTP_LINENOTITLE(UTL_REPORTX, "", 0%) &
+		FOR LOOP% = TRAN_COUNT% + 1% TO &
+			FORM_GROUP(FRM_BODY_SCHED%)::NUMBER
+
+	!
+	! Print the bottom of the form
+	!
+	SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_BOT%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		0%)
+
+	!
+	! Print to the bottom of the form
+	!
+	LINE_COUNT% = UTL_REPORTX::LINENO
+	CALL OUTP_LINENOTITLE(UTL_REPORTX, "", 0%) &
+			FOR LOOP% = LINE_COUNT% + 1% TO &
+				FORM_GROUP(FRM_LENGTH%)::NUMBER
+
+	!
+	! Do the next group
+	!
+	RETURN
+
+	%Page
+
+ Alignment:
+	!*******************************************************************
+	! Print alignment form, if desireable
+	!*******************************************************************
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+	UTL_REPORTX::LINENO = 0%
+	UTL_REPORTX::PAGENO = 0%
+
+	SCOPE::PRG_ITEM = "ALIGNMENT"
+	JUNK$ = ENTR_3YESNO(SCOPE, SCOPE::SMG_OPTION, "", &
+		"Do you want an alignment form?  Confirm then press <Do> ", &
+		"N", 0%, "'E", "")
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+
+	SELECT SCOPE::SCOPE_EXIT
+
+		!
+		! An exit key was typed
+		!
+		CASE 3%, SMG$K_TRM_CTRLZ, SMG$K_TRM_F10
+			GOTO ExitProgram
+
+		!
+		! Return, etc. act as next screen
+		!
+		CASE 10%, 12%, 13%, SMG$K_TRM_F7, SMG$K_TRM_DO
+
+		!
+		! Case else
+		!
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO Alignment
+
+	END SELECT
+
+	GOTO AlignmentReturn IF JUNK$ <> "Y"
+
+	SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_TOP%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		1%)
+
+	!
+	! Display three instruction lines
+	!
+	SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_BODY_SCHED%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		1%) &
+			FOR I% = 1% TO 3%
+
+	!
+	! Display three charge lines
+	!
+	SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_BODY_CHARGE%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		1%) &
+			FOR I% = 1% TO 3%
+
+	!
+	! Print lines to botton of the voucher
+	!
+	CALL OUTP_LINENOTITLE(UTL_REPORTX, "", 0%) &
+		FOR LOOP% = 7% TO FORM_GROUP(FRM_BODY_SCHED%)::NUMBER
+
+	!
+	! Print the bottom of the form
+	!
+	SMG_STATUS% = OUTP_FORMPRINT(UTL_REPORTX, &
+		FRM_BOT%, &
+		FORM_TEXT$, &
+		FORM_GROUPS%, &
+		FORM_GROUP(), &
+		1%)
+
+	!
+	! Print to the bottom of the form
+	!
+	LINE_COUNT% = UTL_REPORTX::LINENO
+	CALL OUTP_LINENOTITLE(UTL_REPORTX, "", 0%) &
+			FOR LOOP% = LINE_COUNT% + 1% TO &
+				FORM_GROUP(FRM_LENGTH%)::NUMBER
+
+	!
+	! Do they need another?
+	!
+	GOTO Alignment
+
+ AlignmentReturn:
+	RETURN
+
+	%PAGE
+
+18900	!******************************************************************
+	! Delete temp file to prepare for exit
+	!******************************************************************
+ KillTempFile:
+	CLOSE PRNT.CH%
+
+	KILL UTL_WORK.DEV$ + TEMPFILE$ FOR I% = 1% TO 10%
+
+18910	RETURN
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+
+		!
+		! Unable to open commerical header file
+		!
+		CASE 300%
+			FINAME$ = "TV_COMMER"
+			RESUME NoFile
+
+		CASE 2000%
+			RESUME 3000
+
+		CASE 2010%
+			RESUME 3000 IF ERR = 11%
+			FINAME$ = "TV_COMMER"
+			RESUME NoFile
+
+		!
+		! Error in coop load
+		!
+		CASE 2013%, 2016%
+			RESUME 2020
+
+		!
+		! Unable to open commerical instructions file
+		!
+		CASE 310%
+			FINAME$ = "TV_COMMER_SKED_INSTR"
+			RESUME NoFile
+
+		CASE 2030%
+			RESUME 2100 IF ERR = 155% OR ERR = 9%
+			FINAME$ = "TV_COMMER_SKED_INSTR"
+			RESUME NoFile
+
+		CASE 2040%
+			RESUME 2100 IF ERR = 11%
+			FINAME$ = "TV_COMMER_SKED_INSTR"
+			RESUME NoFile
+
+
+		!
+		! Unable to open commercial charge file
+		!
+		CASE 320%
+			FINAME$ = "TV_COMMER_CHARGE"
+			RESUME NoFile
+
+		CASE 5100%, 5110%
+			RESUME 5200
+
+		!
+		! Error in customer file
+		!
+		CASE 330%
+			FINAME$ = "AR_CUSTOM"
+			RESUME NoFile
+
+		CASE 2020%
+			RESUME 2025 IF ERR = 155% OR ERR = 9%
+			FINAME$ = "AR_CUSTOM"
+			RESUME NoFile
+
+		!
+		! Unable to open users report file
+		!
+		CASE 360%
+			FINAME$ = "UTL_REPORT"
+			RESUME NoFile
+
+		!
+		! Unable to get report record from report file
+		! (try to add it in)
+		!
+		CASE 370%
+			RESUME 380
+
+		!
+		! Unable to open system report file
+		!
+		CASE 380%
+			FINAME$ = "CMC:UTL_REPORT"
+			RESUME NoFile
+
+		!
+		! Unable to add record to report file
+		!
+		CASE 390%
+			FINAME$ = "UTL_REPORT"
+			RESUME NoFile
+
+		!
+		! Unable to open print temp file
+		!
+		CASE 510%
+			PROGRAM$ = "PRNT_TEMP"
+			RESUME NoFile
+
+		!
+		! Unable to read/lock report record
+		!
+		CASE 520%
+			FINAME$ = "UTL_REPORT"
+			RESUME NoFile
+
+		!
+		! Print temp file does not exist
+		!
+		CASE 18900%
+			RESUME 18910
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME 19990
+
+19990	!
+	! This moved from inside error to outside so that errors occuring
+	! at lower levels could be trapped.  Basic will not allow any
+	! error to occur inside of an error no matter if it is in a
+	! different module.
+	!
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(ERRNUM%))
+
+	GOTO ExitProgram
+
+	!
+	! Handle the cases where a file couldn't be opened
+	!
+ NoFile:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", FINAME$, "ERROR" + NUM1$(ERR))
+
+	GOTO ExitProgram
+
+	END
+
+20000	SUB FORM_LOADVAR(VARNAME$, REALVALUE, TEXTVALUE$)
+
+	!*******************************************************************
+	! This function is used to return the value of a field back to the
+	! form printer.
+	!*******************************************************************
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Define maps
+	!
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+	MAP (TV_COMMER) TV_COMMER_CDD TV_COMMER
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_SKED_INSTR"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.HB"
+	MAP (TV_COMMER_SKED_INSTR) TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED_INSTR
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_CHARGE"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CHARGE.HB"
+	MAP (TV_COMMER_CHARGE) TV_COMMER_CHARGE_CDD TV_COMMER_CHARGE
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSTOM"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM) AR_CUSTOM_CDD AR_CUSTOM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_PROFILE"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_PROFILE.HB"
+	MAP (UTL_PROFILE)	UTL_PROFILE_CDD	UTL_PROFILE
+
+
+	MAP (CONFIRM_FORM) &
+		CUR_DATE, &
+		SPOT_DOLLARS, &
+		GROSS_SALE, &
+		MISC_CHARGES, &
+		COOP_PCT
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING	FUNCTION PRNT_DATE
+	EXTERNAL STRING FUNCTION PRNT_TIME
+	EXTERNAL STRING FUNCTION DATE_TODAY
+	EXTERNAL REAL	FUNCTION FUNC_ROUND
+
+	%PAGE
+
+	!
+	! Set up default values
+	!
+	REALVALUE = 0.0
+	TEXTVALUE$ = "????????"
+
+	!
+	! Pick by variable
+	!
+	SELECT VARNAME$
+
+	!************************************************************
+	! Fields for the AR_CUSTOM file
+	!************************************************************
+
+	CASE "AR_CUSTOM::CUSNUM"
+		TEXTVALUE$ = AR_CUSTOM::CUSNUM
+
+	CASE "AR_CUSTOM::CUSNAM"
+		TEXTVALUE$ = AR_CUSTOM::CUSNAM
+
+	CASE "AR_CUSTOM::ADD1"
+		TEXTVALUE$ = AR_CUSTOM::ADD1
+
+	CASE "AR_CUSTOM::ADD2"
+		TEXTVALUE$ = AR_CUSTOM::ADD2
+
+	CASE "AR_CUSTOM::CITY"
+		TEXTVALUE$ = AR_CUSTOM::CITY
+
+	CASE "AR_CUSTOM::STATE"
+		TEXTVALUE$ = AR_CUSTOM::STATE
+
+	CASE "AR_CUSTOM::ZIP"
+		TEXTVALUE$ = AR_CUSTOM::ZIP
+
+	CASE "AR_CUSTOM::COUNTRY"
+		TEXTVALUE$ = AR_CUSTOM::COUNTRY
+
+	CASE "AR_CUSTOM::PHONE"
+		TEXTVALUE$ = AR_CUSTOM::PHONE
+
+	CASE "AR_CUSTOM::METHOD"
+		TEXTVALUE$ = AR_CUSTOM::METHOD
+
+	CASE "AR_CUSTOM::STMTFLG"
+		TEXTVALUE$ = AR_CUSTOM::STMTFLG
+
+	CASE "AR_CUSTOM::ALPSRT"
+		TEXTVALUE$ = AR_CUSTOM::ALPSRT
+
+	CASE "AR_CUSTOM::SERCHRG"
+		TEXTVALUE$ = AR_CUSTOM::SERCHRG
+
+	!************************************************************
+	! Fields for the Commercial Header file
+	!************************************************************
+	CASE "TV_COMMER::FRMNUM"
+		TEXTVALUE$ = TV_COMMER::FRMNUM
+
+	CASE "TV_COMMER::CUSNUM"
+		TEXTVALUE$ = TV_COMMER::CUSNUM
+
+	CASE "TV_COMMER::CLASS"
+		TEXTVALUE$ = TV_COMMER::CLASS
+
+	CASE "TV_COMMER::SOURCE"
+		TEXTVALUE$ = TV_COMMER::SOURCE
+
+	CASE "TV_COMMER::PRIORITY"
+		REALVALUE = TV_COMMER::PRIORITY
+
+	CASE "TV_COMMER::START_DATE"
+		TEXTVALUE$ = PRNT_DATE(TV_COMMER::START_DATE, 8%)
+
+	CASE "TV_COMMER::END_DATE"
+		TEXTVALUE$ = PRNT_DATE(TV_COMMER::END_DATE, 8%)
+
+		IF (TV_COMMER::END_DATE = "")
+		THEN
+			TEXTVALUE$ = "  TFN   "
+		END IF
+
+	CASE "TV_COMMER::AGENCY_NUM"
+		TEXTVALUE$ = TV_COMMER::AGENCY_NUM
+
+	CASE "TV_COMMER::AGENCY_PCT"
+		REALVALUE = TV_COMMER::AGENCY_PCT
+
+	CASE "TV_COMMER::DATE_BILLED"
+		TEXTVALUE$ = PRNT_DATE(TV_COMMER::DATE_BILLED, 8%)
+
+	CASE "TV_COMMER::MATCH"
+		TEXTVALUE$ = TV_COMMER::MATCH
+
+	CASE "TV_COMMER::REP_NUM"
+		TEXTVALUE$ = TV_COMMER::REP_NUM
+
+	CASE "TV_COMMER::REP_PCT"
+		REALVALUE = TV_COMMER::REP_PCT
+
+	CASE "TV_COMMER::SALES_NUM"
+		TEXTVALUE$ = TV_COMMER::SALES_NUM
+
+	CASE "TV_COMMER::SALES_PCT"
+		REALVALUE = TV_COMMER::SALES_PCT
+
+	CASE "TV_COMMER::DESCR"
+		TEXTVALUE$ = TV_COMMER::DESCR
+
+	CASE "TV_COMMER::CONTACT"
+		TEXTVALUE$ = TV_COMMER::CONTACT
+
+	CASE "TV_COMMER::BILL_TYPE"
+		TEXTVALUE$ = TV_COMMER::BILL_TYPE
+
+	CASE "TV_COMMER::SPOT_SEP"
+		TEXTVALUE$ = PRNT_TIME(TV_COMMER::SPOT_SEP, 0%)
+
+	CASE "TV_COMMER::PROD_SEP"
+		TEXTVALUE$ = PRNT_TIME(TV_COMMER::PROD_SEP, 0%)
+
+	CASE "TV_COMMER::PO"
+		TEXTVALUE$ = TV_COMMER::PO
+
+	CASE "TV_COMMER::BILL_FLAG"
+		TEXTVALUE$ = TV_COMMER::BILL_FLAG
+
+	CASE "TV_COMMER::MOD_NUM"
+		REALVALUE = TV_COMMER::MOD_NUM
+
+	CASE "TV_COMMER::CONFLICT"
+		TEXTVALUE$ = TV_COMMER::CONFLICT
+
+	!************************************************************
+	! Fields for the Commercial schedule instructions file
+	!************************************************************
+	CASE "TV_COMMER_SKED_INSTR::FRMNUM"
+		TEXTVALUE$ = TV_COMMER_SKED_INSTR::FRMNUM
+
+	CASE "TV_COMMER_SKED_INSTR::SKED_NUM"
+		TEXTVALUE$ = TV_COMMER_SKED_INSTR::SKED_NUM
+
+	CASE "TV_COMMER_SKED_INSTR::START_DATE"
+		TEXTVALUE$ = PRNT_DATE(TV_COMMER_SKED_INSTR::START_DATE,6%)
+
+	CASE "TV_COMMER_SKED_INSTR::END_DATE"
+		TEXTVALUE$ = PRNT_DATE(TV_COMMER_SKED_INSTR::END_DATE, 6%)
+
+		IF (TV_COMMER_SKED_INSTR::END_DATE = "")
+		THEN
+			TEXTVALUE$ = "  TFN   "
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::START_TIME"
+		TEXTVALUE$ = PRNT_TIME(TV_COMMER_SKED_INSTR::START_TIME, 0%)
+
+	CASE "TV_COMMER_SKED_INSTR::END_TIME"
+		TEXTVALUE$ = PRNT_TIME(TV_COMMER_SKED_INSTR::END_TIME, 0%)
+
+	CASE "TV_COMMER_SKED_INSTR::LENGTH"
+		TEXTVALUE$ = PRNT_TIME(TV_COMMER_SKED_INSTR::LENGTH, 0%)
+
+	CASE "TV_COMMER_SKED_INSTR::RATE_PER_SPOT"
+		REALVALUE = FUNC_ROUND(TV_COMMER_SKED_INSTR::RATE_PER_SPOT * &
+			COOP_PCT / 100.0, 2%)
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_MON"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(0%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_TUE"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(1%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_WED"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(2%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_THR"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(3%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_FRI"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(4%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_SAT"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(5%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::SPOTS_PER_DAY_SUN"
+		REALVALUE = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(6%)
+
+		IF REALVALUE = 0.0
+		THEN
+			TEXTVALUE$ = " ."
+		ELSE
+			TEXTVALUE$ = FORMAT$(REALVALUE, "##")
+		END IF
+
+	CASE "TV_COMMER_SKED_INSTR::TOTAL_SPOTS"
+		REALVALUE = TV_COMMER_SKED_INSTR::TOTAL_SPOTS
+
+	!************************************************************
+	! Fields for the Commercial charge file
+	!************************************************************
+
+	CASE "TV_COMMER_CHARGE::FRMNUM"
+		TEXTVALUE$ = TV_COMMER_CHARGE::FRMNUM
+
+	CASE "TV_COMMER_CHARGE::BILL_DATE"
+		TEXTVALUE$ = PRNT_DATE(TV_COMMER_CHARGE::BILL_DATE, 6%)
+
+	CASE "TV_COMMER_CHARGE::DESCR"
+		TEXTVALUE$ = TV_COMMER_CHARGE::DESCR
+
+	CASE "TV_COMMER_CHARGE::AMOUNT"
+		REALVALUE = TV_COMMER_CHARGE::AMOUNT
+
+	CASE "TV_COMMER_CHARGE::ACCTNO"
+		TEXTVALUE$ = TV_COMMER_CHARGE::ACCTNO
+
+	CASE "TV_COMMER_CHARGE::PERIOD"
+		TEXTVALUE$ = TV_COMMER_CHARGE::PERIOD
+
+	CASE "TV_COMMER_CHARGE::COOP"
+		TEXTVALUE$ = TV_COMMER_CHARGE::COOP
+
+	CASE "TV_COMMER_CHARGE::BILL_FLAG"
+		TEXTVALUE$ = TV_COMMER_CHARGE::BILL_FLAG
+
+	CASE "TV_COMMER_CHARGE::BILL_TYPE"
+		TEXTVALUE$ = TV_COMMER_CHARGE::BILL_TYPE
+
+	!************************************************************
+	! Fields for the UTL_PROFILE file
+	!************************************************************
+
+	CASE "UTL_PROFILE::REP_NAME"
+		TEXTVALUE$ = UTL_PROFILE::REP_NAME
+
+	!************************************************************
+	! Non fielded values
+	!************************************************************
+
+	CASE "CUR_DATE"
+		TEXTVALUE$ = DATE_TODAY
+
+	CASE "SPOT_DOLLARS"
+		REALVALUE = FUNC_ROUND(SPOT_DOLLARS * COOP_PCT / 100.0, 2%)
+
+	CASE "MISC_CHARGES"
+		REALVALUE = MISC_CHARGES
+
+	END SELECT
+
+	END SUB

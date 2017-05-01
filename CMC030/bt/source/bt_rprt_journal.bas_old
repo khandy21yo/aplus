@@ -1,0 +1,450 @@
+1	%TITLE "BT Journal Printer"
+	%SBTTL "BT_RPRT_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BT001
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Print Billing Tuition Journal\* option provides a means
+	!	to print a report containing the following information:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Guardian _#
+	!	.le
+	!	Name
+	!	.le
+	!	Invoice _#
+	!	.le
+	!	AR Account _#
+	!	.le
+	!	Transaction Date
+	!	.le
+	!	Revenue Account
+	!	.le
+	!	Client Name
+	!	.le
+	!	Fee
+	!	.els
+	!
+	! Index:
+	!	.x Print>Billing Tuition Journal
+	!	.x Print>Journal
+	!	.x Journal>Print
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Author:
+	!
+	!	05/27/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_RPRT_JOURNAL/LINE
+	!	$ LINK/EXE=BT_EXE: BT_RPRT_JOURNAL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BT_RPRT_JOURNAL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	07/08/88 - Kevin Handy
+	!		Modified journal file to have child name
+	!		instead of pointing to payroll master file.
+	!
+	!	08/11/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/10/91 - Craig Tanner
+	!		Modified to use GL_OUTP_ACCTSUM to do Debit/Credit page.
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of a change
+	!		to that function.
+	!
+	!	03/18/93 - Kevin Handy
+	!		Added arguement to GL_OUTP_ACCTSUM for units.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/03/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/23/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP	(AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALH.HB"
+	MAP	(BT_JOURNALH)	BT_JOURNALH_CDD	BT_JOURNALH
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALL.HB"
+	MAP	(BT_JOURNALL)	BT_JOURNALL_CDD	BT_JOURNALL
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Guardian\*
+	!	.p
+	!	The ^*From Guardian\* setting provides a means to begin the
+	!	report with a selected Guardian by entering the selection
+	!	in this field.
+	!	.p
+	!	A blank setting will cause the report to start with the first
+	!	Guardian in the file.
+	!
+	! Index:
+	!	.x From Guardian>Print Billing Journal Tuition
+	!	.x Print Billing Journal Tuition>From Guardian
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Guardian\*
+	!	.p
+	!	The ^*To Guardian\* setting provides a means to end the
+	!	report with a selected Guardian by entering the selection
+	!	in this field.
+	!	.p
+	!	A blank setting will cause the report to end with the last
+	!	Guardian in the file.
+	!
+	! Index:
+	!	.x To Guardian>Print Billing Tuition Journal
+	!	.x Print Billing Tuition Journal>To Gaurdian
+	!
+	!--
+
+
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Batch Number\*
+	!	.p
+	!	The ^*To Guardian\* setting provides a means to end the
+	!	report with a selected Guardian by entering the selection
+	!	in this field.
+	!	.p
+	!	A blank setting will cause the report to end with the last
+	!	Guardian in the file.
+	!
+	! Index:
+	!	.x To Guardian>Print Billing Tuition Journal
+	!	.x Print Billing Tuition Journal>To Gaurdian
+	!
+	!--
+
+
+300	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+320	!
+	! Open journal header file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALH.OPN"
+
+330	!
+	! Open journal header file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALL.OPN"
+
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "Billing Tuition Journal"
+	TITLE$(2%) = "BT System"
+	TITLE$(3%) = ""
+
+	!
+	! Headings
+	!
+	TITLE$(4%) = "Guardian    Name                           Invoice" + &
+		"   AR Account         TranDate"
+	TITLE$(5%) = "                                                  " + &
+		"    Revenue Account     Client Name                       " + &
+		"                  Fee"
+	TITLE$(6%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BT_JOURNALH.CH%, KEY #0%
+	ELSE
+		FIND #BT_JOURNALH.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BT_JOURNALH.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF &
+		(BT_JOURNALH::CUSNUM > TO.ITEM$) AND &
+		(TO.ITEM$ <> "")
+
+17030	!
+	! Get agency name
+	!
+	AR_35CUSTOM::CUSNAM = STRING$(LEN(AR_35CUSTOM::CUSNAM), 63%)
+	GET #AR_35CUSTOM.CH%, KEY #0% EQ BT_JOURNALH::CUSNUM, REGARDLESS
+
+17040	!
+	! output journal header line
+	!
+	TEXT$ = BT_JOURNALH::CUSNUM + "  " + &
+		LEFT(AR_35CUSTOM::CUSNAM, 30%) + "  " + &
+		BT_JOURNALH::INVNUM + " " + &
+		BT_JOURNALH::AR_ACCT + " " + &
+		PRNT_DATE(BT_JOURNALH::TRADAT, 8%)
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17100	!*******************************************************************
+	! Handle line items for an invoice
+	!*******************************************************************
+	TOTAL_FEE = 0.0
+	LINE_COUNT% = 0%
+
+	FIND #BT_JOURNALL.CH%, KEY #0% GE BT_JOURNALH::CUSNUM, REGARDLESS
+
+17110	GET #BT_JOURNALL.CH%, REGARDLESS
+
+	GOTO 17190 IF BT_JOURNALH::CUSNUM <> BT_JOURNALL::CUSNUM
+
+17140	!
+	! Print line file
+	!
+	TEXT$ = SPACE$(54%) + &
+		BT_JOURNALL::ACCT + "  " + &
+		BT_JOURNALL::CHILD + "  " + &
+		FORMAT$(BT_JOURNALL::RATE, "###,###,###.## ")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BT_JOURNALL::ACCT, &
+		0.0, -BT_JOURNALL::RATE, 0.0, TITLE$(), &
+		UTL_REPORTX) <> CMC$_NORMAL
+
+
+	!
+	! Add fee and line counter
+	!
+	TOTAL_FEE = TOTAL_FEE + BT_JOURNALL::RATE
+	GRAND_TOTAL_FEE = GRAND_TOTAL_FEE + BT_JOURNALL::RATE
+
+	LINE_COUNT% = LINE_COUNT% + 1%
+
+	GOTO 17110
+
+17190	!
+	! End out of line items
+	!
+	IF LINE_COUNT% > 1%
+	THEN
+		TEXT$ = SPACE$(116%) + "Total" + &
+			FORMAT$(TOTAL_FEE, "######.## ")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BT_JOURNALH::AR_ACCT, &
+		0.0, TOTAL_FEE, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Print one additional line
+	!
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	TEXT$ = SPACE$(110%) + "Grand Total" + &
+			FORMAT$(GRAND_TOTAL_FEE, "######.## ")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	!
+	! Print out the Debit/Credit information
+	!
+	V% = GL_OUTP_ACCTSUM(OPT_SUMMARY, "", 0.0, 0.0, 0.0, &
+		TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 300%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 320%, 17000%
+		FILENAME$ = "BT_JOURNALH"
+
+	CASE 330%
+		FILENAME$ = "BT_JOURNALL"
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "BT_JOURNALH"
+
+	CASE 17030%	! Unable to find customer #
+		RESUME 17040 IF ERR = 155%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 17100%, 17110%
+		RESUME 17190
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

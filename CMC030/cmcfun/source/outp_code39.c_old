@@ -1,0 +1,224 @@
+/*
+ *	%TITLE "Generate escape sequence to print out a barcode"
+ */
+#module outp_code39 "V3.6 Calico"
+
+/*
+ *
+ *	COPYRIGHT (C) 1985 BY
+ *	Software Solutions, Inc.
+ *	Idaho Falls, Idaho.
+ *
+ * This software is furnished under a license and may be used and
+ * copied only in accordance with terms of such license and with
+ * the inclusion of the above copyright notice.  This software or
+ * any other copies therof may not be provided or otherwise made
+ * available to any other person.  No title to and ownership of
+ * the software is hereby transferred.
+ *
+ * The information in this software is subject to change without
+ * notice and should not be construed as a committment by
+ * Computer management Center.
+ *
+ * CMC assumes no responsibility for the use or reliability of
+ * its software on equipment which is not supported by CMC.
+ *
+ *++
+ *
+ * Abstract:HELP
+ *	.p
+ *	This function is used to generate bar codes using the
+ *	code39 symbology.
+ *
+ * Parameters:
+ *
+ *	MESSAGE$
+ *		The data to be bar-coded
+ *
+ *	Type
+ *		The type of printer to generate for
+ *
+ *	Return Value
+ *		Escape sequence for the barcode, and stay on same line.
+ *
+ * Compile
+ *
+ *	$ cc FUNC_SOURCE:outp_code39/G_FLOAT
+ *	$ LIB FUNC_LIB:CMCFUN/REP outp_code39
+ *	$ DELETE outp_code39.OBJ;*
+ *
+ * Author:
+ *
+ *	09/24/97 - Kevin Handy
+ *
+ * Modification history:
+ *
+ *--
+ */
+
+#include <stdlib.h>
+#include <string.h>
+#include <descrip.h>
+
+/*
+// Function Prototypes
+*/
+static char* fnencodebw(const char* message, char* Result);
+static void fnencodebar(const char* message, char* Buffer, long* Length);
+
+/*
+// Data Statement
+*/
+static const char codechar[] =
+	"*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%";
+
+static const char* codebar[] =
+{
+	"bWbwBwBwbw","bwbWBwBwbw","BwbWbwbwBw","bwBWbwbwBw",
+	"BwBWbwbwbw","bwbWBwbwBw","BwbWBwbwbw","bwBWBwbwbw",
+	"bwbWbwBwBw","BwbWbwBwbw","bwBWbwBwbw","BwbwbWbwBw",
+	"bwBwbWbwBw","BwBwbWbwbw","bwbwBWbwBw","BwbwBWbwbw",
+	"bwBwBWbwbw","bwbwbWBwBw","BwbwbWBwbw","bwBwbWBwbw",
+	"bwbwBWBwbw","BwbwbwbWBw","bwBwbwbWBw","BwBwbwbWbw",
+	"bwbwBwbWBw","BwbwBwbWbw","bwBwBwbWbw","bwbwbwBWBw",
+	"BwbwbwBWbw","bwBwbwBWbw","bwbwBwBWbw","BWbwbwbwBw",
+	"bWBwbwbwBw","BWBwbwbwbw","bWbwBwbwBw","BWbwBwbwbw",
+	"bWBwBwbwbw","bWbwbwBwBw","BWbwbwBwbw","bWBwbwBwbw",
+	"bWbWbWbwbw","bWbWbwbWbw","bWbwbWbWbw","bwbWbWbWbw"
+};
+
+static const int totalcodes = sizeof(codechar);
+
+static const char b1line[] = {0xff,0xff};
+static const char b2line[] = {0xff,0xff,0xff,0xff,0xff};
+static const char w1line[] = {0x00,0x00};
+static const char w2line[] = {0x00,0x00,0x00,0x00};
+
+/*
+ * This function takes a text string and converts it into a
+ * string coded as 'bwBW' for wide/narrow bars.
+ */
+static char* fnencodebw(const char* message, char* Result)
+{
+	int ch;
+	int ch_V1;
+	int i;
+	int j;
+	int output = 0;
+
+	Result[0] = '\0';
+	for (i = 0; i < strlen(message); i++)
+	{
+		ch = message[i];
+		ch_V1 = -1;
+		for (j = 0; j < totalcodes; j++)
+		{
+			if (codechar[j] == ch)
+			{
+				ch_V1 = j;
+			}
+		}
+		if (ch_V1 != -1)
+		{
+			strcat(Result, codebar[ch_V1]);
+		}
+		else
+		{
+			strcat(Result, "x");
+		}
+	}
+	return Result;
+}
+
+/*
+ * This function takes the barcodes coded as a 'bwBW' string, and generates
+ * the necessary escape sequence to output a bar code
+ */
+static void fnencodebar(const char* message, char* Buffer, long* Length)
+{
+	int i;
+	*Length = 4;
+
+	Buffer[0] = 27;
+	Buffer[1] = 'L';
+
+	for (i = 0; i < strlen(message); i++)
+	{
+		switch (message[i])
+		{
+		case 'b':
+
+			memcpy(Buffer + *Length, b1line, sizeof(b1line));
+			*Length += sizeof(b1line);
+			break;
+
+		case 'B':
+
+			memcpy(Buffer + *Length, b2line, sizeof(b2line));
+			*Length += sizeof(b2line);
+			break;
+
+		case 'w':
+
+			memcpy(Buffer + *Length, w1line, sizeof(w1line));
+			*Length += sizeof(w1line);
+			break;
+
+		case 'W':
+
+			memcpy(Buffer + *Length, w2line, sizeof(w2line));
+			*Length += sizeof(w2line);
+			break;
+
+		}
+	}
+	Buffer[2] = (*Length - 4) & 255;
+	Buffer[3] = ((*Length - 4) >> 8) & 255;
+}
+
+/*
+ * outp_code39
+ *
+ *	Here's the main function. It translates from a descriptor into
+ *	a generic C string, then processes the barcode using C based
+ *	functions, then translates the funal barcode back to a
+ *	descriptor.
+ *
+ *	The type field passed in the destination, so that we don't
+ *	try to send bar codes out to the display, or to a printer
+ *	port because neither case works.
+ *
+ *	The Device field will allow for additional printers in the
+ *	future, instead of just Epson compatibles.
+ */
+void outp_code39(struct dsc$descriptor_s *returnstr,
+	struct dsc$descriptor_s *source, long* Type, long* Device)
+{
+	char message[64];		/* Original message */
+	char Work1[512];		/* bwBW encoding */
+	char Buffer[1024];		/* Bar code escape sequence */
+	long Length = 0;
+	char* Tp1;
+
+	switch(*Type)
+	{
+	case 1:
+	case 5:
+		strcpy(Buffer, "*BARCODE*");
+		Length = strlen(Buffer);
+		break;
+
+	default:
+		message[0] = '*';
+		strncpy(message + 1, source->dsc$a_pointer,
+			source->dsc$w_length);
+		message[source->dsc$w_length + 1] = '*';
+		message[source->dsc$w_length + 2] = '\0';
+		Tp1 = fnencodebw(message, Work1);
+		fnencodebar(Tp1, Buffer, &Length);
+		break;
+	}
+
+	str$copy_r(returnstr, &Length, &Buffer);
+}
+

@@ -1,0 +1,1085 @@
+1	%TITLE "Sales Journal Header Maintenance"
+	%SBTTL "BA_MAIN_JOURNALL"
+	%IDENT "V3.6A Calico"
+
+	FUNCTION LONG BA_MAIN_JOURNALL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Line Items\* program maintains the Marketing Sales Journal Header file.
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_MAIN_JOURNALL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BA_MAIN_JOURNALL
+	!	$ DELETE BA_MAIN_JOURNALL.OBJ;*
+	!
+	! Author:
+	!
+	!	05/10/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/06/91 - Frank F. Starman
+	!		Add error trapping for 28110.
+	!
+	!	05/06/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/15/96 - Kevin Handy
+	!		Reformat source
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/25/97 - Kevin Handy
+	!		Change 'val' to 'val%'
+	!
+	!	03/04/99 - Kevin Handy
+	!		Convert to 3.6A
+	!
+	!	03/08/99 - Kevin Handy
+	!		Fix FIND bug
+	!
+	!	08/05/99 - Kevin Handy
+	!		Lose lines 760 and 770, which are not referenced
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:PR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALL.HB"
+	MAP (BA_JOURNALL)	BA_JOURNALL_CDD		BA_JOURNALL
+	MAP (BA_JOURNALL_OLD)	BA_JOURNALL_CDD		BA_JOURNALL_OLD, &
+		BA_JOURNALL2
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALH.HB"
+	MAP (BA_JOURNALH)	BA_JOURNALH_CDD		BA_JOURNALH
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_EMP_MASTER.HB"
+	MAP (PR_EMP_MASTER)	PR_EMP_MASTER_CDD	PR_EMP_MASTER
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_TRN_PAY.HB"
+	MAP (PR_TRN_PAY)	PR_TRN_PAY_CDD		PR_TRN_PAY
+	MAP (PR_HIS_PAY)	PR_TRN_PAY_CDD		PR_HIS_PAY
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.HB"
+	MAP (BA_BILTBL)		BA_BILTBL_CDD		BA_BILTBL
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTYP.HB"
+	MAP (BA_CUSTYP)		BA_CUSTYP_CDD		BA_CUSTYP
+
+	!
+	! Create array to contain pointers and totals
+	!
+	RECORD RARRAY_RECORD
+		RFA	LINRFA		! Rfa pointer for record
+		REAL	DAYS
+		REAL	HOURS
+		REAL	UNITS
+		REAL	WAGES
+		REAL	FEE
+	END RECORD
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (TT_BA_JOURNALL) RARRAY_RECORD RARRAY(300%)
+
+	COM (CH_BA_JOURNALH) &
+		BATCH_NO$ = 2%, &
+		BA_JOURNALH.CH%, &
+		BA_JOURNALH.READONLY%
+
+	COM (CH_BA_JOURNALL) &
+		BA_JOURNALL.CH%, &
+		BA_JOURNALL.READONLY%
+
+	COM (CH_BA_BILTBL) &
+		BA_BILTBL.CH%
+
+	COM (CH_BA_CUSTYP) &
+		BA_CUSTYP.CH%
+
+	MAP (TT_BA_BILTBL) &
+		MTITLE$ = 32%, &
+		METHOD$(6%) = 32%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	DECLARE INTEGER CONSTANT OPEN_MAX = 24
+	DECLARE INTEGER CONSTANT FILE_MAX = 2000
+
+	COM (PR_HISTORY) &
+		DATA_FILE$(FILE_MAX)=8%, &
+		USE_HISTORY%(OPEN_MAX), &
+		PR_TMP_PAY.CH%(OPEN_MAX), &
+		DATA_FILE%
+
+	ON ERROR GOTO 29000
+
+	%PAGE
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Line items"
+		SMG_WINDOW::NHELP = "BA_MAIN_JOURNALL"
+		SMG_WINDOW::HSIZE = 130%
+		SMG_WINDOW::VSIZE = 9%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 11%
+		SMG_WINDOW::NITEMS= 9%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::TOPLIN = 3%
+		SMG_WINDOW::BOTLIN = 8%
+
+		!
+		! List of types
+		!
+		MTITLE$ = "Method Description"
+		METHOD$(0%) = "5"
+		METHOD$(1%) = "1    Days"
+		METHOD$(2%) = "2    Hours"
+		METHOD$(3%) = "3    Units"
+		METHOD$(4%) = "4    Wages"
+		METHOD$(5%) = "5    Flat Rate"
+
+		!
+		! Load in defaults for chart
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW)
+
+700		!
+		! Declare channels
+		!
+		IF BA_JOURNALL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BA_JOURNALL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALL.CRE"
+		BA_JOURNALL.READONLY% = 0%
+		GOTO 790
+
+790		SMG_WINDOW::CHAN  = BA_JOURNALL.CH%
+
+		TMP_DATA_FILE% = OPEN_MAX
+		TMP_DATA_FILE% = DATA_FILE% IF DATA_FILE% < OPEN_MAX
+		FOR I%=1% TO TMP_DATA_FILE%
+			CLOSE PR_TMP_PAY.CH%(I%)
+			CALL ASSG_FREECHANNEL(PR_TMP_PAY.CH%(I%))
+		NEXT I%
+
+		PR_TRN_PAY.CH% = 0%
+
+		!
+		! Find all folders
+		!
+		CALL READ_DEVICE("PR_TRN_PAY",PR_TRN_PAY.DEV$,STAT%)
+		CALL READ_DEVICE("PR_HIS_PAY",PR_HIS_PAY.DEV$,STAT%)
+
+		CALL PR_FIND_DETAILFILE(BA_JOURNALH::FROMDATE, &
+			BA_JOURNALH::TODATE,PR_TRN_PAY.DEV$, &
+			PR_HIS_PAY.DEV$,DATA_FILE$())
+
+		DATA_FILE% = VAL%(DATA_FILE$(0%))
+
+		! Open up the pay file.  If there are more than OPEN_MAX files
+		! then skip to slower logic - open close files
+		!
+		TMP_DATA_FILE% = OPEN_MAX
+		TMP_DATA_FILE% = DATA_FILE% IF DATA_FILE% < OPEN_MAX
+
+		FOR PR_LOOP% = 1% TO TMP_DATA_FILE%
+			BATCH_NO$ = DATA_FILE$(PR_LOOP%)
+
+			USE_HISTORY%(PR_LOOP%) = 0%
+
+810			!
+			! Open Pay folder
+			!
+			%INCLUDE "SOURCE:[PR.OPEN]PR_TRN_PAY.OPN"
+
+			PR_TMP_PAY.CH%(PR_LOOP%) = PR_TRN_PAY.CH%
+
+			GOTO 830
+
+820			!
+			! Open pay history folder if journal not there
+			!
+			CALL ASSG_FREECHANNEL(PR_TRN_PAY.CH%)
+			USE_HISTORY%(PR_LOOP%) = -1%
+
+			%INCLUDE "SOURCE:[PR.OPEN]PR_HIS_PAY.OPN"
+
+			PR_TMP_PAY.CH%(PR_LOOP%) = PR_HIS_PAY.CH%
+
+830			PR_TRN_PAY.CH%, PR_HIS_PAY.CH% = 0%
+		NEXT PR_LOOP%
+
+	%PAGE
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!******************************************************************
+
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"    (01)                               " + &
+			"(02)         (03)        (04)        (05)" + &
+			"   (06)       (07)        (08)    (09)             ", &
+			1%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  Client #   Client Name               " + &
+			"Days     ProdHours       Units       Wages" + &
+			"  Mthd       Rate         Fee  Account #         ", &
+			2%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Extra display data
+	!
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! Generate totals
+		!
+		DAYS = 0.0
+		HOURS = 0.0
+		UNITS = 0.0
+		WAGES = 0.0
+		FEE = 0.0
+
+		FOR I% = 1% TO SMG_WINDOW::TOTREC
+
+			DAYS = DAYS + RARRAY(I%)::DAYS
+			HOURS = HOURS + RARRAY(I%)::HOURS
+			UNITS = UNITS + RARRAY(I%)::UNITS
+			WAGES = WAGES + RARRAY(I%)::WAGES
+			FEE = FEE + RARRAY(I%)::FEE
+
+		NEXT I%
+
+		!
+		! Display totals
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"Number of lines" + &
+			FORMAT$(SMG_WINDOW::TOTREC, "###") + &
+			"               " + &
+			FORMAT$(DAYS, "###,###.#### ") + &
+			FORMAT$(HOURS, "###,###.#### ") + &
+			FORMAT$(UNITS, "###,###.#### ") + &
+			FORMAT$(WAGES, "###,###.##                   ") + &
+			FORMAT$(FEE, "###,###.## ") + &
+			SPACE$(18%), &
+			SMG_WINDOW::VSIZE, 1%, , SMG$M_REVERSE)
+
+		!
+		! Paint lines on screen
+		!
+		FOR I% = 1% TO 9%
+
+			A% = VAL%(MID("013,033,046,059,072,083,088,101,112", &
+				I% * 4% - 3%, 3%))
+
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_WINDOW::WNUMBER, &
+				1%, A%, SMG_WINDOW::BOTLIN, A%)
+
+		NEXT I%
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+20200	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display
+	! data, set defaults, and return the data back according to
+	! MFLAG.
+	!******************************************************************
+	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		XLINE$ = NUM1$(SMG_WINDOW::CURLIN)
+
+		TEMP1% = SCOPE::SCOPE_EXIT
+
+ ELoop:		SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Client _#\*
+	!	.p
+	!	The ^*Client _#\* field provides for entry of the Client, by number,
+	!	which was referred by a particular agency. Entering
+	!	a valid Client _# causes the system to automatically display
+	!	the Client name. If an invalid Client _# is entered, a message
+	!	will appear on the screen indicating the Client _# is invalid.
+	!	.p
+	!	Pressing ^*List Choices\* at this field will provide a list of
+	!	valid Client _#'s.
+	!
+	! Index:
+	!	.x Client Number
+	!
+	!--
+
+			BA_JOURNALL::EMPNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";3", TEMP$, &
+				BA_JOURNALL::EMPNUM, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(PR_MAIN_EMPLOYEE.ID, "VX") = 1%)
+				THEN
+					BA_JOURNALL::EMPNUM = &
+						PR_EMP_MASTER::EMPNUM
+				END IF
+				GOTO ELoop
+			END IF
+
+			IF (TEMP$ = "Add") AND ((MFLAG AND 1%) = 0%)
+			THEN
+				GOSUB ReadTable
+				GOSUB 28500
+			END IF
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Days\*
+	!	.p
+	!	The ^*Days\* field contains the number of days
+	!	allotted for a particular client by the agency.
+	!	.p
+	!	The format for entry is XXXXXXX.XX.
+	!
+	! Index:
+	!	.x Days
+	!
+	!--
+
+			BA_JOURNALL::DAYS = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";34", TEMP$, &
+				BA_JOURNALL::DAYS, MFLAG, "###,###.####", &
+				MVALUE)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Hours\*
+	!	.p
+	!	The ^*Hours\* field contains the number of hours
+	!	(other than units) which a client is allotted by a particular
+	!	agency.
+	!	.p
+	!	The format for entry is XXXXXXX.XX.
+	!
+	! Index:
+	!	.x Hours
+	!
+	!--
+
+			BA_JOURNALL::HOURS = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";47", TEMP$, &
+				BA_JOURNALL::HOURS, MFLAG, "###,###.####", &
+				MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Units\*
+	!	.p
+	!	The ^*Units\* field provides a means to enter the appropriate
+	!	units produced relating to a specific client for the agency.
+	!	.p
+	!	The format for entry is XXXXXXX.XX.
+	!
+	! Index:
+	!	.x Units
+	!
+	!--
+
+			BA_JOURNALL::UNITS = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";60", TEMP$, &
+				BA_JOURNALL::UNITS, MFLAG, "###,###.####", &
+				MVALUE)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Wages\*
+	!	.p
+	!	The ^*Wages\* field provides for entry of the amount of
+	!	wages earned by a particular client from the agency.
+	!	.p
+	!	The format for entry is XXXXXXX.XX.
+	!
+	! Index:
+	!	.x Wages
+	!
+	!--
+
+			BA_JOURNALL::WAGES = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";73", TEMP$, &
+				BA_JOURNALL::WAGES, MFLAG, "###,###.##", MVALUE)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!
+	!	^*(06) Method\*
+	!	.p
+	!	The ^*Method\* field provides a means to enter how the
+	!	Agency is to be billed.
+	!	.p
+	!	Valid methods are:
+	!	.b
+	!	.lm +10
+	!	.list 0,"*"
+	!	.le
+	!	1 - Days
+	!	.le
+	!	2 - Hours
+	!	.le
+	!	3 - Units
+	!	.le
+	!	4 - Wages
+	!	.le
+	!	5 - Flat Rate
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Pressing ^*List Choices\* will display a list of valid methods.
+	!
+	! Index:
+	!--
+
+			BA_JOURNALL::METHOD = ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";85", TEMP$, &
+				BA_JOURNALL::METHOD, MFLAG, "'", MVALUE, &
+				METHOD$(), MTITLE$, "007")
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!
+	!	^*(07) Rate\*
+	!	.p
+	!	The ^*Rate\* field is provided to enter the rate to be
+	!	charged by the Agency.
+	!	.p
+	!	The field will accept a figure as large as XXXXXXX.XX.
+	!
+	! Index:
+	!--
+
+			BA_JOURNALL::RATE = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";89", TEMP$, &
+				BA_JOURNALL::RATE, MFLAG, "###,###.####", &
+				MVALUE)
+
+		CASE 8%
+
+	!++
+	! Abstract:FLD008
+	!
+	!	^*(08) Fee\*
+	!	.p
+	!	The ^*Fee\* which will appear in field (08) will automatically
+	!	be calculated by the system.  (Method times the Rate)
+	!	.p
+	!	The figure may be edited manually by accessing the Change
+	!	function in the Command Menu and entering the corrected amount.
+	!
+	! Index:
+	!--
+
+			BA_JOURNALL::FEE = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";102", TEMP$, &
+				BA_JOURNALL::FEE, MFLAG, &
+				"###,###.##", MVALUE)
+
+		CASE 9%
+
+	!++
+	! Abstract:FLD009
+	!	^*(09) Account _#\*
+	!	.p
+	!	The ^*Account _#\* field contains the appropriate
+	!	General Ledger revenue account number to which this line item
+	!	has reference.
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field provides a list
+	!	of valid Account _#'s.
+	!
+	! Index:
+	!	.x Account Number
+	!
+	!--
+
+			BA_JOURNALL::ACCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";113", TEMP$, &
+				BA_JOURNALL::ACCT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX") = 1%)
+				THEN
+					BA_JOURNALL::ACCT = GL_CHART::ACCT
+				END IF
+				GOTO ELoop
+			END IF
+		END SELECT
+
+		GOSUB CalcFee &
+			IF ((MFLAG AND 1%) = 0%) AND &
+			((MLOOP >= 2%) AND (MLOOP <= 7%))
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BA_MAIN_JOURNALL = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			!
+			! Is the input defined?
+			!
+			BA_MAIN_JOURNALL = FUNC_TESTENTRY(SMG_WINDOW, &
+				BA_JOURNALL::EMPNUM, &
+				PR_EMP_MASTER::EMPNAME, &
+				"BA", MLOOP, "PRG", &
+				"Client Number", PR_MAIN_EMPLOYEE.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(PR_EMP_MASTER::EMPNAME, 19%), &
+				SMG_WINDOW::CURLIN, 14%, , SMG$M_BOLD)
+
+		END SELECT
+
+	!
+	! Set BA_JOURNALL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BA_JOURNALL_OLD = BA_JOURNALL
+
+	!
+	! Restore BA_JOURNALL_OLD value
+	!
+	CASE OPT_RESETOLD
+		BA_JOURNALL = BA_JOURNALL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BA_JOURNALL2 = BA_JOURNALL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BA_JOURNALL = BA_JOURNALL2
+
+		!
+		! Set special default values for the key of a new record
+		! which is the most likely case when this function is to
+		! be called.
+		!
+		BA_JOURNALL::BILLNUM = BA_JOURNALH::BILLNUM
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BA_JOURNALL.CH%, &
+				KEY#0% GE BA_JOURNALL::BILLNUM + "", &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle array of records
+	!
+27000	CASE OPT_ARRAY
+
+		!
+		! Select sub-option of array
+		!
+		SELECT MLOOP
+
+		!
+		! Load array with line items
+		!
+		CASE 1%
+
+			!
+			! Empty array
+			!
+			SMG_WINDOW::TOTREC = 0%
+
+27110			!
+			! Search for first record
+			!
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0% GE BA_JOURNALH::BILLNUM + "", &
+				REGARDLESS
+
+27120			!
+			! Get a record
+			!
+			GET #SMG_WINDOW::CHAN
+
+			IF BA_JOURNALL::BILLNUM = BA_JOURNALH::BILLNUM
+			THEN
+				!
+				! Add information to array
+				!
+				SMG_WINDOW::TOTREC = SMG_WINDOW::TOTREC + 1%
+				RARRAY(SMG_WINDOW::TOTREC)::LINRFA = &
+					GETRFA(SMG_WINDOW::CHAN)
+				RARRAY(SMG_WINDOW::TOTREC)::DAYS = &
+					BA_JOURNALL::DAYS
+				RARRAY(SMG_WINDOW::TOTREC)::HOURS = &
+					BA_JOURNALL::HOURS
+				RARRAY(SMG_WINDOW::TOTREC)::UNITS = &
+					BA_JOURNALL::UNITS
+				RARRAY(SMG_WINDOW::TOTREC)::WAGES = &
+					BA_JOURNALL::WAGES
+				RARRAY(SMG_WINDOW::TOTREC)::FEE = &
+					BA_JOURNALL::FEE
+				GOTO 27120
+			END IF
+
+		!
+		! Remove one element of the array
+		!
+		CASE 2%
+			!
+			! Remove item pointed to by Mflag
+			!
+			FOR I% = MFLAG TO SMG_WINDOW::TOTREC - 1%
+				RARRAY(I%) = RARRAY(I% + 1%)
+			NEXT I%
+
+		!
+		! Set array item to current record
+		!
+		CASE 3%
+			RARRAY(MFLAG)::LINRFA = GETRFA(SMG_WINDOW::CHAN)
+			RARRAY(SMG_WINDOW::TOTREC)::DAYS = &
+				BA_JOURNALL::DAYS
+			RARRAY(SMG_WINDOW::TOTREC)::HOURS = &
+				BA_JOURNALL::HOURS
+			RARRAY(SMG_WINDOW::TOTREC)::UNITS = &
+				BA_JOURNALL::UNITS
+			RARRAY(SMG_WINDOW::TOTREC)::WAGES = &
+				BA_JOURNALL::WAGES
+			RARRAY(SMG_WINDOW::TOTREC)::FEE = &
+				BA_JOURNALL::FEE
+
+		!
+		! Load in current record, locked
+		!
+		CASE 4%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA
+
+		!
+		! Load in current record, unlocked
+		!
+		CASE 5%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA, &
+				REGARDLESS
+
+		!
+		! Change the current record's key to match header.  The
+		! new key is probibly passes through MVALUE, unless some
+		! other means is devised.
+		!
+		CASE 6%
+			BA_JOURNALL::BILLNUM = RIGHT(MVALUE, 2%)
+
+
+		!
+		! Print descriptions in journal window.
+		!
+		CASE 7%
+			IF MAIN_WINDOW(PR_MAIN_EMPLOYEE.ID, &
+				"Q0" + BA_JOURNALL::EMPNUM) <> 1%
+			THEN
+				PR_EMP_MASTER::EMPNAME = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(PR_EMP_MASTER::EMPNAME, 19%), &
+				SMG_WINDOW::CURLIN, 14%, , SMG$M_BOLD)
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+
+	EXIT FUNCTION
+
+	%PAGE
+
+28100	!*******************************************************************
+	! Read the billing table
+	!*******************************************************************
+ ReadTable:
+	!
+	! We should already have the BA_CUSTYP and PR_EMP_MASTER records
+	! in memory already, so use them to create the GL number.
+	!
+	CALL GL_ASSG_ACCMASK(BA_CUSTYP::REV_MASK, PR_EMP_MASTER::ACCT, &
+		BA_JOURNALL::ACCT)
+
+	!
+	! Try to find billing table record
+	!
+	GET #BA_BILTBL.CH%, &
+		KEY #0% EQ BA_JOURNALL::EMPNUM + BA_JOURNALH::CUSNUM, &
+		REGARDLESS
+
+28110	!
+	! Search for current record
+	!
+	IF (BA_BILTBL::CUSNUM = BA_JOURNALH::CUSNUM) AND &
+		(BA_BILTBL::EMPNUM = BA_JOURNALL::EMPNUM)
+	THEN
+		!
+		! Verify the date range
+		!
+		IF (BA_BILTBL::FROMDATE <= BA_JOURNALH::TRADAT) AND &
+			((BA_BILTBL::TODATE = "") OR &
+			(BA_BILTBL::TODATE >= BA_JOURNALH::TRADAT))
+		THEN
+			!
+			! Is in range, use data
+			!
+			GOTO 28120
+		ELSE
+			!
+			! Is not in range, try next record
+			!
+			GET #BA_BILTBL.CH%, REGARDLESS
+			GOTO 28110
+		END IF
+	ELSE
+		!
+		! No record found for this employee/customer pair
+		!
+		GOTO 28190
+	END IF
+
+28120	!
+	! Set up information in main record
+	!
+	BA_JOURNALL::RATE = BA_BILTBL::RATE
+	BA_JOURNALL::METHOD = BA_BILTBL::METHOD
+
+	TEMP$ = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+		XLINE$ + ";85", TEMP$, &
+		BA_JOURNALL::METHOD, 1%, "'", MVALUE)
+
+	TEMP = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+		XLINE$ + ";89", TEMP$, &
+		BA_JOURNALL::RATE, 1%, "###,###.####", MVALUE)
+
+	TEMP$ = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+		XLINE$ + ";113", TEMP$, &
+		BA_JOURNALL::ACCT, 1%, "'E", MVALUE)
+
+28190	GOSUB CalcFee
+
+	RETURN
+
+	%PAGE
+
+28200	!*******************************************************************
+	! Calculate Fee
+	!*******************************************************************
+ CalcFee:
+	SELECT BA_JOURNALL::METHOD
+
+	CASE "1"
+		BA_JOURNALL::FEE = BA_JOURNALL::RATE * BA_JOURNALL::DAYS
+
+	CASE "2"
+		BA_JOURNALL::FEE = BA_JOURNALL::RATE * BA_JOURNALL::HOURS
+
+	CASE "3"
+		BA_JOURNALL::FEE = BA_JOURNALL::RATE * BA_JOURNALL::UNITS
+
+	CASE "4"
+		BA_JOURNALL::FEE = BA_JOURNALL::RATE * BA_JOURNALL::WAGES
+
+	CASE "5"
+		BA_JOURNALL::FEE = BA_JOURNALL::RATE
+
+	END SELECT
+
+	!
+	! Round off number, and display
+	!
+	BA_JOURNALL::FEE = FUNC_ROUND(BA_JOURNALL::FEE, 2%)
+
+	TEMP = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+		XLINE$ + ";102", TEMP$, &
+		BA_JOURNALL::FEE, 1%, &
+		"###,###.##", MVALUE)
+
+	RETURN
+
+28500	!
+	! Read payroll history file
+	!
+	EMP_TOTAL(I%) = 0.0 FOR I% = 1% TO 4%
+	PR_END_DATE$ = ""
+	DAYS% = 0%
+
+	!
+	! Look up employee in all payroll files selected
+	!
+	TMP_DATA_FILE% = OPEN_MAX
+	TMP_DATA_FILE% = DATA_FILE% IF DATA_FILE% < OPEN_MAX
+	FOR PR_LOOP% = 1% TO TMP_DATA_FILE%
+		BATCH_NO$ = DATA_FILE$(PR_LOOP%)
+		USE_HISTORY% = USE_HISTORY%(PR_LOOP%)
+		PR_TMP_PAY.CH% = PR_TMP_PAY.CH%(PR_LOOP%)
+
+28600		!
+		! Get pay detail information
+		!
+		FIND #PR_TMP_PAY.CH%, &
+			KEY #0% EQ BA_JOURNALL::EMPNUM + "", &
+			REGARDLESS
+
+28610		GET #PR_TMP_PAY.CH%, REGARDLESS
+
+		!
+		! If history then set history map to journal
+		!
+		IF USE_HISTORY%
+		THEN
+			PR_TRN_PAY = PR_HIS_PAY
+		END IF
+
+		GOTO 28700 IF (BA_JOURNALL::EMPNUM <> PR_TRN_PAY::EMPNUM)
+
+		DAYS% = DAYS% + 1% IF PR_END_DATE$ <> PR_TRN_PAY::PR_END_DATE
+
+		!
+		! Is this productive of non productive time
+		!
+		IF COMP_STRING(TRM$(PR_TRN_PAY::OPER), &
+			BA_JOURNALH::OPERATIONS)=0% OR &
+			TRM$(BA_JOURNALH::OPERATIONS) = ""
+		THEN
+			EMP_TOTAL(1%) = EMP_TOTAL(1%) + PR_TRN_PAY::REG_HR
+			EMP_TOTAL(2%) = EMP_TOTAL(2%) + PR_TRN_PAY::OVT_HR
+			EMP_TOTAL(3%) = EMP_TOTAL(3%) + PR_TRN_PAY::PIECE
+		END IF
+
+		EMP_TOTAL(4%) = EMP_TOTAL(4%) + PR_TRN_PAY::GROSS
+
+		PR_END_DATE$ = PR_TRN_PAY::PR_END_DATE
+
+		GOTO 28610
+
+28700	!
+	! Next payroll folder
+	!
+	NEXT PR_LOOP%
+
+	BA_JOURNALL::DAYS	= DAYS%
+	BA_JOURNALL::HOURS	= EMP_TOTAL(1%) + EMP_TOTAL(2%)
+	BA_JOURNALL::UNITS	= EMP_TOTAL(3%)
+	BA_JOURNALL::WAGES	= EMP_TOTAL(4%)
+
+
+	RETURN
+
+	%PAGE
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 750%
+		RESUME 32767
+
+	CASE 810%
+		RESUME 820 IF ERR = 5%
+		PRINT PR_LOOP%
+		PRINT BATCH_NO$
+		SLEEP 5%
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Error while loading array
+	!
+	CASE 27110%
+		!
+		! Nothing to load
+		!
+		RESUME ExitFunction
+
+	CASE 27120%
+		!
+		! Read all records
+		!
+		RESUME ExitFunction IF ERR = 11%
+
+	CASE 28100%
+		!
+		! Unable to find billing table record
+		!
+		RESUME 28190
+
+	CASE 28110%
+		!
+		! End of the file
+		!
+		RESUME 28120 IF ERR = 11%
+
+	CASE 28600%
+		RESUME 28700 IF ERR = 155% OR ERR = 9%
+
+	CASE 28610%
+		RESUME 28700 IF ERR = 11%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

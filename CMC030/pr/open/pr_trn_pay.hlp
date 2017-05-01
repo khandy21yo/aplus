@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Pay Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TRN__PAY.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Payroll System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Payroll Pay Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TRN__PAY.JRL\*
+	!	.p
+	!	Payroll Pay Journal.
+	!
+	! Index:
+	!	.x Payroll Pay Journal
+	!	.x PR_TRN_PAY
+	!--

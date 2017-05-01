@@ -1,0 +1,21 @@
+	!======================================================================
+	! WP_REQLINE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_REQLINE.CH%, STAT%)
+	CALL READ_DEVICE('WP_REQLINE',WP_REQLINE.DEV$, STAT%)
+
+	WP_REQLINE.NAME$ = WP_REQLINE.DEV$+"WP_REQLINE_"+BATCH_NO$+".JRL"
+
+	OPEN WP_REQLINE.NAME$ FOR INPUT AS FILE WP_REQLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_REQLINE, &
+		PRIMARY KEY &
+		( &
+			WP_REQLINE::JOB, &
+			WP_REQLINE::LLINE, &
+			WP_REQLINE::OPERATION, &
+			WP_REQLINE::PRODUCT &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,199 @@
+;+
+; The following two lines define the name of the module,
+; and the identification (version) of this module.
+;-
+	.TITLE	CMC_3VECTOR
+	.IDENT	/2-009/
+
+;+
+; The following lines define a MACRO called ROUTINE which,
+; when invoked, generates one transfer vector entry.
+;-
+	.MACRO	ROUTINE	NAME
+	.EXTRN		NAME
+	.ALIGN	QUAD
+	.TRANSFER	NAME
+	.MASK		NAME
+	JMP		NAME+2
+	.ENDM
+
+;+
+; The following lines define a MACRO called ROUTINE which,
+; when invoked, generates one transfer vector entry.
+;-
+	.MACRO	XTINCT	NAME
+	.ALIGN	QUAD
+	JMP		XXXX_EXTINCT+2
+	.ENDM
+
+;+
+; The following lines define a MACRO called FUTURE which,
+; when invoked, generates one transfer vector entry that does
+; not have a universal symbol in the sharable library image.
+; It's used to "reserve" transfer vector entries for routines
+; that haven't been written yet, so the length of the transfer
+; vector doesn't have to change when they're written.
+;-
+	.MACRO	FUTURE	NAME
+	.EXTRN		NAME
+	.ALIGN	QUAD
+	.MASK		NAME
+	JMP		NAME+2
+	.ENDM
+
+;+
+; The next two lines define the program section (PSECT)
+; in which the transfer vector resides.
+;
+; When linking to the sharable image that uses this transfer
+; vector, it's important to place the transfer vector at
+; the beginning of the sharable image (for example, by
+; use of the CLUSTER or COLLECT options in a linker options
+; file).
+;-
+	.PSECT	CMC_VECTOR	PIC, USR, CON, REL, LCL, SHR, -
+				EXE, RD, NOWRT, QUAD
+
+;+
+; Following this point are the transfer vector entries.
+; Each entry is of the form:
+;
+;	ROUTINE routine-name
+;
+; where routine-name is the name of the routine for which you
+; wish to make an entry.  The order in which you list the routines
+; is not important, but it is important that you not change the
+; order once you have created the sharable library image.
+;
+; Note that there are 'not implemented' entries at the end of
+; the vector.  These are placeholders in the vector for routines
+; to be added in the future.  As long as the routines do not exist,
+; these placeholders should transfer to a routine that signals, or
+; returns an error.  When you add routines, simply replace a FUTURE
+; entry with a ROUTINE entry with the name of the new routine.
+;
+; If you run out of 'not implemented' entries, then extend the
+; vector with a new set, and increment the minor ID in the GSMATCH
+; option in the linker options file.
+;
+; For compatibility, you should never delete a routine.  If the
+; routine must be eliminated, replace its name with the name of
+; the 'not implemented' routine, so that an error will be signaled
+; if a program (mistakenly) tries to use it.
+;
+;
+; **WARNING**: Don't change the order of the items in the list, else you will
+; need to recompile EVERYTHING, send EVERYTHING out to all of the customers,
+; and make sure they re-install EVERYTHING.
+;-
+	ROUTINE	COMP_STRING
+	ROUTINE	DATE_DAYCODE
+	ROUTINE	DATE_DAYOFWEEK
+	ROUTINE	DATE_INVDCODE
+	ROUTINE	DATE_INVMCODE
+	ROUTINE	DATE_MONCODE
+	ROUTINE	DATE_STOREDATE
+	ROUTINE	DATE_TODAY
+	ROUTINE	DSPL_SPLITCURSOR
+	ROUTINE	FUNC_INCREMENT
+	ROUTINE	FUNC_MODULUS
+	ROUTINE	FUNC_ROUND
+	ROUTINE	FUNC_SCOSEQ
+	ROUTINE	OUTP_FORMFF
+	ROUTINE	PRNT_CHECKPROTECT
+	ROUTINE	PRNT_DATE
+	ROUTINE	PRNT_DATUM
+	ROUTINE	PRNT_FANCYDATE
+	ROUTINE	PRNT_MONTHYYYY
+	ROUTINE	PRNT_PHONE
+	ROUTINE	PRNT_SSN
+	ROUTINE	PRNT_TIME
+	ROUTINE	READ_CURPROTECTION
+	ROUTINE	READ_OWNERPID
+	ROUTINE	READ_SYSDETACH
+	ROUTINE	READ_SYSJOB
+	ROUTINE	READ_SYSPID
+	ROUTINE	TIME_NOW
+	ROUTINE	WRIT_STRING
+	XTINCT  OUTP_SAVESETTINGS		; 04/15/92 - DELETED
+	ROUTINE	OUTP_INITSTRUCTURE
+	ROUTINE	TIME_ADD
+	ROUTINE	TIME_STORETIME
+	ROUTINE	FIND_FILEEXISTS
+	ROUTINE	LIBR_NODIGSR
+	ROUTINE	LIBR_DIGSR
+	ROUTINE	LIBR_CONNECT
+	ROUTINE	LIBR_DELETE
+	ROUTINE	LIBR_EXTRACT
+	ROUTINE	LIBR_EXTRACTFILE
+	ROUTINE	LIBR_EXTRACTVAR
+	ROUTINE	LIBR_LOOKUP
+	ROUTINE	LIBR_FORMATTEXT
+	ROUTINE	TIME_CODE
+	ROUTINE	TIME_INVCODE
+	ROUTINE	OUTP_SPOOL
+	ROUTINE	SMG_PUT_VIRTUAL_DISPLAY_ENCODED
+	ROUTINE	READ_SYSLOG
+	ROUTINE	READ_SYSPN
+	ROUTINE	OUTP_READSTRUCTURE
+	ROUTINE	SUBR_SUBMIT
+	ROUTINE	READ_DEVID
+	ROUTINE	READ_QUEFORM
+	ROUTINE	WRIT_CURPROTECTION
+	ROUTINE	PRNT_NUMBERTEXT
+	ROUTINE	ENTR_4ENTRY
+	ROUTINE	FUNC_4SCOSEQ
+	ROUTINE DSPL_SCROLL
+	ROUTINE DSPL_SCROLLCIR
+	ROUTINE DSPL_SCREENCAPTURE
+
+	ROUTINE ENTR_3ENTER			; 12/01/89	2.4
+	ROUTINE ENTR_4SPECIALKEYS		; 12/01/89
+	ROUTINE MENU_3INTERRUPT			; 12/01/89
+	ROUTINE SUBR_3CLIPBOARDCUT		; 12/01/89
+	ROUTINE ENTR_3MESSAGE			; 12/01/89
+	ROUTINE SUBR_3SPAWN			; 12/01/89
+	ROUTINE ENTR_3BADKEY			; 12/01/89
+	ROUTINE ENTR_3CHOICE			; 12/01/89
+	ROUTINE ENTR_3MESSAGENEWWINDOW		; 12/01/89
+	ROUTINE HELP_3MESSAGE			; 12/01/89
+	ROUTINE READ_3BROADCAST			; 12/01/89
+	ROUTINE LIBR_3INSERT			; 12/01/89
+
+	ROUTINE ENTR_3OPTION			; 12/08/89	2.5
+	ROUTINE ENTR_3STRING			; 12/08/89
+	ROUTINE ENTR_3NUMBER			; 12/11/89
+	ROUTINE ENTR_3YESNO			; 12/11/89
+	ROUTINE ENTR_3STRINGLIST		; 12/11/89
+	ROUTINE ENTR_3PHONE			; 12/11/89
+
+	ROUTINE SUBR_3EXITPROGRAM		; 12/20/89	2.6
+	ROUTINE DATE_3SELECT			; 12/20/89
+	ROUTINE ENTR_3DATE			; 12/20/89
+	ROUTINE ENTR_3SSN			; 12/20/89
+	ROUTINE OUTP_CREATESTR			; 12/26/89
+	ROUTINE ENTR_3TIME			; 12/26/89
+	ROUTINE FIND_FILE			; 12/28/89
+	ROUTINE PR_FIND_DETAILFILE		; 12/28/89
+
+	ROUTINE HELP_34MESSAGE			; 02/20/90	2.7
+	ROUTINE ENTR_MACRO			; 04/06/90	
+
+	ROUTINE ENTR_3ENTRYSTRING		; 05/29/90
+
+	XTINCT  ENTR_3PO			; 12/04/92	2.8 04/15/92 DELETED
+	ROUTINE PRNT_PO				; 12/04/92	
+
+	ROUTINE CONV_STRING			; 03/04/92	
+
+	ROUTINE FIND_3PRINTGROUPITEM		; 10/20/92	2.9
+	ROUTINE OUTP_3WRITESTRUCTURE		; 10/20/92
+	ROUTINE READ_DEFAULT			; 10/21/92
+	ROUTINE READ_USERNAME			; 10/21/92
+
+;	FUTURE	NOT_YET_IMPLEMENTED
+
+;+
+; The last line denotes the end of the module.
+;-
+	.END

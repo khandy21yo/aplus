@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The 1099 Annual Work File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__1099__YYYY.HIS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x 1099 Annual Work File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__1099__YYYY.HIS\*
+	!	.p
+	!	1099 Annual Work File.
+	!
+	! Index:
+	!	.x 1099 Annual Work File
+	!	.x AP_1099_YYYY
+	!--

@@ -1,0 +1,21 @@
+	!======================================================================
+	! TV_FILL file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TV_FILL.CH%, STAT%)
+	CALL READ_DEVICE('TV_FILL',TV_FILL.DEV$, STAT%)
+	CALL READ_PROTECTION('TV_FILL',TV_FILL.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(TV_FILL.PRO$, STAT%)
+
+	TV_FILL.NAME$ = TV_FILL.DEV$+"TV_FILL.MAS"
+
+	OPEN TV_FILL.NAME$ AS FILE TV_FILL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TV_FILL, &
+		PRIMARY KEY &
+			TV_FILL::FILNUM, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

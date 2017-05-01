@@ -1,0 +1,10 @@
+125 125% Declining Balance                  03
+150 150% Declining                          04
+150S150% Declining method to Straight Line  08
+ACRSAccelerated Cost Recovery System        01
+DD  Double Declining                        06
+DDS Double Declining to Straight Line       10
+MACRModified ACRS                           01
+SL  Straight Line                           02
+SYD Sum of the Years-Digits                 11
+UOP Unit-of-Production                      12

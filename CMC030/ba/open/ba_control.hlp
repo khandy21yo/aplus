@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Billing to Agency Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BA_CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controlling file in the ^*Billing Agency System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Billing to Agency Control File
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BA__CONTROL.CTR\*
+	!	.p
+	!	Billing to Agency Control File.
+	!
+	! Index:
+	!	.x Billing to Agency Control File
+	!	.x BA_CONTROL
+	!--

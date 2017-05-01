@@ -1,0 +1,25 @@
+	!======================================================================
+	! OS_JMAIN file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OS_JMAIN.CH%, STAT%)
+	CALL READ_DEVICE('OS_JMAIN',OS_JMAIN.DEV$, STAT%)
+	CALL READ_PROTECTION('OS_JMAIN',OS_JMAIN.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(OS_JMAIN.PRO$, STAT%)
+
+	OS_JMAIN.NAME$ = OS_JMAIN.DEV$+"OS_JMAIN_"+BATCH_NO$+".JRL"
+
+	OPEN OS_JMAIN.NAME$ AS FILE OS_JMAIN.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OS_JMAIN, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			OS_JMAIN::ORDNUM, &
+			OS_JMAIN::JLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

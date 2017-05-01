@@ -1,0 +1,425 @@
+1	%TITLE "Initilize REPORT Output Information"
+	%SBTTL "OUTP_INITFROMFILE"
+	%IDENT "V3.6 Calico"
+
+	SUB OUTP_INITFROMFILE(UTL_REPORTX_CDD UTL_REPORTX, WORD XWIDTH)
+
+	!
+	!	COPYRIGHT (C) 1984 BY
+	!	Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function initilizes the REPORT output functions.
+	!
+	! Parameters:
+	!
+	!	UTL_REPORTX
+	!		The file used to initilize the report functions.
+	!
+	!	XWIDTH
+	!		The returned variable used for the report output.
+	!
+	!	Returned value
+	!		Initilizes the report output functions and other
+	!		information the file has.
+	!
+	! Example:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:OUTP_INITFROMFILE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP OUTP_INITFROMFILE
+	!	$ DELETE OUTP_INITFROMFILE.OBJ;*
+	!
+	! Author:
+	!
+	!	03/23/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	10/20/87 - Kevin Handy
+	!		Modified for new print types 6, 7, and 8.
+	!		(Clipboard, Word processor, file cabinet)
+	!
+	!	06/03/88 - Kevin Handy
+	!		Modifications to make it work over DECNET.
+	!		Assumed that the printer type passed through
+	!		from report settings will be accurate.
+	!
+	!	06/16/88 - Kevin Handy
+	!		Finished modifications for DECNET.  Required
+	!		adding an "ORGANIZATION SEQUENTIAL" to the
+	!		open statements.
+	!
+	!	08/12/88 - Kevin Handy
+	!		Modified to allow open of set and device to
+	!		occur in the functions that need them.
+	!
+	!	12/09/88 - Kevin Handy
+	!		Modified call for KEYBOARD.OPN so that it
+	!		only occured once in the entire program run,
+	!		because it was consuming two event flags per
+	!		call to this function.
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to use READ_INITIALIZE.
+	!
+	!	10/02/89 - Kevin Handy
+	!		Changed error message to give correct function
+	!		name.
+	!
+	!	04/03/90 - Frank F. Starman
+	!		Changed more error message to give correct function
+	!		name. Call "Please Wait." after initialization.
+	!
+	!	05/17/91 - Kevin Handy
+	!		Added "ALLOW READ" to open for disk file, so that
+	!		the report could be examined while it is being
+	!		created.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	05/18/95 - Kevin Handy
+	!		Modified to change the screen width only when
+	!		in "display" mode.
+	!
+	!	06/19/95 - Kevin Handy
+	!		Modified to close PRNTxxx.TMP file when done
+	!		with it.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	PRG_COMPANY
+	!		String used to open set file and get
+	!		information.
+	!
+	!	SYS_STATUS
+	!		Long variable used to tell the status of the
+	!		file.
+	!
+	!	TEMPLONG
+	!		Variable used to allocate a new channel for
+	!		file.
+	!
+	!	TEMPFILE$
+	!		String that holds the information of the old
+	!		file.
+	!
+	!	SCREEN.WIDTH
+	!		Variable that tells the width of the screen.
+	!
+	!	REPORT.DATA$
+	!		String used to hold the new copy of the file.
+	!
+	!	INLINE$
+	!		String used to keep track of the record
+	!		number.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION LIB$GET_SYMBOL
+
+	!
+	! Declare vars
+	!
+	DECLARE LONG SYS_STATUS, TEMPLONG
+	DECLARE LONG CONSTANT DC$_TERMINAL = 66
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!******************************************************************
+	! Initilization
+	!******************************************************************
+
+	!
+	! Open keyboard if not open
+	!
+	IF (SCOPE::SMG_OPTION = 0%)
+	THEN
+		CALL READ_INITIALIZE
+	END IF
+
+600	!
+	! Assume no errors
+	!
+	UTL_REPORTX::STAT = 0%
+
+	!
+	! Set up paging information
+	!
+	UTL_REPORTX::PAGENO = 0%		! Start without a page number
+	UTL_REPORTX::LINENO = 0%		! Not on a line
+
+	!
+	! Open up report file and read information for this report
+	!
+	SYS_STATUS = LIB$GET_SYMBOL("CMC$REPORT" BY DESC, TEMPFILE$ BY DESC,,)
+
+	IF (SYS_STATUS AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to find WORK file name!", 0%)
+		UTL_REPORTX::STAT = SYS_STATUS
+		EXIT SUB
+	END IF
+
+
+	!
+	! Allocate a channel for report
+	!
+	CALL ASSG_CHANNEL(UTL_REPORTX::CHAN, STAT%)
+
+	OPEN TEMPFILE$ FOR INPUT AS FILE UTL_REPORTX::CHAN
+
+	CALL OUTP_READSTRUCTURE(UTL_REPORTX, UTL_REPORTX::CHAN, INLINE$)
+
+	!
+	! Initilize the width variable
+	!
+	UTL_REPORTX::REPWIDTH = 132% IF UTL_REPORTX::REPWIDTH = 0%
+	UTL_REPORTX::REPWIDTH = XWIDTH IF XWIDTH <> 0%
+	UTL_REPORTX::PAGELEN  = 66%  IF UTL_REPORTX::PAGELEN  = 0%
+
+	!
+	! Keyboard open needed
+	!
+	IF UTL_REPORTX::PRINTTO = 1%
+	THEN
+		SCOPE::SCREEN_WIDTH = UTL_REPORTX::REPWIDTH
+		SCOPE::SCREEN_WIDTH = 80% IF SCOPE::SCREEN_WIDTH = 0%
+
+		SMG_STATUS% = SMG$CHANGE_PBD_CHARACTERISTICS(SCOPE::SMG_PBID, &
+			SCOPE::SCREEN_WIDTH)
+	END IF
+
+	CALL ENTR_3MESSAGE(SCOPE, "",1% + 16%)
+
+1000	!******************************************************************
+	! Remove group from print file
+	!******************************************************************
+
+	!
+	! Allocate a channel for the new copy of the file
+	!
+	CALL ASSG_CHANNEL(TEMPLONG, STAT%)
+
+	IF STAT% <> 0%
+	THEN
+		UTL_REPORTX::STAT = STAT%
+		EXIT SUB
+	END IF
+
+	!
+	! Delete the old file
+	!
+	KILL TEMPFILE$
+
+	!
+	! If no report number (RN>) is passed through OUTP_READSTRUCTURE
+	! then this is the last report to run.  No need to create a new
+	! temp file.
+	!
+	GOTO 1100 IF INLINE$ = ""
+
+	!
+	! Create new copy of the settings file
+	!
+	OPEN TEMPFILE$ FOR OUTPUT AS FILE TEMPLONG
+	REPORT.DATA$ = ""
+
+1010	!
+	! Copy over all remaining lines
+	!
+ Nxt:	PRINT #TEMPLONG, INLINE$
+	IF (LEFT(INLINE$, 3%) = "PG>") AND (REPORT.DATA$ = "")
+	THEN
+		REPORT.DATA$ = INLINE$
+	END IF
+	LINPUT #UTL_REPORTX::CHAN, INLINE$
+	GOTO Nxt
+
+1100	UTL_REPORTX::NEXTRUN = RIGHT(REPORT.DATA$, 4%)
+	CLOSE TEMPLONG
+	CALL ASSG_FREECHANNEL(TEMPLONG)
+	CLOSE UTL_REPORTX::CHAN
+
+	!******************************************************************
+	! Prepare for output of information
+	!******************************************************************
+
+	CALL WRIT_STRING(UTL_REPORTX::PRINTINIT, PRINTINIT$)
+	CALL WRIT_STRING(UTL_REPORTX::TOLOCAL, TOLOCAL$)
+	CALL WRIT_STRING(UTL_REPORTX::TOSCREEN, TOSCREEN$)
+
+	!
+	! Initilize the flags
+	!
+	SELECT UTL_REPORTX::PRINTTO
+
+	!
+	! Display
+	!
+	CASE 1%
+		!
+		! No start/end pages
+		!
+		UTL_REPORTX::STARTP, UTL_REPORTX::ENDP = 0%
+
+		!
+		! Length of report is 18 lines
+		!
+		UTL_REPORTX::PAGELEN = 20%
+
+		!
+		! Create display for this report
+		!
+		SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+		( &
+			UTL_REPORTX::PAGELEN, &
+			UTL_REPORTX::REPWIDTH * 1%, &
+			UTL_REPORTX::WINDOW &
+		)
+
+		!
+		! Paste on the virtual display
+		!
+		SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+		( &
+			UTL_REPORTX::WINDOW, &
+			SCOPE::SMG_PBID, &
+			1%, &
+			1% &
+		)
+
+	!
+	! Local printer
+	!
+	CASE 5%
+		!
+		! Open keyboard for output
+		!
+		OPEN UTL_REPORTX::DEFOUT AS FILE UTL_REPORTX::CHAN, &
+	!		ORGANIZATION SEQUENTIAL, &
+			ACCESS APPEND, &
+			RECORDSIZE 255%
+
+		PRINT #UTL_REPORTX::CHAN, TOLOCAL$; &
+			PRINTINIT$; &
+			TOSCREEN$;
+
+
+	!
+	! To terminal
+	!
+	CASE 3%
+
+		OPEN UTL_REPORTX::DEFOUT AS FILE UTL_REPORTX::CHAN, &
+			ORGANIZATION SEQUENTIAL, &
+			ACCESS APPEND, &
+			RECORDSIZE 255%, &
+			RECORDTYPE NONE
+
+		PRINT #UTL_REPORTX::CHAN, PRINTINIT$;
+
+		CLOSE UTL_REPORTX::CHAN
+
+		OPEN UTL_REPORTX::DEFOUT AS FILE UTL_REPORTX::CHAN, &
+			ORGANIZATION SEQUENTIAL, &
+			ACCESS APPEND, &
+			RECORDSIZE 255%
+
+	!
+	! Else a file
+	!
+	CASE ELSE
+		OPEN UTL_REPORTX::DEFOUT AS FILE UTL_REPORTX::CHAN, &
+			ORGANIZATION SEQUENTIAL, &
+			ACCESS APPEND, &
+			RECORDSIZE 255%, &
+			ALLOW READ
+
+		PRINT #UTL_REPORTX::CHAN, PRINTINIT$; &
+			UNLESS (UTL_REPORTX::PRINTTO = 6%) OR &
+				(UTL_REPORTX::PRINTTO = 7%) OR &
+				(UTL_REPORTX::PRINTTO = 8%) OR &
+				(UTL_REPORTX::PRINTTO = 9%) OR &
+				(UTL_REPORTX::PRINTTO = 10%) OR &
+				(UTL_REPORTX::PRINTTO = 11%)
+
+	END SELECT
+
+	EXIT SUB
+
+	%PAGE
+
+ Crash:	!
+	! Exit from function with an error
+	!
+	UTL_REPORTX::STAT = ERR
+
+	CALL ENTR_3MESSAGE(SCOPE, "ERROR: OUTP_INITFROMFILE (" + &
+		NUM1$(ERR) + ") " + ERT$(ERR) + " at line " + NUM1$(ERL) + &
+		" in " + ERN$, 4%)
+
+	EXIT SUB
+
+19000	!
+	! Trap errors
+	!
+	SELECT ERL
+
+	CASE 1010%
+		RESUME 1100 IF ERR = 11%
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME Crash
+
+	END SUB

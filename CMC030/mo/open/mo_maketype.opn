@@ -1,0 +1,16 @@
+	!======================================================================
+	! MO_MAKETYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MAKETYPE.CH%, STAT%)
+	CALL READ_DEVICE('MO_MAKETYPE',MO_MAKETYPE.DEV$, STAT%)
+
+	MO_MAKETYPE.NAME$ = MO_MAKETYPE.DEV$+"MO_MAKETYPE.TBL"
+
+	OPEN MO_MAKETYPE.NAME$ FOR INPUT AS FILE MO_MAKETYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MAKETYPE, &
+		PRIMARY KEY &
+			MO_MAKETYPE::MTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,14 @@
+	!======================================================================
+	! TS_CONTROL file (create, open read/write)
+	!======================================================================
+
+	OLD_PROT$ = READ_CURPROTECTION
+	CALL WRIT_CURPROTECTION(TS_CONTROL.PRO$)
+
+	OPEN TS_CONTROL.DEV$+"TS_CONTROL.CTR" AS FILE TS_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP TS_CONTROL, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

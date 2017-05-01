@@ -1,0 +1,10 @@
+	!++
+	! Abstract:FILE
+	!	^*PO__TYPE.TBL\*
+	!	.p
+	!	Purchase Order Type.
+	!
+	! Index:
+	!	.x Purchase Order Type
+	!	.x PO_TYPE
+	!--

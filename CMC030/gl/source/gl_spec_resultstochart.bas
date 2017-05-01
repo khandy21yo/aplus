@@ -1,0 +1,75 @@
+1	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART) GL_CHART_CDD GL_CHART
+
+100 !	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.CRE"
+	!======================================================================
+	! GL_CHART file (create, open read/write)
+	!======================================================================
+
+	GL_CHART.CH% = 2%
+
+	GL_CHART.NAME$ = "GL_CHART.MAS"
+
+	OPEN GL_CHART.NAME$ AS FILE GL_CHART.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_CHART, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			GL_CHART::ACCT, &
+		ALTERNATE KEY &
+			GL_CHART::FLOW &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			GL_CHART::WORK &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			GL_CHART::FINTYPE &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+
+
+110	LINPUT "File to read (092.DAT)"; FINAME$
+	FINAME$ = "092.DAT" IF FINAME$ = ""
+
+	OPEN FINAME$ FOR INPUT AS FILE 1%
+
+	ON ERROR GOTO 19000
+
+200	LINPUT #1%, Y$(I%) FOR I% = 1% TO 3%
+
+	IF Y$(3%) <> "<END>"
+	THEN
+		PRINT ":::"; Y$(1%)
+		PRINT "   "; Y$(2%)
+		PRINT "   "; Y$(3%)
+		STOP
+	END IF
+
+300	GL_CHART::ACCT = RIGHT(Y$(1%),5%)
+	GL_CHART::DESCR = Y$(2%)
+	GL_CHART::ACCTYPE = ""
+	GL_CHART::FLOW = ""
+	GL_CHART::WORK = ""
+	GL_CHART::FINTYPE = ""
+	GL_CHART::SUMMARY = "1"
+	GL_CHART::BATCH = ""
+	GL_CHART::CPERIOD = 1%
+
+	PUT #GL_CHART.CH%
+
+	PRINT "+++"; GL_CHART::ACCT
+
+	GOTO 200
+
+19000	SELECT ERL
+	CASE 300%
+		PRINT "---"; GL_CHART::ACCT
+		RESUME 200
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+	END

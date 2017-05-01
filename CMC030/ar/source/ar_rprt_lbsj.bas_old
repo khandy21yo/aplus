@@ -1,0 +1,624 @@
+1	%TITLE "Legal Billing Sales Journal Report"
+	%SBTTL "AR_RPRT_LBSJ"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:AR005
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Legal Billing Sales Journal Report\* program prints the Sales Journal
+	!	file. This file contains the following fields:
+	!	.table 3,25
+	!	.te
+	!	Invoice	Customer
+	!	.te
+	!	Type	Date
+	!	.te
+	!	Receipt	Check Number
+	!	.te
+	!	Deposit Number	Account
+	!	.te
+	!	Matter Number	Description
+	!	.te
+	!	Amount
+	!	.end table
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	02/25/88 - Aaron Redd
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_RPRT_LBSJ.BAS/LINE
+	!	$ LINK/EXE=AR_EXE: AR_RPRT_LBSJ, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AR_RPRT_LBSJ.OBJ;*
+	!
+	! Modification history:
+	!
+	!	03/21/88 - Kevin Handy
+	!		Reformatted output.
+	!
+	!	08/10/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/06/91 - Kevin Handy
+	!		Unwound error trapping.
+	!
+	!	06/10/91 - Craig Tanner
+	!		Modified to use GL_OUTP_ACCTSUM to do Debit/Credit page.
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of change
+	!		in that function.
+	!
+	!	03/18/93 - Kevin Handy
+	!		Added arguement to GL_OUTP_ACCTSUM for units.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:CODES.INC"
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_SJH"
+	MAP (AR_SJH)		AR_SJH_CDD		AR_SJH
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_SJL"
+	MAP (AR_SJL)		AR_SJL_CDD		AR_SJL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+	EXTERNAL REAL	FUNCTION FUNC_ROUND
+	EXTERNAL STRING	FUNCTION PRNT_DATE
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	BATCH_NO$	= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	!++
+	! Abstract:FLD01
+	!	^*(01) Batch to Print\*
+	!	.b
+	!	.lm +5
+	!	The ^*Batch to Print\* field refers to a particular batch number
+	!	which is to be printed or displayed.
+	!	.b
+	!	Only one batch at a time may be printed or displayed.
+	!	.b
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Batch to Print
+	!	.x Print>Batch to
+	!
+	!--
+
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	!++
+	! Abstract:FLD02
+	!	^*(02) From Invoice\*
+	!	.b
+	!	.lm +5
+	!	The value entered in the ^*From Invoice\* setting causes the
+	!	report to begin printing or displaying with a specified invoice number.
+	!	.b
+	!	A blank setting will cause the report to start with the first
+	!	invoice number in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x From Invoice
+	!	.x Invoice>From
+	!
+	!--
+
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+	!++
+	! Abstract:FLD03
+	!	^*(03) To Invoice\*
+	!	.b
+	!	.lm +5
+	!	The value entered in the ^*To Invoice\* field causes the
+	!	report to end printing or displaying with a specified invoice number.
+	!	.b
+	!	A blank field causes the report to end with the last
+	!	invoice number in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x To Invoice
+	!	.x Invoice>To
+	!
+	!--
+
+300	%INCLUDE "SOURCE:[AR.OPEN]AR_SJH.OPN"
+
+310	!
+	! Open AR_SJL file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_SJL.OPN"
+
+320	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+	GET #AR_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+330	!
+	! Open Customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) =	"Legal Billing Journal File List"
+	TITLE$(2%) =	"Batch #" + BATCH_NO$
+	TITLE$(3%) =	""
+
+
+	TITLE$(4%) =	"Invoice   " + LEFT(AR_CONTROL::CTITLE, 10%) + &
+		" Type Date      Receipt   Chk #   Dpst #  Account   " + &
+		"          Matter #    Description                     Amount"
+	TITLE$(5%) =	"."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #AR_SJH.CH%
+	ELSE
+		FIND #AR_SJH.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+	!
+	! Declare some variables
+	!
+	!GRAND.TOTAL = 0.0
+	GROSS.TOTAL = 0.0
+	INVOICE.TOTAL = 0.0
+	DIST.TOTAL = 0.0
+
+	SALE.DIST = 0.0
+	CASH.DIST = 0.0
+	DEBIT.DIST = 0.0
+	SERV.DIST = 0.0
+	CREDIT.DIST = 0.0
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #AR_SJH.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (AR_SJH::INVNUM > TO.ITEM$) AND TO.ITEM$ <> ""
+
+17100	!
+	! Look up customer name
+	!
+	AR_35CUSTOM::CUSNAM = STRING$(LEN(AR_35CUSTOM::CUSNAM), 63%)
+
+	GET #AR_35CUSTOM.CH%, KEY #0% GE AR_SJH::CUSNUM, REGARDLESS
+
+17120	!
+	! Print the Sales Journal line
+	!
+	TEXT$ =	AR_SJH::INVNUM + "  " + &
+		AR_SJH::CUSNUM + "  " + &
+		AR_35CUSTOM::CUSNAM
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 4%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	TEXT$ = SPACE$(22%) + &
+		AR_SJH::TRATYP + " " + &
+		PRNT_DATE(AR_SJH::TRADAT, 8%) + " " + &
+		AR_SJH::RECNUM + "  " + &
+		AR_SJH::CHECK + "  " + &
+		AR_SJH::DEPOSIT + "  " + &
+		AR_SJH::ARACCT + "              " + &
+		AR_SJH::DESCR + "  " + &
+		FORMAT$(AR_SJH::AMOUNT,"#######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Total header
+	!
+	!GRAND.TOTAL = GRAND.TOTAL + AR_SJH::AMOUNT
+	GROSS.MARGIN = 0.0
+	THIS.TOTAL = AR_SJH::AMOUNT
+	INVOICE.TOTAL = FUNC_ROUND(INVOICE.TOTAL + AR_SJH::AMOUNT, 2%)
+
+	SELECT AR_SJH::TRATYP
+
+		CASE "01"
+			SALE.DIST = FUNC_ROUND(SALE.DIST + AR_SJH::AMOUNT, 2%)
+
+		CASE "02"
+			CASH.DIST = FUNC_ROUND(CASH.DIST + AR_SJH::AMOUNT, 2%)
+
+		CASE "03"
+			DEBIT.DIST = FUNC_ROUND(DEBIT.DIST + AR_SJH::AMOUNT, 2%)
+
+		CASE "04"
+			SERV.DIST = FUNC_ROUND(SERV.DIST + AR_SJH::AMOUNT, 2%)
+
+		CASE "08"
+			CREDIT.DIST = FUNC_ROUND(CREDIT.DIST + AR_SJH::AMOUNT, 2%)
+
+	END SELECT
+
+	!
+	! Print out line items
+	!
+	GOSUB Print_Lines
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, AR_SJH::ARACCT, &
+		0.0, AR_SJH::AMOUNT, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+17200	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	DIST.TOTAL = FUNC_ROUND(DIST.TOTAL, 2%)
+	TEXT$ =	"                                                      " + &
+		"                                        Distribution " + &
+		"Grand Total:  " + FORMAT$(DIST.TOTAL,"########.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	INVOICE.TOTAL = FUNC_ROUND(INVOICE.TOTAL, 2%)
+	TEXT$ =	"                                                      " + &
+		"                                             Invoice " + &
+		"Grand Total:  " + FORMAT$(INVOICE.TOTAL,"########.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	SALE.DIST = FUNC_ROUND(SALE.DIST, 2%)
+	IF SALE.DIST <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                          " + &
+			"                      Sales on Account" + &
+			":  " + FORMAT$(SALE.DIST, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	CASH.DIST = FUNC_ROUND(CASH.DIST, 2%)
+	IF CASH.DIST <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                                                      " + &
+			"Cash Sales:  " + FORMAT$(CASH.DIST, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	DEBIT.DIST = FUNC_ROUND(DEBIT.DIST, 2%)
+	IF DEBIT.DIST <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                          " + &
+			"                            Debit Memo" + &
+			":  " + FORMAT$(DEBIT.DIST, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	SERV.DIST = FUNC_ROUND(SERV.DIST, 2%)
+	IF SERV.DIST <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                          " + &
+			"                        Service Charge" + &
+			":  " + FORMAT$(SERV.DIST, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	CREDIT.DIST = FUNC_ROUND(CREDIT.DIST, 2%)
+	IF CREDIT.DIST <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                          " + &
+			"                           Credit Memo" + &
+			":  " + FORMAT$(CREDIT.DIST, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GROSS.TOTAL = FUNC_ROUND(GROSS.TOTAL, 2%)
+	IF GROSS.TOTAL <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                          " + &
+			"                          Gross Margin" + &
+			":  " + FORMAT$(GROSS.TOTAL, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	V% = GL_OUTP_ACCTSUM(OPT_SUMMARY, "", 0.0, 0.0, 0.0, TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Print_Lines:
+17740	!****************************************************************
+	!*  Subroutine for printing out Line Items			*
+	!****************************************************************
+	!
+
+	FIND #AR_SJL.CH%, KEY #0% GE AR_SJH::INVNUM, REGARDLESS
+
+ Get_Next_Line:
+17750
+	!
+	! Loop starts here
+	!
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	!
+	! Get next line item
+	!
+	GET #AR_SJL.CH%, REGARDLESS
+
+	!
+	! Check current line item
+	!
+	GOTO LastLine IF AR_SJL::INVNUM <> AR_SJH::INVNUM
+
+	!
+	! Print the line item line
+	!
+	TEXT$ = "                      " + &
+		AR_SJL::LTYPE + " " + &
+		AR_SJL::TAXTYP + "                              " + &
+		"       " + &
+		AR_SJL::ACCT + "  " + &
+		AR_SJL::SUBACCT + "  " + &
+		AR_SJL::DESCR + " " + &
+		FORMAT$(AR_SJL::AMOUNT,"########.##")
+
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, AR_SJL::ACCT, &
+		0.0, AR_SJL::AMOUNT, AR_SJL::QTY, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Total in the line
+	!
+	!GRAND.TOTAL = FUNC_ROUND(GRAND.TOTAL + AR_SJL::AMOUNT, 2%)
+	THIS.TOTAL = FUNC_ROUND(THIS.TOTAL + AR_SJL::AMOUNT, 2%)
+	DIST.TOTAL = FUNC_ROUND(DIST.TOTAL + AR_SJL::AMOUNT, 2%)
+
+	IF INSTR(1%, "SC", AR_SJL::LTYPE)
+	THEN
+		GROSS.MARGIN = FUNC_ROUND(GROSS.MARGIN + AR_SJL::AMOUNT, 2%)
+		GROSS.TOTAL = FUNC_ROUND(GROSS.TOTAL + AR_SJL::AMOUNT, 2%)
+	END IF
+
+	!
+	! Try for next Line
+	!
+	GOTO Get_Next_Line
+
+ LastLine:
+	GROSS.MARGIN = FUNC_ROUND(GROSS.MARGIN, 2%)
+	IF GROSS.MARGIN <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                                                    " + &
+			"Gross Margin:  " + FORMAT$(GROSS.MARGIN, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -2%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -2%)
+	END IF
+
+	THIS.TOTAL = FUNC_ROUND(THIS.TOTAL, 2%)
+	IF THIS.TOTAL <> 0.0
+	THEN
+		TEXT$ =	"                                                      " + &
+			"                           " + &
+			"         *** Invoice does not balance" + &
+			":  " + FORMAT$(THIS.TOTAL, "########.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -2%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -2%)
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+		CASE 154%	! Locked record
+			SLEEP 1%
+			RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+		!
+		! Open Sales Journal
+		!
+		CASE 300%
+			FILENAME$ = "AR_SJH"
+
+		CASE 310%
+			FILENAME$ = "AR_SJL"
+
+		!
+		! AR Control file
+		!
+		CASE 320%
+			IF ERR = 5%
+			THEN
+				AR_CONTROL::CTITLE = "Customer"
+				RESUME 330
+			END IF
+
+			FILENAME$ = "AR_CONTROL"
+
+		!
+		! AR Customer file
+		!
+		CASE 330%
+			FILENAME$ = "AR_35CUSTOM"
+
+		!
+		! AR Customer file
+		!
+		CASE 17100%
+			RESUME 17120 IF ERR = 155%
+			FILENAME$ = "AR_35CUSTOM"
+
+		CASE 17000%, 17020%
+			RESUME ExitTotal
+
+		CASE 17740, 17750%
+			RESUME LastLine
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

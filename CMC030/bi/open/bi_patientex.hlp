@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Extra Information for Patients is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__PATIENTEX.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Extra Information for Patients
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__PATIENTEX.MAS\*
+	!	.p
+	!	Extra Information for Patients.
+	!	contains additional information on each patient which is not necessarily
+	!	used all the time.
+	!
+	! Index:
+	!	.x Extra Information for Patients
+	!	.x BI_PATIENTEX
+	!
+	!--

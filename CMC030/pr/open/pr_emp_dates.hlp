@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Employee Date History is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__EMP__DATES.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and run process again.
+	!
+	! Index:
+	!	.x Payroll Employee Date History
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__EMP__DATES.TBL\*
+	!	.p
+	!	Payroll Employee Date History.
+	!
+	! Index:
+	!	.x Payroll Employee Date History
+	!	.x PR_EMP_DATES
+	!--

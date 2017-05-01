@@ -1,0 +1,19 @@
+	!======================================================================
+	! AD_CEILING file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_CEILING.CH%, STAT%)
+	CALL READ_DEVICE('AD_CEILING',AD_CEILING.DEV$, STAT%)
+
+	AD_CEILING.NAME$ = AD_CEILING.DEV$+"AD_CEILING.TBL"
+
+	OPEN AD_CEILING.NAME$ FOR INPUT AS FILE AD_CEILING.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_CEILING, &
+		PRIMARY KEY &
+		( &
+			AD_CEILING::CEILTABLE, &
+			AD_CEILING::EFFDATE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

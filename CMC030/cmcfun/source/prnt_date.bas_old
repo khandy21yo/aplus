@@ -1,0 +1,112 @@
+1	%TITLE "Format Date into MM/DD/YY or MM/DD/YYYY Format"
+	%SBTTL "PRNT_DATE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING PRNT_DATE(INDATE$, INDATE%)
+
+	!
+	!		COPYRIGHT (C) 1985 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function formats a date into MM/DD/YYYY format if
+	!	INDATE% is 8% and into MM/DD/YY format otherwise.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	INDATE$
+	!		The passed date that is to be formatted.
+	!	INDATE%
+	!		The passed integer that tells how the date should be
+	!		formatted.
+	!
+	!	This function formats a date into either MM/DD/YYYY or
+	!	MM/DD/YY, depending on the users choice.
+	!
+	! Example:
+	!
+	!	PRNT_DATE(AP_OPEN::INVDAT,8%)
+	!
+	! Environment:
+	!
+	!	VMS/VAX BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:PRNT_DATE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP PRNT_DATE
+	!	$ DELETE PRNT_DATE.OBJ;*
+	!
+	! Author:
+	!
+	!	08/02/85 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/25/85 - Frank Starman
+	!		Print blank date ("  /  /    ") if the input date
+	!		is a null string.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	MON$
+	!		A string that extracts the months from INDATE$
+	!
+	!	DAY$
+	!		A string that extracts the days.
+	!
+	!	YEA$
+	!		A string that extracts the years from INDATE$.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	INDATE$	= "        " IF EDIT$(INDATE$,-1%) = ""
+
+	IF LEN(INDATE$) = 8%
+	THEN
+		MON$ = MID(INDATE$, 5%, 2%)
+		DAY$ = MID(INDATE$, 7%, 2%)
+		YEA$ = LEFT(INDATE$, 4%)
+	ELSE
+		MON$ = MID(INDATE$, 3%, 2%)
+		DAY$ = MID(INDATE$, 5%, 2%)
+		YEA$ = "19" + LEFT(INDATE$, 2%)
+	END IF
+
+	IF INDATE% = 8%
+	THEN
+		PRNT_DATE = MON$ + "/" + DAY$ + "/" + YEA$
+	ELSE
+		PRNT_DATE = MON$ + "/" + DAY$ + "/" + RIGHT(YEA$, 3%)
+	END IF
+
+	END FUNCTION

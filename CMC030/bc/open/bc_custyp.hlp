@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Billing to Customer Type Definitions is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BC_CUSTYP.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Customer Billing Agency\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Billing to Customer Type Definitions
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BC__CUSTYP.TBL\*
+	!	.p
+	!	Billing to Customer Type Definitions.
+	!
+	! Index:
+	!	.x Billing to Customer Type Definitions
+	!	.x BC_CUSTYP
+	!--

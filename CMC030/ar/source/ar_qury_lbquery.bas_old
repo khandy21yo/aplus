@@ -1,0 +1,1353 @@
+1	%TITLE "Query the Legal Accounts Receivable System"
+	%SBTTL "AR_QURY_LBQUERY"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Query Accounts Receivable\* file option provides
+	!	the means to make online inquiries into selected customer
+	!	accounts, in respect to both open and closed files, and shows
+	!	the complete status of these accounts.
+	!	.b
+	!	The query will also display any information
+	!	from the LB WIP file that has not yet been posted to the
+	!	AR register.
+	!	.b
+	!	The Print option in the command menu will provide a report
+	!	containing the following information:
+	!	.table 3,25
+	!	Invoice Number		Description
+	!	.te
+	!	Account Number		Date
+	!	.te
+	!	Sale Amount		Discount Amount
+	!	.te
+	!	Other			Gross Amount
+	!	.te
+	!	Receipt Number		Check Number
+	!	.te
+	!	Date			Amount
+	!	.te
+	!	Balance			Account
+	!	.te
+	!	Service Charge		Future
+	!	.te
+	!	Balance			Credit Limit
+	!	.te
+	!	Open File Total		Closed File Total
+	!	.end table
+	!
+	! Index:
+	!	.x Query>Accounts Receivable
+	!	.x Accounts Receivable>Query
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_QURY_LBQUERY/LINE
+	!	$ LINK/EXECUTABLE=AR_EXE: AR_QURY_LBQUERY,-
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AR_QURY_LBQUERY.OBJ;*
+	!
+	! Author:
+	!
+	!	12/22/86 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	08/10/90 - Kevin Handy
+	!		Modified to put credit memo's (08) on the left
+	!		side instead of the right side of the page.
+	!
+	!	11/15/90 - Kevin Handy
+	!		Modification so that the description will not
+	!		print junk when the check description is blank
+	!		and the left side hasn't been filled in.
+	!
+	!	06/06/91 - Kevin Handy
+	!		Unwound error trapping.
+	!
+	!	09/06/91 - Kevin Handy
+	!		Modified FIND option to match changes made in
+	!		AR_QURY_QUERY.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+
+	!
+	! Map file
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CLOSED"
+	MAP	(AR_CLOSED)	AR_CLOSED_CDD	AR_CLOSED
+	DIM AR_CLOSED_CDD LEFT_CLOSED(2000%), RIGHT_CLOSED(2000%)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN"
+	MAP	(AR_OPEN)	AR_OPEN_CDD	AR_OPEN
+	DIM AR_OPEN_CDD LEFT_OPEN(2000%), RIGHT_OPEN(2000%)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP	(AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSBAL"
+	MAP	(AR_CUSBAL)	AR_CUSBAL_CDD	AR_CUSBAL
+	DIM AR_CUSBAL_CDD ARRAY_CUSBAL(50%)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP	(AR_CONTROL)	AR_CONTROL_CDD	AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_MATTER"
+	MAP	(LB_MATTER)	LB_MATTER_CDD	LB_MATTER
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_35WIP"
+	MAP (LB_35WIP)	LB_35WIP_CDD	LB_35WIP
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORT"
+	MAP	(UTL_REPORT)	UTL_REPORT_CDD	UTL_REPORT
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_COUNTRY"
+	MAP	(UTL_COUNTRY)	UTL_COUNTRY_CDD	UTL_COUNTRY
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	COM (CH_LB_MATTER) LB_MATTER.CH%
+	COM (CH_AR_OPEN) AR_OPEN.CH%
+	COM (CH_LB_35WIP) LB_35WIP.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING		FUNCTION ENTR_3OPTION
+	EXTERNAL STRING		FUNCTION ENTR_3STRING
+	EXTERNAL STRING		FUNCTION PRNT_DATE
+	EXTERNAL STRING		FUNCTION PRNT_PHONE
+	EXTERNAL STRING		FUNCTION DATE_TODAY
+	EXTERNAL LONG		FUNCTION LIB$SET_SYMBOL
+	EXTERNAL LONG		FUNCTION MAIN_WINDOW
+
+	EXTERNAL LONG		FUNCTION LB_FUNC_AGEAR
+	EXTERNAL LONG		FUNCTION LIB$SET_SYMBOL
+	EXTERNAL LONG		FUNCTION FIND_FILEEXISTS
+	EXTERNAL STRING		FUNCTION READ_SYSJOB
+
+	!
+	! Declare constants
+	!
+	DECLARE INTEGER CONSTANT MAX.ITEM = 8%
+	DECLARE LONG YLONG, SMG_BLANK
+
+	JJ$ = READ_SYSJOB
+
+	!
+	! Dim
+	!
+	DIM MATTER_NUM$(100%), &
+		MATTER_B_METHOD$(100%), &
+		INVNUM$(1000%), &
+		INVDAT$(1000%), &
+		AMT(1000%)
+
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	RESTORE_PROGRAM$ = PRG_PROGRAM
+	RESTORE_IDENT$ = PRG_IDENT
+
+	REPORT$ = "ARQURY"
+
+	CALL ASSG_CHANNEL(PRNT.CH%,STAT%)
+
+	!
+	! Look up device
+	!
+	CALL  READ_DEVICE("UTL_WORK", UTL_WORK.DEV$, STAT%)
+
+300	!
+	! Open Customer File
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+310	!
+	! Open AR open file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+
+320	!
+	! Open AR close file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CLOSED.OPN"
+
+330	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+
+	GET #AR_CONTROL.CH%, RECORD 1%
+
+340	!
+	! Now format the interval for aging
+	!
+	INTRVL$(I%) = EDIT$(AR_CONTROL::AGENAM(I%), 140%) FOR I% = 0% TO 4%
+
+	INTRVL$(I%) = LEFT(SPACE$(13%-LEN(INTRVL$(I%))) + &
+		INTRVL$(I%), 13%) + "  " &
+			FOR I% = 0% TO 4%
+
+	!
+	! Open files
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_MATTER.OPN"
+
+350	!
+	! Open the WIP file
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_35WIP.OPN"
+360
+	!
+	! Open Country file
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_COUNTRY.OPN"
+
+400	! Open REPORT file
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORT.MOD"
+
+410	!
+	! Get Report
+	!
+	GET #UTL_REPORT.CH%, KEY#0 EQ REPORT$, REGARDLESS
+
+	GOTO 500
+
+420	!
+	! Open system file if report not found
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_SYSREP.OPN"
+
+	GET #UTL_SYSREP.CH%, KEY #0 EQ REPORT$
+	UNLOCK #UTL_SYSREP.CH%
+
+	CLOSE #UTL_SYSREP.CH%
+	CALL ASSG_FREECHANNEL(UTL_SYSREP.CH%)
+
+430	PUT #UTL_REPORT.CH%
+
+500	GOSUB Initialize
+
+900	!
+	! Create a display window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		'18'L, &
+		'78'L, &
+		SMG_QUERY, &
+		SMG$M_BORDER &
+	)
+
+	!
+	! Label the display
+	!
+	SMG_STATUS% = SMG$LABEL_BORDER(SMG_QUERY, &
+		"AR Query for " + TRM$(PRG_COMPANY))
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_QUERY, AR_CONTROL::CTITLE, '2'L, '2'L)
+
+	GOSUB Repaint
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_QUERY, &
+		SMG_PBID, &
+		'2'L, &
+		'2'L &
+	)
+
+	%PAGE
+
+1000	!******************************************************************
+	! Main option menu
+	!******************************************************************
+	!
+	! Enter options
+	!
+	PRG_ITEM = ""
+	PRG_IDENT = RESTORE_IDENT$
+	PRG_PROGRAM = RESTORE_PROGRAM$
+
+	OPTLIST$ = "Find Next Print Help eXit"
+	OPT$ = ENTR_3OPTION(SCOPE, "COMMAND", OPTLIST$, OPT%, 0%)
+
+	SELECT SCOPE.EXIT%
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO ExitProgram
+
+	END SELECT
+
+	SELECT OPT$
+
+		!
+		! Call the help message
+		!
+		CASE "H"
+	CALL HELP_34MESSAGE(SCOPE, "", PRG_IDENT, PRG_PROGRAM, "", "HELP")
+
+		CASE "F"
+1120
+			LAST_CUST$ = AR_35CUSTOM::CUSNUM
+
+			AR_35CUSTOM::CUSNUM = ENTR_3STRING(SCOPE, SMG_QUERY, "2;14", &
+				TRM$(AR_CONTROL::CTITLE) + &
+				" #", AR_35CUSTOM::CUSNUM, FLAG%, "'E", DEFLT$)
+
+			SELECT SCOPE.EXIT%
+				!
+				! List Choices
+				!
+				CASE SMG$K_TRM_F14
+					PRG_ITEM = "FLD001"
+					IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX") <> 1%
+					THEN
+						AR_35CUSTOM::CUSNUM = LAST_CUST$
+						GOTO 1120
+					ELSE
+						GOTO 2000
+					END IF
+
+				!
+				! Control c
+				!
+				CASE 3%
+					GOTO 1120
+
+				!
+				! Exit key
+				!
+				CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO 1000
+
+			END SELECT
+
+			IF AR_35CUSTOM::CUSNUM = "??????????"
+			THEN
+				GOTO 1000
+			END IF
+
+2000			GET #AR_35CUSTOM.CH%, KEY#0% GE AR_35CUSTOM::CUSNUM, REGARDLESS
+
+2010 !			GET #AR_35CUSTOM.CH%, REGARDLESS
+
+2011			GET #UTL_COUNTRY.CH%, KEY#0% EQ AR_35CUSTOM::COUNTRY, REGARDLESS
+
+2012			IF AR_35CUSTOM::COUNTRY = "US" OR AR_35CUSTOM::COUNTRY = ""
+			THEN
+				UTL_COUNTRY::DESCR = ""
+			END IF
+
+			GOSUB Repaint
+
+		CASE "N"
+3000			GET #AR_35CUSTOM.CH%, REGARDLESS
+
+3011			GET #UTL_COUNTRY.CH%, KEY#0% EQ AR_35CUSTOM::COUNTRY, REGARDLESS
+
+3012			IF AR_35CUSTOM::COUNTRY = "US" OR AR_35CUSTOM::COUNTRY = ""
+			THEN
+				UTL_COUNTRY::DESCR = ""
+			END IF
+
+
+			GOSUB Repaint
+
+		CASE "P"
+			!*****************************************************
+			! List all records in all files
+			!*****************************************************
+
+			CALL ENTR_3MESSAGE(SCOPE, "",1%+16%)
+
+
+			XLOOP% = 0%
+
+4000			!******************************************************************
+			! Set up the report settings screen
+			!******************************************************************
+			XLOOP%		= XLOOP% + 1%
+			TEMPFILE$	= "PRNT" + JJ$ + "_" + NUM1$(XLOOP%) + ".TMP"
+
+			IF FIND_FILEEXISTS(UTL_WORK.DEV$ + TEMPFILE$, FLAG%)
+			THEN
+				GOTO 4000
+			END IF
+
+			CLOSE PRNT.CH%
+			OPEN UTL_WORK.DEV$ + TEMPFILE$ FOR OUTPUT AS FILE PRNT.CH%
+
+			SYS_STATUS% = LIB$SET_SYMBOL("CMC$REPORT", TEMPFILE$,)
+
+			IF (SYS_STATUS% AND 1%) = 0%
+			THEN
+				CALL ENTR_3MESSAGE(SCOPE, "Unable to declare symbol for work file. " + &
+					NUM1$(SYS_STATUS%), 0%)
+
+				GOTO 1000
+			END IF
+
+4010			GET #UTL_REPORT.CH%, KEY#0 EQ REPORT$
+
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_MESSAGE)
+
+			UTL_REPORTX::WINDOW = 0%
+
+			!
+			! Initilize defaults from report file
+			!
+			CALL OUTP_INITSTRUCTURE(UTL_REPORT, UTL_REPORTX)
+
+			!
+			! Ask user to change settings
+			!
+			CALL OUTP_SETTINGS(UTL_REPORT, UTL_REPORTX, UTL_REPORT.CH%, &
+				"DD SP EP CP AS RD ", "PT ")
+
+			UNLOCK #UTL_REPORT.CH%
+
+			!
+			! Un-normal abort, exit, etc.
+			!
+			IF (SCOPE.EXIT% = SMG$K_TRM_F10) OR &
+				(SCOPE.EXIT% = SMG$K_TRM_CTRLC) OR &
+				(SCOPE.EXIT% = SMG$K_TRM_F8)
+			THEN
+				SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(UTL_REPORTX::WINDOW)
+
+				GOSUB KillTempFIle
+
+				GOTO 1000
+			END IF
+
+			!
+			! Erase option and message window
+			!
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_OPTION)
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_MESSAGE)
+
+			!
+			! Create a blank display window
+			!
+			SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY('20'L, '132'L, SMG_BLANK)
+
+			!
+			! Paste on blank display to hide the width change
+			!
+			SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(SMG_BLANK, &
+				SMG_PBID, '1'L, '1'L)
+
+			SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(UTL_REPORTX::WINDOW)
+
+			!
+			! Write the data out to the ascii file
+			!
+			CALL OUTP_WRITESTRUCTURE(UTL_REPORTX, PRNT.CH%)
+
+			CLOSE PRNT.CH%
+
+			!
+			! Initilize for output
+			!
+			CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+			GOTO 1000 IF UTL_REPORTX::STAT
+
+			TITLE$(1%) =	"Legal Accounts Receivable Query"
+			TITLE$(2%) =	""
+
+			TITLE$(3%) = LEFT(AR_CONTROL::CTITLE, 10%) + "  Name"
+			TITLE$(4%) = "Invoice   Matter #    Resp Staff  Date    " + &
+				"    Bill Amount Description          Receipt   " + &
+				"Chck #   Date  Receipt Amount       Balance"
+			TITLE$(5%) =	""
+
+			TEXT$ = AR_35CUSTOM::CUSNUM + " " + &
+				AR_35CUSTOM::CUSNAM
+
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+4050			TEXT$ = "     Matter #         " + &
+				INTRVL$(0%) + INTRVL$(1%) + &
+				INTRVL$(2%) + &
+				INTRVL$(3%) + INTRVL$(4%) + &
+				"    ServChg       Balance"
+
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+			BALANCE = 0.0
+			AR_CUSBAL::CREDIT = 0.0
+			AR_CUSBAL::AGING(I%) = 0.0 FOR I% = 0% TO 4%
+			AR_CUSBAL::FUTURE = 0.0
+			AR_CUSBAL::YTDSERVICE = 0.0
+			AR_CUSBAL::PTDSALES = 0.0
+			AR_CUSBAL::YTDSALES = 0.0
+			AR_CUSBAL::CHARGE = 0.0
+
+			GOSUB LookUpMatter
+
+			IF LB_FUNC_AGEAR(AR_35CUSTOM::CUSNUM, &
+				DATE_TODAY, &
+				"", &
+				"", &
+				"", &
+				NUM_ACCT%, &
+				ARRAY_CUSBAL()) <> 0%
+			THEN
+				TEXT$ = "           *** Unable to age ***"
+				CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+			ELSE
+				FOR THIS_ACCT% = 1% TO NUM_ACCT%
+					AR_CUSBAL::AGING(I%) = &
+						AR_CUSBAL::AGING(I%) + &
+						ARRAY_CUSBAL(THIS_ACCT%)::AGING(I%) &
+						FOR I% = 0% TO 4%
+					AR_CUSBAL::CHARGE = AR_CUSBAL::CHARGE + &
+						ARRAY_CUSBAL(THIS_ACCT%)::CHARGE
+
+					TEMP = ARRAY_CUSBAL(THIS_ACCT%)::CHARGE
+					TEMP = TEMP + ARRAY_CUSBAL(THIS_ACCT%)::AGING(I%) &
+						FOR I% = 0% TO 4%
+
+					BALANCE = BALANCE + TEMP
+
+					TEXT$ = "     " + ARRAY_CUSBAL(THIS_ACCT%)::ACCT + &
+						FORMAT$(ARRAY_CUSBAL(THIS_ACCT%)::AGING(0%), "#########.##   ") + &
+						FORMAT$(ARRAY_CUSBAL(THIS_ACCT%)::AGING(1%), "#########.##   ") + &
+						FORMAT$(ARRAY_CUSBAL(THIS_ACCT%)::AGING(2%), "#########.##   ") + &
+						FORMAT$(ARRAY_CUSBAL(THIS_ACCT%)::AGING(3%), "#########.##   ") + &
+						FORMAT$(ARRAY_CUSBAL(THIS_ACCT%)::AGING(4%), "#########.##   ") + &
+						FORMAT$(ARRAY_CUSBAL(THIS_ACCT%)::CHARGE, "#######.##    ") + &
+						FORMAT$(TEMP, "#######.##")
+
+					CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+					GOTO 4400 IF UTL_REPORTX::STAT
+				NEXT THIS_ACCT%
+			END IF
+
+			IF NUM_ACCT% > 1%
+			THEN
+				TEXT$ = "       Total           " + &
+					FORMAT$(AR_CUSBAL::AGING(0%), "#########.##   ") + &
+					FORMAT$(AR_CUSBAL::AGING(1%), "#########.##   ") + &
+					FORMAT$(AR_CUSBAL::AGING(2%), "#########.##   ") + &
+					FORMAT$(AR_CUSBAL::AGING(3%), "#########.##   ") + &
+					FORMAT$(AR_CUSBAL::AGING(4%), "#########.##   ") + &
+					FORMAT$(AR_CUSBAL::CHARGE, "#######.##    ") + &
+					FORMAT$(BALANCE, "#######.## ")
+
+				CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+				GOTO 4400 IF UTL_REPORTX::STAT
+			END IF
+
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+			GOTO 4400 IF UTL_REPORTX::STAT
+
+4100			!
+			LEFT_OPEN% = 0%			! Total # items in left column
+			RIGHT_OPEN% = 0%		! Total # items in right column
+			THIS_INVOICE$ = "1234567890123"	! Impossible invoice number.
+
+			CUS.SALAMT = 0.0		! Zero customer totals
+			CUS.CREDIT = 0.0
+
+			FIND #AR_OPEN.CH%, KEY #0 EQ AR_35CUSTOM::CUSNUM, REGARDLESS
+
+4110			!
+			GET #AR_OPEN.CH%, REGARDLESS
+
+			GOTO 4150 IF AR_35CUSTOM::CUSNUM <> AR_OPEN::CUSNUM
+
+			IF (AR_OPEN::INVNUM <> THIS_INVOICE$)
+			THEN
+				GOSUB DumpInvoice
+				GOTO 4400 IF UTL_REPORTX::STAT
+			END IF
+
+			SELECT AR_OPEN::TRATYP
+
+			CASE "02"
+				LEFT_OPEN% = LEFT_OPEN% + 1%
+				LEFT_OPEN(LEFT_OPEN%) = AR_OPEN
+				RIGHT_OPEN% = RIGHT_OPEN% + 1%
+				RIGHT_OPEN(RIGHT_OPEN%) = AR_OPEN
+				RIGHT_OPEN(RIGHT_OPEN%)::SALAMT = -RIGHT_OPEN(RIGHT_OPEN%)::SALAMT
+
+			CASE "09", "10"
+				RIGHT_OPEN% = RIGHT_OPEN% + 1%
+				RIGHT_OPEN(RIGHT_OPEN%) = AR_OPEN
+
+			CASE ELSE
+				LEFT_OPEN% = LEFT_OPEN% + 1%
+				LEFT_OPEN(LEFT_OPEN%) = AR_OPEN
+			END SELECT
+
+			GOTO 4110
+
+4150			GOSUB DumpInvoice
+			GOTO 4400 IF UTL_REPORTX::STAT
+
+4160			!
+			! Print all unposted bills in the wip file
+			!
+			FOR WORK_LOOP% = 1% TO MATTER_LOOP%
+
+				INVOICE_LOOP% = 0%
+
+		FIND #LB_35WIP.CH%, KEY#1% GE MATTER_NUM$(WORK_LOOP%) + AR_35CUSTOM::CUSNUM, REGARDLESS
+
+
+4170				!
+				! Get LB_35WIP record
+				!
+				GET #LB_35WIP.CH%
+
+				!
+				! Skip out if done with this matter number
+				!
+		GOTO 4190 IF LB_35WIP::MATTER_NUM <> MATTER_NUM$(WORK_LOOP%)
+
+
+		GOTO 4190 IF LB_35WIP::CLINUM <> AR_35CUSTOM::CUSNUM
+
+				GOTO 4170 IF LB_35WIP::BILL_FLAG <> "B"
+
+				!
+				! Skip the wip file if the billing method is a contigency
+				!
+				IF MATTER_B_METHOD$(WORK_LOOP%) = "4"
+				THEN
+					GOTO 4170 &
+						IF INSTR(1%, "67", LB_35WIP::WIP_FLAG) = 0%
+				END IF
+
+				!
+				! Skip if non-billable
+				!
+				SELECT LB_35WIP::WIP_FLAG
+					CASE	"2","4","5"
+						GOTO 4170
+				END SELECT
+
+				GOTO InvoiceTotal IF INVNUM$(I%) = LB_35WIP::INVOICE_NUM &
+					FOR I% = 1% TO INVOICE_LOOP%
+
+				INVOICE_LOOP%, I% = INVOICE_LOOP% + 1%
+				INVNUM$(I%) = LB_35WIP::INVOICE_NUM
+				INVDAT$(I%) = LB_35WIP::INVOICE_DATE
+				AMT(I%) = 0.0
+
+ InvoiceTotal:
+				AMT(I%) = AMT(I%) + LB_35WIP::WIP_AMT + LB_35WIP::ADJUST
+
+4180				!
+				! Try for next record of LB_35WIP
+				!
+				GOTO 4170
+
+4190				FOR I% = 1% TO INVOICE_LOOP%
+					LEFT_OPEN(1%)::CUSNUM	= AR_35CUSTOM::CUSNUM
+					LEFT_OPEN(1%)::INVNUM	= INVNUM$(I%)
+					LEFT_OPEN(1%)::TRATYP	= "01"
+					LEFT_OPEN(1%)::TRADAT	= INVDAT$(I%)
+					LEFT_OPEN(1%)::SALAMT	= AMT(I%)
+					LEFT_OPEN(1%)::DISAMT	= 0.0
+					LEFT_OPEN(1%)::OTHCHG	= 0.0
+					LEFT_OPEN(1%)::RECNUM	= ""
+					LEFT_OPEN(1%)::CHKNUM	= ""
+					LEFT_OPEN(1%)::ARACCT	= ""
+					LEFT_OPEN(1%)::SUBACC	= MATTER_NUM$(WORK_LOOP%)
+					LEFT_OPEN(1%)::DESCR	= "Unposted Billings"
+
+					LEFT_OPEN% = 1%		! Total # items in left column
+					RIGHT_OPEN% = 0%	! Total # items in right column
+
+					!
+					! Print unposted billings
+					!
+					GOSUB DumpInvoice
+					GOTO 4400 IF UTL_REPORTX::STAT
+				NEXT I%
+			NEXT WORK_LOOP%
+
+			TEXT$ = SPACE$(9%) + &
+				FORMAT$("Open File Total", &
+					"'LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL") + &
+				FORMAT$(CUS.SALAMT, "#########.##") + &
+				SPACE$(49%) + &
+				FORMAT$(-CUS.CREDIT, "#########.##  ") + &
+				FORMAT$(CUS.SALAMT + &
+					CUS.CREDIT, "#########.##")
+
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 6%)
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 6%)
+			GOTO 4400 IF UTL_REPORTX::STAT
+
+4200			!
+			! Search for first invoice record for this customer
+			!
+			LEFT_CLOSED% = 0%		! Total # items in left column
+			RIGHT_CLOSED% = 0%		! Total # items in right column
+			THIS_INVOICE$ = "1234567890123"	! Impossible invoice number.
+
+			CUS.SALAMT = 0.0		! Zero customer totals
+			CUS.CREDIT = 0.0
+
+			!
+			! Search for first record
+			!
+			FIND #AR_CLOSED.CH%, KEY #0 EQ AR_35CUSTOM::CUSNUM, REGARDLESS
+
+4210			!
+			! Pull in next record
+			!
+			GET #AR_CLOSED.CH%, REGARDLESS
+
+			GOTO 4250 IF AR_35CUSTOM::CUSNUM <> AR_CLOSED::CUSNUM
+
+			IF (AR_CLOSED::INVNUM <> THIS_INVOICE$)
+			THEN
+				GOSUB DumpInvoiceClosed
+				GOTO 4400 IF UTL_REPORTX::STAT
+			END IF
+
+			SELECT AR_CLOSED::TRATYP
+
+			CASE "02"
+				!
+				! Cash sale.  Goes in both columns.  Balances to zero.
+				!
+				LEFT_CLOSED% = LEFT_CLOSED% + 1%
+				LEFT_CLOSED(LEFT_CLOSED%) = AR_CLOSED
+				RIGHT_CLOSED% = RIGHT_CLOSED% + 1%
+				RIGHT_CLOSED(RIGHT_CLOSED%) = AR_CLOSED
+				RIGHT_CLOSED(RIGHT_CLOSED%)::SALAMT = -RIGHT_CLOSED(RIGHT_CLOSED%)::SALAMT
+
+			CASE "09", "10"
+				!
+				! Payments.  Goes in right column.
+				!
+				RIGHT_CLOSED% = RIGHT_CLOSED% + 1%
+				RIGHT_CLOSED(RIGHT_CLOSED%) = AR_CLOSED
+
+			CASE ELSE
+				!
+				! All else goes in left column
+				!
+				LEFT_CLOSED% = LEFT_CLOSED% + 1%
+				LEFT_CLOSED(LEFT_CLOSED%) = AR_CLOSED
+			END SELECT
+
+			GOTO 4210
+
+4250			GOSUB DumpInvoiceClosed
+
+			GOTO 4400 IF UTL_REPORTX::STAT
+
+			TEXT$ = SPACE$(9%) + &
+				FORMAT$("Closed File Total", &
+					"'LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL") + &
+				FORMAT$(CUS.SALAMT, "#########.##") + &
+				SPACE$(49%) + &
+				FORMAT$(-CUS.CREDIT, "#########.##  ") + &
+				FORMAT$(CUS.SALAMT + &
+					CUS.CREDIT, "#########.##")
+
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 6%)
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 6%)
+			GOTO 4400 IF UTL_REPORTX::STAT
+
+4400			!
+			! Finish up
+			!
+			CALL OUTP_FINISH(UTL_REPORTX)
+
+			SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_BLANK)
+
+			GOSUB KillTempFIle
+
+			GOTO 900
+
+		CASE "X"
+			GOTO ExitProgram
+
+	END SELECT
+
+	GOTO 1000
+
+	%PAGE
+
+ ExitProgram:
+	!******************************************************************
+	! Exit the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+ Repaint:
+	!**************************************************************
+	! Repaint Customer name
+	!**************************************************************
+
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::CUSNUM, 2%, 14%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::CUSNAM, 5%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::ADD1, 6%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::ADD2, 7%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::ADD3, 8%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::CITY + " " + AR_35CUSTOM::STATE + " " + &
+		AR_35CUSTOM::ZIP, 9%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		UTL_COUNTRY::DESCR, 10%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		PRNT_PHONE(AR_35CUSTOM::PHONE,0%), 11%, 3%,, SMG$M_BOLD )
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_QUERY, &
+		AR_35CUSTOM::ALPSRT, 12%, 3%,, SMG$M_BOLD )
+
+	RETURN
+
+	%Page
+
+ Initialize:
+	!*******************************************************************
+	! Set Initialize values
+	!*******************************************************************
+
+	AR_35CUSTOM::CUSNUM	= STRING$( 10%, ASCII("?") )
+	AR_35CUSTOM::CUSNAM	= STRING$( 40%, ASCII("?") )
+	AR_35CUSTOM::ADD1		= STRING$( 25%, ASCII("?") )
+	AR_35CUSTOM::ADD2		= STRING$( 21%, ASCII("?") )
+	AR_35CUSTOM::ADD3		= STRING$( 21%, ASCII("?") )
+	AR_35CUSTOM::CITY		= STRING$( 15%, ASCII("?") )
+	AR_35CUSTOM::STATE	= STRING$(  2%, ASCII("?") )
+	AR_35CUSTOM::COUNTRY	= STRING$(  8%, ASCII("?") )
+	AR_35CUSTOM::ZIP		= STRING$( 10%, ASCII("?") )
+	AR_35CUSTOM::PHONE	= STRING$( 10%, ASCII("?") )
+	AR_35CUSTOM::COUNTRY = ""
+	UTL_COUNTRY::DESCR = ""
+
+	AR_35CUSTOM::ALPSRT	= STRING$( 15%, ASCII("?") )
+
+	RETURN
+
+	%Page
+
+ DumpInvoice:
+	!*******************************************************************
+	! Dump out one invoice
+	!*******************************************************************
+
+	!
+	! Force item into left size for titles if none there
+	!
+	LEFT_OPEN(1%) = RIGHT_OPEN(1%) IF LEFT_OPEN% = 0%
+
+	!
+	! Calculate total for this invoice
+	!
+	INVTOTAL = 0.0
+	INVTOTAL = INVTOTAL + LEFT_OPEN(LOOP%)::SALAMT &
+		FOR LOOP% = 1% TO LEFT_OPEN%
+	INVTOTAL = INVTOTAL + RIGHT_OPEN(LOOP%)::SALAMT &
+		FOR LOOP% = 1% TO RIGHT_OPEN%
+
+	!
+	! Loop through all of the collected records
+	!
+	IF LEFT_OPEN% > RIGHT_OPEN%
+	THEN
+		ENDLOOP% = LEFT_OPEN%
+	ELSE
+		ENDLOOP% = RIGHT_OPEN%
+	END IF
+
+	FOR LOOP% = 1% TO ENDLOOP%
+		!
+		! Show invoice number only on first line of type
+		!
+		IF LOOP% = 1%
+		THEN
+			SUBACC$ = LEFT_OPEN(LOOP%)::SUBACC
+
+			GOSUB LookUpStaff
+
+			TEXT$ = LEFT_OPEN(LOOP%)::INVNUM + "  " + &
+				LEFT_OPEN(LOOP%)::SUBACC + "  " + &
+				LB_MATTER::RESP_STAFF + "  "
+		ELSE
+			TEXT$ = SPACE$(34%)
+		END IF
+
+		!
+		! Handle left column
+		!
+		IF LOOP% <= LEFT_OPEN%
+		THEN
+			TEXT$ = TEXT$ + &
+				PRNT_DATE(LEFT_OPEN(LOOP%)::TRADAT, 8%) + " " + &
+				FORMAT$(LEFT_OPEN(LOOP%)::SALAMT, "#########.## ")
+
+			CUS.SALAMT = CUS.SALAMT + LEFT_OPEN(LOOP%)::SALAMT
+		ELSE
+			TEXT$ = TEXT$ + SPACE$(24%)
+		END IF
+
+		!
+		! Handle description
+		!
+		IF ((TRM$(RIGHT_OPEN(LOOP%)::DESCR) <> "") AND (LOOP% <= RIGHT_OPEN%)) or &
+			(LOOP% > LEFT_OPEN%)
+		THEN
+			TEXT$ = TEXT$ + &
+				LEFT(RIGHT_OPEN(LOOP%)::DESCR + SPACE$(20%), 20%) + " "
+		ELSE
+			TEXT$ = TEXT$ + &
+				LEFT(LEFT_OPEN(LOOP%)::DESCR + SPACE$(20%), 20%) + " "
+		END IF
+
+		!
+		! Handle right column
+		!
+		IF LOOP% <= RIGHT_OPEN%
+		THEN
+			TEXT$ = TEXT$ + &
+				RIGHT_OPEN(LOOP%)::RECNUM + " " + &
+				RIGHT_OPEN(LOOP%)::CHKNUM + "  " + &
+				PRNT_DATE(RIGHT_OPEN(LOOP%)::TRADAT, 8%) + &
+				FORMAT$(-RIGHT_OPEN(LOOP%)::SALAMT, "#########.##  ")
+
+			CUS.CREDIT = CUS.CREDIT + RIGHT_OPEN(LOOP%)::SALAMT
+		ELSE
+			TEXT$ = TEXT$ + SPACE$(41%)
+		END IF
+
+		!
+		! Handle final total
+		!
+		IF LOOP% = ENDLOOP%
+		THEN
+			TEXT$ = TEXT$ + FORMAT$(INVTOTAL, "#########.##")
+		END IF
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 6%)
+		GOTO DumpInvoice1 IF UTL_REPORTX::STAT
+
+	NEXT LOOP%
+
+	!
+	! Prepare for next invoice number
+	!
+	LEFT_OPEN% = 0%
+	RIGHT_OPEN% = 0%
+	THIS_INVOICE$ = AR_OPEN::INVNUM + ""
+
+ DumpInvoice1:
+	RETURN
+
+ DumpInvoiceClosed:
+	!*******************************************************************
+	! Dump out one invoice
+	!*******************************************************************
+
+	!
+	! Force item into left size for titles if none there
+	!
+	LEFT_CLOSED(1%) = RIGHT_CLOSED(1%) IF LEFT_CLOSED% = 0%
+
+	!
+	! Calculate total for this invoice
+	!
+	INVTOTAL = 0.0
+	INVTOTAL = INVTOTAL + LEFT_CLOSED(LOOP%)::SALAMT &
+		FOR LOOP% = 1% TO LEFT_CLOSED%
+	INVTOTAL = INVTOTAL + RIGHT_CLOSED(LOOP%)::SALAMT &
+		FOR LOOP% = 1% TO RIGHT_CLOSED%
+
+	!
+	! Loop through all of the collected records
+	!
+	IF LEFT_CLOSED% > RIGHT_CLOSED%
+	THEN
+		ENDLOOP% = LEFT_CLOSED%
+	ELSE
+		ENDLOOP% = RIGHT_CLOSED%
+	END IF
+
+	FOR LOOP% = 1% TO ENDLOOP%
+		!
+		! Show invoice number only on first line of type
+		!
+		IF LOOP% = 1%
+		THEN
+			SUBACC$ = LEFT_CLOSED(LOOP%)::SUBACC
+
+			GOSUB LookUpStaff
+
+			TEXT$ = LEFT_CLOSED(LOOP%)::INVNUM + "  " + &
+				LEFT_CLOSED(LOOP%)::SUBACC + "  " + &
+				LB_MATTER::RESP_STAFF + "  "
+		ELSE
+			TEXT$ = SPACE$(34%)
+		END IF
+
+		!
+		! Handle left column
+		!
+		IF LOOP% <= LEFT_CLOSED%
+		THEN
+			TEXT$ = TEXT$ + &
+				PRNT_DATE(LEFT_CLOSED(LOOP%)::TRADAT, 8%) + " " + &
+				FORMAT$(LEFT_CLOSED(LOOP%)::SALAMT, "#########.## ")
+
+			CUS.SALAMT = CUS.SALAMT + LEFT_CLOSED(LOOP%)::SALAMT
+
+		ELSE
+			TEXT$ = TEXT$ + SPACE$(24%)
+		END IF
+
+		!
+		! Handle right column
+		!
+		IF LOOP% <= RIGHT_CLOSED%
+		THEN
+			TEXT$ = TEXT$ + &
+				LEFT(RIGHT_CLOSED(LOOP%)::DESCR + SPACE$(20%), 20%) + " " + &
+				RIGHT_CLOSED(LOOP%)::RECNUM + " " + &
+				RIGHT_CLOSED(LOOP%)::CHKNUM + "  " + &
+				PRNT_DATE(RIGHT_CLOSED(LOOP%)::TRADAT, 8%) + &
+				FORMAT$(-RIGHT_CLOSED(LOOP%)::SALAMT, "#########.##  ")
+
+			CUS.CREDIT = CUS.CREDIT + RIGHT_CLOSED(LOOP%)::SALAMT
+		ELSE
+			TEXT$ = TEXT$ + SPACE$(62%)
+		END IF
+
+		!
+		! Handle final total
+		!
+		IF LOOP% = ENDLOOP%
+		THEN
+			TEXT$ = TEXT$ + FORMAT$(INVTOTAL, "#########.##")
+		END IF
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 6%)
+		GOTO DumpInvoiceClosed1 IF UTL_REPORTX::STAT
+
+	NEXT LOOP%
+
+	!
+	! Prepare for next invoice number
+	!
+	LEFT_CLOSED% = 0%
+	RIGHT_CLOSED% = 0%
+	THIS_INVOICE$ = AR_CLOSED::INVNUM + ""
+
+ DumpInvoiceClosed1:
+	RETURN
+
+ LookUpMatter:
+	!
+	! Now look up all of the Matters for this client
+	!
+18000	MATTER_LOOP% = 0%
+
+	FIND #LB_MATTER.CH%, KEY#0% EQ AR_35CUSTOM::CUSNUM, REGARDLESS
+
+18020	GET #LB_MATTER.CH%, REGARDLESS
+
+	GOTO 18090 IF LB_MATTER::CLINUM <> AR_35CUSTOM::CUSNUM
+
+
+	MATTER_LOOP% = MATTER_LOOP% + 1%
+	MATTER_NUM$(MATTER_LOOP%)  = LB_MATTER::MATTER_NUM
+	MATTER_B_METHOD$(MATTER_LOOP%) = LB_MATTER::B_METHOD
+
+	GOTO 18020
+
+18090	RETURN
+
+	%Page
+
+ LookUpStaff:
+18200	!******************************************************************
+	! Look up matter number for resp staff
+	!******************************************************************
+	LB_MATTER::RESP_STAFF = STRING$(10%, 63%)
+
+	GET #LB_MATTER.CH%, KEY#1% EQ SUBACC$ + AR_35CUSTOM::CUSNUM, REGARDLESS
+
+18290	RETURN
+
+	%Page
+
+18900	!******************************************************************
+	! Delete temp file to prepare for exit
+	!******************************************************************
+ KillTempFile:
+	CLOSE PRNT.CH%
+
+	KILL UTL_WORK.DEV$ + TEMPFILE$ FOR I% = 1% TO 10%
+
+18910	RETURN
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+		CASE 300%
+			FILENAME$ = "AR_35CUSTOM"
+
+		CASE 310%
+			RESUME 320 IF ERR = 5%
+			FILENAME$ = "AR_OPEN"
+
+		CASE 320%
+			RESUME 330 IF ERR = 5%
+			FILENAME$ = "AR_CLOSE"
+
+		CASE 330%
+			IF ERR = 5%
+			THEN
+				!
+				! Fake a control file
+				!
+				AR_CONTROL::CTITLE = "Client"
+				AR_CONTROL::AR_ACCT = ""
+				AR_CONTROL::RETAIN = 0%
+				AR_CONTROL::LASTPERCLOSE = 0%
+				AR_CONTROL::YEAR = ""
+				AR_CONTROL::CLOSEFLAG = "0"
+				AR_CONTROL::CTITLE = "Customer"
+				AR_CONTROL::AGEPER(0) = 30%
+				AR_CONTROL::AGENAM(0) = "Current"
+				AR_CONTROL::AGEPER(1) = 30%
+				AR_CONTROL::AGENAM(1) = "31 to 60 days"
+				AR_CONTROL::AGEPER(2) = 30%
+				AR_CONTROL::AGENAM(2) = "61 to 90 days"
+				AR_CONTROL::AGEPER(3) = 30%
+				AR_CONTROL::AGENAM(3) = "91 to 120 days"
+				AR_CONTROL::AGEPER(4) = 30%
+				AR_CONTROL::AGENAM(4) = "121 and over"
+
+				RESUME 340
+			END IF
+			FILENAME$ = "AR_CONTROL"
+
+		!
+		! LB Matter file
+		!
+		CASE 340%
+			RESUME 350 IF ERR = 5%
+			FILENAME$ = "LB_MATTER"
+
+		CASE 360%
+			RESUME 400
+		!
+		! LB Matter file
+		!
+		CASE 18000%
+			RESUME 18090 IF ERR = 155%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! LB Matter file
+		!
+		CASE 18020%
+			RESUME 18090 IF ERR = 11%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! LB Matter file
+		!
+		CASE 18200%
+			RESUME 18290 IF ERR = 155%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! LB WIP file
+		!
+		CASE 350%
+			RESUME 400 IF ERR = 5%
+			FILENAME$ = "LB_35WIP"
+
+		!
+		! LB WIP file
+		!
+		CASE 4160%
+			RESUME 4190 IF ERR = 155% OR ERR = 9%
+			FILENAME$ = "LB_35WIP"
+
+		!
+		! LB WIP file
+		!
+		CASE 4170%
+			RESUME 4190 IF ERR = 11%
+			FILENAME$ = "LB_35WIP"
+
+		CASE 400%, 410%, 430%
+			RESUME 420 IF ERR = 155%
+			FILENAME$ = "UTL_REPORT"
+
+		CASE 420%
+			FILENAME$ = "UTL_SYSREP"
+
+		CASE 2000%
+			IF ERR = 155%
+			THEN
+				RESUME 2010
+			END IF
+
+			FILENAME$ = "AR_35CUSTOM"
+
+ !		CASE 2010%
+ !			IF ERR = 11%
+ !			THEN
+ !				CALL ENTR_3MESSAGE(SCOPE, "End of file",0%)
+ !				RESUME 1000
+ !			END IF
+ !			FILENAME$ = "AR-35CUSTOM"
+
+		CASE 2011%
+			UTL_COUNTRY::DESCR = ""
+			RESUME 2012
+
+
+		CASE 3000%
+			IF ERR = 11%
+			THEN
+				CALL ENTR_3MESSAGE(SCOPE, "End of file",0%)
+				RESUME 1000
+			END IF
+
+			FILENAME$ = "AR_35CUSTOM"
+
+		CASE 3011%
+			UTL_COUNTRY::DESCR = ""
+			RESUME 3012
+
+		!
+		! Unable to open print temp file
+		!
+		CASE 4000%
+			FILENAME$ = "PRNT_TEMP"
+
+		CASE 4100%, 4110%
+			RESUME 4150
+
+		CASE 4200%, 4210%
+			RESUME 4250
+
+		!
+		! Print temp file does not exist
+		!
+		CASE 18900%
+			RESUME 18910
+
+	END SELECT
+
+	RESUME HelpError
+
+19999	END
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+		CASE AR_MAIN_35CUSTOM.ID
+
+			MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

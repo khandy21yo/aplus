@@ -1,0 +1,19 @@
+	!======================================================================
+	! PO_ORDERLINE file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_ORDERLINE.CH%, STAT%)
+	CALL READ_DEVICE('PO_ORDERLINE',PO_ORDERLINE.DEV$, STAT%)
+
+	PO_ORDERLINE.NAME$ = PO_ORDERLINE.DEV$+"PO_ORDERLINE_"+BATCH_NO$+".JRL"
+
+	OPEN PO_ORDERLINE.NAME$ FOR INPUT AS FILE PO_ORDERLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_ORDERLINE, &
+		PRIMARY KEY &
+		( &
+			PO_ORDERLINE::PO, &
+			PO_ORDERLINE::PO_LINE &
+		)	, &
+		
+

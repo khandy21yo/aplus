@@ -1,0 +1,670 @@
+1	%TITLE "TV_CART_INVENTORY - TV House Cart Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_CART(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the House Cart file.
+	!
+	! Index:
+	!
+	!	TV
+	!	Cart File
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_CART/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_CART
+	!	$ DELETE TV_MAIN_CART.OBJ;*
+	!
+	! Author:
+	!
+	!	11/11/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/09/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSTOM"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)			AR_CUSTOM_CDD	AR_CUSTOM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CART_INVENTORY"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CART_INVENTORY.HB"
+	MAP (TV_CART_INVENTORY)		TV_CART_INVENTORY_CDD	TV_CART_INVENTORY
+	MAP (TV_CART_INVENTORY_OLD)	TV_CART_INVENTORY_CDD	TV_CART_INVENTORY_OLD, TV_CART_INVENTORY2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_CART_INVENTORY) &
+		TV_CART_INVENTORY.CH%, &
+		TV_CART_INVENTORY.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION READ_SET
+	EXTERNAL STRING FUNCTION PRNT_DATE
+	EXTERNAL STRING FUNCTION PRNT_TIME
+
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION MAIN_JOURNAL
+
+	!
+	! Declare variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "House Cart Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_CART"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 8%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 3%
+		SMG_WINDOW::KNAME(0%) = "Cart"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "Customer"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 3%
+		SMG_WINDOW::KNAME(2%) = "Agency"
+			SMG_WINDOW::KFIELD(2%, 0%) = 1%
+			SMG_WINDOW::KFIELD(2%, 1%) = 4%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_CART_INVENTORY.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_CART_INVENTORY.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_CART_INVENTORY.CRE"
+		TV_CART_INVENTORY.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_CART_INVENTORY.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_CART_INVENTORY.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_CHANNEL(TV_CART_INVENTORY.CH%, STAT%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_CART_INVENTORY.CH%
+		RESET #TV_CART_INVENTORY.CH%
+		GET #TV_CART_INVENTORY.CH%, REGARDLESS
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Line_items"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "Line_items"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(TV_CART_INVENTORY.CH%)
+
+			TV_MAIN_CART = MAIN_JOURNAL(TV_MAIN_CART_JOUR.ID, "")
+
+		END SELECT
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	5,  1, "(01) Cart #", &
+			6,  1, "(02) Name", &
+			7,  1, "(03) Customer", &
+			8,  1, "(04) Agency", &
+			9,  1, "(05) Title", &
+			10,  1, "(06) Length", &
+			11,  1, "(07) Date in", &
+			12,  1, "(08) Date out", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Eloop:		SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_CART_INVENTORY::CARTNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;15", TEMP$, &
+				TV_CART_INVENTORY::CARTNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+			TV_CART_INVENTORY::PRONAME = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;15", TEMP$, &
+				TV_CART_INVENTORY::PRONAME, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+			TV_CART_INVENTORY::CUSNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;15", TEMP$, &
+				TV_CART_INVENTORY::CUSNUM, MFLAG, "'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+			CASE SMG$K_TRM_F14
+				TV_CART_INVENTORY::CUSNUM = AR_CUSTOM::CUSNUM &
+					IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+				GOTO ELoop
+
+			CASE SMG$K_TRM_F17
+					ST% = MAIN_WINDOW( TV_MAIN_CUSTOM.ID, &
+						"M0"+TV_CART_INVENTORY::CUSNUM )
+				GOTO ELoop
+
+			END SELECT
+
+		CASE 4%
+			TV_CART_INVENTORY::AGENCY_NUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;15", TEMP$, &
+				TV_CART_INVENTORY::AGENCY_NUM, MFLAG, "'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+			CASE SMG$K_TRM_F14
+				TV_CART_INVENTORY::AGENCY_NUM = AR_CUSTOM::CUSNUM &
+					IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+				GOTO ELoop
+
+			CASE SMG$K_TRM_F17
+					ST% = MAIN_WINDOW( TV_MAIN_CUSTOM.ID, &
+						"M0"+TV_CART_INVENTORY::AGENCY_NUM )
+				GOTO ELoop
+
+			END SELECT
+
+
+		CASE 5%
+			TV_CART_INVENTORY::TITLE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"9;15", TEMP$, &
+				TV_CART_INVENTORY::TITLE, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+			TV_CART_INVENTORY::LENGTH = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;15", TEMP$, &
+				TV_CART_INVENTORY::LENGTH, MFLAG, "H", MVALUE)
+
+		CASE 7%
+			TV_CART_INVENTORY::DATE_IN = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;15", TEMP$, &
+				TV_CART_INVENTORY::DATE_IN, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+			TV_CART_INVENTORY::DATE_OUT = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;15", TEMP$, &
+				TV_CART_INVENTORY::DATE_OUT, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		TV_MAIN_CART = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF TV_CART_INVENTORY::CARTNUM = ""
+			THEN
+				TV_MAIN_CART = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #TV_CART_INVENTORY.CH%, &
+						KEY#0 EQ TV_CART_INVENTORY::CARTNUM, &
+						REGARDLESS
+					TV_MAIN_CART = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 3%
+			IF TV_CART_INVENTORY::CUSNUM = ""
+			THEN
+				TV_MAIN_CART = 1%
+			ELSE
+				!
+				! Is the input defined?
+				!
+				DISPLAY_DESCR$ = STRING$(50%,63%)
+				IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_CART_INVENTORY::CUSNUM) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "CUSNUM"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "CUSNUM"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't
+						! allow them to enter undefined values.
+						!
+						TV_MAIN_CART = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Customer number is undefined ", 1%)
+					ELSE
+						!
+						! Verify that they really want to
+						! enter an undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, &
+							"", "Customer number is " + &
+							"undefined, confirm entry " + &
+							"then press <DO> ", &
+							"N", 0%, "", "")
+						TV_MAIN_CART = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= AR_CUSTOM::CUSNAM
+
+					SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+						DISPLAY_DESCR$,7%,26%, ,SMG$M_BOLD)
+			END IF
+			END IF
+
+		CASE 4%
+			IF TV_CART_INVENTORY::AGENCY_NUM = ""
+			THEN
+				TV_MAIN_CART = 1%
+			ELSE
+				!
+				! Is the input defined?
+				!
+				DISPLAY_DESCR$ = STRING$(50%,63%)
+				IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_CART_INVENTORY::AGENCY_NUM) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "AGYNUM"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "AGYNUM"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't
+						! allow them to enter undefined values.
+						!
+						TV_MAIN_CART = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Agency number is undefined ", 1%)
+					ELSE
+						!
+						! Verify that they really want to
+						! enter an undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, &
+							"", "Agency Number is " + &
+							"undefined, confirm entry " + &
+							"then press <DO> ", &
+							"N", 0%, "", "")
+						TV_MAIN_CART = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= AR_CUSTOM::CUSNAM
+
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					DISPLAY_DESCR$,8%,26%, ,SMG$M_BOLD)
+			END IF
+			END IF
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		DISPLAY_DESCR$ = STRING$(50%,63%)
+		DISPLAY_DESCR$ = AR_CUSTOM::CUSNAM &
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_CART_INVENTORY::CUSNUM) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$,7%,26%, ,SMG$M_BOLD)
+
+		DISPLAY_DESCR$ = STRING$(50%,63%)
+		DISPLAY_DESCR$ = AR_CUSTOM::CUSNAM &
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_CART_INVENTORY::AGENCY_NUM) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$,8%,26%, ,SMG$M_BOLD)
+
+	!
+	! Set TV_CART_INVENTORY_OLD value
+	!
+20500	CASE OPT_SETOLD
+		TV_CART_INVENTORY_OLD = TV_CART_INVENTORY
+
+	!
+	! Restore TV_CART_INVENTORY_OLD value
+	!
+	CASE OPT_RESETOLD
+		TV_CART_INVENTORY = TV_CART_INVENTORY_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		TV_CART_INVENTORY2 = TV_CART_INVENTORY
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		TV_CART_INVENTORY = TV_CART_INVENTORY2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+			!
+			! Title (One line only)
+			!
+			CASE 1%
+				MVALUE = "  Cart       Program                   " + &
+					"Customer # Agency     " + &
+					"Title                     " + &
+					"Length   Date-in  Date-out"
+
+			!
+			! Positions of lines
+			!
+			CASE 2%
+				MVALUE = "013,039,050,061,087,096,105"
+
+			!
+			! Convert current record into text
+			!
+			CASE 3%
+
+				MVALUE = &
+					TV_CART_INVENTORY::CARTNUM + " " + &
+					LEFT(TV_CART_INVENTORY::PRONAME, 25%) + " " + &
+					TV_CART_INVENTORY::CUSNUM + " " + &
+					TV_CART_INVENTORY::AGENCY_NUM + " " + &
+					LEFT(TV_CART_INVENTORY::TITLE, 25%) + " " + &
+					PRNT_TIME(TV_CART_INVENTORY::LENGTH, 0%) + " " + &
+					PRNT_DATE(TV_CART_INVENTORY::DATE_IN, 0%) + " " + &
+					PRNT_DATE(TV_CART_INVENTORY::DATE_OUT, 0%)
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #TV_CART_INVENTORY.CH%, &
+				KEY #0% GE TV_CART_INVENTORY::CARTNUM, &
+				REGARDLESS
+
+		CASE 1%
+			FIND #TV_CART_INVENTORY.CH%, &
+				KEY #1% GE TV_CART_INVENTORY::CUSNUM, &
+				REGARDLESS
+
+		CASE 2%
+			FIND #TV_CART_INVENTORY.CH%, &
+				KEY #2% GE TV_CART_INVENTORY::AGENCY_NUM, &
+				REGARDLESS
+
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			TV_MAIN_CART = MAIN_JOURNAL(TV_MAIN_CART_JOUR.ID, "A")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF (TV_CART_INVENTORY_OLD::CUSNUM <> TV_CART_INVENTORY::CUSNUM)
+			THEN
+				TEMP$ = TV_CART_INVENTORY::CARTNUM
+				TV_CART_INVENTORY = TV_CART_INVENTORY_OLD
+				TV_MAIN_COPY = MAIN_JOURNAL(TV_MAIN_CART_JOUR.ID, "C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			TV_MAIN_COPY = MAIN_JOURNAL(TV_MAIN_CART_JOUR.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+
+		!
+		! Unable to open Read/Write
+		!
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			TV_MAIN_CART = ERR
+			RESUME 770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 760%
+			TV_MAIN_CART = ERR
+			RESUME 770
+
+		!
+		! Unable to reset
+		!
+		CASE 790%
+			RESUME 32767
+
+		!
+		! Record does not already exist
+		!
+		CASE 20300%
+			RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

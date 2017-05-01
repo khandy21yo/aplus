@@ -1,0 +1,74 @@
+1	! Special program to Date in GL period, given a batch number
+	!
+	OPTION SIZE = (INTEGER LONG, REAL DOUBLE)
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.HB"
+	MAP (GL_YYYY_PP) GL_YYYY_PP_CDD GL_YYYY_PP
+
+110	!
+	! Open period file
+	!
+	LINPUT "Period to work on"; YYYY_PP$
+	YYYY_PP$ = EDIT$(YYYY_PP$, -1%)
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.MOD"
+
+200	!
+	! Get batch number
+	!
+	LINPUT "Batch Number"; BATCHNO$
+	BATCHNO$ = EDIT$(BATCHNO$, -1%)
+
+300	!
+	! Get old date
+	!
+	LINPUT "Old Date YYYYMMDD "; OLDDATE$
+	OLDDATE$ = EDIT$(OLDDATE$, -1%)
+
+
+400	!
+	! Get old date
+	!
+	LINPUT "New Date YYYYMMDD "; NEWDATE$
+	NEWDATE$ = EDIT$(NEWDATE$, -1%)
+
+	ON ERROR GOTO 19000
+
+1000	!
+	! Startup loop
+	!
+	FIND #GL_YYYY_PP.CH%, KEY #4% EQ BATCHNO$
+
+
+1100	GET #GL_YYYY_PP.CH%
+
+1110	IF (GL_YYYY_PP::BTHNUM = BATCHNO$)
+	THEN
+		IF GL_YYYY_PP::TRANDAT = OLDDATE$
+		THEN
+			GL_YYYY_PP::TRANDAT = NEWDATE$
+
+			UPDATE #GL_YYYY_PP.CH%
+
+			PRINT GL_YYYY_PP::ACCT; " "; &
+				GL_YYYY_PP::SUBACC
+		END IF
+
+		GOTO 1100
+	END IF
+
+2000	CLOSE GL_YYYY_PP.CH%
+
+19000	!
+	! Trap errors
+	!
+	SELECT ERL
+		CASE 1100%
+			RESUME 2000 IF ERR = 11%
+
+		CASE 1110%
+			PRINT "#";
+			RESUME 1100
+	END SELECT
+
+32767	END

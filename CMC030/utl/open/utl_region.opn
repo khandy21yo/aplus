@@ -1,0 +1,19 @@
+	!======================================================================
+	! UTL_REGION file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_REGION.CH%, STAT%)
+	CALL READ_DEVICE('UTL_REGION',UTL_REGION.DEV$, STAT%)
+
+	UTL_REGION.NAME$ = UTL_REGION.DEV$+"UTL_REGION.TBL"
+
+	OPEN UTL_REGION.NAME$ FOR INPUT AS FILE UTL_REGION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_REGION, &
+		PRIMARY KEY &
+		( &
+			UTL_REGION::COUNTRY, &
+			UTL_REGION::REGION &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

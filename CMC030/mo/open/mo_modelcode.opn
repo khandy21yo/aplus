@@ -1,0 +1,16 @@
+	!======================================================================
+	! MO_MODELCODE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MODELCODE.CH%, STAT%)
+	CALL READ_DEVICE('MO_MODELCODE',MO_MODELCODE.DEV$, STAT%)
+
+	MO_MODELCODE.NAME$ = MO_MODELCODE.DEV$+"MO_MODELCODE.TBL"
+
+	OPEN MO_MODELCODE.NAME$ FOR INPUT AS FILE MO_MODELCODE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MODELCODE, &
+		PRIMARY KEY &
+			MO_MODELCODE::MODELCODE, &
+		ACCESS READ, ALLOW MODIFY
+

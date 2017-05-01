@@ -1,0 +1,28 @@
+	!======================================================================
+	! MO_MODELLINE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MODELLINE.CH%, STAT%)
+	CALL READ_DEVICE('MO_MODELLINE',MO_MODELLINE.DEV$, STAT%)
+
+	MO_MODELLINE.NAME$ = MO_MODELLINE.DEV$+"MO_MODELLINE.MAS"
+
+	OPEN MO_MODELLINE.NAME$ FOR INPUT AS FILE MO_MODELLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MODELLINE, &
+		PRIMARY KEY &
+		( &
+			MO_MODELLINE::MODELCODE, &
+			MO_MODELLINE::MSIZE, &
+			MO_MODELLINE::CLASS, &
+			MO_MODELLINE::OPTGROUP, &
+			MO_MODELLINE::OPTN &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			MO_MODELLINE::OPTGROUP, &
+			MO_MODELLINE::OPTN, &
+			MO_MODELLINE::MODELCODE &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

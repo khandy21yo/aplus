@@ -1,0 +1,14 @@
+	!======================================================================
+	! GL_PERIOD file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_PERIOD.CH%, STAT%)
+	CALL READ_DEVICE('GL_PERIOD',GL_PERIOD.DEV$, STAT%)
+
+	GL_PERIOD.NAME$ = GL_PERIOD.DEV$+"GL_PERIOD.CTR"
+
+	OPEN GL_PERIOD.NAME$ FOR INPUT AS FILE GL_PERIOD.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP GL_PERIOD, &
+		ACCESS READ, ALLOW MODIFY
+

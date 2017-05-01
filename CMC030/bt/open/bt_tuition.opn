@@ -1,0 +1,20 @@
+	!======================================================================
+	! BT_TUITION file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BT_TUITION.CH%, STAT%)
+	CALL READ_DEVICE('BT_TUITION',BT_TUITION.DEV$, STAT%)
+
+	BT_TUITION.NAME$ = BT_TUITION.DEV$+"BT_TUITION.MAS"
+
+	OPEN BT_TUITION.NAME$ FOR INPUT AS FILE BT_TUITION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BT_TUITION, &
+		PRIMARY KEY &
+		( &
+			BT_TUITION::CUSNUM, &
+			BT_TUITION::CHILD, &
+			BT_TUITION::FROMDATE &
+		)	DUPLICATES , &
+		ACCESS READ, ALLOW MODIFY
+

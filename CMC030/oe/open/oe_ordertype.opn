@@ -1,0 +1,19 @@
+	!======================================================================
+	! OE_ORDERTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_ORDERTYPE.CH%, STAT%)
+	CALL READ_DEVICE('OE_ORDERTYPE',OE_ORDERTYPE.DEV$, STAT%)
+
+	OE_ORDERTYPE.NAME$ = OE_ORDERTYPE.DEV$+"OE_ORDERTYPE.TBL"
+
+	OPEN OE_ORDERTYPE.NAME$ FOR INPUT AS FILE OE_ORDERTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_ORDERTYPE, &
+		PRIMARY KEY &
+			OE_ORDERTYPE::ORDTYPE, &
+		ALTERNATE KEY &
+			OE_ORDERTYPE::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

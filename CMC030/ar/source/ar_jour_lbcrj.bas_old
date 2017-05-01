@@ -1,0 +1,405 @@
+1	%TITLE "Cash Receipt Journal Maintenance"
+	%SBTTL "AR_JOUR_LBCRJ"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Maintain Cash Receipts Journal\* option provides the means
+	!	to enter and maintain cash receipt transactions.  After selecting
+	!	this option, a screen will appear for selection of a batch number.
+	!	If a new batch number is to be created, press ^*Do\* to bypass
+	!	the existing batch number screen.  A screen will appear accommodating
+	!	entry of a new batch number.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Maintain>Cash Receipt Journal
+	!	.x Cash Receipt Journal>Maintenance
+	!
+	! Option:
+	!
+	!	AR_MAIN_LBCRJ$HELP
+	!	AR_JOUR_LBCRJ_LINE$HELP
+	!	AR_MAIN_LBCRJ_LINE$HELP
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_JOUR_LBCRJ/LINE
+	!	$ LINK/EXECUTABLE=AR_EXE: AR_JOUR_LBCRJ,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AR_JOUR_LBCRJ.OBJ;*
+	!
+	! Author:
+	!
+	!	05/12/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	02/09/89 - Kevin Handy
+	!		Modified for changes in ENTR_ENTER.
+	!
+	!	12/21/92 - Kevin Handy
+	!		Added routines to allow F17 input of customer
+	!		work.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+
+	!
+	! Map's
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL) AR_CONTROL_CDD AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_CONTROL"
+	MAP (LB_CONTROL) LB_CONTROL_CDD LB_CONTROL
+
+	!
+	! Common statements
+	!
+	COM (CH_AR_CONTROL) &
+		AR_CONTROL.CH%
+
+	COM (TT_AR_LBCRJ) &
+		BATCH_NO$ = 2%, &
+		CASH_FLAG$ = 1%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+	EXTERNAL INTEGER FUNCTION ENTR_3CHOICE
+	EXTERNAL LONG    FUNCTION ENTR_3ENTER
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+200	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+
+	GET #AR_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+250	%INCLUDE "SOURCE:[LB.OPEN]LB_CONTROL.OPN"
+
+	GET #LB_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	!IF LB_CONTROL::GL_INTERFACE = "Y"
+	!THEN
+	!	CASH_FLAG$ = "N"
+	!ELSE
+	!	CASH_FLAG$ = "Y"
+	!END IF
+
+
+300	!******************************************************************
+	! Get batch number
+	!******************************************************************
+
+	!
+	! Look up device
+	!
+	CALL  READ_DEVICE("AR_LBCRJH", AR_LBCRJH.DEV$, STAT%)
+
+	!
+	! Find out what is already there
+	!
+	CALL FIND_FILE(AR_LBCRJH.DEV$ + "AR_LBCRJH_*.JRL", AR_LBCRJH_FILE$(), &
+		'16'L,"","")
+
+	!
+	! If any files are in the list, then do a query screen
+	!
+	AR_LBCRJH_FILE% = VAL(AR_LBCRJH_FILE$(0%))
+
+	IF AR_LBCRJH_FILE%
+	THEN
+		!
+		! Get ONLY the batch number of the file
+		!
+		FOR LOOP% = 1% TO AR_LBCRJH_FILE%
+			TEMP$ = RIGHT(AR_LBCRJH_FILE$(LOOP%), 11%)
+			I% = INSTR(1%, TEMP$, ".")
+			I% = LEN(TEMP$) + 1% IF I% = 0%
+			AR_LBCRJH_FILE$(LOOP%) = LEFT(TEMP$, I% - 1%)
+		NEXT LOOP%
+
+		!
+		! Query the user
+		!
+		X% = ENTR_3CHOICE(SCOPE, "", "", AR_LBCRJH_FILE$(), "", &
+			'0'L, "LB Cash Receipts Journal Files", "", "" )
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(AR_LBCRJH_FILE$(X%),-1%)
+			GOTO 390
+		END IF
+	END IF
+
+	SELECT SCOPE.EXIT%
+		!
+		! Exit key ?
+		!
+		CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO ExitProgram
+	END SELECT
+
+	!
+	! Ask user for period
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		'18'L, &
+		'80'L, &
+		SMG_SCREEN_DATA% &
+	)
+
+310	!
+	! Print background
+	!
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Cash Receipts Journal Maintenance", '10'L, '20'L)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Batch:", '12'L, '31'L)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SMG_PBID, &
+		'1'L, &
+		'1'L &
+	)
+
+320	!
+	! Query user for batch number
+	!
+	BATCH_NO$ = ""
+	PRG_ITEM = "BATCH"
+
+	!++
+	! Abstract:BATCH
+	!	^*Batch\*
+	!	.b
+	!	.lm +5
+	!	The ^*Batch\* field provides the means to enter the number of the batch for
+	!	which the cash receipts journal is being entered.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Batch
+	!
+	!--
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 12%, 39%, BATCH_NO$, -1%, 16%)
+
+		CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 320
+
+		CASE SMG$K_TRM_DOWN
+			GOTO 320
+
+		CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+			! Good key
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE,SCOPE::SCOPE_EXIT)
+			GOTO 320
+	END SELECT
+
+	IF LEN(TRM$(BATCH_NO$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Please enter the BATCH number in XX format", 0%)
+		GOTO 320
+	END IF
+
+390	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(AR_MAIN_LBCRJ.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+		CASE 200%
+			FILENAME$ = "AR_CONTROL"
+			RESUME HelpFile
+
+		CASE 250%
+			FILENAME$ = "LB_CONTROL"
+			RESUME HelpFile
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpFile:
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	RESUME ExitProgram
+
+ HelpError:
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	RESUME ExitProgram
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:LB_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OE_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:SA_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION AR_MAIN_LBCRJ
+	EXTERNAL LONG FUNCTION AR_MAIN_LBCRJ_LINE
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+	EXTERNAL LONG FUNCTION GL_MAIN_CHART
+	EXTERNAL LONG FUNCTION LB_MAIN_STAFF
+	EXTERNAL LONG FUNCTION AR_MAIN_CONTACT
+	EXTERNAL LONG FUNCTION AR_MAIN_CUSTYPE
+	EXTERNAL LONG FUNCTION OE_MAIN_CATEGORY
+	EXTERNAL LONG FUNCTION OE_MAIN_SALESTAX
+	EXTERNAL LONG FUNCTION UTL_MAIN_LOCATION
+	EXTERNAL LONG FUNCTION UTL_MAIN_COUNTRY
+	EXTERNAL LONG FUNCTION UT_MAIN_TERMS
+	EXTERNAL LONG FUNCTION UT_MAIN_CARRIER
+	EXTERNAL LONG FUNCTION SA_MAIN_SALESMAN
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+		CASE GL_MAIN_CHART.ID
+
+			MAINT_GROUP = GL_MAIN_CHART(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE LB_MAIN_STAFF.ID
+
+			MAINT_GROUP = LB_MAIN_STAFF(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE AR_MAIN_35CUSTOM.ID
+
+			MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE AR_MAIN_LBCRJ.ID
+
+			MAINT_GROUP = AR_MAIN_LBCRJ(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE AR_MAIN_LBCRJ_LINE.ID
+
+			MAINT_GROUP = AR_MAIN_LBCRJ_LINE(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE AR_MAIN_CONTACT.ID
+			MAINT_GROUP = AR_MAIN_CONTACT(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE AR_MAIN_CUSTYPE.ID
+			MAINT_GROUP = AR_MAIN_CUSTYPE(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE OE_MAIN_CATEGORY.ID
+			MAINT_GROUP = OE_MAIN_CATEGORY(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE OE_MAIN_SALESTAX.ID
+			MAINT_GROUP = OE_MAIN_SALESTAX(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE UTL_MAIN_LOCATION.ID
+			MAINT_GROUP = UTL_MAIN_LOCATION(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE UTL_MAIN_COUNTRY.ID
+			MAINT_GROUP = UTL_MAIN_COUNTRY(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE UT_MAIN_TERMS.ID
+			MAINT_GROUP = UT_MAIN_TERMS(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE UT_MAIN_CARRIER.ID
+			MAINT_GROUP = UT_MAIN_CARRIER(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE SA_MAIN_SALESMAN.ID
+			MAINT_GROUP = SA_MAIN_SALESMAN(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

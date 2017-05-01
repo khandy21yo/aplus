@@ -1,0 +1,19 @@
+	!======================================================================
+	! BI_CATEGORY file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_CATEGORY.CH%, STAT%)
+	CALL READ_DEVICE('BI_CATEGORY',BI_CATEGORY.DEV$, STAT%)
+
+	BI_CATEGORY.NAME$ = BI_CATEGORY.DEV$+"BI_CATEGORY.TBL"
+
+	OPEN BI_CATEGORY.NAME$ FOR INPUT AS FILE BI_CATEGORY.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_CATEGORY, &
+		PRIMARY KEY &
+			BI_CATEGORY::CATEGORY, &
+		ALTERNATE KEY &
+			BI_CATEGORY::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

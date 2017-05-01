@@ -1,0 +1,399 @@
+1	%TITLE "Service Billing Report"
+	%SBTTL "BS_RPRT_BILL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BS001
+	!
+	! Abstract:HELP
+	!	.p
+	!	This program prints out the Service billing report
+	!
+	! Compile:
+	!
+	!	$ BAS BS_SOURCE:BS_RPRT_BILL/LINE
+	!	$ LINK/EXE=BS_EXE: BS_RPRT_BILL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BS_RPRT_BILL.OBJ;*
+	!
+	! Author:
+	!
+	!	09/27/89 - Frank Starman
+	!
+	! Modification History:
+	!
+	!	03/24/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/13/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards.
+	!		Change start_date to start_date$ and end_date to
+	!		end_date$.
+	!
+	!	01/26/96 - Kevin Handy
+	!		Reformat source code.
+	!		Change STRING$(...,ASCII(" ")) to "" in
+	!		several places.
+	!
+	!	10/17/96 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	07/30/97 - Kevin Handy
+	!		Change XAGE parameter of READ_PERIOD to integer.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[BS.OPEN]BS_BILL.HB"
+	MAP	(BS_BILL)	BS_BILL_CDD		BS_BILL
+
+	%INCLUDE "SOURCE:[SB.OPEN]SB_SUBACCOUNT.HB"
+	MAP	(SB_SUBACCOUNT)	SB_SUBACCOUNT_CDD	SB_SUBACCOUNT
+
+	%INCLUDE "SOURCE:[SB.OPEN]SB_TYPE.HB"
+	MAP	(SB_TYPE)	SB_TYPE_CDD	SB_TYPE
+
+	%INCLUDE "SOURCE:[SB.OPEN]SB_CLASS.HB"
+	MAP	(SB_CLASS)	SB_CLASS_CDD	SB_CLASS
+
+	%INCLUDE "SOURCE:[BS.OPEN]BS_CLIENT.HB"
+	MAP	(BS_CLIENT)	BS_CLIENT_CDD		BS_CLIENT
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(0%), -1%)
+
+300	!
+	%INCLUDE "SOURCE:[BS.OPEN]BS_BILL.OPN"
+
+310	!
+	! Open file
+	!
+	%INCLUDE "SOURCE:[SB.OPEN]SB_SUBACCOUNT.OPN"
+
+320	!
+	! Open file
+	!
+	%INCLUDE "SOURCE:[SB.OPEN]SB_TYPE.OPN"
+
+330	!
+	! Open file
+	!
+	%INCLUDE "SOURCE:[SB.OPEN]SB_CLASS.OPN"
+
+340	!
+	! Open file
+	!
+	%INCLUDE "SOURCE:[BS.OPEN]BS_CLIENT.OPN"
+
+ ReportTitle:
+	TEST.PERIOD$ = BATCH_NO$
+	V% = READ_PERIOD("FIND", "GL", TEST.PERIOD$, PERIOD_DESCR$, STAT$, &
+		START_DATE$, END_DATE$, 0%)
+
+	!
+	! Title
+	!
+	TITLE$(2%) = "Service Billing System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "Client#    Name                                     "+ &
+		"Program    RateUOM   Rate   Length     Amount "+ &
+		"YtdLength  YtdAmount"
+	TITLE$(5%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	FIND #SB_SUBACCOUNT.CH%, KEY#0% EQ "P", REGARDLESS
+
+	CALL ENTR_3MESSAGE(SCOPE, "Creating temporary file ...",1%)
+
+	CALL ASSG_CHANNEL(TEMP.CH%, STAT%)
+	CALL READ_DEVICE("UTL_WORK",UTL_WORK.DEV$, STAT%)
+
+	TEMP.NAME$ = UTL_WORK.DEV$ + "TEMP.TMP"
+
+17005	OPEN TEMP.NAME$ AS FILE TEMP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_SUBACCOUNT, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			SB_SUBACCOUNT::CLASS, &
+			SB_SUBACCOUNT::TTYPE, &
+			SB_SUBACCOUNT::SUBACCOUNT &
+		), &
+		ACCESS MODIFY, ALLOW NONE, TEMPORARY
+
+17010	GET #SB_SUBACCOUNT.CH%, REGARDLESS
+
+	GOTO 17100 IF SB_SUBACCOUNT::SUBJECT <>"P"
+
+	PUT #TEMP.CH%
+	GOTO 17010
+
+17100	RESET #TEMP.CH%
+
+ NextTemp:
+17120	GET #TEMP.CH%
+	GOSUB 18100 IF PREV.CLASS% = 0%
+
+17130	RESET #BS_CLIENT.CH%
+
+17140	GET #BS_CLIENT.CH%, REGARDLESS
+
+17150	BS_BILL::RATEUOM = ""
+	BS_BILL::RATE = 0.0
+	BS_BILL::LENGTH = 0.0
+	BS_BILL::AMOUNT = 0.0
+	GET #BS_BILL.CH%, KEY#0% EQ &
+		BS_CLIENT::CLIENT + SB_SUBACCOUNT::SUBACCOUNT, REGARDLESS
+
+ YTD:
+	!
+	! Go for YTD balance
+	!
+	CALL BS_READ_REGISTER(BS_CLIENT::CLIENT,SB_SUBACCOUNT::SUBACCOUNT, &
+		"", BATCH_NO$, BS_BILL::RATEUOM, AMOUNT(), LENGTH())
+
+	GOTO 17140 IF BS_BILL::AMOUNT = 0.0 AND AMOUNT(1%) = 0.0
+
+	LIN% = 0%
+	IF SB_SUBACCOUNT::TTYPE <> PREV.TYPE$ AND PREV.CLASS% <> 0% AND &
+		SB_SUBACCOUNT::CLASS = PREV.CLASS$
+	THEN
+		GOSUB 18000
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	END IF
+
+	IF SB_SUBACCOUNT::CLASS <> PREV.CLASS$ AND PREV.CLASS%<>0%
+	THEN
+		GOSUB 18000
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		TEXT$ = "Total    "+ &
+			SPACE$(78%)+ &
+			FORMAT$(TOTAL.CLASS,"###,###.##")+" "+ &
+			SPACE$(10%)+ &
+			FORMAT$(TOTAL.CLASS+TOTAL.CLASSYTD,"###,###.##")
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		TOTAL.CLASS = 0.0
+		TOTAL.CLASSYTD = 0.0
+		LIN% = 999%
+		GOSUB 18100
+	END IF
+
+	TEXT$ = BS_CLIENT::CLIENT+" "+ &
+		LEFT(BS_CLIENT::CLIENTNAME,40%)+" "+ &
+		SB_SUBACCOUNT::SUBACCOUNT+ " " + &
+		BS_BILL::RATEUOM + " " + &
+		FORMAT$(BS_BILL::RATE,"   #,###.##") + " " + &
+		FORMAT$(BS_BILL::LENGTH,"#,###.##") + " " + &
+		FORMAT$(BS_BILL::AMOUNT,"###,###.##")+ " " + &
+		FORMAT$(LENGTH(1%)+BS_BILL::LENGTH,"##,###.##")+" "+ &
+		FORMAT$(AMOUNT(1%)+BS_BILL::AMOUNT,"###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, LIN%)
+
+	TOTAL.TYPE = TOTAL.TYPE + BS_BILL::AMOUNT
+	TOTAL.TYPEYTD = TOTAL.TYPEYTD + AMOUNT(1%)
+	TOTAL.CLASS = TOTAL.CLASS + BS_BILL::AMOUNT
+	TOTAL.CLASSYTD = TOTAL.CLASSYTD + AMOUNT(1%)
+	PREV.CLASS% = -1%
+	PREV.TYPE$ = SB_SUBACCOUNT::TTYPE
+	PREV.CLASS$ = SB_SUBACCOUNT::CLASS
+
+	GOTO 17140
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+	IF PREV.CLASS%
+	THEN
+		GOSUB 18000
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		TEXT$ = "Total    "+ &
+			SPACE$(78%)+ &
+			FORMAT$(TOTAL.CLASS,"###,###.##")+" "+ &
+			SPACE$(10%)+ &
+			FORMAT$(TOTAL.CLASS+TOTAL.CLASSYTD,"###,###.##")
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	END IF
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%Page
+
+18000	!
+	! Read type
+	!
+	SB_TYPE::DESCR = &
+		STRING$(LEN(SB_TYPE::DESCR), ASCII("?"))
+	GET #SB_TYPE.CH%, KEY#0% EQ PREV.TYPE$, REGARDLESS
+
+18010	TEXT$ = PREV.TYPE$+" "+ &
+		SB_TYPE::DESCR + " "+ &
+		SPACE$(53%)+ &
+		FORMAT$(TOTAL.TYPE,"###,###.##")+" "+ &
+		SPACE$(10%)+ &
+		FORMAT$(TOTAL.TYPE+TOTAL.TYPEYTD,"###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	TOTAL.TYPE = 0.0
+	TOTAL.TYPEYTD = 0.0
+
+	RETURN
+
+18100	!
+	! Read Class
+	!
+	SB_CLASS::DESCR = &
+		STRING$(LEN(SB_CLASS::DESCR), ASCII("?"))
+	GET #SB_CLASS.CH%, KEY#0% EQ SB_SUBACCOUNT::CLASS, REGARDLESS
+
+18110	TITLE$(1%) = TRM$(SB_CLASS::DESCR)+" in "+PERIOD_DESCR$
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "BS_BILL"
+
+	CASE 310%
+		FILENAME$ = "SB_SUBACCOUNT"
+
+	CASE 320%
+		RESUME 330 IF ERR = 5%
+		FILENAME$ = "SB_TYPE"
+
+	CASE 330%
+		RESUME 340 IF ERR = 5%
+		FILENAME$ = "SB_CLASS"
+
+	CASE 340%
+		FILENAME$ = "BS_CLIENT"
+
+	CASE 17000%
+		RESUME ExitProgram IF ERR = 155%
+		FILENAME$ = "SB_SUBACCOUNT"
+
+	CASE 17010%
+		RESUME 17100 IF ERR = 11%
+		FILENAME$ = "TEMP.TMP"
+
+	CASE 17120%
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "SB_SUBACCOUNT"
+
+	CASE 17140%
+		RESUME 17120 IF ERR = 11%
+		FILENAME$ = "BS_CLIENT"
+
+	CASE 17150%
+		RESUME YTD IF ERR = 155%
+		FILENAME$ = "BS_BILL"
+
+	CASE 18000%
+		RESUME 18010 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "SB_TYPE"
+
+	CASE 18100%
+		RESUME 18110 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "SB_CLASS"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

@@ -1,0 +1,16 @@
+	!======================================================================
+	! GL_OBJECT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_OBJECT.CH%, STAT%)
+	CALL READ_DEVICE('GL_OBJECT',GL_OBJECT.DEV$, STAT%)
+
+	GL_OBJECT.NAME$ = GL_OBJECT.DEV$+"GL_OBJECT.MAS"
+
+	OPEN GL_OBJECT.NAME$ FOR INPUT AS FILE GL_OBJECT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_OBJECT, &
+		PRIMARY KEY &
+			GL_OBJECT::OBJ_MASK, &
+		ACCESS READ, ALLOW MODIFY
+

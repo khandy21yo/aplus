@@ -1,0 +1,22 @@
+	!======================================================================
+	! SB_CLASS file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('SB_CLASS',SB_CLASS.DEV$, STAT%)
+	CALL READ_PROTECTION('SB_CLASS',SB_CLASS.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(SB_CLASS.PRO$, STAT%)
+
+	SB_CLASS.NAME$ = SB_CLASS.DEV$+"SB_CLASS.TBL"
+
+	OPEN SB_CLASS.NAME$ AS FILE SB_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_CLASS, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			SB_CLASS::CLASS, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

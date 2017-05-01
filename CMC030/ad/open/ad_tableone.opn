@@ -1,0 +1,21 @@
+	!======================================================================
+	! AD_TABLEONE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_TABLEONE.CH%, STAT%)
+	CALL READ_DEVICE('AD_TABLEONE',AD_TABLEONE.DEV$, STAT%)
+
+	AD_TABLEONE.NAME$ = AD_TABLEONE.DEV$+"AD_TABLEONE.TBL"
+
+	OPEN AD_TABLEONE.NAME$ FOR INPUT AS FILE AD_TABLEONE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_TABLEONE, &
+		PRIMARY KEY &
+		( &
+			AD_TABLEONE::OPTTABLE, &
+			AD_TABLEONE::YEARS, &
+			AD_TABLEONE::EFFDATE, &
+			AD_TABLEONE::DEP_YEAR &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

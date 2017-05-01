@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Asset Depreciation File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__DEPRECIATION.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Asset Depreciation File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__DEPRECIATION.MAS\*
+	!	.p
+	!	Asset Depreciation File.
+	!
+	! Index:
+	!	.x Asset Depreciation File
+	!	.x AD_DEPRECIATION
+	!--

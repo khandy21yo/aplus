@@ -1,0 +1,16 @@
+	!======================================================================
+	! BI_RATETABLE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_RATETABLE.CH%, STAT%)
+	CALL READ_DEVICE('BI_RATETABLE',BI_RATETABLE.DEV$, STAT%)
+
+	BI_RATETABLE.NAME$ = BI_RATETABLE.DEV$+"BI_RATETABLE.TBL"
+
+	OPEN BI_RATETABLE.NAME$ FOR INPUT AS FILE BI_RATETABLE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_RATETABLE, &
+		PRIMARY KEY &
+			BI_RATETABLE::RATETABLE, &
+		ACCESS READ, ALLOW MODIFY
+

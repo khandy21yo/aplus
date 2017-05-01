@@ -1,0 +1,22 @@
+	!======================================================================
+	! PO_TYPE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('PO_TYPE',PO_TYPE.DEV$, STAT%)
+	CALL READ_PROTECTION('PO_TYPE',PO_TYPE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PO_TYPE.PRO$, STAT%)
+
+	PO_TYPE.NAME$ = PO_TYPE.DEV$+"PO_TYPE.TBL"
+
+	OPEN PO_TYPE.NAME$ AS FILE PO_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_TYPE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			PO_TYPE::POTYPE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

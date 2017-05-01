@@ -1,0 +1,9 @@
+DEFINE RECORD CDD$TOP.BA.BA_FORM
+
+        DESCRIPTION IS /*Billing to Agency Form Library*/.
+
+        BA_FORM_CDD STRUCTURE.
+
+        END BA_FORM_CDD STRUCTURE.
+
+END BA_FORM.

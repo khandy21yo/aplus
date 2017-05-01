@@ -1,0 +1,370 @@
+1	%TITLE "TV_RPRT_SALES01 - TV Traffic Sales Report"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program prints a sales report.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	02/02/87 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_RPRT_SALES01
+	!	$ LINK/EXECUTABLE=TV_EXE:*.EXE TV_RPRT_SALES01, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_RPRT_SALES01.OBJ;*
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE		UTL_REPORTX_CDD		UTL_REPORTX
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOGSPOTS"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP	(TV_LOGSPOTS)	TV_LOGSPOTS_CDD		TV_LOGSPOTS
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION PRNT_TIME
+	EXTERNAL LONG    FUNCTION DATE_DAYCODE
+	EXTERNAL LONG    FUNCTION DATE_DAYOFWEEK
+	EXTERNAL LONG    FUNCTION TIME_CODE
+	EXTERNAL STRING  FUNCTION TIME_INVCODE
+	EXTERNAL STRING  FUNCTION DATE_STOREDATE
+	EXTERNAL STRING  FUNCTION PRNT_FANCYDATE
+
+	!
+	! Dimension for totals
+	!
+	DECLARE INTEGER CONSTANT MAXCLASS = 200%
+	DIM CLASS_NAMES$(MAXCLASS), &
+		CLASS_SPOTS%(MAXCLASS), &
+		CLASS_DOLLARS(MAXCLASS), &
+		CLASS_LENGTH%(MAXCLASS)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Set up from user input
+	!
+	SCHED_DATE$ = DATE_STOREDATE(TRM$(UTL_REPORTX::OPTDEF(0%)))
+
+300	!
+	! Open TV_LOGSPOTS file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.OPN"
+
+1000	!
+	! Set up title
+	!
+ ReportTitle:
+	EC$(0%) = "8"
+	EC$(1%) = "Monday"
+	EC$(2%) = "Tuesday"
+	EC$(3%) = "Wednesday"
+	EC$(4%) = "Thursday"
+	EC$(5%) = "Friday"
+	EC$(6%) = "Saturday"
+	EC$(7%) = "Sunday"
+
+	!
+	! Title
+	!
+	TITLE$(1%) = "Brief Log for " + PRNT_FANCYDATE(SCHED_DATE$) + " (" + &
+		EC$(DATE_DAYOFWEEK(DATE_DAYCODE(SCHED_DATE$))) + ")"
+	TITLE$(2%) = "TV Traffic System"
+	TITLE$(3%) = "Printed by " + K_STYLE$
+	TITLE$(4%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(5%) = "Customer   Form No. Sked  Time     Length       " + &
+		"Rate Fl Code Class Cart      Cut  Description"
+	TITLE$(6%) = ""
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	RESET #TV_LOGSPOTS.CH%
+
+	!
+	! Initialize totals
+	!
+	TOTAL_SPOTS% = 0%
+	TOTAL_DOLLARS = 0.0
+	TOTAL_LENGTH% = 0%
+
+	CUSTOTAL_SPOTS% = 0%
+	CUSTOTAL_DOLLARS = 0.0
+	CUSTOTAL_LENGTH% = 0%
+
+	CLASS_TOTAL% = 0%
+
+	THIS_CUS$ = "~~~~~~~~~~~~~~~~~~~~"
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #TV_LOGSPOTS.CH%, REGARDLESS
+
+	!
+	! Skip record if it is not a commercial
+	!
+	GOTO GetNextRec IF TV_LOGSPOTS::SCH_TYPE <> "0"
+
+	!
+	! Print totals after each customer
+	!
+	IF THIS_CUS$ <> TV_LOGSPOTS::CUSNUM
+	THEN
+		IF CUSTOTAL_SPOTS% <> 0%
+		THEN
+			TEXT$ = "           Total (" + &
+				FORMAT$(CUSTOTAL_SPOTS%, "##")+ &
+				") Spots       " + &
+				PRNT_TIME(TIME_INVCODE(CUSTOTAL_LENGTH%), 0%) + " " + &
+				FORMAT$(CUSTOTAL_DOLLARS, "$$####.##")
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -1%)
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 5%)
+		END IF
+
+		THIS_CUS$ = TV_LOGSPOTS::CUSNUM + ""
+		CUSTOTAL_SPOTS% = 0%
+		CUSTOTAL_DOLLARS = 0.0
+		CUSTOTAL_LENGTH% = 0%
+	END IF
+
+
+	!
+	! Display this one
+	!
+	TEXT$ = TV_LOGSPOTS::CUSNUM + " " + &
+		TV_LOGSPOTS::FRMNUM + "  " + &
+		TV_LOGSPOTS::SKEDNUM + "  " + &
+		PRNT_TIME(TV_LOGSPOTS::SCH_TIME, 0%) + " " + &
+		PRNT_TIME(TV_LOGSPOTS::LENGTH, 0%) + " " + &
+		FORMAT$(TV_LOGSPOTS::RATE, "$$####.##") + " " + &
+		TV_LOGSPOTS::SPOTS_FLAG + "  " + &
+		TV_LOGSPOTS::SPOTS_CODE + "   " + &
+		TV_LOGSPOTS::CLASS + "  " + &
+		TV_LOGSPOTS::CARTNUM + " " + &
+		TV_LOGSPOTS::CUTNUM + " " + &
+		TV_LOGSPOTS::DESCR
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Total up for grans total
+	!
+	TOTAL_SPOTS% = TOTAL_SPOTS% + 1%
+	TOTAL_DOLLARS = TOTAL_DOLLARS + TV_LOGSPOTS::RATE
+	TOTAL_LENGTH% = TOTAL_LENGTH% + TIME_CODE(TV_LOGSPOTS::LENGTH)
+
+	!
+	! Total up for customer
+	!
+	CUSTOTAL_SPOTS% = CUSTOTAL_SPOTS% + 1%
+	CUSTOTAL_DOLLARS = CUSTOTAL_DOLLARS + TV_LOGSPOTS::RATE
+	CUSTOTAL_LENGTH% = CUSTOTAL_LENGTH% + TIME_CODE(TV_LOGSPOTS::LENGTH)
+
+	!
+	! Total up for class total
+	!
+	FOR LOOP% = 1% TO CLASS_TOTAL%
+
+		GOTO ClassExit IF CLASS_NAME$(LOOP%) = TV_LOGSPOTS::CLASS
+
+	NEXT LOOP%
+
+	LOOP%, CLASS_TOTAL% = CLASS_TOTAL% + 1%
+	CLASS_NAME$(LOOP%) = TV_LOGSPOTS::CLASS
+	CLASS_SPOTS%(LOOP%) = 0%
+	CLASS_DOLLARS(LOOP%) = 0.0
+	CLASS_LENGTH%(LOOP%) = 0%
+
+ ClassExit:
+	CLASS_SPOTS%(LOOP%) = CLASS_SPOTS(LOOP%) + 1%
+	CLASS_DOLLARS(LOOP%) = CLASS_DOLLARS(LOOP%) + TV_LOGSPOTS::RATE
+	CLASS_LENGTH%(LOOP%) = CLASS_LENGTH%(LOOP%) + TIME_CODE(TV_LOGSPOTS::LENGTH)
+
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	IF CUSTOTAL_SPOTS% <> 0%
+	THEN
+		TEXT$ = "           Total (" + &
+			FORMAT$(CUSTOTAL_SPOTS%, "##")+ &
+			") Spots       " + &
+			PRNT_TIME(TIME_INVCODE(CUSTOTAL_LENGTH%), 0%) + " " + &
+			FORMAT$(CUSTOTAL_DOLLARS, "$$####.##")
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -1%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	END IF
+
+	TEXT$ = "         Grand Total (" + &
+		FORMAT$(TOTAL_SPOTS%, "###")+ &
+		") Spots   " + &
+		PRNT_TIME(TIME_INVCODE(TOTAL_LENGTH%), 0%) + " " + &
+		FORMAT$(TOTAL_DOLLARS, "$$####.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+	!
+	! Print class totals
+	!
+	FOR LOOP% = 1% TO CLASS_TOTAL%
+		TEXT$ = CLASS_NAME$(LOOP%) + &
+			"     Class Total (" + &
+			FORMAT$(CLASS_SPOTS%(LOOP%), "###")+ &
+			") Spots   " + &
+			PRNT_TIME(TIME_INVCODE(CLASS_LENGTH%(LOOP%)), 0%) + " " + &
+			FORMAT$(CLASS_DOLLARS(LOOP%), "$$####.##")
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	NEXT LOOP%
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", PROGRAM$, "ERROR" + NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	!
+	! Record locked
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 300%, 17000%
+		PROGRAM$ = "TV_LOGSPOTS"
+		RESUME HelpError
+
+	!
+	! End of LOG_PROGRAM file
+	!
+	CASE 17020%
+		RESUME ExitTotal IF ERR = 11%
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	PROGRAM$ = SCOPE::PRG_PROGRAM
+	RESUME HelpError
+
+32767	END

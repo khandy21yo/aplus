@@ -1,0 +1,16 @@
+	!======================================================================
+	! BI_INSUREX file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_INSUREX.CH%, STAT%)
+	CALL READ_DEVICE('BI_INSUREX',BI_INSUREX.DEV$, STAT%)
+
+	BI_INSUREX.NAME$ = BI_INSUREX.DEV$+"BI_INSUREX.MAS"
+
+	OPEN BI_INSUREX.NAME$ FOR INPUT AS FILE BI_INSUREX.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_INSUREX, &
+		PRIMARY KEY &
+			BI_INSUREX::CUSNUM, &
+		ACCESS READ, ALLOW MODIFY
+

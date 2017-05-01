@@ -1,0 +1,586 @@
+1	%TITLE "Sales Quantity Report"
+	%SBTTL "RM_RPRT_SALEQTY"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM019
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Sales Quantity Report\* provides the means to print a report containing
+	!	the total quantity of sales. Contained in this report are the following fields:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	Location
+	!	.le
+	!	Product Number
+	!	.le
+	!	Description
+	!	.le
+	!	Sales
+	!	.le
+	!	Promotion
+	!	.le
+	!	Employee Sales
+	!	.le
+	!	Total
+	!	.le
+	!	Total Sales
+	!	.els
+	!
+	! Index:
+	!	.x Sales Quantity Report
+	!	.x Report>Sales Quantity
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_SALEQTY/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_SALEQTY,-
+	!		 FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_SALEQTY.OBJ;*
+	!
+	! Author:
+	!
+	!	25/07/89 - J. Shad Rydalch
+	!
+	! Modification History:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE				UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)		PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.HB"
+	MAP	(RM_TRANSACTION)	RM_TRANSACTION_CDD	RM_TRANSACTION
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_CATEGORY.HB"
+	MAP	(PD_CATEGORY)		PD_CATEGORY_CDD		PD_CATEGORY
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODTYPE.HB"
+	MAP	(PD_PRODTYPE)		PD_PRODTYPE_CDD		PD_PRODTYPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)		UTL_LOCATION_CDD	UTL_LOCATION
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.HB"
+	MAP	(RM_CONTROL)		RM_CONTROL_CDD		RM_CONTROL
+
+	!
+	! External functions
+	!
+	EXTERNAL REAL    FUNCTION PC_READ_PRICE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+	LOCATIONS$ = EDIT$(UTL_REPORTX::OPTDEF(4%), -1%)
+	FROMDATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+	TODATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(6%), 132%))
+	ZERO.BAL$ = EDIT$(UTL_REPORTX::OPTDEF(7%), -1%)
+
+	TITLE1$ = "From "+PRNT_DATE(FROMDATE$,8%)+" to "+PRNT_DATE(TODATE$, 8%)
+
+300	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+310	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.OPN"
+
+320	%INCLUDE "SOURCE:[PD.OPEN]PD_CATEGORY.OPN"
+
+330	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+340	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.OPN"
+	GET #RM_CONTROL.CH%, RECORD 1%
+	CLOSE RM_CONTROL.CH%
+
+350	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODTYPE.OPN"
+
+ ReportTitle:
+
+	SELECT SORT.BY$
+	CASE "P"
+		ADD.TITLE$ = "PRODUCT  NUMBER"
+		SORT.KEY%  = 0%
+
+	CASE "T"
+		ADD.TITLE$ = "PRODUCT  TYPE"
+		SORT.KEY%  = 1%
+
+	CASE "C"
+		ADD.TITLE$ = "CATEGORY"
+		SORT.KEY%  = 2%
+
+	CASE "S"
+		ADD.TITLE$ = "SECONDARY  CODE"
+		SORT.KEY%  = 4%
+
+	END SELECT
+
+	!
+	! Title
+	!
+	TITLE$(1%) = "STD  COST  OF  SALES  MIX  REPORT  SORTED  BY  " + &
+		ADD.TITLE$
+	TITLE$(2%) = "Restaurant Management System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	SELECT SORT.BY$
+	CASE "P","C","T"
+		TITLE$(5%) = &
+			"Product#       Description                        "+ &
+			"      Sale Prom EmpS Total TotalSale"
+
+	CASE "S"
+		TITLE$(5%) = &
+			"SecondaryCode  Description                        "+ &
+			"      Sale Prom EmpS Total TotalSale"
+
+	END SELECT
+
+	Lyt_line$ = "$Prod#/SecCode:056,VSale:061,VProm:066,VEmpS:071,VTotal:077,VTotalSale:087"
+
+	TITLE$(6%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	RESET #UTL_LOCATION.CH%
+
+ GetNextSto:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #UTL_LOCATION.CH%, REGARDLESS
+
+	GOTO GetNextSto IF LOCATIONS$ <>"" AND &
+		COMP_STRING(EDIT$(UTL_LOCATION::LOCATION,-1%), LOCATIONS$) = 0%
+
+	TITLE$(4%) = LEFT("==== "+UTL_LOCATION::LOCATION+" "+ &
+		EDIT$(UTL_LOCATION::LOCNAME,128%)+" "+ &
+		STRING$(102%,61%),102%)+" "+TITLE1$
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 999%) &
+			IF LAST_LOCATION$ <> ""
+
+17030	CALL ENTR_3MESSAGE(SCOPE, "Searching for Sales at Location "+ &
+		UTL_LOCATION::LOCATION, 1%)
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #PD_PRODUCT.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #PD_PRODUCT.CH%, KEY#SORT.KEY% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+	LAST_LOCATION$ = UTL_LOCATION::LOCATION
+
+ GetNextRec:
+17125	!
+	! Subloop starts here
+	!
+	! Get next record
+	!
+	GET #PD_PRODUCT.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO GetNextRec IF PD_PRODUCT::SSTATUS <> "A"
+
+	SELECT SORT.BY$
+	CASE "C"
+
+		GOTO ExitTotal IF (PD_PRODUCT::CATEGORY > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::CATEGORY,-1%), WLDCRD$) = 0%
+
+	CASE "T"
+
+		GOTO ExitTotal IF (PD_PRODUCT::PROD_TYPE > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE,-1%), WLDCRD$) = 0%
+
+	CASE "P"
+
+		GOTO ExitTotal IF (PD_PRODUCT::PRODUCT_NUM > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM,-1%), WLDCRD$) = 0%
+
+	CASE "S"
+
+		GOTO ExitTotal IF (PD_PRODUCT::SECONDARY_CODE > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::SECONDARY_CODE,-1%), WLDCRD$) = 0%
+
+	END SELECT
+
+17200	!
+	! Read RM Transaction file
+	!
+
+	! Zero totals
+	EMP_TOTAL, PROM_TOTAL, SALES_TOTAL, TOTAL_TOTAL = 0.
+
+	FIND #RM_TRANSACTION.CH%, KEY#2% EQ UTL_LOCATION::LOCATION + &
+		PD_PRODUCT::PRODUCT_NUM, REGARDLESS
+
+ NextTrans:
+	GET #RM_TRANSACTION.CH%, REGARDLESS
+
+	! Check the transaction date to see if it is within
+	! the time frame the users wants
+	GOTO NextTrans IF RM_TRANSACTION::TRANSDATE < FROMDATE$
+	GOTO NextTrans IF RM_TRANSACTION::TRANSDATE > TODATE$
+
+	! If new product print the caluculated totals on the item we
+	! just finished reading about
+	GOTO PrintRec &
+		IF (RM_TRANSACTION::PRODUCT + RM_TRANSACTION::LOCATION <> &
+		PD_PRODUCT::PRODUCT_NUM + UTL_LOCATION::LOCATION)
+
+	EMP_TOTAL = EMP_TOTAL + 1 &
+		IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTEMP
+
+	PROM_TOTAL = PROM_TOTAL + 1 &
+		IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTPROM
+
+	SALES_TOTAL = SALES_TOTAL + 1 &
+		IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTSALES
+
+	GOTO NextTrans
+
+ PrintRec:
+17300	!
+	! Print out one line
+	!
+	! get the menu price of the item to be printed
+	MENU = PC_READ_PRICE(PD_PRODUCT::PRODUCT_NUM,UTL_LOCATION::LOCATION, &
+		RM_CONTROL::PRCMENU,RM_TRANSACTION::TRANSDATE, &
+		"000000","","")
+
+	! get the employee price of the item to be printed
+	EMP_P = PC_READ_PRICE(PD_PRODUCT::PRODUCT_NUM,UTL_LOCATION::LOCATION, &
+		RM_CONTROL::PRCEMP,RM_TRANSACTION::TRANSDATE, &
+		"000000","","")
+
+	! calculate the total amount of sales for the item to be printed
+	TOTAL_SALE = MENU * SALES_TOTAL + EMP_P * EMP_TOTAL
+
+	SELECT SORT.BY$
+	CASE "P","C","T"
+		TEXT$ = PD_PRODUCT::PRODUCT_NUM	+ " "
+
+	CASE "S"
+		TEXT$ = PD_PRODUCT::SECONDARY_CODE + "     "
+
+	END SELECT
+
+	TOTAL_TOTAL = SALES_TOTAL + PROM_TOTAL + EMP_TOTAL
+
+	TEXT$ = TEXT$ + PD_PRODUCT::DESCRIPTION	+ " " + &
+		FORMAT$(SALES_TOTAL,"#### ") + &
+		FORMAT$(PROM_TOTAL,"#### ") + &
+		FORMAT$(EMP_TOTAL,"#### ") + &
+		FORMAT$(TOTAL_TOTAL,"##### ") + &
+		FORMAT$(TOTAL_SALE,"#####.## ")
+
+	CALL OUTP_LINE(lyt_line$, UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17550	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Print totals
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 300%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 310%
+		FILENAME$ = "RM_TRANSACTION"
+
+	CASE 320%
+		FILENAME$ = "PD_CATEGORY"
+
+	CASE 330%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 340%
+		FILENAME$ = "RM_CONTROL"
+
+	CASE 350%
+		FILENAME$ = "PD_PRODTYPE"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020	! End of file
+		RESUME ExitTotal IF ERR = 11%
+
+	CASE 17030	! End of file
+		RESUME ExitTotal IF ERR = 11% OR ERR = 155%
+
+	CASE 17125%	! End of file
+		RESUME 17020 IF ERR = 11%
+
+	CASE 17200%	! Can't find
+		RESUME PrintRec IF ERR = 11%
+		RESUME GetNextRec IF  ERR = 155%
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Sort (P,S)\*
+	!	.p
+	!	The value entered in the ^*Sort\* field causes the report to print in the
+	!	selected order.
+	!	.p
+	!	The following values are valid:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	P = Product
+	!	.le
+	!	S = Secondary Code
+	!	.els
+	!
+	! Index:
+	!	.x Sort
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) From Item\*
+	!	.p
+	!	The value entered in the ^*From Item\* field causes the report to begin with
+	!	the selected item.
+	!	.p
+	!	A blank field causes the report to begin with the first item in the file.
+	!
+	! Index:
+	!	.x From Item
+	!	.x Item>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) To Item\*
+	!	.p
+	!	The value entered in the ^*To Item\* field causes the report to end with the
+	!	the selected item.
+	!	.p
+	!	A blank setting causes the report to end with the last item in the file
+	!
+	! Index:
+	!	.x To Item
+	!	.x Item>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD04
+	!	^*(04) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* setting enables the user to print a report including only
+	!	selected items using the wildcarding techniques.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(06) Locations\*
+	!	.p
+	!	The ^*Locations\* field provides the means to enter the locations which
+	!	will be printed on the report.
+	!
+	! Index:
+	!	.x Locations
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD06
+	!	^*(06) From Date\*
+	!	.p
+	!	The value entered in the ^*From Date\* field causes the report to begin with
+	!	the selected date. A blank setting causes the report to begin with the first
+	!	period in the file.
+	!	.p
+	!	Format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x From Date
+	!	.x Date>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD07
+	!	^*(07) To Date\*
+	!	.p
+	!	The value entered in the ^*To Date\* field causes the report to end with the
+	!	selected date.  A blank setting causes the report to end with the last period
+	!	in the file.
+	!	.p
+	!	The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x To Date
+	!	.x Date>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD08
+	!	^*(08) Print Zero\*
+	!	.p
+	!	The ^*Print Zero\* option provides the means for the user to determine if
+	!	the zeros will be printed on the report.  A ^*Y\* entry causes the zeros
+	!	to be printed, while a ^*N\* entry does not.
+	!
+	! Index:
+	!	.x Print Zero
+	!	.x Zero>Print
+	!
+	!--

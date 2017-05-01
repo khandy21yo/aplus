@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Customer Type Description File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__CUSTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Receivable System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Customer Type Description File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__CUSTYPE.TBL\*
+	!	- Customer Type Description File.
+	!
+	! Index:
+	!	.x Customer Type Description File
+	!	.x AR_CUSTYPE
+	!--

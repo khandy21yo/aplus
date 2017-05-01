@@ -1,0 +1,14 @@
+	!======================================================================
+	! TS_AUTH_TDY file (open read only)
+	!======================================================================
+
+	OPEN TS_AUTH_TDY.DEV$+"TS_AUTH_TDY_"+BATCH_NO$+".JRL" FOR INPUT AS FILE TS_AUTH_TDY.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TS_AUTH_TDY, &
+		PRIMARY KEY &
+		( &
+			TS_AUTH_TDY::TANUM, &
+			TS_AUTH_TDY::LINE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Sales Tax Monthly Report File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__SALTAXLED.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Sales Tax Monthly Report File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__SALTAXLED.LED\*
+	!	- Sales Tax Monthly Report File.
+	!
+	! Index:
+	!	.x Sales Tax Monthly Report File
+	!	.x AR_SALTAXLED
+	!--

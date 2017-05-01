@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Restaurant Transaction File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*RM__TRANSACTION.HIS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Restaurant Transaction File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*RM__TRANSACTION.HIS\*
+	!	.p
+	!	Restaurant Transaction File.
+	!
+	! Index:
+	!	.x Restaurant Transaction File
+	!	.x RM_TRANSACTION
+	!--

@@ -1,0 +1,119 @@
+
+int main()
+{
+
+	// %TITLE "Extract a File from a Text Library"
+	// %SBTTL "LIBR_KEEP_OPENREAD"
+	// %IDENT "V3.6 Calico"
+}
+
+long libr_keep_openread(String lib_name, int lib_number)
+{
+	int st;
+	int lib_number;
+	void entr_3message();
+	String lib_name;
+
+	//
+	//		COPYRIGHT (C) 1988 BY
+	//		Computer Management Center, Inc.
+	//		Idaho Falls, Idaho.
+	//
+	// This software is furnished under a license and may be used and
+	// copied only in accordance with terms of such license and with
+	// the inclusion of the above copyright notice.  This software or
+	// any other copies thereof may not be provided or otherwise made
+	// available to any other person.  No title to and ownership of
+	// the software is hereby transferred.
+	//
+	// The information in this software is subject to change without
+	// notice and should not be construed as a commitment by
+	// Computer Management Center, Inc.
+	//
+	// CMC assumes no responsibility for the use or reliability of
+	// its software on equipment which is not supported by CMC.
+	//
+	// ++
+	//
+	// Abstract:HELP
+	//	.p
+	//	This function is used to open a text library in
+	//	read/only mode.
+	//
+	// Parameter:
+	//
+	//	LIB_NAME$
+	//		Passed name of the library to pull text from.
+	//
+	//	LIB_NUMBER%
+	//		Returned number used to access the library
+	//
+	//	Returns a status code.
+	//
+	// Example:
+	//
+	//	ST% = LIBR_KEEP_OPENREAD("HELP_GL", GL_LIB.CH%)
+	//
+	// Environment:
+	//
+	//	VAX/VMS BASIC V4.4
+	//
+	// Compile:
+	//
+	//	$ BAS FUNC_SOURCE:LIBR_KEEP_OPENREAD/NOLINE
+	//	$ LIB FUNC_LIB:CMCFUN/REP LIBR_KEEP_OPENREAD
+	//	$ DELETE LIBR_KEEP_OPENREAD.OBJ;*
+	//
+	// Author:
+	//
+	//	12/28/88 - Kevin Handy
+	//
+	// Modification history:
+	//
+	//
+	//	04/15/95 - Kevin Handy
+	//		(V3.6)
+	//		Update to V3.6 coding standards
+	// --
+	// ++
+	//
+	// Variables:
+	//
+	//	TXRFA
+	//		Variable used to test the data.
+	//
+	//	NULL.RFA
+	//		Variable used to enter the text information.
+	//
+	//	OUT_TEXT$
+	//		String variable used to output the text.
+	//
+	//	TEMP_TEXT$
+	//		String used to open up the output file.
+	// --
+??348:OPTION(,,,)
+	//
+	// Include files
+	//
+	//	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+#include "FUNC_INCLUDE:LIBRARY.COM"
+	libr_keep_openread() = 1;
+	//
+	// Set up the control structure if necessary
+	//
+	st = lbr$ini_control(lib_number, lbr$c_read);
+	if ((st & 1) == 0)
+	{
+		entr_3message(SCOPE, "Unable to initilize library" + NUM1$(st), 0);
+		libr_keep_openread() = st;
+		return;
+	}
+	//
+	// Open the library function
+	//
+	st = lbr$open(lib_number, lib_name, 0, ".TLB");
+	if ((st & 1) == 0)
+	{
+		libr_keep_openread() = st;
+	}
+}

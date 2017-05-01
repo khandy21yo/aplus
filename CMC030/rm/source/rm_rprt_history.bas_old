@@ -1,0 +1,415 @@
+1	%TITLE "Restaurant Sales and Labor History"
+	%SBTTL "RM_RPRT_HISTORY"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM001
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Half Hour sales and Labor\* program prints out a list of Restaurant
+	!	sales and labor history back up file.  Contained in this list are the following
+	!	fields:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Store
+	!	.le
+	!	Date
+	!	.le
+	!	From Time
+	!	.le
+	!	To Time
+	!	.els
+	!
+	! Index:
+	!	.x Half Hour Sales and Labor>Report
+	!	.x Report>Half Hour Sales and Labor
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_HISTORY/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_HISTORY, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_HISTORY.OBJ;*
+	!
+	! Author:
+	!
+	!	10/22/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	05/12/95 - Kevin Handy
+	!		Open RM_HISTORY as .OPN instead of .CRE
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.HB"
+	MAP	(RM_HISTORY)	RM_HISTORY_CDD	RM_HISTORY
+
+	DECLARE	STRING TEST_CATEGORY
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	WLDSTORE$ = EDIT$(UTL_REPORTX::OPTDEF(4%), 132%)
+	FROM.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+	TO.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(6%), 132%))
+
+
+300	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "RESTAURANT  SALES  AND  LABOR"
+	TITLE$(2%) = "Restaurant management system"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "Store Date         Rate From  To"
+	TITLE$(5%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #RM_HISTORY.CH%
+	ELSE
+		FIND #RM_HISTORY.CH%, KEY#0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #RM_HISTORY.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (RM_HISTORY::CATEGORY > TO.ITEM$) AND TO.ITEM$ <> ""
+
+	GOTO GetNextRec &
+		IF COMP_STRING(EDIT$(RM_HISTORY::CATEGORY,-1%), WLDCRD$) = 0% &
+		AND WLDCRD$ <> ""
+
+	GOTO GetNextRec IF WLDSTORE$ <>"" AND &
+		COMP_STRING(EDIT$(RM_HISTORY::LOCATION,-1%), WLDSTORE$) = 0%
+
+	GOTO GetNextRec IF (RM_HISTORY::ACTION_DATE < FROM.DATE$) AND &
+		FROM.DATE$ <> ""
+
+17050	IF (RM_HISTORY::ACTION_DATE > TO.DATE$) AND TO.DATE$ <> ""
+	THEN
+		FIND #RM_HISTORY.CH%, KEY #0% GE RM_HISTORY::CATEGORY + &
+			RM_HISTORY::LOCATION + "99999999"
+	END IF
+
+17300	IF TEST_CATEGORY <> RM_HISTORY::CATEGORY
+	THEN
+		TEXT$ = RM_HISTORY::CATEGORY
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(),"", 1%) &
+			IF TEST_CATEGORY <>""
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	END IF
+
+	!
+	! Print out one line
+	!
+
+	TEXT$ = RM_HISTORY::LOCATION + "  " + &
+		PRNT_DATE (RM_HISTORY::ACTION_DATE,8%) + " " + &
+		FORMAT$(RM_HISTORY::RATE,"###.##")+" "+ &
+		LEFT$(PRNT_TIME (RM_HISTORY::TIME_FROM,1%),5%) + " " + &
+		LEFT$(PRNT_TIME (RM_HISTORY::TIME_TO,1%),5%)
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	DIFFTIM$ = TIME_ADD(RM_HISTORY::TIME_TO,"-", &
+		PRNT_TIME(RM_HISTORY::TIME_FROM,1%))
+	HOURS% = VAL%(LEFT(DIFFTIM$,2%))
+	MINUT% = VAL%(MID(DIFFTIM$,4%,2%))
+	HALF.HOURS% = 2% * HOURS% + SGN(MINUT%) + INT(MINUT%/31%)
+
+	TEXT$ = RM_HISTORY::LOCATION + SPACE$(16%)
+
+	SELECT RM_HISTORY::CATEGORY
+
+	CASE "01","02"
+
+		FOR I%=0% TO HALF.HOURS%-1%
+
+			IF I%=16% OR I%=32%
+			THEN
+				CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), &
+					TEXT$, 0%)
+				TEXT$ = RM_HISTORY::LOCATION+SPACE$(16%)
+			END IF
+
+			TEXT$ = TEXT$ + &
+				FORMAT$(RM_HISTORY::AMOUNT_QTY(I%), "  #####")
+
+		NEXT I%
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%) &
+			IF HALF.HOURS%<>0%
+
+	CASE "03","04"
+
+		FOR I%=0% TO HALF.HOURS%-1%
+
+			IF I%=16% OR I%=32%
+			THEN
+				CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), &
+					TEXT$, 0%)
+				TEXT$ = RM_HISTORY::LOCATION+SPACE$(16%)
+			END IF
+
+			TEXT$ = TEXT$ + &
+				FORMAT$(RM_HISTORY::AMOUNT_QTY(I%)," ###.##")
+
+		NEXT I%
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%) &
+			IF HALF.HOURS%<>0%
+
+	END SELECT
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17350	!
+	! Try for next record
+	!
+	TEST_CATEGORY = RM_HISTORY::CATEGORY
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 17050%	! End of file
+		RESUME ExitTotal IF ERR = 155%
+		FILENAME$ = "RM_HISTORY"
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Item\*
+	!	.p
+	!	The ^*From Item\* field provides the means to begin the list with a selected
+	!	product item by entering that selection in this field.
+	!	.p
+	!	A blank setting causes the list to begin with the first item in the list.
+	!
+	! Index:
+	!	.x From Item
+	!	.x Item>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Item\*
+	!	.p
+	!	The ^*To Item\* field provides the means to conclude the list with the selected
+	!	item by entering it in this field.
+	!	.p
+	!	A blank field causes the list to conclude with the last record in the file.
+	!
+	! Index:
+	!	.x To Item
+	!	.x Item>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	This ^*Wildcard\* field provides the means to select designated items to
+	!	be printed on the list by entering a "item wildcard" value in this field.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Location\*
+	!	.p
+	!	The ^*Location\* field provides the means to enter the location for which
+	!	the list will be printed.
+	!
+	! Index:
+	!	.x Location
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD06
+	!	^*(06) From Date\*
+	!	.p
+	!	The ^*From Date\* entered in this field causes the report to begin with the
+	!	selected date.
+	!	.p
+	!	A blank field causes the report begin with the first date in this file.
+	!	.p
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x From Date
+	!	.x Date>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD07
+	!	^*(07) To Date\*
+	!	.p
+	!	The ^*To Date\* entered in this field causes the report to end with the
+	!	selected date.
+	!	.p
+	!	A blank field causes the report to print to the end of the file.
+	!	.p
+	!	The format for entry is MMDDYYY or MMDDYY.
+	!
+	! Index:
+	!	.x To Date
+	!	.x Date>To
+	!
+	!--

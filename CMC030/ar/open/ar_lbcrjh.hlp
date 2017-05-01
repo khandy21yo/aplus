@@ -1,0 +1,16 @@
+	!======================================================================
+	! AR_LBCRJH file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_LBCRJH.CH%, STAT%)
+	CALL READ_DEVICE('AR_LBCRJH',AR_LBCRJH.DEV$, STAT%)
+
+	AR_LBCRJH.NAME$ = AR_LBCRJH.DEV$+"AR_LBCRJH_"+BATCH_NO$+".JRL"
+
+	OPEN AR_LBCRJH.NAME$ FOR INPUT AS FILE AR_LBCRJH.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_LBCRJH, &
+		PRIMARY KEY &
+			AR_LBCRJH::RECNUM, &
+		
+

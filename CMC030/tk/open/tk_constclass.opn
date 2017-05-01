@@ -1,0 +1,16 @@
+	!======================================================================
+	! TK_CONSTCLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_CONSTCLASS.CH%, STAT%)
+	CALL READ_DEVICE('TK_CONSTCLASS',TK_CONSTCLASS.DEV$, STAT%)
+
+	TK_CONSTCLASS.NAME$ = TK_CONSTCLASS.DEV$+"TK_CONSTCLASS.TBL"
+
+	OPEN TK_CONSTCLASS.NAME$ FOR INPUT AS FILE TK_CONSTCLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_CONSTCLASS, &
+		PRIMARY KEY &
+			TK_CONSTCLASS::CLASS, &
+		ACCESS READ, ALLOW MODIFY
+

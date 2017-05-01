@@ -1,0 +1,10 @@
+	!++
+	! Abstract:FILE
+	!	^*UTL__ACCOUNT.TBL\*
+	!	.p
+	!	Transaction Account Table.
+	!
+	! Index:
+	!	.x Transaction Account Table
+	!	.x UTL_ACCOUNT
+	!--

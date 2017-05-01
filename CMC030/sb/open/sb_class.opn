@@ -1,0 +1,16 @@
+	!======================================================================
+	! SB_CLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('SB_CLASS',SB_CLASS.DEV$, STAT%)
+
+	SB_CLASS.NAME$ = SB_CLASS.DEV$+"SB_CLASS.TBL"
+
+	OPEN SB_CLASS.NAME$ FOR INPUT AS FILE SB_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_CLASS, &
+		PRIMARY KEY &
+			SB_CLASS::CLASS, &
+		ACCESS READ, ALLOW MODIFY
+

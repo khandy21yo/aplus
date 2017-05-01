@@ -1,0 +1,28 @@
+	!======================================================================
+	! AP_CLOSE file (No create _new, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_CLOSE.CH_NEW%, STAT%)
+	CALL READ_DEVICE('AP_CLOSE',AP_CLOSE.DEV$, STAT%)
+
+	AP_CLOSE.NAME_NEW$ = AP_CLOSE.DEV$+"AP_CLOSE.LED_NEW"
+
+	OPEN AP_CLOSE.NAME_NEW$ AS FILE AP_CLOSE.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_CLOSE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			AP_CLOSE::VENNUM, &
+			AP_CLOSE::TRANKEY &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AP_CLOSE::VENNUM, &
+			AP_CLOSE::INVNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_CLOSE::BATCH &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

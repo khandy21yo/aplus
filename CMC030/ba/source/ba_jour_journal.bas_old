@@ -1,0 +1,364 @@
+1	%TITLE "Employee Billing Maintenance"
+	%SBTTL "BA_JOUR_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain Agency Journal\* option provides for entry of a specific
+	!	agency billing data.
+	!
+	! Index:
+	!	.x Add>Journal
+	!	.x Erase>Journal
+	!	.x Change>Journal
+	!	.x Journal>Add
+	!	.x Journal>Erase
+	!	.x Journal>Change
+	!	.x Maintain>Agency Journal
+	!	.x Agency Journal>Maintenance
+	!
+	! Option:
+	!
+	!	BA_MAIN_JOURNAL$HELP
+	!	BA_MAIN_JOURNALL$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_JOUR_JOURNAL/LINE
+	!	$ LINK/EXEC:BA_EXE BA_JOUR_JOURNAL,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BA_JOUR_JOURNAL.OBJ;*
+	!
+	! Author:
+	!
+	!	05/10/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	03/16/92 - Dan Perkins
+	!		Added abiltiy to work with differt batches.
+	!
+	!	04/13/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards.
+	!		Change last param of entr_3choices from "" to 0%
+	!
+	!	11/29/95 - Kevin Handy
+	!		Added dimension for BA_JOURNALH_FILE$()
+	!		Reformat closer to 80 columns.
+	!
+	!	10/15/96 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/25/97 - Kevin Handy
+	!		Use 'val%' instead of 'val'
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BA_WINDOW.INC"
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CONTROL.HB"
+	MAP (BA_CONTROL)	BA_CONTROL_CDD		BA_CONTROL
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTOMEX.HB"
+	MAP (BA_CUSTOMEX)	BA_CUSTOMEX_CDD		BA_CUSTOMEX
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTYP.HB"
+	MAP (BA_CUSTYP)		BA_CUSTYP_CDD		BA_CUSTYP
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.HB"
+	MAP (BA_BILTBL)		BA_BILTBL_CDD		BA_BILTBL
+
+	COM (CH_BA_CONTROL) &
+		BA_CONTROL.CH%
+
+	COM (CH_BA_CUSTOMEX) &
+		BA_CUSTOMEX.CH%
+
+	COM (CH_BA_CUSTYP) &
+		BA_CUSTYP.CH%
+
+	COM (CH_BA_BILTBL) &
+		BA_BILTBL.CH%
+
+	COM (CH_BA_JOURNALH) &
+		BATCH_NO$ = 2%, &
+		BA_JOURNALH.CH%
+
+	DIM BA_JOURNALH_FILE$(40%)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	! Look up device
+	!
+	CALL READ_DEVICE("BA_JOURNALH", BA_JOURNALH.DEV$, STAT%)
+
+310	!
+	! Set things do display the BATCH
+	!
+	CALL FIND_FILE( BA_JOURNALH.DEV$ + "BA_JOURNALH_%%.JRL", &
+		BA_JOURNALH_FILE$(), &
+		16%,"","")
+
+	BA_JOURNALH_FILE% = VAL%(BA_JOURNALH_FILE$(0%))
+
+	IF BA_JOURNALH_FILE%
+	THEN
+		BA_JOURNALH_FILE$(LOOP%) = &
+			MID(BA_JOURNALH_FILE$(LOOP%),13%,2%) &
+				FOR LOOP% = 1% TO BA_JOURNALH_FILE%
+
+		TEMP$ = "Billing Journal Batch"
+
+		X% = ENTR_3CHOICE(SCOPE, "", "", BA_JOURNALH_FILE$(), "", &
+			0%, TEMP$, "", 0%)
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(BA_JOURNALH_FILE$(X%),-1%)
+			GOTO 400
+		END IF
+	END IF
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask for batch number
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		20%, &
+		80%, &
+		SMG_SCREEN_DATA% &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		1%, &
+		1% &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Batch number:", &
+		11%, 30%)
+
+320	!
+	! Set up the help message
+	!
+	SCOPE::PRG_ITEM = "FLD01BATCH"
+
+	!
+	! Assign default batch number
+	!
+	BATCH_NO$ = "01"
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, &
+		11%, 43%, BATCH_NO$, -1%, 16%)
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	BATCH_NO$ = EDIT$(BATCH_NO$, -1%)
+
+	IF LEN(TRM$(BATCH_NO$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Please enter the batch number in XX format", 0%)
+		GOTO 320
+	END IF
+
+400	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+700	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CONTROL.MOD"
+
+	GET #BA_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+710	!
+	! Open customer type table
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTOMEX.OPN"
+
+720	!
+	! Open customer type table
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTYP.OPN"
+
+730	!
+	! Open billing table file
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.OPN"
+
+740	GOTO 1000
+
+750	CALL HELP_3MESSAGE(SCOPE, "Missing BA CONTROL file", &
+		"ERR", "BA_CONTROL", "ERROR_CONTROL")
+	GOTO ExitProgram
+
+1000	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(BA_MAIN_JOURNAL.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 700%
+		RESUME 750 IF ERR = 5%
+		FILENAME$ = "BA_CONTROL"
+
+	CASE 710%
+		RESUME 730 IF ERR = 5%
+		FILENAME$ = "BA_CUSTOMEX"
+
+	CASE 720%
+		RESUME 730 IF ERR = 5%
+		FILENAME$ = "BA_CUSTYP"
+
+	CASE 730%
+		RESUME 740 IF ERR = 5%
+		FILENAME$ = "BA_BILTBL"
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+	%INCLUDE "FUNC_INCLUDE:BA_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PR_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION GL_MAIN_CHART
+	EXTERNAL LONG FUNCTION PR_MAIN_EMPLOYEE
+	EXTERNAL LONG FUNCTION BA_MAIN_BILTBL
+	EXTERNAL LONG FUNCTION BA_MAIN_CUSTOM
+	EXTERNAL LONG FUNCTION BA_MAIN_JOURNAL
+	EXTERNAL LONG FUNCTION BA_MAIN_JOURNALL
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE GL_MAIN_CHART.ID
+
+		MAINT_GROUP = GL_MAIN_CHART(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PR_MAIN_EMPLOYEE.ID
+
+		MAINT_GROUP = PR_MAIN_EMPLOYEE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BA_MAIN_CUSTOM.ID
+
+		MAINT_GROUP = BA_MAIN_CUSTOM(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BA_MAIN_BILTBL.ID
+
+		MAINT_GROUP = BA_MAIN_BILTBL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BA_MAIN_JOURNAL.ID
+
+		MAINT_GROUP = BA_MAIN_JOURNAL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BA_MAIN_JOURNALL.ID
+
+		MAINT_GROUP = BA_MAIN_JOURNALL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

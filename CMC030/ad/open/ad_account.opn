@@ -1,0 +1,19 @@
+	!======================================================================
+	! AD_ACCOUNT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_ACCOUNT.CH%, STAT%)
+	CALL READ_DEVICE('AD_ACCOUNT',AD_ACCOUNT.DEV$, STAT%)
+
+	AD_ACCOUNT.NAME$ = AD_ACCOUNT.DEV$+"AD_ACCOUNT.TBL"
+
+	OPEN AD_ACCOUNT.NAME$ FOR INPUT AS FILE AD_ACCOUNT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_ACCOUNT, &
+		PRIMARY KEY &
+		( &
+			AD_ACCOUNT::LOCATION, &
+			AD_ACCOUNT::ASSET_TYPE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

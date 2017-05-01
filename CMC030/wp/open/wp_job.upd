@@ -1,0 +1,26 @@
+	!======================================================================
+	! WP_JOB file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_JOB.CH%, STAT%)
+	CALL READ_DEVICE('WP_JOB',WP_JOB.DEV$, STAT%)
+
+	WP_JOB.NAME$ = WP_JOB.DEV$+"WP_JOB_"+BATCH_NO$+".JRL"
+
+	OPEN WP_JOB.NAME$ FOR INPUT AS FILE WP_JOB.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_JOB, &
+		PRIMARY KEY &
+			WP_JOB::JOB, &
+		ALTERNATE KEY &
+		( &
+			WP_JOB::TTYPE, &
+			WP_JOB::JOB &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			WP_JOB::CLASS, &
+			WP_JOB::JOB &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

@@ -1,0 +1,169 @@
+1	%TITLE "Insert a Text String into a Library"
+	%SBTTL "LIBR_KEEP_OPENWRITE"
+	%IDENT "V3.6 Calico"
+
+	FUNCTION LONG LIBR_KEEP_OPENWRITE(LIB_NAME$, LIB_NUMBER%)
+
+	!
+	!		COPYRIGHT (C) 1987 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will open a library for writing,
+	!	and create it if it does not already exist.
+	!
+	! Parameters:
+	!
+	!	LIB_NAME$
+	!		Passed name of library to insert text into.
+	!
+	!	LIB_NUMBER%
+	!		Returns channel for library.
+	!
+	!	Returns a status code.
+	!
+	! Example:
+	!
+	!	ST% = LIBR_KEEP_OPENWRITE("HELP_FUN", LIB_FUN.CH%)
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:LIBR_KEEP_OPENWRITE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP LIBR_KEEP_OPENWRITE
+	!	$ DELETE LIBR_KEEP_OPENWRITE.OBJ;*
+	!
+	! Author:
+	!
+	!	12/28/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+ !	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+	!
+	! Necessary map for create
+	!
+	MAP (LBR_JUNKJUNK) C_ARRAY%(19%)
+	MAP (LBR_JUNKJUNK) C_ARRAY$ = 88%
+
+	%PAGE
+
+	LIBR_KEEP_OPENWRITE = 1%
+
+100	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(LIB_NUMBER%, LBR$C_UPDATE)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to initilize library" + NUM1$(ST%), 0%)
+		LIBR_KEEP_OPENWRITE = ST%
+		EXIT FUNCTION
+	END IF
+
+200	!
+	! Open the library function
+	!
+	ST% = LBR$OPEN(LIB_NUMBER%, LIB_NAME$, , ".TLB", ,C_ARRAY$)
+
+	IF (ST% = 98962%)
+	THEN
+		ST% = LBR$CLOSE(LIB_NUMBER%)
+		GOSUB CreateLibrary
+		GOTO 100
+	END IF
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to open library " + NUM1$(ST%) + " " + &
+			C_ARRAY$, 4%)
+		LIBR_EXTRACT = ST%
+	END IF
+
+	EXIT FUNCTION
+
+	%PAGE
+
+1000	!*******************************************************************
+	! Create a library file
+	!*******************************************************************
+ CreateLibrary:
+
+	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(LC.INDEX%, LBR$C_CREATE, LBR$C_TYP_TXT)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to initilize library", 0%)
+		LIBR_KEEP_OPENWRITE = ST%
+		EXIT FUNCTION
+	END IF
+
+	!
+	! Open the library file
+	!
+	C_ARRAY%( 0%) = LBR$C_TYP_TXT		! Library type
+	C_ARRAY%( 1%) = 39%			! Key length
+	C_ARRAY%( 2%) = 11%			! Initial allocation
+	C_ARRAY%( 3%) = 1%			! Number of keys
+	C_ARRAY%( 4%) = 0%			! Additional chars in header
+	C_ARRAY%( 5%) = 200%			! Preallocated indexes
+	C_ARRAY%( 6%) = 0%			! History records
+	C_ARRAY%( 7%) = 3%			! Format of library
+	C_ARRAY%( 8%) = 0%			! Index casing
+
+	ST% = LBR$OPEN(LC.INDEX%, LIB_NAME$, C_ARRAY$ BY REF, DEF_DIR$ + ".TLB")
+
+	!
+	! Close it and return
+	!
+	ST% = LBR$CLOSE(LC.INDEX%)
+
+	RETURN
+
+	END FUNCTION

@@ -1,0 +1,111 @@
+1	%TITLE "Time Aging Function"
+	%SBTTL "TIME_INVCODE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING TIME_INVCODE(DATUM%)
+
+	!
+	!		COPYRIGHT (C) 1985 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will conver a number into a time string.
+	!
+	!	WARNING: When adding a length to a time, you must
+	!	subtract off one second.  A one hour period starting
+	!	at 07:00:00 ends at 07:59:59, not 08:00:00, so you
+	!	must subtract off one second when adding a length
+	!	to a time.
+	!
+	! Parameters:
+	!
+	!	DATUM%
+	!		The passed time in question in seconds.
+	!
+	!	Returned value
+	!		Returns a time in the format HH:MM:SS.  Any overflow
+	!		above 60 hours is lost.
+	!
+	! Example:
+	!
+	!	GOOF_TIME$ = TIME_INVCODE(3600%)
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile
+	!
+	!	$ BAS FUNC_SOURCE:TIME_INVCODE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP TIME_INVCODE
+	!	$ DELETE TIME_INVCODE.OBJ;*
+	!
+	! Author:
+	!
+	!	11/27/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	10/24/92 - Kevin Handy
+	!		Changed TEMP% to TEMP to change a int-to-dfloat
+	!		conversion to an int-to-gfloat.
+	!
+	!--
+
+	!++
+	!
+	! Variables:
+	!
+	!	TOTAL_TIME$
+	!		The string value for the time.
+	!
+	!	TOTAL_TIME%
+	!		The integer value for the time.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%PAGE
+
+	!
+	! Init starting value
+	!
+	TOTAL_TIME$ = ""
+	TOTAL_TIME% = DATUM%
+
+	!
+	! Loop through time string
+	!
+	FOR LOOP% = 1% TO 3%
+
+		!
+		! Calculate next higher period
+		!
+		TEMP = TOTAL_TIME% - (TOTAL_TIME% / 60%) * 60%
+		TOTAL_TIME% = TOTAL_TIME% / 60%
+		TOTAL_TIME$ = FORMAT$(TEMP, "<0>#") + TOTAL_TIME$
+
+	NEXT LOOP%
+
+	TIME_INVCODE = TOTAL_TIME$
+
+	END FUNCTION

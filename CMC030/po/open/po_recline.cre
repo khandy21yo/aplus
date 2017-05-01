@@ -1,0 +1,25 @@
+	!======================================================================
+	! PO_RECLINE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_RECLINE.CH%, STAT%)
+	CALL READ_DEVICE('PO_RECLINE',PO_RECLINE.DEV$, STAT%)
+	CALL READ_PROTECTION('PO_RECLINE',PO_RECLINE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PO_RECLINE.PRO$, STAT%)
+
+	PO_RECLINE.NAME$ = PO_RECLINE.DEV$+"PO_RECLINE_"+BATCH_NO$+".JRL"
+
+	OPEN PO_RECLINE.NAME$ AS FILE PO_RECLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_RECLINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			PO_RECLINE::PO, &
+			PO_RECLINE::PO_LINE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

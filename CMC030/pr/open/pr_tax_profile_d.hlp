@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Tax Profile - County is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TAX__PROFILE__D.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Tax Profile - County
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TAX__PROFILE__D.TBL\*
+	!	.p
+	!	Payroll Tax Profile - County.
+	!
+	! Index:
+	!	.x Payroll Tax Profile - County
+	!	.x PR_TAX_PROFILE_D
+	!--

@@ -1,0 +1,38 @@
+	!======================================================================
+	! IC_HISTORY file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_HISTORY.CH%, STAT%)
+	CALL READ_DEVICE('IC_HISTORY',IC_HISTORY.DEV$, STAT%)
+
+	IC_HISTORY.NAME$ = IC_HISTORY.DEV$+"IC_HISTORY_"+YYYY$+".HIS"
+
+	OPEN IC_HISTORY.NAME$ FOR INPUT AS FILE IC_HISTORY.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_HISTORY, &
+		PRIMARY KEY &
+		( &
+			IC_HISTORY::PRODUCT, &
+			IC_HISTORY::LOCATION, &
+			IC_HISTORY::PERIOD, &
+			IC_HISTORY::TRANSTYPE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			IC_HISTORY::BATCH, &
+			IC_HISTORY::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			IC_HISTORY::TRANSTYPE, &
+			IC_HISTORY::PRODUCT, &
+			IC_HISTORY::PERIOD &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			IC_HISTORY::PERIOD, &
+			IC_HISTORY::PRODUCT, &
+			IC_HISTORY::TRANSTYPE &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

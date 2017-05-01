@@ -1,0 +1,16 @@
+	!======================================================================
+	! MO_MAKECLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MAKECLASS.CH%, STAT%)
+	CALL READ_DEVICE('MO_MAKECLASS',MO_MAKECLASS.DEV$, STAT%)
+
+	MO_MAKECLASS.NAME$ = MO_MAKECLASS.DEV$+"MO_MAKECLASS.TBL"
+
+	OPEN MO_MAKECLASS.NAME$ FOR INPUT AS FILE MO_MAKECLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MAKECLASS, &
+		PRIMARY KEY &
+			MO_MAKECLASS::CLASS, &
+		ACCESS READ, ALLOW MODIFY
+

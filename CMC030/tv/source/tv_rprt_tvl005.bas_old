@@ -1,0 +1,273 @@
+1	%TITLE "TV_RPRT_TVL005 - TV Traffic Cart Master File"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program prints the Cart master file.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	11/16/87 - B. Craig Larsen
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_RPRT_TVL005
+	!	$ LINK/EXECUTABLE=TV_EXE:*.EXE TV_RPRT_TVL005, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_RPRT_TVL005.OBJ;*
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE				UTL_REPORTX_CDD		UTL_REPORTX
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CART_INVENTORY"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CART_INVENTORY.HB"
+	MAP	(TV_CART_INVENTORY)	TV_CART_INVENTORY_CDD	TV_CART_INVENTORY
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION PRNT_DATE
+	EXTERNAL STRING  FUNCTION PRNT_TIME
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 130%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Set up from user input
+	!
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	SORTBY$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	FORMTYPE$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+	SELECT SORTBY$
+	CASE "AN"
+		K_NUM% = 2%
+	CASE "CU"
+		K_NUM% = 1%
+	CASE ELSE
+		K_NUM% = 0%
+	END SELECT
+
+300	!
+	! Open TV_CART_INVENTORY file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CART_INVENTORY.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "CART MASTER FILE LIST"
+	TITLE$(2%) = "TV Traffic System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	IF FORMTYPE$ = "L"
+	THEN
+		TITLE$(4%) = "Cart        Program                    " + &
+			"Customer #  Agency      " + &
+			"Title                      " + &
+			"Length    Date-in   Date-out"
+	ELSE
+		TITLE$(4%) = "Cart       Program                   "
+	END IF
+
+	TITLE$(5%) = ""
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #TV_CART_INVENTORY.CH%, KEY#K_NUM%
+	ELSE
+		FIND #TV_CART_INVENTORY.CH%, KEY#K_NUM% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #TV_CART_INVENTORY.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	SELECT SORTBY$
+	CASE "AN"
+		GOTO ExitTotal IF (TV_CART_INVENTORY::AGENCY_NUM > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+	CASE "CU"
+		GOTO ExitTotal IF (TV_CART_INVENTORY::CUSNUM > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+	CASE ELSE
+		GOTO ExitTotal IF (TV_CART_INVENTORY::CARTNUM > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+	END SELECT
+
+	!
+	! Print out one line
+	!
+	IF FORMTYPE$ = "L"
+	THEN
+		TEXT$ = TV_CART_INVENTORY::CARTNUM + "  " + &
+			LEFT(TV_CART_INVENTORY::PRONAME, 25%) + "  " + &
+			TV_CART_INVENTORY::CUSNUM + "  " + &
+			TV_CART_INVENTORY::AGENCY_NUM + "  " + &
+			LEFT(TV_CART_INVENTORY::TITLE, 25%) + "  " + &
+			PRNT_TIME(TV_CART_INVENTORY::LENGTH, 0%) + "  " + &
+			PRNT_DATE(TV_CART_INVENTORY::DATE_IN, 0%) + "  " + &
+			PRNT_DATE(TV_CART_INVENTORY::DATE_OUT, 0%)
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	ELSE
+		TEXT$ = TV_CART_INVENTORY::CARTNUM + " " + &
+			TV_CART_INVENTORY::PRONAME
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", PROGRAM$, "ERROR" + NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 300%, 17000%
+		PROGRAM$ = "TV_CART_INVENTORY"
+		RESUME HelpError
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	PROGRAM$ = SCOPE::PRG_PROGRAM
+	RESUME HelpError
+
+32767	END

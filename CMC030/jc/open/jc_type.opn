@@ -1,0 +1,16 @@
+	!======================================================================
+	! JC_TYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(JC_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('JC_TYPE',JC_TYPE.DEV$, STAT%)
+
+	JC_TYPE.NAME$ = JC_TYPE.DEV$+"JC_TYPE.TBL"
+
+	OPEN JC_TYPE.NAME$ FOR INPUT AS FILE JC_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP JC_TYPE, &
+		PRIMARY KEY &
+			JC_TYPE::TTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

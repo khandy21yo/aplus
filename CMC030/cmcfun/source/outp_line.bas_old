@@ -1,0 +1,870 @@
+1	%TITLE "Handle Paging on Reports"
+	%SBTTL "OUTP_LINE"
+	%IDENT "V3.3"
+
+	SUB OUTP_LINE(STRING COLUMNS, UTL_REPORTX_CDD UTL_REPORTX, &
+		STRING HDR(), STRING TXT, WORD LINEOFF)
+
+	!
+	! COPYRIGHT (C) 1986 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This subroutine handles paging for the report
+	!	programs existing in all systems.
+	!
+	! Index:
+	!	.x Print Line
+	!
+	! Parameters:
+	!
+	!	COLUMNS$
+	!		Passed specification for not only where the
+	!		columns are in the report, but also labels for
+	!		these columns.  This string is used for shipping
+	!		the report to Graphics, a Spreadsheet, or a
+	!		Database.  Each column of data should have a
+	!		section in this string, in this form:
+	!
+	!		... <DataType><Label>:<EndingPos>, ...
+	!
+	!		<DataType> is a single character describing
+	!			the type of data passed in that column:
+	!			($ = String, D = Date, P = Phone number,
+	!			T = Time, and V = Number value).
+	!		<Label> is a label for the data passed in that
+	!			column.
+	!		<EndingPos> is the horizontal position along
+	!			the line where this column ends.
+	!
+	!	UTL_REPORTX
+	!		This passed structure contains the definitions of
+	!		various items for the report being printed.  These
+	!		items are modified according to actions taken; line
+	!		number, page number incremented, etc.
+	!
+	!	HDR()
+	!		Headers to be printed on the top of every page.
+	!
+	!	TXT
+	!		Passed text to print.
+	!
+	!	LINEOFF
+	!		Variable used to control paging.  A positive value
+	!		causes paging to occur that many lines earlier,
+	!		and a negitive value causes it to occur that many
+	!		lines later.  A special case of LINEOFF >= 1000
+	!		exists that forces a new page, but the line is not
+	!		counted/printed.
+	!
+	! Example:
+	!
+	!	.
+	!	.
+	!	.
+	!	CALL OUTP_INITFROMFILE(UTL_REPORTX, 80%)
+	!	.
+	!	.
+	!	.
+	!	TITLE$(1%) = "This is the report"
+	!	TITLE$(2%) = "For the current period"
+	!	TITLE$(3%) = ""
+	!	TITLE$(4%) = "Key  Description          Date     Time  Flag"
+	!	TITLE$(5%) = ""
+	!	.
+	!	.
+	!	.
+	!	LAYOUT$ = "$KEY:005,$DESCR:026,DDATE:035,TTIME:041,VFLAG:043"
+	!	.
+	!	.
+	!	.
+	!	LINE$ =	KEY$ + " " + &
+	!		DESCRIPTION$ + " " + &
+	!		PRNT_DATE(DATE$, 0%) + " " + &
+	!		PRNT_TIME(TIME$, 2048%) + " " + &
+	!		FORMAT$(FLAG%, "#")
+	!
+	!	CALL OUTP_LINE(LAYOUT$, UTL_REPORTX, TITLES$(), LINE$, 0%)
+	!	.
+	!	.
+	!	.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:OUTP_LINE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP OUTP_LINE
+	!	$ DELETE OUTP_LINE.OBJ;*
+	!
+	! Author:
+	!
+	!	03/23/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	09/01/87 - Kevin Handy
+	!		Modified to allow user to type exit, help, interrupt,
+	!		etc. during report output (even in Printer Port mode)
+	!
+	!	10/19/87 - Kevin Handy
+	!		Minor fix for interupt menu.
+	!
+	!	10/19/87 - Kevin Handy
+	!		Modified not to form feed at top of form, but to
+	!		form feed at bottom.
+	!
+	!	10/20/87 - Kevin Handy
+	!		Modified for new print types 6, 7, and 8.
+	!		(Clipboard, Word processor, file cabinet)
+	!
+	!	03/23/88 - Kevin Handy
+	!		Fixed bug whiched caused problem when user
+	!		typed an undefined key at screen pause prompt.
+	!
+	!	07/19/88 - Aaron Redd
+	!		Modified for new destinations 10 and 11.
+	!		(SuperComp 20/20 and D.I.F.)
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to read report name out of UTL_PROFILE
+	!		instead of using UTL_SET.
+	!
+	!	11/09/89 - Kevin Handy
+	!		Modified to uset ENTR_4SPECIALKEYS instead of
+	!		doing all the checks on RRR_FLAG% manually.
+	!
+	!	11/13/89 - Kevin Handy
+	!		Modified to handle PlanPerfect files.
+	!
+	!	04/13/90 - Kevin Handy
+	!		Modified output to spreadsheets to re-format
+	!		any numbers that have commas, or minus on the end,
+	!		so that the spreadsheets won't think that they are
+	!		strings.
+	!
+	!	08/07/90 - Frank F. Starman
+	!		Change text for messages.
+	!
+	!	02/27/92 - Kevin Handy
+	!		Modifications to make form-feed through printer
+	!		ports work better.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	I%
+	!		Temporary use variable.
+	!
+	!	JUNK%
+	!		Temporary use variable.
+	!
+	!	JUNK$
+	!		Temporary use variable.
+	!
+	!	JUNK0$
+	!		Format for printing titles.
+	!
+	!	JUNK1%
+	!		Temporary use variable.
+	!
+	!	JUNK3$
+	!		Page numberr to print.
+	!
+	!	PRINT.FLAG1%
+	!		Used to determine if page title should be printed,
+	!		or if it is not in the proper page range to print.
+	!
+	!	RRR_FLAG% (defined in a MAP)
+	!		Flag used to tell when the user types a key while
+	!		printing (between pauses).
+	!
+	!	Q.FLAG%
+	!		Used to change the flag used by DSPL_SCROLLCIR.
+	!
+	!	V%
+	!		Temporary use variable.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	!
+	! Maps
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_PROFILE"
+	MAP (UTL_PROFILE) UTL_PROFILE_CDD UTL_PROFILE
+
+	!
+	! Create a structure to contain all of the display stuff for
+	! scrolling up and down.
+	!
+	DECLARE INTEGER CONSTANT MAX_SMG_TEXT = 200
+
+	%INCLUDE %FROM %CDD "CDD$TOP.SMG.SMG_SCROLL"
+	MAP (DP_ARENA_KEVIN) &
+		SMG_SCROLL_CDD SMG_SCROLL, &
+		STRING SMG_TEXT(MAX_SMG_TEXT) = 132%
+
+	MAP (DP_OUTP_XUNSOL) RRR_FLAG%
+
+	COM (TITLE_LINE) STRING TITLE1=80%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION STR$FIND_FIRST_IN_SET
+	EXTERNAL LONG	FUNCTION DSPL_SCROLLCIR
+	EXTERNAL WORD   FUNCTION ENTR_4SPECIALKEYS
+
+	EXTERNAL LONG   OUTP_XUNSOL	! (It's really an AST routine)
+
+
+	%PAGE
+
+	!
+	!Save the key for help
+	!
+	OLD_HELP_SEVERITY$	= PRG_IDENT
+	OLD_PROGRAM$		= PRG_PROGRAM
+	OLD_HELP_ITEM$		= PRG_ITEM
+
+	PRG_PROGRAM	= "OUTP_LINE"
+	PRG_ITEM	= "HELP"
+	PRG_IDENT	= "H"
+
+	!
+	! Exit due to report request
+	!
+	GOTO ExitSub IF (UTL_REPORTX::STAT <> 0%)
+
+	IF TRM$(HDR(1%))<>""
+	THEN
+		TITLE1 = TRM$(HDR(1%))
+		!TITLE1 = TITLE1 + " "+TRM$(HDR(2%)) IF TRM$(HDR(2%))<>""
+	END IF
+
+
+	!
+	! Special LINEOFF (-12345) for OUTP_FINISH when in display mode.
+	! This is used so that when you hit the end of the report, you
+	! can still arrow back up and down to your hearts content.
+	! Q.FLAG% is used to change the flag used by DSPL_SCROLLCIR.
+	!
+	IF (LINEOFF = -12345%) AND (UTL_REPORTX::PRINTTO = 1%)
+	THEN
+		Q.FLAG% = 2%
+		GOSUB 2000
+		GOTO ExitSub
+	END IF
+
+	Q.FLAG% = 6%
+
+	!
+	! Output goes to printer if to printer port
+	!
+	IF (UTL_REPORTX::PRINTTO = 5%) AND &
+		(UTL_REPORTX::PAGENO >= UTL_REPORTX::STARTP)
+	THEN
+		CALL WRIT_STRING(UTL_REPORTX::TOLOCAL, TOLOCAL$)
+		PRINT #UTL_REPORTX::CHAN, TOLOCAL$;
+	END IF
+
+	!
+	! Force the title if this is the first time through,
+	! or it is time to do a page.
+	!
+	GOSUB 2000 IF &
+		(UTL_REPORTX::PAGENO = 0%) AND (UTL_REPORTX::PRINTTO < 10%) OR &
+		((UTL_REPORTX::LINENO + LINEOFF) >= (UTL_REPORTX::PAGELEN - 7%) AND &
+			(UTL_REPORTX::PRINTTO <> 1%)) AND (UTL_REPORTX::PRINTTO < 10%) OR &
+		((UTL_REPORTX::LINENO) >= (UTL_REPORTX::PAGELEN) AND &
+			(UTL_REPORTX::PRINTTO = 1%))
+
+	!
+	! Count the line
+	!
+	UTL_REPORTX::LINENO = UTL_REPORTX::LINENO + 1% IF LINEOFF < 1000% &
+		AND UTL_REPORTX::AUTOSCROLL = 0%
+
+	!
+	! Will we be printing? (Check for start and end page, as
+	! well as report request to exit)
+	!
+	GOTO 1500 UNLESS &
+		((UTL_REPORTX::PAGENO >= UTL_REPORTX::STARTP) AND &
+		((UTL_REPORTX::PAGENO <= UTL_REPORTX::ENDP) OR &
+			(UTL_REPORTX::ENDP = 0%)))
+
+	GOTO 1500 IF (UTL_REPORTX::STAT <> 0%)
+
+	!
+	! If the lineoff<1000 then line will print otherwise line
+	! will not print
+	!
+	IF LINEOFF < 1000%
+	THEN
+		!
+		! Handle the various types of output
+		!
+		SELECT UTL_REPORTX::PRINTTO
+
+			!
+			! Display
+			!
+			CASE 1%
+				SMG_SCROLL::END_ELEMENT = SMG_SCROLL::END_ELEMENT + 1%
+				SMG_SCROLL::END_ELEMENT = SMG_SCROLL::TOP_ARRAY &
+					IF SMG_SCROLL::END_ELEMENT > SMG_SCROLL::BOT_ARRAY
+				SMG_SCROLL::BEG_ELEMENT = SMG_SCROLL::END_ELEMENT + 1% &
+					IF SMG_SCROLL::BEG_ELEMENT = SMG_SCROLL::END_ELEMENT
+				SMG_SCROLL::BEG_ELEMENT = SMG_SCROLL::TOP_ARRAY &
+					IF SMG_SCROLL::BEG_ELEMENT > SMG_SCROLL::BOT_ARRAY
+
+				SMG_TEXT(SMG_SCROLL::END_ELEMENT) = TXT
+				SMG_SCROLL::FIND_LINE = SMG_SCROLL::END_ELEMENT
+
+				JUNK% = DSPL_SCROLLCIR(SMG_SCROLL, SMG_TEXT(), 0%, "FIND")
+
+			!
+			! SuperComp 20/20, PlanPerfect
+			!
+			CASE 10%, 11%
+				COLUMN$		= COLUMNS + ","
+				STARTPOS%	= 0%
+				PRINT.FLAG2%	= 0%
+				TEMP$ = ""
+
+				WHILE COLUMN$ <> ""
+					COMMAPOS% = INSTR(1%, COLUMN$, ",")
+					THIS.COL$ = LEFT(COLUMN$, COMMAPOS% - 1%)
+					COLUMN$ = RIGHT(COLUMN$, COMMAPOS% + 1%)
+
+					COLONPOS% = INSTR(1%, THIS.COL$, ":")
+					ENDPOS% = VAL%(RIGHT(THIS.COL$, COLONPOS% + 1%))
+					DATA$ = TRM$(SEG$(TXT, STARTPOS%, ENDPOS%))
+
+					IF EDIT$(LEFT(THIS.COL$, 1%), -1%) = "V"
+					THEN
+						!
+						! Clean up data a little
+						!
+						DATA$ = EDIT$(DATA$, 8%+128%)
+
+						DATA$ = "-" + SEG$(DATA$, 2%, LEN(DATA$) - 1%) &
+							IF RIGHT(DATA$, LEN(DATA$)) = ")" AND &
+							LEFT(DATA$, 1%) = "("
+						DATA$ = "-" + LEFT(DATA$, LEN(DATA$) - 1%) &
+							IF RIGHT(DATA$, LEN(DATA$)) = "-"
+
+						I% = INSTR(1%, DATA$, ",")
+						WHILE I%
+							DATA$ = LEFT(DATA$, I% - 1%) + &
+								RIGHT(DATA$, I% + 1%)
+							I% = INSTR(1%, DATA$, ",")
+						NEXT
+
+						I% = INSTR(1%, DATA$, "$")
+						IF I%
+						THEN
+							DATA$ = LEFT(DATA$, I% - 1%) + &
+								RIGHT(DATA$, I% + 1%)
+						END IF
+					END IF
+
+
+					IF UTL_REPORTX::PRINTTO = 11%
+					THEN
+						TEMP$ = TEMP$ + "	" + DATA$
+						PRINT.FLAG2% = -1% IF DATA$ <> ""
+					ELSE
+						SELECT EDIT$(LEFT(THIS.COL$, 1%), -1%)
+						CASE "V"
+							TEMP$ = TEMP$ + &
+								DATA$ + ' #'
+							PRINT.FLAG2% = -1% &
+								IF STR$FIND_FIRST_IN_SET(DATA$, "123456789")
+						CASE ELSE
+							TEMP$ = TEMP$ + '"' + DATA$ + '" #'
+							PRINT.FLAG2% = -1% IF DATA$ <> ""
+						END SELECT
+					END IF
+
+					STARTPOS% = ENDPOS% + 1%
+				NEXT
+
+				SELECT UTL_REPORTX::PRINTTO
+				CASE 10%
+					TEMP$ =	TEMP$ + "#"
+				CASE 11%
+					TEMP$ = RIGHT(TEMP$, 2%)
+				END SELECT
+
+				PRINT #UTL_REPORTX::CHAN, TEMP$ IF PRINT.FLAG2%
+
+				CALL ENTR_3MESSAGE(SCOPE, TITLE1, 1%+16%) &
+					IF UTL_REPORTX::LINENO = 1%
+
+			!
+			! D.I.F.
+			!
+			!CASE 11%
+			!	This is where stuff for printing to a DIF
+			!	file would go.
+
+			!
+			! Normal output
+			!
+			CASE ELSE
+				PRINT #UTL_REPORTX::CHAN, TRM$(TXT)
+
+		END SELECT
+	END IF
+
+1500	!
+	! Output goes to the screen if in printer port mode
+	!
+	IF UTL_REPORTX::PRINTTO = 5%
+	THEN
+		CALL WRIT_STRING(UTL_REPORTX::TOSCREEN, TOSCREEN$)
+		PRINT #UTL_REPORTX::CHAN, TOSCREEN$;
+	END IF
+
+	!
+	! Flag to end program if we reach the end page number
+	!
+	UTL_REPORTX::STAT = -50% &
+		IF (UTL_REPORTX::PAGENO > UTL_REPORTX::ENDP) AND &
+			(UTL_REPORTX::ENDP <> 0%)
+
+	!
+	! Handle any special junk in RRR_FLAG%
+	!
+	SELECT RRR_FLAG%
+
+		!
+		! Nothing
+		!
+		CASE 0%
+			! Nothing
+
+		!
+		! Exit keys
+		!
+		CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+
+			UTL_REPORTX::STAT = RRR_FLAG%
+
+		!
+		! Else
+		!
+		CASE ELSE
+			SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SMG_PBID)
+
+			SMG_STATUS% = ENTR_4SPECIALKEYS(scope.exit%, &
+				SMG_OPTION by value, 256% by value, RRR_FLAG% BY VALUE)
+
+			SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SMG_PBID, &
+				OUTP_XUNSOL, SMG_KBID)
+
+	END SELECT
+
+	RRR_FLAG% = 0%
+
+ ExitSub:
+	!
+	!Restore the key for help
+	!
+	PRG_IDENT	= OLD_HELP_SEVERITY$
+	PRG_PROGRAM	= OLD_PROGRAM$
+	PRG_ITEM	= OLD_HELP_ITEM$
+
+	EXIT SUB
+
+	%PAGE
+
+2000	!*******************************************************************
+	! This subroutine does the actual paging
+	!*******************************************************************
+
+	!
+	! Count one page
+	!
+	UTL_REPORTX::PAGENO = UTL_REPORTX::PAGENO + 1%
+
+	!
+	! Are we skipping this page? Check first for page range, but
+	! force first title when printing to a clipboard, wp document,
+	! or file cabinet.
+	!
+	PRINT.FLAG1% = ((UTL_REPORTX::PAGENO >= UTL_REPORTX::STARTP) AND &
+		((UTL_REPORTX::PAGENO <= UTL_REPORTX::ENDP) OR &
+			(UTL_REPORTX::ENDP = 0%)))
+
+	!
+	! On first page, enable unsolicited input trapping
+	!
+	IF UTL_REPORTX::PAGENO = 1%
+	THEN
+		SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SMG_PBID, &
+			OUTP_XUNSOL, SMG_KBID)
+		RRR_FLAG% = 0%
+	END IF
+
+	!
+	! While in display, title goes on line two and three
+	!
+	SELECT UTL_REPORTX::PRINTTO
+
+	CASE 1%
+		!
+		! Pause
+		!
+		SCOPE.EXIT% = 0%
+
+		IF (UTL_REPORTX::PAGENO <> 1%) AND (UTL_REPORTX::AUTOSCROLL = 0%)
+		THEN
+ PauseLoop:
+			SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SMG_PBID)
+
+			!CALL ENTR_3MESSAGE(SCOPE, "Printing, press <EXIT> to exit.", 0%)
+			CALL ENTR_3MESSAGE(SCOPE, TITLE1, 0%)
+
+			SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SMG_PBID, &
+				OUTP_XUNSOL, SMG_KBID)
+
+			SELECT SCOPE.EXIT%
+
+				!
+				! An exit key was typed
+				!
+				CASE 3%, SMG$K_TRM_CTRLZ, SMG$K_TRM_F10, &
+					SMG$K_TRM_F8
+
+					UTL_REPORTX::STAT = SCOPE.EXIT%
+					GOTO Ret2000
+
+				!
+				! Cursor positioning (up) key was typed
+				!
+				CASE SMG$K_TRM_UP, &
+					SMG$K_TRM_F18, &
+					SMG$K_TRM_PREV_SCREEN
+
+					SMG_SCROLL::SMG_FLAG = 2%
+
+					TEMP% = DSPL_SCROLLCIR(SMG_SCROLL, &
+						SMG_TEXT(), SCOPE.EXIT%, "FIND")
+
+					GOTO PauseLoop
+
+				!
+				! Cursor positioning key (down) was typed
+				!
+				CASE SMG$K_TRM_DOWN, &
+					SMG$K_TRM_F19, &
+					SMG$K_TRM_NEXT_SCREEN
+
+					SMG_SCROLL::SMG_FLAG = Q.FLAG%
+
+					TEMP% = DSPL_SCROLLCIR(SMG_SCROLL, &
+						SMG_TEXT(), SCOPE.EXIT%, "FIND")
+
+					GOTO PauseLoop IF TEMP% <= 0%
+
+					UTL_REPORTX::LINENO = &
+						UTL_REPORTX::LINENO - TEMP%
+
+				!
+				! Return, etc. act as next screen
+				!
+				CASE 10%, 12%, 13%, SMG$K_TRM_F7, SMG$K_TRM_DO
+
+					SMG_SCROLL::SMG_FLAG = Q.FLAG%
+
+					TEMP% = DSPL_SCROLLCIR(SMG_SCROLL, &
+						SMG_TEXT(), &
+						SMG$K_TRM_NEXT_SCREEN, &
+						"FIND")
+
+					GOTO PauseLoop IF TEMP% <= 0%
+
+					UTL_REPORTX::LINENO = &
+						UTL_REPORTX::LINENO - TEMP%
+
+				!
+				! Case else
+				!
+				CASE ELSE
+					SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SMG_PBID)
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SMG_PBID, &
+						OUTP_XUNSOL, SMG_KBID)
+					GOTO PauseLoop
+
+			END SELECT
+
+		END IF
+
+		!
+		! Search for header
+		!
+		V% = 0% FOR JUNK% = 1% UNTIL HDR(JUNK%) = ""
+		V% = 0% FOR JUNK1% = JUNK% + 1% UNTIL HDR(JUNK1%) = ""
+
+		!
+		! Clear the screen and print the title if necessary
+		!
+		IF (UTL_REPORTX::PAGENO = 1%) OR (LINEOFF > 1000%)
+		THEN
+			!
+			! Display the header
+			!
+			FOR I% = JUNK% + 1% TO JUNK1% - 1%
+
+				JUNK$ = HDR(I%)
+				JUNK$ = "" IF JUNK$ = "."
+				SMG_STATUS% = SMG$PUT_CHARS(UTL_REPORTX::WINDOW, &
+					JUNK$ + SPACE$(UTL_REPORTX::REPWIDTH - LEN(JUNK$)), &
+					(I% - JUNK%) * '1'L, '1'L, '1'L, SMG$M_REVERSE)
+			NEXT I%
+
+			!
+			! Set up scrolling region
+			!
+			SMG_STATUS% = SMG$SET_DISPLAY_SCROLL_REGION(UTL_REPORTX::WINDOW, &
+				JUNK1% - JUNK% + '0'L, '20'L)
+
+			!
+			! Create SMG_SCROLL array
+			!
+			SMG_SCROLL::WINDOW = UTL_REPORTX::WINDOW
+			SMG_SCROLL::SCROLL_TOP = JUNK1% - JUNK%
+			SMG_SCROLL::SCROLL_BOT = '20'L
+			SMG_SCROLL::TOP_ARRAY = '1'L
+			SMG_SCROLL::BOT_ARRAY = MAX_SMG_TEXT
+			SMG_SCROLL::CUR_LINE, SMG_SCROLL::CUR_W_COL = '1'L
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::TOP_LINE, &
+				SMG_SCROLL::CUR_W_ROW, SMG_SCROLL::BEG_ELEMENT = '1'L
+			SMG_SCROLL::END_ELEMENT = '1'L
+			SMG_TEXT(1%) = ""
+
+			SMG_SCROLL::SMG_FLAG = '6'L
+			SMG_SCROLL::PROMPT = ""
+			SMG_SCROLL::NUM_COLM = '1'L
+
+			!
+			! Calculate number of lines available on the screen
+			!
+			UTL_REPORTX::LINENO = JUNK1% - JUNK%
+		END IF
+
+
+	CASE ELSE
+		!
+		! Skip to the top of the next page
+		!
+		IF UTL_REPORTX::PAGENO = 1%
+		THEN
+			UTL_REPORTX::SDATE = DATE$(0%)
+			UTL_REPORTX::STIME = TIME$(0%)
+		END IF
+
+		!
+		! Print the page title
+		!
+		JUNK0$ = "'LLLLLLLLLLLLLLL '" + &
+			STRING$(UTL_REPORTX::REPWIDTH - 35%, ASCII('C')) + &
+			" 'RRRRRRRRRRRRRRR"
+		JUNK3$ = "Page " + NUM1$(UTL_REPORTX::PAGENO)
+
+		!
+		! NOTE:  If you take out this ENTR_MESSAGE call, leave in the
+		! print of '[5i' business.  It is necessary for proper
+		! operation.
+		!
+		SMG_STATUS% = SMG$FLUSH_BUFFER(SMG_PBID)
+		IF UTL_REPORTX::PRINTTO = 5%
+		THEN
+			CALL WRIT_STRING(UTL_REPORTX::TOSCREEN, TOSCREEN$)
+			PRINT #UTL_REPORTX::CHAN, TOSCREEN$;
+		END IF
+
+		CALL ENTR_3MESSAGE(SCOPE, JUNK3$+" of "+TITLE1, 1% + 16%)
+		UTL_REPORTX::STAT = MACROFLAG
+
+		SMG_STATUS% = SMG$FLUSH_BUFFER(SMG_PBID)
+		IF UTL_REPORTX::PRINTTO = 5%
+		THEN
+			CALL WRIT_STRING(UTL_REPORTX::TOLOCAL, TOLOCAL$)
+			PRINT #UTL_REPORTX::CHAN, TOLOCAL$;
+		END IF
+
+		!
+		! Handle title while skipping pages (Use special loop
+		! because it looks better than 1000 if statements in
+		! the printing section that follows).
+		!
+		! Also, handle types 6, 7, and 8 (Clipboard, Word Processing,
+		! File cabinet), after the first header, so that the user
+		! can actuall use start/end page.
+		!
+		IF (PRINT.FLAG1% = 0%) OR &
+		( &
+			(UTL_REPORTX::PAGENO <> 1%) AND &
+			( &
+				(UTL_REPORTX::PRINTTO = 6%) OR &
+				(UTL_REPORTX::PRINTTO = 7%) OR &
+				(UTL_REPORTX::PRINTTO = 8%) &
+			) &
+		)
+		THEN
+			!
+			! Print page anyway if need a title for
+			! clipboard, wp, or file cabinet.
+			!
+			GOTO 2050 &
+				IF (UTL_REPORTX::PAGENO = 1%) AND &
+				((UTL_REPORTX::PRINTTO = 6%) OR &
+				(UTL_REPORTX::PRINTTO = 7%) OR &
+				(UTL_REPORTX::PRINTTO = 8%))
+
+			!
+			! Special GOSUB 3000's in title
+			!
+			UTL_REPORTX::LINENO = 5%
+			UTL_REPORTX::LINENO = UTL_REPORTX::LINENO + 1% &
+				IF UTL_REPORTX::REPYN <> "N"
+
+			!
+			! Title
+			!
+			UTL_REPORTX::LINENO = UTL_REPORTX::LINENO + 1% &
+				FOR JUNK1% = 1% UNTIL HDR(JUNK1%) = ""
+			!
+			! Header
+			!
+			UTL_REPORTX::LINENO = UTL_REPORTX::LINENO + 1% &
+				FOR JUNK1% = JUNK1% + 1% UNTIL HDR(JUNK1%) = ""
+			GOTO 2100
+		END IF
+
+2050		!
+		! Output the title
+		!
+		IF (UTL_REPORTX::PAGENO <> 1%)
+		THEN
+			CALL OUTP_FORMFF(UTL_REPORTX)
+			UTL_REPORTX::PAGENO = UTL_REPORTX::PAGENO - 1%	! (Hack)
+		END IF
+
+		UTL_REPORTX::LINENO = 4%! Minimum number of lines in header
+					! Modified to adjust for excesses in
+					! paging section, and room for blank
+					! lines at bottom of page.
+
+		PRINT #UTL_REPORTX::CHAN
+		PRINT #UTL_REPORTX::CHAN
+
+		JUNK% = 0%
+
+		JUNK$ = TRM$(UTL_PROFILE::REP_NAME)
+		GOSUB 3000
+
+		FOR JUNK1% = 1% UNTIL HDR(JUNK1%) = ""
+			JUNK$ = TRM$(HDR(JUNK1%))
+			GOSUB 3000
+		NEXT JUNK1%
+
+		IF UTL_REPORTX::REPYN <> "N"
+		THEN
+			JUNK$ = TRM$(UTL_REPORTX::REPDATE)
+			GOSUB 3000
+		END IF
+
+		PRINT #UTL_REPORTX::CHAN
+		PRINT #UTL_REPORTX::CHAN, STRING$(UTL_REPORTX::REPWIDTH, ASCII("="))
+
+		FOR JUNK1% = JUNK1% + 1% UNTIL HDR(JUNK1%) = ""
+			JUNK$ = TRM$(HDR(JUNK1%))
+			JUNK$ = "" IF JUNK$ = "."
+			PRINT #UTL_REPORTX::CHAN, JUNK$
+			UTL_REPORTX::LINENO = UTL_REPORTX::LINENO + 1%
+		NEXT JUNK1%
+
+	END SELECT
+
+2100	RETURN
+
+	%PAGE
+
+3000	!
+	! Print the heading stuff
+	!
+	JUNK% = JUNK% + 1%
+	JUNK$ = "" IF JUNK$ = "."
+	UTL_REPORTX::LINENO = UTL_REPORTX::LINENO + 1%
+
+	SELECT JUNK%
+
+		CASE 1%
+			PRINT #UTL_REPORTX::CHAN USING JUNK0$, &
+				"Date: " + DATE$(0%), JUNK$, JUNK3$
+
+		CASE 2%
+			PRINT #UTL_REPORTX::CHAN USING JUNK0$, &
+				"Time: " + TIME$(0%), JUNK$, "V3.0"
+
+		CASE ELSE
+			PRINT #UTL_REPORTX::CHAN USING JUNK0$, &
+				"", JUNK$, ""
+	END SELECT
+
+ Ret2000:
+	RETURN
+
+	END SUB
+	!+-+-+
+	!++
+	! Success:DISPLAY
+	!	^*Display Report\*
+	!	.b
+	!	.lm +5
+	!	Scrolling of the report to the next screen, previous screen,
+	!	line by line or exit.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--

@@ -1,0 +1,27 @@
+	!======================================================================
+	! PO_REG_SUB_LINE file (create, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_REG_SUB_LINE.CH_NEW%, STAT%)
+	CALL READ_DEVICE('PO_REG_SUB_LINE',PO_REG_SUB_LINE.DEV$, STAT%)
+
+	PO_REG_SUB_LINE.NAME_NEW$ = PO_REG_SUB_LINE.DEV$+"PO_REG_SUB_LINE.LED_NEW"
+
+	OPEN PO_REG_SUB_LINE.NAME_NEW$ FOR OUTPUT AS FILE PO_REG_SUB_LINE.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_REG_SUB_LINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			PO_REG_SUB_LINE::PO, &
+			PO_REG_SUB_LINE::PO_LINE, &
+			PO_REG_SUB_LINE::PO_ACTION &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			PO_REG_SUB_LINE::BATCH, &
+			PO_REG_SUB_LINE::PO, &
+			PO_REG_SUB_LINE::PO_LINE &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

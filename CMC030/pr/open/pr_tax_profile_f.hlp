@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Tax Profile - Federal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TAX__PROFILE__F.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Tax Profile - Federal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TAX__PROFILE__F.TBL\*
+	!	.p
+	!	Payroll Tax Profile - Federal.
+	!
+	! Index:
+	!	.x Payroll Tax Profile - Federal
+	!	.x PR_TAX_PROFILE_F
+	!--

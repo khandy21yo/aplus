@@ -1,0 +1,31 @@
+	!======================================================================
+	! MO_OPTION file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_OPTION.CH%, STAT%)
+	CALL READ_DEVICE('MO_OPTION',MO_OPTION.DEV$, STAT%)
+	CALL READ_PROTECTION('MO_OPTION',MO_OPTION.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(MO_OPTION.PRO$, STAT%)
+
+	MO_OPTION.NAME$ = MO_OPTION.DEV$+"MO_OPTION.MAS"
+
+	OPEN MO_OPTION.NAME$ AS FILE MO_OPTION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_OPTION, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			MO_OPTION::OPTGROUP, &
+			MO_OPTION::OPTN &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			MO_OPTION::PRODUCT, &
+			MO_OPTION::OPTGROUP, &
+			MO_OPTION::OPTN &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Property Type Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__PROPTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Property Type Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__PROPTYPE.TBL\*
+	!	.b
+	!	.lm +5
+	!	Property Type Description.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Property Type Description
+	!	.x AD_PROPTYPE
+	!
+	!--

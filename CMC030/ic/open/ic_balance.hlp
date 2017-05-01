@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Product Location Balance Quantity is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__BALANCE.HIS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Product Location Balance Quantity
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__BALANCE.HIS\*
+	!	- Product Location Balance Quantity.
+	!
+	! Index:
+	!	.x Product Location Balance Quantity
+	!	.x IC_BALANCE
+	!--

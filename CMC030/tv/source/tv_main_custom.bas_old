@@ -1,0 +1,998 @@
+1	%TITLE "TV_CUSTOM - Customer address Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_CUSTOM(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the customer file.
+	!
+	! Index:
+	!
+	!	TV
+	!	AR
+	!	CUSTOM
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_CUSTOM/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_CUSTOM
+	!	$ DELETE TV_MAIN_CUSTOM.OBJ;*
+	!
+	! Author:
+	!
+	!	08/11/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	11/20/87 - Kevin Handy
+	!		Added journal of conflict codes.
+	!
+	!	02/04/88 - Kevin Handy
+	!		Added extra information (CUSTOMEX)
+	!
+	!	05/11/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	07/21/88 - Kevin Handy
+	!		Combined CUSTOMEX information onto main screen.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)		AR_CUSTOM_CDD	AR_CUSTOM
+	MAP (AR_CUSTOM_OLD)	AR_CUSTOM_CDD	AR_CUSTOM_OLD, AR_CUSTOM2
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOMEX.HB"
+	MAP (TV_CUSTOMEX)		TV_CUSTOMEX_CDD	TV_CUSTOMEX
+	MAP (TV_CUSTOMEX_OLD)		TV_CUSTOMEX_CDD	TV_CUSTOMEX_OLD, TV_CUSTOMEX2
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SALESMAN.HB"
+	MAP (TV_SALESMAN)		TV_SALESMAN_CDD TV_SALESMAN
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_REP.HB"
+	MAP (TV_REP)			TV_REP_CDD TV_REP
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILTYP.HB"
+	MAP (TV_BILTYP)			TV_BILTYP_CDD TV_BILTYP
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_AR_CUSTOM) &
+		AR_CUSTOM.CH%, &
+		AR_CUSTOM.READONLY%
+
+	COM (TT_AR_CUSTOM) &
+		ECTITLE$ = 32%, &
+		EC$(5%) = 32%
+
+	COM (CH_TV_CUSTOMEX) &
+		TV_CUSTOMEX.CH%, &
+		TV_CUSTOMEX.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION READ_SET
+
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION MAIN_JOURNAL
+
+	!
+	! Declare variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Customer Address maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_CUSTOM"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 19%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 3%
+		SMG_WINDOW::KNAME(0%) = "Customer-number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "Name"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+		SMG_WINDOW::KNAME(2%) = "Alpha-sort"
+			SMG_WINDOW::KFIELD(2%, 0%) = 1%
+			SMG_WINDOW::KFIELD(2%, 1%) = 3%
+
+		!
+		! List of types
+		!
+		ECTITLE$ = "Method Description"
+		EC$(0%) = "3"
+		EC$(1%) = "O    Open Billing"
+		EC$(2%) = "B    Balance Forward Billing"
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF AR_CUSTOM.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF AR_CUSTOM.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.CRE"
+		AR_CUSTOM.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		AR_CUSTOM.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(AR_CUSTOM.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = AR_CUSTOM.CH%
+		RESET #AR_CUSTOM.CH%
+		GET #AR_CUSTOM.CH%, REGARDLESS
+
+800		!
+		! Declare channels
+		!
+		IF TV_CUSTOMEX.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_CUSTOMEX.READONLY%
+			GOTO 890
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+850		%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOMEX.CRE"
+		TV_CUSTOMEX.READONLY% = 0%
+		GOTO 890
+
+860		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOMEX.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_CUSTOMEX.READONLY% = -1%
+
+		GOTO 890
+
+870		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_CUSTOMEX.CH%)
+
+		EXIT FUNCTION
+
+890		!
+		RESET #TV_CUSTOMEX.CH%
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " cOnflict-codes"
+
+	!
+	! Optional menu items
+	!
+	CASE OPT_MOREMENU
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "cOnflict-codes"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(AR_CUSTOM.CH%)
+
+			TV_MAIN_CUSTOM = MAIN_JOURNAL(TV_MAIN_CUSCONF.ID, "")
+
+		END SELECT
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Cust No.", &
+			2,  1, "(02) Name", &
+			3,  1, "(03) Alpha", &
+			4,  1, "(04) Add1", &
+			5,  1, "(05) Add2", &
+			6,  1, "(06) City", &
+			6, 29, "(07) State", &
+			7,  1, "(08) Zip", &
+			7, 29, "(09) Country", &
+			8,  1, "(10) Phone", &
+			8, 29, "(11) County", &
+			10,  1, "(12) Method         (O or B)", &
+			11,  1, "(13) Statement      (Y or N)", &
+			12,  1, "(14) Srvc Chrg      (Y or N)", &
+			9, 40, "(15) Salesperson", &
+			10, 40, "(16) Agency", &
+			11, 40, "(17) Cust Type", &
+			12, 40, "(18) Bill Type", &
+			13, 40, "(19) Repres.", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+			AR_CUSTOM::CUSNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;15", TEMP$, &
+				AR_CUSTOM::CUSNUM, MFLAG, "'E", MVALUE)
+
+			TV_CUSTOMEX::CUSNUM = AR_CUSTOM::CUSNUM IF (MFLAG AND 1%) = 0%
+
+		CASE 2%
+			AR_CUSTOM::CUSNAM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;13", TEMP$, &
+				AR_CUSTOM::CUSNAM, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+			AR_CUSTOM::ALPSRT = EDIT$(AR_CUSTOM::CUSNAM, 32%) &
+				IF (TEMP1$ = "Add") AND &
+					((MFLAG AND 1%) = 0%) AND &
+					(AR_CUSTOM::ALPSRT = "")
+
+			AR_CUSTOM::ALPSRT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;13", TEMP$, &
+				AR_CUSTOM::ALPSRT, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+			AR_CUSTOM::ADD1 = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;13", TEMP$, &
+				AR_CUSTOM::ADD1, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+			AR_CUSTOM::ADD2 = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;13", TEMP$, &
+				AR_CUSTOM::ADD2, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+			AR_CUSTOM::CITY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;13", TEMP$, &
+				AR_CUSTOM::CITY, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+			AR_CUSTOM::STATE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;42", TEMP$, &
+				AR_CUSTOM::STATE, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+			AR_CUSTOM::ZIP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;13", TEMP$, &
+				AR_CUSTOM::ZIP, MFLAG, "'E", MVALUE)
+
+		CASE 9%
+			AR_CUSTOM::COUNTRY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;42", TEMP$, &
+				AR_CUSTOM::COUNTRY, MFLAG, "'E", MVALUE)
+
+		CASE 10%
+			AR_CUSTOM::PHONE = ENTR_3PHONE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;13", TEMP$, &
+				AR_CUSTOM::PHONE, 2% OR MFLAG, 0%, MVALUE)
+
+		CASE 11%
+			AR_CUSTOM::COUNTY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;42", TEMP$, &
+				AR_CUSTOM::COUNTY, MFLAG, "'E", MVALUE)
+
+		CASE 12%
+			AR_CUSTOM::METHOD = EDIT$(ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, "10;17", &
+				TEMP$ + " (O/B)", AR_CUSTOM::METHOD, MFLAG, &
+				"'", MVALUE, EC$(), ECTITLE$, "007"), -1%)
+
+		CASE 13%
+			AR_CUSTOM::STMTFLG = ENTR_3YESNO(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;17", TEMP$, &
+				AR_CUSTOM::STMTFLG, MFLAG, "'E", MVALUE)
+
+		CASE 14%
+			AR_CUSTOM::SERCHRG = ENTR_3YESNO(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;17", TEMP$, &
+				AR_CUSTOM::SERCHRG, MFLAG, "'E", MVALUE)
+
+		CASE 15%
+			GOSUB ReadExtra IF (TV_CUSTOMEX::CUSNUM <> AR_CUSTOM::CUSNUM)
+
+			TV_CUSTOMEX::SALESMAN = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"9;57", TEMP$, &
+				TV_CUSTOMEX::SALESMAN, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_CUSTOMEX::SALESMAN = TV_SALESMAN::SALNUM &
+					IF MAIN_WINDOW(TV_MAIN_SALESMAN.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 16%
+			GOSUB ReadExtra IF (TV_CUSTOMEX::CUSNUM <> AR_CUSTOM::CUSNUM)
+
+			TV_CUSTOMEX::AGENCY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;57", TEMP$, &
+				TV_CUSTOMEX::AGENCY, MFLAG, &
+				"'E", MVALUE)
+
+ !
+ ! This code screws up the change
+ !
+ !			SELECT SCOPE.EXIT%
+ !			CASE SMG$K_TRM_F14
+ !				TV_CUSTOMEX::AGENCY = AR_CUSTOM::CUSNUM &
+ !					IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+ !				SCOPE.EXIT% = 0%
+ !				GOTO ELoop
+ !
+ !			CASE SMG$K_TRM_F17
+ !					ST% = MAIN_WINDOW( TV_MAIN_CUSTOM.ID, &
+ !						"M0"+TV_CUSTOMEX::AGENCY)
+ !				SCOPE.EXIT% = 0%
+ !				GOTO ELoop
+ !
+ !			END SELECT
+
+		CASE 17%
+			GOSUB ReadExtra IF (TV_CUSTOMEX::CUSNUM <> AR_CUSTOM::CUSNUM)
+
+			TV_CUSTOMEX::CUSTYP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;57", TEMP$, &
+				TV_CUSTOMEX::CUSTYP, MFLAG, "'E", MVALUE)
+
+		CASE 18%
+			GOSUB ReadExtra IF (TV_CUSTOMEX::CUSNUM <> AR_CUSTOM::CUSNUM)
+
+			TV_CUSTOMEX::BILTYP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;57", TEMP$, &
+				TV_CUSTOMEX::BILTYP, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_CUSTOMEX::BILTYP = TV_BILTYP::BTYPE &
+					IF MAIN_WINDOW(TV_MAIN_BILTYP.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 19%
+			GOSUB ReadExtra IF (TV_CUSTOMEX::CUSNUM <> AR_CUSTOM::CUSNUM)
+
+			TV_CUSTOMEX::REP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"13;57", TEMP$, &
+				TV_CUSTOMEX::REP, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_CUSTOMEX::REP = TV_REP::REP_NUM &
+					IF MAIN_WINDOW(TV_MAIN_COMCON.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		TV_MAIN_CUSTOM = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF AR_CUSTOM::CUSNUM = ""
+			THEN
+				TV_MAIN_CUSTOM = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #AR_CUSTOM.CH%, &
+						KEY#0 EQ AR_CUSTOM::CUSNUM, &
+						REGARDLESS
+					TV_MAIN_CUSTOM = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 12%
+			TV_MAIN_CUSTOM = 1% IF AR_CUSTOM::METHOD <> "O" AND &
+				AR_CUSTOM::METHOD <> "B"
+
+		CASE 15%
+			!
+			! Is the input defined?
+			!
+			IF TV_CUSTOMEX::SALESMAN = ""
+			THEN
+				DISPLAY_DESCR$ = SPACE$(25%)
+			ELSE
+				DISPLAY_DESCR$ = STRING$(25%,63%)
+				IF MAIN_WINDOW(TV_MAIN_SALESMAN.ID,"Q0"+TV_CUSTOMEX::SALESMAN) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "SALNUM"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "SALNUM"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't allow
+						! them to enter undefined values.
+						!
+						TV_MAIN_COMMER = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Input undefined ", 0%)
+					ELSE
+						!
+						! Verify that they really want to enter an
+						! undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, &
+							SMG_WINDOW::WNUMBER, "", &
+							"Input undefined, enter anyway", &
+							"N", 0%, "", "")
+						TV_MAIN_COMMER = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= TV_SALESMAN::SNAME
+
+				END IF
+			END IF
+
+ !			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+ !				LEFT(DISPLAY_DESCR$,24%),'13'L,'28'L, ,SMG$M_BOLD)
+
+
+		CASE 16%
+			!
+			! Is the input defined?
+			!
+			IF TV_CUSTOMEX::AGENCY = ""
+			THEN
+				DISPLAY_DESCR$ = SPACE$(25%)
+			ELSE
+				DISPLAY_DESCR$ = STRING$(25%,63%)
+				IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_CUSTOMEX::AGENCY) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "AGENCY"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "AGENCY"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't allow
+						! them to enter undefined values.
+						!
+						TV_MAIN_COMMER = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Input undefined ", 0%)
+					ELSE
+						!
+						! Verify that they really want to enter an
+						! undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, &
+							SMG_WINDOW::WNUMBER, "", &
+							"Input undefined, enter anyway", &
+							"N", 0%, "", "")
+						TV_MAIN_COMMER = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= AR_CUSTOM::CUSNAM
+				END IF
+			END IF
+
+ !			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+ !				LEFT(DISPLAY_DESCR$,24%),'9'L,'28'L, ,SMG$M_BOLD)
+
+
+		CASE 19%
+			!
+			! Is the input defined?
+			!
+			IF TV_CUSTOMEX::REP = ""
+			THEN
+				DISPLAY_DESCR$ = SPACE$(25%)
+			ELSE
+				DISPLAY_DESCR$ = STRING$(25%,63%)
+				IF MAIN_WINDOW(TV_MAIN_COMCON.ID,"Q0"+TV_CUSTOMEX::REP) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "REPNUM"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "REPNUM"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't allow
+						! them to enter undefined values.
+						!
+						TV_MAIN_COMMER = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Input undefined ", 0%)
+					ELSE
+						!
+						! Verify that they really want to enter an
+						! undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, &
+							SMG_WINDOW::WNUMBER, "", &
+							"Input undefined, enter anyway", &
+							"N", 0%, "", "")
+						TV_MAIN_COMMER = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= TV_REP::RNAME
+				END IF
+			END IF
+
+ !			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+ !				LEFT(DISPLAY_DESCR$,24%),'11'L,'28'L, ,SMG$M_BOLD)
+
+
+		END SELECT
+
+	!
+	! Set AR_CUSTOM_OLD value
+	!
+20500	CASE OPT_SETOLD
+		AR_CUSTOM_OLD = AR_CUSTOM
+		TV_CUSTOMEX_OLD = TV_CUSTOMEX
+
+	!
+	! Restore AR_CUSTOM_OLD value
+	!
+	CASE OPT_RESETOLD
+		AR_CUSTOM = AR_CUSTOM_OLD
+		TV_CUSTOMEX = TV_CUSTOMEX_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		AR_CUSTOM2 = AR_CUSTOM
+		TV_CUSTOMEX2 = TV_CUSTOMEX
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		AR_CUSTOM = AR_CUSTOM2
+		TV_CUSTOMEX = TV_CUSTOMEX2
+		TV_CUSTOMEX::CUSNUM = AR_CUSTOM::CUSNUM
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+			!
+			! Title (One line only)
+			!
+			CASE 1%
+				MVALUE = "  Cust #     Name                      Address" + &
+					"                                          City, State" + &
+					"                  Zip Code"
+
+			!
+			! Positions of lines
+			!
+			CASE 2%
+				MVALUE = "013,039,087,116"
+
+			!
+			! Convert current record into text
+			!
+			CASE 3%
+
+				MVALUE = &
+					AR_CUSTOM::CUSNUM + " " + &
+					LEFT(AR_CUSTOM::CUSNAM, 25%) + " " + &
+					LEFT(AR_CUSTOM::ADD1 + "/" + &
+						AR_CUSTOM::ADD2, 48%) + " " + &
+					LEFT(AR_CUSTOM::CITY + ", " + &
+						AR_CUSTOM::STATE + " " + &
+						AR_CUSTOM::COUNTRY, 28%) + " " + &
+					TRM$(AR_CUSTOM::ZIP)
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #AR_CUSTOM.CH%, KEY #0% GE AR_CUSTOM::CUSNUM, &
+				REGARDLESS
+
+		CASE 1%
+			FIND #AR_CUSTOM.CH%, KEY #1% GE AR_CUSTOM::CUSNAM, &
+				REGARDLESS
+
+		CASE 2%
+			FIND #AR_CUSTOM.CH%, KEY #2% GE AR_CUSTOM::ALPSRT, &
+				REGARDLESS
+
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			GOSUB ChangeExtra
+			TV_MAIN_CUSTOM = MAIN_JOURNAL(TV_MAIN_CUSCONF.ID, "A")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF (AR_CUSTOM_OLD::CUSNUM <> AR_CUSTOM::CUSNUM)
+			THEN
+				GOSUB ChangeExtraKey
+				TEMP$ = AR_CUSTOM::CUSNUM
+				AR_CUSTOM = AR_CUSTOM_OLD
+				TV_MAIN_CUSTOM = MAIN_JOURNAL(TV_MAIN_CUSCONF.ID, "C" + TEMP$)
+			ELSE
+				GOSUB ChangeExtra
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			GOSUB DeleteExtra
+			TV_MAIN_CUSTOM = MAIN_JOURNAL(TV_MAIN_CUSCONF.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+	%PAGE
+
+ ReadExtra:
+28000	!*******************************************************************
+	! Read in extra record for current customer, if available
+	!*******************************************************************
+
+	GET #TV_CUSTOMEX.CH%, KEY#0 EQ AR_CUSTOM::CUSNUM, REGARDLESS
+
+28010	RETURN
+
+ ChangeExtra:
+28020	!*******************************************************************
+	! Change/Add customer extra information
+	!*******************************************************************
+
+	TV_CUSTOMEX::CUSNUM = AR_CUSTOM::CUSNUM
+
+	FIND #TV_CUSTOMEX.CH%, KEY#0 EQ AR_CUSTOM::CUSNUM
+
+	UPDATE #TV_CUSTOMEX.CH%
+
+	GOTO 28040
+
+28030	PUT #TV_CUSTOMEX.CH%
+
+28040	RETURN
+
+ DeleteExtra:
+28050	!*******************************************************************
+	! Change/Add customer extra information
+	!*******************************************************************
+
+	GET #TV_CUSTOMEX.CH%, KEY#0 EQ AR_CUSTOM::CUSNUM
+
+	DELETE #TV_CUSTOMEX.CH%
+
+28060	RETURN
+
+ ChangeExtraKey:
+28070	!*******************************************************************
+	! Change/Add customer extra information
+	!*******************************************************************
+
+	FIND #TV_CUSTOMEX.CH%, KEY#0 EQ AR_CUSTOM_OLD::CUSNUM
+
+	DELETE #TV_CUSTOMEX.CH%
+
+	GOSUB ChangeExtra
+
+28080	RETURN
+
+	%PAGE
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+		!
+		! Unable to open Read/Write
+		!
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			TV_MAIN_CUSTOM = ERR
+			RESUME 770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 760%
+			TV_MAIN_CUSTOM = ERR
+			RESUME 770
+
+		!
+		! Unable to reset
+		!
+		CASE 790%
+			RESUME 32767
+
+		!
+		! Unable to open Read/Write
+		!
+		CASE 850%
+			RESUME 860 IF ERR = 10%
+			TV_MAIN_CUSTOMEX = ERR
+			RESUME 870
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 860%
+			TV_MAIN_CUSTOMEX = ERR
+			RESUME 870
+
+		!
+		! Unable to reset
+		!
+		CASE 890%
+			RESUME 32767
+		!
+		! Record does not already exist
+		!
+		CASE 20300%
+			RESUME 32767 IF ERR = 155%
+
+		!
+		! Unable to find a record for this extra file
+		!
+		CASE 28000
+			TV_CUSTOMEX::CUSNUM = AR_CUSTOM::CUSNUM
+			TV_CUSTOMEX::SALESMAN = TV_CUSTOMEX2::SALESMAN
+			TV_CUSTOMEX::AGENCY = TV_CUSTOMEX2::AGENCY
+			TV_CUSTOMEX::CUSTYP = TV_CUSTOMEX2::CUSTYP
+			TV_CUSTOMEX::BILTYP = TV_CUSTOMEX2::BILTYP
+			TV_CUSTOMEX::REP = TV_CUSTOMEX2::REP
+			RESUME 28010
+
+		!
+		! Unable to find extra record to update (Currently
+		! ignores errors it cannot handle)
+		!
+		CASE 28020%
+			RESUME 28030 IF ERR = 155%
+			RESUME 28040
+
+		CASE 28030%
+			RESUME 28040
+
+
+		!
+		! Unable to find extra record to delete (Currently
+		! ignores errors it cannot handle)
+		!
+		CASE 28050%
+			RESUME 28060
+
+		!
+		! Unable to find extra record to Change (Currently
+		! ignores errors it cannot handle)
+		!
+		CASE 28070%
+			RESUME 28080
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

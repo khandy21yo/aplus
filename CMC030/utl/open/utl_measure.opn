@@ -1,0 +1,16 @@
+	!======================================================================
+	! UTL_MEASURE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_MEASURE.CH%, STAT%)
+	CALL READ_DEVICE('UTL_MEASURE',UTL_MEASURE.DEV$, STAT%)
+
+	UTL_MEASURE.NAME$ = UTL_MEASURE.DEV$+"UTL_MEASURE.TBL"
+
+	OPEN UTL_MEASURE.NAME$ FOR INPUT AS FILE UTL_MEASURE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_MEASURE, &
+		PRIMARY KEY &
+			UTL_MEASURE::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

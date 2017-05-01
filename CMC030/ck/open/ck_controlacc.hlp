@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Check Account Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*CK__CONTROLACC.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controlling file in the ^*Ck/Dep Reconciliation System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Check Account Control File
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*CK__CONTROLACC.CTR\*
+	!	.p
+	!	Check Account Control File.
+	!
+	! Index:
+	!	.x Check Account Control File
+	!	.x CK_CONTROLACC
+	!--

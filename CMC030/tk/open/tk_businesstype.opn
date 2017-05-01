@@ -1,0 +1,16 @@
+	!======================================================================
+	! TK_BUSINESSTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_BUSINESSTYPE.CH%, STAT%)
+	CALL READ_DEVICE('TK_BUSINESSTYPE',TK_BUSINESSTYPE.DEV$, STAT%)
+
+	TK_BUSINESSTYPE.NAME$ = TK_BUSINESSTYPE.DEV$+"TK_BUSINESSTYPE.TBL"
+
+	OPEN TK_BUSINESSTYPE.NAME$ FOR INPUT AS FILE TK_BUSINESSTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_BUSINESSTYPE, &
+		PRIMARY KEY &
+			TK_BUSINESSTYPE::BUSINESSTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

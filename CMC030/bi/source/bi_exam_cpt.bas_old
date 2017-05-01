@@ -1,0 +1,216 @@
+1	%TITLE "Examination of CPT Number"
+	%SBTTL "BI_EXAM_CPT"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_EXAM_CPT( STRING CPTNUM, &
+		BI_CPT_CDD BI_CPT_EXAM )
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!		This function, given an insurance number and a
+	!	Current Procedural Terminology number, will return the
+	!	record from the Insurance Billing CPT file associated
+	!	with this CPT number.
+	!
+	! Index:
+	! Option:
+	!
+	!
+	! Inputs:
+	!
+	!	CPTNUM		is the given CPT number
+	!
+	! Outputs:
+	!
+	!	BI_CPT	is the record associated with the given
+	!		CPT number.
+	!	Returned Value	is CMC$_NORMAL if the search for the
+	!		record was successful, CMC$_UNDEFINED if the
+	!		record wasn't found, or CMC$_UNTERROR if there
+	!		was an error of some sort.
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_EXAM_CPT
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_EXAM_CPT
+	!	$ DELETE BI_EXAM_CPT.OBJ;*
+	!
+	! Author:
+	!
+	!	07/13/89 - Aaron Redd
+	!
+	! Modification History:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	10/15/98 - Kevin Handy
+	!		Lose excessive %PAGE's
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include special CMC codes
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPT.HB"
+	MAP	(BI_CPT)	BI_CPT_CDD	BI_CPT
+	COM	(BI_CPT_INI)	BI_CPT_CDD	BI_CPT_INI
+
+	!
+	! Common memory areas
+	!
+	COM (BI_EXAM_CPT.CH) BI_CPT.CH%
+
+	DECLARE LONG EXIT_STATUS
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Assume undefined
+	!
+	EXIT_STATUS = CMC$_UNDEFINED
+
+	!
+	! Open the BI CPT file if not already open
+	!
+100	IF BI_CPT.CH% <= 0%
+	THEN
+		BI_CPT_INI::CPT = &
+			STRING$(LEN(BI_CPT_INI::CPT),ASCII("?"))
+
+		BI_CPT_INI::DESCRIPTION = &
+			STRING$(LEN(BI_CPT_INI::DESCRIPTION),ASCII("?"))
+
+		BI_CPT_INI::CPTTYPE = &
+			STRING$(LEN(BI_CPT_INI::CPTTYPE),ASCII("?"))
+
+		BI_CPT_INI::CATEGORY = &
+			STRING$(LEN(BI_CPT_INI::CATEGORY),ASCII("?"))
+
+		BI_CPT_INI::RATEFLAG = &
+			STRING$(LEN(BI_CPT_INI::RATEFLAG),ASCII("?"))
+
+		%INCLUDE "SOURCE:[BI.OPEN]BI_CPT.OPN"
+	END IF
+
+	!
+	! Get the BI_CPT record and set it to be returned to the main program
+	!
+200	BI_CPT_EXAM = BI_CPT_INI
+	GET #BI_CPT.CH%, KEY #0% EQ CPTNUM, REGARDLESS
+
+	BI_CPT_EXAM = BI_CPT
+	EXIT_STATUS = CMC$_NORMAL
+
+ ExitFunction:
+	BI_EXAM_CPT = EXIT_STATUS
+
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+
+	!
+	! Can't find BI_CPT file
+	!
+	CASE 100%
+		RESUME ExitFunction IF ERR = 5%
+		FILENAME$ = "BI_CPT"
+
+	!
+	! Undefined CPT Number
+	!
+	CASE 200%
+		RESUME ExitFunction IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "BI_CPT"
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+32767	!******************************************************************
+	! End of function BI_EXAM_CPT
+	!******************************************************************
+	END FUNCTION

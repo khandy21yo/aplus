@@ -1,0 +1,25 @@
+	!======================================================================
+	! UTL_ACCOUNT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_ACCOUNT.CH%, STAT%)
+	CALL READ_DEVICE('UTL_ACCOUNT',UTL_ACCOUNT.DEV$, STAT%)
+
+	UTL_ACCOUNT.NAME$ = UTL_ACCOUNT.DEV$+"UTL_ACCOUNT.TBL"
+
+	OPEN UTL_ACCOUNT.NAME$ FOR INPUT AS FILE UTL_ACCOUNT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_ACCOUNT, &
+		PRIMARY KEY &
+		( &
+			UTL_ACCOUNT::ACCOUNT, &
+			UTL_ACCOUNT::LOCATION, &
+			UTL_ACCOUNT::TRANSTYPE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			UTL_ACCOUNT::LOCATION, &
+			UTL_ACCOUNT::TRANSTYPE &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

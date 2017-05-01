@@ -1,0 +1,472 @@
+1	%TITLE "TV_SPEC_COPY_LOG - Assign copy to the spots"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program will assign copy to the spots in
+	!	the SPOTS file using information defined in the
+	!	COPY file(s).
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_SPEC_COPY_LOG
+	!	$ LINK/EXE=TV_EXE: TV_SPEC_COPY_LOG, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_SPEC_COPY_LOG.OBJ;*
+	!
+	! Author:
+	!
+	!	12/22/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to use READ_INITIALIZE.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	DECLARE INTEGER CONSTANT MAX_COPY = 20%
+
+	!
+	! Include files
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP	(TV_LOGSPOTS)	TV_LOGSPOTS_CDD		TV_LOGSPOTS
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_INSTR.HB"
+	MAP	(TV_COPY_INSTR)	TV_COPY_INSTR_CDD	TV_COPY_INSTR
+	DIM	RFA		TV_COPY(MAX_COPY)
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_SPOTS.HB"
+	MAP	(TV_COPY_SPOTS)	TV_COPY_SPOTS_CDD	TV_COPY_SPOTS
+
+	%PAGE
+
+	!*******************************************************************
+	! Initialization.  Init error trapping, terminal, Set up for help,
+	! allocate channels.
+	!*******************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	! Init terminal
+	!
+	CALL READ_INITIALIZE
+
+	!
+	! Init help
+	!
+	SCOPE::PRG_IDENT = "PROG"
+	SCOPE::PRG_PROGRAM = "TV_SPEC_COPY_LOG"
+	SCOPE::PRG_ITEM = "DATE"
+
+	!
+	! Init day of week array
+	!
+	SCHED_DAY$(1%) = "Monday"
+	SCHED_DAY$(2%) = "Tuesday"
+	SCHED_DAY$(3%) = "Wednesday"
+	SCHED_DAY$(4%) = "Thursday"
+	SCHED_DAY$(5%) = "Friday"
+	SCHED_DAY$(6%) = "Saturday"
+	SCHED_DAY$(7%) = "Sunday"
+
+	!*******************************************************************
+	! Create windows to play in
+	!*******************************************************************
+
+	SMG_STATUS% = SMG$BEGIN_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	!
+	! Create IO window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(4%, 78%, IO_INPUT%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_INPUT%, "Assign Copy")
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "Copy date", 2%, 1%)
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_INPUT%, SCOPE::SMG_PBID, 2%, 2%)
+
+	!
+	! Create entertainment window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(13%, 78%, IO_MESSAGE%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_MESSAGE%, "Messages")
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_MESSAGE%, SCOPE::SMG_PBID, 7%, 2%)
+	SMG_STATUS% = SMG$SET_CURSOR_ABS(IO_MESSAGE%, 1%, 1%)
+
+	SMG_STATUS% = SMG$END_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	%PAGE
+
+	!*******************************************************************
+	! Open up files that can be opened up and left open
+	!*******************************************************************
+
+1010	%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_INSTR.MOD"
+
+1020	%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_SPOTS.OPN"
+
+	%PAGE
+
+1200	!*******************************************************************
+	! Get from date
+	!*******************************************************************
+
+	FROM_DATE$ = ENTR_3DATE(SCOPE, IO_INPUT%, "2;13", &
+		"Assign copy for date", DATE_TODAY, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+	CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+		GOTO ExitProgram
+
+	CASE SMG$K_TRM_UP
+		GOTO 1200
+
+	CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DOWN, SMG$K_TRM_DO
+
+	CASE ELSE
+		CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+		GOTO 1200
+	END SELECT
+
+1400	!*******************************************************************
+	! Get to date
+	!*******************************************************************
+
+	TO_DATE$ = FROM_DATE$
+
+	%PAGE
+
+1600	!*******************************************************************
+	! Loop from FROM_DATE to TO_DATE
+	!*******************************************************************
+
+	FROM_DATE% = DATE_DAYCODE(FROM_DATE$)
+	TO_DATE%   = DATE_DAYCODE(TO_DATE$)
+
+	!
+	! If they make it to here, then the range must be OK.
+	! Loop through all days in that range and extend the
+	! logs.
+	!
+	FOR DAY_LOOP% = FROM_DATE% TO TO_DATE%
+
+		!
+		! Figure out all sorts of useful things about the
+		! given date.
+		!
+		SCHED_DATE$ = DATE_INVDCODE(DAY_LOOP%)
+		SCHED_DAY%  = DATE_DAYOFWEEK(DAY_LOOP%)
+
+		!
+		! Extend the schedule for that date
+		!
+		GOSUB CopyOneDate
+
+	NEXT DAY_LOOP%
+
+	CALL ENTR_3MESSAGE(SCOPE, "Finished!", 0%)
+
+	GOTO ExitProgram
+
+	%PAGE
+
+4000	!*******************************************************************
+	! Assign copy to one date
+	!*******************************************************************
+
+ CopyOneDate:
+
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		"Starting " + PRNT_DATE(SCHED_DATE$, 8%) + " (" + &
+		SCHED_DAY$(SCHED_DAY%) + ")")
+
+4010	!
+	! Open up the spots file for the given date
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.MOD"
+
+4020	!
+	! Reset to the front of the file (Going to pass through
+	! by scheduled time).
+	!
+	RESET #TV_LOGSPOTS.CH%, KEY #1%
+
+4100	!
+	! Loop through the spots file (by time)
+	!
+	GET #TV_LOGSPOTS.CH%
+
+	!
+	! Bypass this spot if it is fill, or if it already has been
+	! assigned copy.
+	!
+	IF (TV_LOGSPOTS::SCH_TYPE <> "0") OR (TRM$(TV_LOGSPOTS::CARTNUM) <> "")
+	THEN
+		!
+		! May want to display spot here?
+		!
+		GOTO 4100
+	END IF
+
+	!*******************************************************************
+	! Load in an array with all of the fill that may be used
+	! for this spot
+	!
+4150	TV_COPY% = 0%
+	FIND #TV_COPY_INSTR.CH%, KEY #0 GE TV_LOGSPOTS::FRMNUM, REGARDLESS
+
+4160	GET #TV_COPY_INSTR.CH%, REGARDLESS
+
+	!
+	! Check if this has the right form
+	!
+	GOTO 4200 IF TV_COPY_INSTR::FRMNUM <> TV_LOGSPOTS::FRMNUM
+
+	!
+	! Check out the date range specified for this copy
+	! instruction.
+	!
+	IF (TV_COPY_INSTR::FROM_DATE > SCHED_DATE$) OR &
+		((TV_COPY_INSTR::TO_DATE > "00000000") AND &
+		(TV_COPY_INSTR::TO_DATE < SCHED_DATE$))
+	THEN
+		GOTO 4160
+	END IF
+
+	!
+	! Chech out various other possible mis-matches
+	!
+	IF (TV_COPY_INSTR::LENGTH <> TV_LOGSPOTS::LENGTH)
+	THEN
+		GOTO 4160
+	END IF
+
+	!
+	! Add this item to the list of possibles
+	!
+	TV_COPY% = TV_COPY% + 1%
+	TV_COPY(TV_COPY%) = GETRFA(TV_COPY_INSTR.CH%)
+
+	GOTO 4160
+
+4200	!*******************************************************************
+	! Now, choose between the possible copy instructions that we have
+	! found.
+	!
+
+	! If there is no copy defined for this item, skip it for now
+	!
+	IF TV_COPY% = 0%
+	THEN
+		!
+		! May want to print something here
+		!
+		SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+			TV_LOGSPOTS::CUSNUM + " " + &
+			TV_LOGSPOTS::FRMNUM + " " + &
+			TV_LOGSPOTS::SKEDNUM + " " + &
+			PRNT_TIME(TV_LOGSPOTS::SCH_TIME, 0%) + " " + &
+			"No cart number to assign")
+		GOTO 4100
+	END IF
+
+4210	!
+	! Choose one of the copy sequences (possible only one) randomly,
+	! rotate the copy, and assign to the spot.
+	!
+	PICKED% = TV_COPY% * RND + 1%
+
+	GET #TV_COPY_INSTR.CH%, RFA TV_COPY(PICKED%)
+
+	TV_COPY_INSTR::CURRENT_ROTATION = TV_COPY_INSTR::CURRENT_ROTATION + 1%
+
+	IF LEN(TRM$(TV_COPY_INSTR::SPOT_ROTATION)) < &
+		TV_COPY_INSTR::CURRENT_ROTATION * 2%
+	THEN
+		TV_COPY_INSTR::CURRENT_ROTATION = 1%
+	END IF
+
+4220	UPDATE #TV_COPY_INSTR.CH%
+
+4240	!
+	! Load in the copy spot
+	!
+	GET #TV_COPY_SPOTS.CH%, &
+		KEY #0% EQ TV_COPY_INSTR::FRMNUM + &
+			TV_COPY_INSTR::SEQNUM + &
+			MID(TV_COPY_INSTR::SPOT_ROTATION, &
+				TV_COPY_INSTR::CURRENT_ROTATION * 2% - 1%, 2%)
+
+4250	!
+	! Assign information to spot
+	!
+	TV_LOGSPOTS::CARTNUM = TV_COPY_SPOTS::CART_NUM
+	TV_LOGSPOTS::CUTNUM = ""
+	TV_LOGSPOTS::AGENCY_NUM = TV_COPY_SPOTS::AGENCY_CART
+
+	UPDATE #TV_LOGSPOTS.CH%
+
+	!
+	! Display spots cart number
+	!
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		TV_LOGSPOTS::CUSNUM + " " + &
+		TV_LOGSPOTS::FRMNUM + " " + &
+		TV_LOGSPOTS::SKEDNUM + " " + &
+		PRNT_TIME(TV_LOGSPOTS::SCH_TIME, 0%) + " " + &
+		TV_LOGSPOTS::CARTNUM)
+
+	!
+	! Go back for the next one
+	!
+	GOTO 4100
+
+4400	!
+	! Finish up this file, close it, and exit back for next day
+	!
+	CLOSE #TV_LOGSPOTS.CH%
+
+	RETURN
+
+	%PAGE
+
+	!*******************************************************************
+	! Exit from the program
+	!*******************************************************************
+
+ ExitProgram:
+	CLOSE #TV_COPY_INSTR.CH%, TV_COPY_SPOTS.CH%
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	IF ERR = 154%
+	THEN
+		SLEEP 5%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+	!
+	! Error opening copy instruction file
+	!
+	CASE 1010%
+		FINAME$ = "TV_COPY_INSTR"
+		RESUME HelpFile
+
+	!
+	! Error opening copy spots file
+	!
+	CASE 1020%
+		FINAME$ = "TV_COPY_PSOTS"
+		RESUME HelpFile
+
+	!
+	! Error opening spots file for a specified date
+	!
+	CASE 4010%
+		FINAME$ = "TV_LOGSPOTS"
+		RESUME HelpFile
+
+	!
+	! End of spots file
+	!
+	CASE 4100%
+		RESUME 4400
+
+	!
+	! Unable to find copy
+	!
+	CASE 4150%, 4160%
+		RESUME 4200
+
+	!
+	! Unable to load copy spot
+	!
+	CASE 4240
+		TV_COPY_SPOTS::CART_NUM = "??????????"
+		RESUME 4250
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(ERR))
+
+	RESUME ExitProgram
+
+ HelpFile:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", FINAME$, "ERROR" + NUM1$(ERR))
+
+	RESUME ExitProgram
+
+	END

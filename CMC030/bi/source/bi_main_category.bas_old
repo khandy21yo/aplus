@@ -1,0 +1,393 @@
+1	%TITLE "CPT Category Description"
+	%SBTTL "BI_MAIN_CATEGORY"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_CATEGORY(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*CPT Category\* option provides for entry and maintenance of the
+	!	Current Procedural Terminology categories including a description.
+	!
+	! Index:
+	!	.x CPT Category>Add
+	!	.x CPT Category>Erase
+	!	.x CPT Category>Change
+	!	.x CPT Category>Maintain
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_CATEGORY/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN BI_MAIN_CATEGORY
+	!	$ DELETE BI_MAIN_CATEGORY.OBJ;*
+	!
+	! Author:
+	!
+	!	10/31/88 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CATEGORY.HB"
+	MAP (BI_CATEGORY)	BI_CATEGORY_CDD		BI_CATEGORY
+	MAP (BI_CATEGORY_OLD)	BI_CATEGORY_CDD BI_CATEGORY_OLD, BI_CATEGORY2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BI_CATEGORY) &
+		BI_CATEGORY.CH%, &
+		BI_CATEGORY.READONLY%
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "CPT Category Description"
+		SMG_WINDOW::NHELP = "BI_MAIN_CATEGORY"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 2%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Category"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "Description"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BI_CATEGORY.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BI_CATEGORY.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BI.OPEN]BI_CATEGORY.CRE"
+		BI_CATEGORY.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_CATEGORY.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BI_CATEGORY.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BI_CATEGORY.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BI_CATEGORY.CH%
+		RESET #BI_CATEGORY.CH%
+		GET #BI_CATEGORY.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	04, 05, "(01) CPT Category", &
+			05, 05, "(02) Description", &
+			00, 00, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Reenter:	SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Current Procedural Terminology Category\*
+	!	.p
+	!	The ^*Current Procedural Terminology Category\* field is provided to enter and
+	!	maintain
+	!	the Current Procedural Terminology Category codes for a particular service or
+	!	procedure
+	!	and a description of those codes.
+	!
+	! Index:
+	!	.x Enter>Category Codes
+	!	.x Maintain>Category Codes
+	!	.x Current Procedural Terminology>Category Codes
+	!	.x Category Codes>Maintain
+	!	.x Category Codes>Description
+	!
+	!--
+
+			BI_CATEGORY::CATEGORY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "04;28", TEMP$, &
+				BI_CATEGORY::CATEGORY, MFLAG, "'E", MVALUE )
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Description\*
+	!	.p
+	!	The ^*Description\* field is provided to enter a description
+	!	for the CPT Category code entered in field (01).
+	!	.p
+	!	The field will accommodate forty (40) alphanumeric characters.
+	!
+	! Index:
+	!	.x Description>CPT Category
+	!	.x CPT Category>Description
+	!
+	!--
+
+			BI_CATEGORY::DESCRIPTION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "05;28", TEMP$, &
+				BI_CATEGORY::DESCRIPTION, MFLAG, "'E", MVALUE )
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+
+		BI_MAIN_CATEGORY = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF BI_CATEGORY::CATEGORY = ""
+			THEN
+				BI_MAIN_CATEGORY = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #BI_CATEGORY.CH%, &
+						KEY#0% EQ BI_CATEGORY::CATEGORY + "", &
+						REGARDLESS
+
+					BI_MAIN_CATEGORY = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		END SELECT
+
+
+20500	CASE OPT_SETOLD
+
+		BI_CATEGORY_OLD = BI_CATEGORY
+
+	CASE OPT_RESETOLD
+
+		BI_CATEGORY = BI_CATEGORY_OLD
+
+	CASE OPT_SETDEFAULT
+
+		BI_CATEGORY2 = BI_CATEGORY
+
+	CASE OPT_RESETDEFAULT
+
+		BI_CATEGORY = BI_CATEGORY2
+
+	CASE OPT_VIEW
+
+		SELECT MLOOP
+
+		CASE 1%
+			MVALUE = "  Category Description"
+
+		CASE 2%
+
+			MVALUE = "011"
+
+		CASE 3%
+			MVALUE = BI_CATEGORY::CATEGORY + "      "+ &
+				BI_CATEGORY::DESCRIPTION
+
+		END SELECT
+
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #BI_CATEGORY.CH%, &
+				KEY#0% GE BI_CATEGORY::CATEGORY + "", &
+				REGARDLESS
+		CASE 1%
+
+			FIND #BI_CATEGORY.CH%, &
+				KEY#1% GE BI_CATEGORY::DESCRIPTION + "", &
+				REGARDLESS
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap Errors
+	!***************************************************************
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BI_MAIN_CATEGORY = ERR
+		RESUME 770
+
+	CASE 760%
+		BI_MAIN_CATEGORY = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

@@ -1,0 +1,31 @@
+	!======================================================================
+	! OE_ORDERJOUR file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_ORDERJOUR.CH%, STAT%)
+	CALL READ_DEVICE('OE_ORDERJOUR',OE_ORDERJOUR.DEV$, STAT%)
+
+	OE_ORDERJOUR.NAME$ = OE_ORDERJOUR.DEV$+"OE_ORDERJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN OE_ORDERJOUR.NAME$ FOR INPUT AS FILE OE_ORDERJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_ORDERJOUR, &
+		PRIMARY KEY &
+			OE_ORDERJOUR::ORDNUM, &
+		ALTERNATE KEY &
+		( &
+			OE_ORDERJOUR::ORDTYPE, &
+			OE_ORDERJOUR::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OE_ORDERJOUR::CUSNUM, &
+			OE_ORDERJOUR::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OE_ORDERJOUR::ORDCAT, &
+			OE_ORDERJOUR::ORDNUM &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

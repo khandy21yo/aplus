@@ -1,0 +1,375 @@
+1	%TITLE "Post to Restaurant Transaction File"
+	%SBTTL "RM_TRAN_POST"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_TRAN_POST(LONG OPT, &
+		STRING BATCH_NUMBER, &
+		STRING TITLE(), &
+		UTL_REPORTX_CDD UTL_REPORTX, &
+		RM_TRANSACTION_CDD RM_TRANSACTION_POST)
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies therof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! ABSTRACT:HELP
+	!	.p
+	!	This function is used to post to the Restaurant
+	!	transaction file.  It also does the remove
+	!	post if necessary.
+	!	Pass 0
+	!		Open RM transaction file
+	!	Pass 1
+	!		Remove period file records with current
+	!			batch number.
+	!	Pass 2
+	!		Generate the totals
+	!	Pass 3
+	!		Display current totals and allow user to abort
+	!			the POST if they so desire.
+	!	Pass 4
+	!		Add records to the Register file
+	!	Pass 5
+	!		Print transmittal on paper
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_TRAN_POST
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_TRAN_POST
+	!	$ DELETE RM_TRAN_POST.OBJ;*
+	!
+	! Author:
+	!
+	!	03/06/88 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	07/18/88 - Frank F. Starman
+	!		Added pass zero, and changed sub to a function.
+	!
+	!	03/13/92 - Kevin Handy
+	!		Cleaned up error trap (check)
+	!
+	!	04/28/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/29/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	!
+	! Memory MAPs
+	!
+	MAP	(DP_OUTP_XUNSOL)				RRR_FLAG%
+	MAP	(RM_TRANSACTION)	RM_TRANSACTION_CDD	RM_TRANSACTION
+
+	!
+	! Common memory areas
+	!
+	COM (RM_TRAN_POST.CH) &
+		RM_TRANSACTION.CH%, &
+		RM_TRANSACTION.SEQ%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION	ASSG_POSTBATCH
+	EXTERNAL LONG	FUNCTION	OUTP_UNSOLICITED
+
+	!
+	! Declare variables and constants
+	!
+	DECLARE LONG EXIT_STATUS
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Assume success
+	!
+	EXIT_STATUS = CMC$_NORMAL
+
+	!
+	! Set record counter to zero
+	!
+	RECORDS% = 0%
+
+	SELECT OPT
+
+	CASE OPT_RESTART
+		!
+		! Remove batch number
+		!
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_MARKFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"RM_TRANSACTION.HIS", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Open RM transaction file
+		!
+100		%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.CRE"
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_OPENFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Do any records in the file have this batch number?
+		!
+105		FIND #RM_TRANSACTION.CH%, KEY #1% EQ BATCH_NUMBER
+
+110		!
+		! Check unsolicited input
+		!
+		IF RRR_FLAG%
+		THEN
+			IF OUTP_UNSOLICITED(OPT_REPORT) <> CMC$_NORMAL
+			THEN
+				EXIT_STATUS = CMC$_UNTERROR
+				GOTO ExitFunction
+			END IF
+		END IF
+
+		GET #RM_TRANSACTION.CH%
+		GOTO 120 IF (RM_TRANSACTION::BATCH <> BATCH_NUMBER)
+		DELETE #RM_TRANSACTION.CH%
+		RECORDS% = RECORDS% + 1%
+		GOTO 110
+
+120		CLOSE #RM_TRANSACTION.CH%
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_CLOSEFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		TEXT$ = FORMAT$(RECORDS%, "         ######## ") + "Deleted Records"
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+
+	CASE OPT_CHECK
+
+		!
+		! Make sure RM Transaction Ledger is clean
+		!
+200		%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.OPN"
+		GET #RM_TRANSACTION.CH%, KEY #1% EQ BATCH_NUMBER
+
+		!
+		! Error; batch number found
+		!
+		EXIT_STATUS = CMC$_WARNING
+		GOTO ExitFunction
+
+		!
+		! Open the temporary sequential file
+		!
+210		CALL ASSG_CHANNEL(RM_TRANSACTION.SEQ%, STAT%)
+		OPEN "RM_TRANSACTION.SEQ" AS FILE RM_TRANSACTION.SEQ%, &
+			ORGANIZATION SEQUENTIAL FIXED, &
+			MAP RM_TRANSACTION, &
+			TEMPORARY, &
+			ALLOW NONE, &
+			ACCESS MODIFY
+
+	CASE OPT_ADDREC
+		!
+		! Check unsolicited input
+		!
+300		IF RRR_FLAG%
+		THEN
+			IF OUTP_UNSOLICITED(OPT_REPORT) <> CMC$_NORMAL
+			THEN
+				EXIT_STATUS = CMC$_UNTERROR
+				GOTO ExitFunction
+			END IF
+		END IF
+
+		!
+		! Fill posting temp file
+		!
+		RM_TRANSACTION = RM_TRANSACTION_POST
+		PUT #RM_TRANSACTION.SEQ%
+
+	CASE OPT_CONFIRM
+		!
+		! Not used
+		!
+
+	CASE OPT_POSTFILE
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_MARKFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"RM_TRANSACTION.HIS", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Open RM transaction file
+		!
+400		%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.CRE"
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_OPENFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Start at the beginning of the temp file
+		!
+410		RESET #RM_TRANSACTION.SEQ%
+
+		!
+		! Check unsolicited input
+		!
+420		IF RRR_FLAG%
+		THEN
+			IF OUTP_UNSOLICITED(OPT_REPORT) <> CMC$_NORMAL
+			THEN
+				EXIT_STATUS = CMC$_UNTERROR
+				GOTO ExitFunction
+			END IF
+		END IF
+
+		GET #RM_TRANSACTION.SEQ%
+		PUT #RM_TRANSACTION.CH%
+		RECORDS% = RECORDS% + 1%
+		GOTO 420
+
+430		CLOSE RM_TRANSACTION.CH%
+		CLOSE RM_TRANSACTION.SEQ%
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_CLOSEFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		TEXT$ = FORMAT$(RECORDS%, "         ########") + " Posted Records"
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+
+	CASE ELSE
+		!
+		! Undefined option
+		!
+		EXIT_STATUS = CMC$_NOOPTION
+
+	END SELECT
+
+ ExitFunction:
+	RM_TRAN_POST = EXIT_STATUS
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_PRINTMESS(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR), &
+		UTL_REPORTX, TITLE(), 0%)
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+	!
+	! Cannot lock file
+	!
+	CASE 138%
+		SLEEP 5%
+		RESUME
+
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 100%, 105%, 110%
+		FILENAME$ = "RM_TRANSACTION"
+
+	CASE 200%
+		RESUME 210 IF (ERR = 155%) OR (ERR = 5%)
+		FILENAME$ = "RM_TRANSACTION"
+
+	CASE 210%
+		FILENAME$ = "RM_TRANSACTION.SEQ"
+
+	CASE 420%
+		RESUME 430 IF (ERR = 11%)
+		FILENAME$ = "RM_TRANSACTION.SEQ"
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+32767	END FUNCTION

@@ -1,0 +1,19 @@
+	!======================================================================
+	! PS_CASHINOUT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PS_CASHINOUT.CH%, STAT%)
+	CALL READ_DEVICE('PS_CASHINOUT',PS_CASHINOUT.DEV$, STAT%)
+
+	PS_CASHINOUT.NAME$ = PS_CASHINOUT.DEV$+"PS_CASHINOUT_"+BATCH_NO$+".JRL"
+
+	OPEN PS_CASHINOUT.NAME$ FOR INPUT AS FILE PS_CASHINOUT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PS_CASHINOUT, &
+		PRIMARY KEY &
+		( &
+			PS_CASHINOUT::CASHDATE, &
+			PS_CASHINOUT::CASHTIME &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

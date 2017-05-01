@@ -1,0 +1,461 @@
+1	%TITLE "TV_SPEC_SKED_MAN - Manual Scheduler"
+	%SBTTL "TV Traffic system"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program is used to manually play with a specific
+	!	days schedule.
+	!
+	! Index:
+	!
+	!	Schedule orders
+	!	Manual schedule
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_SPEC_SKED_MAN
+	!	$ LINK/EXE=TV_EXE: TV_SPEC_SKED_MAN, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_SPEC_SKED_MAN.OBJ;*
+	!
+	! Author:
+	!
+	!	08/09/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to use READ_INITIALIZE.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	!
+	! Maps
+	!
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+	MAP	(TV_COMMER)		TV_COMMER_CDD		TV_COMMER
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_SKED_INSTR"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.HB"
+	MAP	(TV_COMMER_SKED_INSTR)	TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED_INSTR
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_PROGRAM"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_PROGRAM.HB"
+	MAP	(TV_LOG_PROGRAM)	TV_LOG_PROGRAM_CDD	TV_LOG_PROGRAM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_BREAK"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.HB"
+	MAP	(TV_LOG_BREAK)		TV_LOG_BREAK_CDD	TV_LOG_BREAK
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOGSPOTS"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP	(TV_LOGSPOTS)		TV_LOGSPOTS_CDD		TV_LOGSPOTS
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_SKED_WORK"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SKED_WORK.HB"
+	MAP	(TV_SKED_WORK)		TV_SKED_WORK_CDD	TV_SKED_WORK
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CUSTOM_CONFLICT"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.HB"
+	MAP	(TV_CUSTOM_CONFLICT)	TV_CUSTOM_CONFLICT_CDD	TV_CUSTOM_CONFLICT
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_BREAK_TYPE"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.HB"
+	MAP	(TV_BREAK_TYPE)		TV_BREAK_TYPE_CDD	TV_BREAK_TYPE
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_CONFLICT"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.HB"
+	MAP	(TV_COMMER_CONFLICT)	TV_COMMER_CONFLICT_CDD	TV_COMMER_CONFLICT
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CONTROL"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.HB"
+	MAP	(TV_CONTROL)		TV_CONTROL_CDD		TV_CONTROL
+
+	!
+	! Channels and stuff to pass around
+	!
+	MAP (CH_TV_COMMER) &
+		TV_COMMER.CH%
+
+	MAP (CH_TV_COMMER_SKED_INSTR) &
+		TV_COMMER_SKED_INSTR.CH%
+
+	MAP (CH_TV_SKED_WORK) &
+		TV_SKED_WORK.CH%
+
+	MAP (CH_TV_LOG_BREAK) &
+		TV_LOG_BREAK.CH%
+
+	MAP (CH_TV_LOGSPOTS) &
+		TV_LOGSPOTS.CH%
+
+	MAP (CH_TV_CUSTOM_CONFLICT) &
+		TV_CUSTOM_CONFLICT.CH%
+
+	MAP (CH_TV_BREAK_TYPE) &
+		TV_BREAK_TYPE.CH%
+
+	MAP (CH_TV_COMMER_CONFLICT) &
+		TV_COMMER_CONFLICT.CH%
+
+	MAP (CH_TV_CONTROL) &
+		TV_CONTROL.CH%
+
+	MAP (CH_TV_TEMP_CONFLICT) &
+		TV_TEMP_CONFLICT.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION DATE_TODAY
+	EXTERNAL LONG   FUNCTION DATE_DAYCODE
+	EXTERNAL LONG   FUNCTION DATE_DAYOFWEEK
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilization.  Init error trapping, terminal, Set up for help,
+	! allocate channels.
+	!*******************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Init terminal
+	!
+	CALL READ_INITIALIZE
+
+	!
+	! Init help
+	!
+	SCOPE::PRG_IDENT = "PROG"
+	SCOPE::PRG_PROGRAM = "TV_SPEC_SKED_MAN"
+	SCOPE::PRG_ITEM = "SCHEDULE"
+
+	!
+	! Init day of week array
+	!
+	SCHED_DAY$(1%) = "Monday"
+	SCHED_DAY$(2%) = "Tuesday"
+	SCHED_DAY$(3%) = "Wednesday"
+	SCHED_DAY$(4%) = "Thursday"
+	SCHED_DAY$(5%) = "Friday"
+	SCHED_DAY$(6%) = "Saturday"
+	SCHED_DAY$(7%) = "Sunday"
+
+	!*******************************************************************
+	! Create windows to play in
+	!*******************************************************************
+
+	SMG_STATUS% = SMG$BEGIN_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	!
+	! Create IO window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(3%, 78%, IO_INPUT%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_INPUT%, "Manual Scheduler")
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "For date", 2%, 1%)
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_INPUT%, SCOPE::SMG_PBID, 2%, 2%)
+
+	SMG_STATUS% = SMG$END_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	%PAGE
+
+	!*******************************************************************
+	! Open up files that can be opened up and left open
+	!*******************************************************************
+
+1010	!
+	! Commercial header file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.OPN"
+
+1015	!
+	! Commercial schedule instructions (orders)
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.OPN"
+
+1020	!
+	! Customer conflict file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.OPN"
+
+1025	!
+	! Break type definition file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.OPN"
+
+1030	!
+	! Conflict definition file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.OPN"
+
+1035	!
+	! Control file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.OPN"
+	GET #TV_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+1040	!
+
+	%PAGE
+
+1100	!*******************************************************************
+	! Get from date
+	!*******************************************************************
+
+	SCHED_DATE$ = ENTR_3DATE(SCOPE, IO_INPUT%, "2;13", &
+		"Schedule for date", DATE_TODAY, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1100
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DOWN, SMG$K_TRM_DO
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1100
+	END SELECT
+
+	%PAGE
+
+1600	!*******************************************************************
+	! Loop from FROM_DATE to TO_DATE
+	!*******************************************************************
+
+	!
+	! Figure out all sorts of useful things about the
+	! given date.
+	!
+	DAY_LOOP%  = DATE_DAYCODE(SCHED_DATE$)
+	SCHED_DAY% = DATE_DAYOFWEEK(DAY_LOOP%)
+
+	%PAGE
+
+2000	!*******************************************************************
+	! Extend the schedule for one date.
+	!*******************************************************************
+
+ ScheduleOneDate:
+
+2010	!
+	! Open up program file for the given date.  We don't need the
+	! program file while scheduling, so we will completely
+	! ignore it.
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_PROGRAM.OPN"
+
+2015	!
+	! Open up break file for the given date.  We don't need the
+	! program file while scheduling, so we will completely
+	! ignore it.
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.OPN"
+
+2020	!
+	! Make sure that there is some breaks scheduled for the
+	! specified date.  (ie. that the log has been extended).
+	!
+	RESET #TV_LOG_BREAK.CH%
+	GET #TV_LOG_BREAK.CH%, REGARDLESS
+
+2040	!
+	! Open/create a spots file for the given date
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.CRE"
+
+	MAIN.OPTION% = 0%
+
+2050	!*******************************************************************
+	! Main options go here
+	!*******************************************************************
+
+	SCOPE::PRG_ITEM = ""
+	MAIN.OPTION$ = ENTR_3OPTION(SCOPE, "COMMAND", "Help eXit", MAIN.OPTION%, 0%)
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	!
+	! Exit the program
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_F8, SMG$K_TRM_CTRLC, &
+		SMG$K_TRM_CTRLZ
+
+		GOTO 2090
+
+	!
+	! Normal selection keys
+	!
+	CASE 0%, 10%, 12%, 13%, SMG$K_TRM_SELECT, SMG$K_TRM_DO
+
+	!
+	! Not-handled keys
+	!
+	CASE ELSE
+		CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+		GOTO 2050
+
+	END SELECT
+
+	SELECT MAIN.OPTION$
+
+	!
+	! Help
+	!
+	CASE "H"
+		CALL HELP_3MESSAGE(SCOPE, SCOPE::PRG_COMPANY, &
+			SCOPE::PRG_IDENT, SCOPE::PRG_PROGRAM, SCOPE::PRG_ITEM)
+
+	!
+	! eXit
+	!
+	CASE "X"
+		GOTO 2090
+
+	END SELECT
+
+	GOTO 2050
+
+2090	!
+	! Finish up the day
+	!
+	CLOSE #TV_LOG_PROGRAM.CH%, TV_LOG_BREAK.CH%, TV_LOGSPOTS.CH%
+
+	GOTO Exitprogram
+
+	%PAGE
+
+	!*******************************************************************
+	! Exit the program
+	!*******************************************************************
+
+ ExitProgram:
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+
+	!
+	! Errors in file opens
+	!
+	CASE 1010%
+		FINAME$ = "COMMER_HEADER"
+		RESUME HelpFile
+
+	CASE 1015%
+		FINAME$ = "COMMER_SKED_INSTR"
+		RESUME HelpFile
+
+	CASE 1020%
+		RESUME 1025
+
+	CASE 1025%
+		FINAME$ = "BREAK_TYPE"
+		RESUME HelpFile
+
+	CASE 1030%
+		RESUME 1040
+
+	!
+	! Error when there are no breaks.
+	!
+	CASE 2010%
+		FINAME$ = "TV_LOG_PROGRAM"
+		RESUME HelpFile
+
+	CASE 2015%
+		FINAME$ = "TV_LOG_BREAK"
+		RESUME HelpFile
+
+	CASE 2020%
+		FINAME$ = "TV_LOG_SPOTS"
+		RESUME HelpFile
+
+	!
+	! Error looking for any already scheduled spots
+	!
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(ERR))
+
+	GOTO ExitProgram
+
+ HelpFile:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", FINAME$, "ERROR" + NUM1$(ERR))
+
+	GOTO ExitProgram
+
+	END

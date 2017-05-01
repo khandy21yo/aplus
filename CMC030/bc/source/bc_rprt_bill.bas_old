@@ -1,0 +1,519 @@
+1	%TITLE "BC Journal Report"
+	%SBTTL "BC_RPRT_BILL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Print Billing Journal\* option provides
+	!	a means to print a report which will contain the following:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Order Number
+	!	.le
+	!	Customer Number
+	!	.le
+	!	Customer Name
+	!	.le
+	!	Ship To Number
+	!	.le
+	!	Salesman
+	!	.le
+	!	Date
+	!	.le
+	!	Ship Via
+	!	.le
+	!	AR Account Number
+	!	.le
+	!	Invoice Number
+	!	.le
+	!	Type
+	!	.le
+	!	Tax
+	!	.le
+	!	Quantity Ordered
+	!	.le
+	!	Quantity Shipped
+	!	.le
+	!	Product _#
+	!	.le
+	!	Description
+	!	.le
+	!	Units
+	!	.le
+	!	Price
+	!	.le
+	!	Amount
+	!	.le
+	!	Account _#
+	!	.els
+	!
+	! Index:
+	!	.x Print>Billing Journal
+	!	.x Billing Journal>Print
+	!
+	! Author:
+	!
+	!	07/07/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS BC_SOURCE:BC_RPRT_BILL.BAS/LINE
+	!	$ LINK/EXE=BC_EXE: BC_RPRT_BILL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BC_RPRT_BILL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	08/10/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/10/91 - Craig Tanner
+	!		Modified to use GL_OUTP_ACCTSUM	to do Debit/Credit pages
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of a change
+	!		in that function.
+	!
+	!	03/18/93 - Kevin Handy
+	!		Added parameter to GL_OUTP_ACCTSUM for units.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/30/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	10/15/98 - Kevin Handy
+	!		Lose excessive %PAGE's
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP	(AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLH.HB"
+	MAP	(BC_BILLH)	BC_BILLH_CDD	BC_BILLH
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLL.HB"
+	MAP	(BC_BILLL)	BC_BILLL_CDD	BC_BILLL
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_CONTROL.HB"
+	MAP	(BC_CONTROL)	BC_CONTROL_CDD	BC_CONTROL
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!
+	!	^*(01) From Order\*
+	!	.p
+	!	The ^*From Order\* number field provides the means to begin
+	!	the printing of the report with a selected order number.
+	!	.p
+	!	A blank setting will cause the report to begin with the
+	!	first order number in the file.
+	!
+	! Index:
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!
+	!	^*(02) To Order\*
+	!	.p
+	!	The ^*To Order\* number field provides a means to enter a
+	!	selected order number with which the report will end printing.
+	!	.p
+	!	A blank setting will cause the report to end with the last
+	!	order number in the file.
+	!
+	! Index:
+	!
+	!--
+
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^* (03) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* field provides the means to enter a
+	!	particular batch to be printed.
+	!	.p
+	!	Only one batch at a time may be printed.
+	!	.p
+	!	An entry is required in this field.
+	!
+	! Index:
+	!	.x Batch Number>Print Journal
+	!	.x Print Journal>Batch Number
+	!
+	!--
+
+300	!
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLH.OPN"
+
+310	!
+	! Open BC_BILLL file
+	!
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLL.OPN"
+
+330	!
+	! Open Customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "Billing Journal File List"
+	TITLE$(2%) = "Customer Billing System"
+	TITLE$(3%) = ""
+
+	!
+	! Headings
+	!
+	TITLE$(4%) = "Order #  Cust #     Name                        " + &
+		"   Invoice #"
+	TITLE$(5%) = "     SalesPerson  Date     Ship VIA             " + &
+		"Terms            Ship #"
+	TITLE$(6%) = "           Order   Ship BacOrd  Type Tax Product" + &
+		"       Descr                UOM            Price        " + &
+		"  Amount  Account"
+	TITLE$(7%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BC_BILLH.CH%
+	ELSE
+		FIND #BC_BILLH.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+	!
+	! Declare some variables
+	!
+	GRAND.TOTAL = 0.0
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BC_BILLH.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (BC_BILLH::ORDER > TO.ITEM$) AND TO.ITEM$ <> ""
+
+17100	!
+	! Look up customer name
+	!
+	AR_35CUSTOM::CUSNAM = STRING$(LEN(AR_35CUSTOM::CUSNAM), 63%)
+
+	GET #AR_35CUSTOM.CH%, KEY #0% GE BC_BILLH::CUSNUM, REGARDLESS
+
+17120	!
+	! Print the Sales Journal line
+	!
+	TEXT$ = BC_BILLH::ORDER + " " + &
+		BC_BILLH::CUSNUM + " " + &
+		LEFT(AR_35CUSTOM::CUSNAM, 30%) + " " + &
+		BC_BILLH::INVNUM
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 4%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	TEXT$ = SPACE$(5%) + &
+		BC_BILLH::SALEMAN + " " + &
+		PRNT_DATE(BC_BILLH::ORDERDATE, 8%) + " " + &
+		BC_BILLH::SHPVIA + " " + &
+		BC_BILLH::TERMS + " " + &
+		BC_BILLH::SHPNUM
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Total header
+	!
+	THIS.TOTAL = 0.0
+
+	!
+	! Print out line items
+	!
+	GOSUB Print_Lines
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BC_BILLH::ACCOUNT, &
+		0.0, THIS.TOTAL, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+17200	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	GRAND.TOTAL = FUNC_ROUND(GRAND.TOTAL, 2%)
+	TEXT$ = "                                                      " + &
+		"                              " + &
+		"Grand Total:  " + FORMAT$(GRAND.TOTAL,"###,###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Print out the Debit/Credit information
+	!
+	V% = GL_OUTP_ACCTSUM(OPT_SUMMARY, "", 0.0, 0.0, 0.0, TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Print_Lines:
+17740	!****************************************************************
+	!*  Subroutine for printing out Line Items			*
+	!****************************************************************
+	!
+	! Set ar amount to zero
+	!
+	AR_AMOUNT = 0.0
+
+	FIND #BC_BILLL.CH%, KEY #0% GE BC_BILLH::ORDER, REGARDLESS
+
+ Get_Next_Line:
+17750
+	!
+	! Loop starts here
+	!
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	!
+	! Get next line item
+	!
+	GET #BC_BILLL.CH%, REGARDLESS
+
+	!
+	! Check current line item
+	!
+	GOTO LastLine IF BC_BILLL::ORDER <> BC_BILLH::ORDER
+
+	!
+	! Print the line item line
+	!
+	TEXT$ = "         " + &
+		FORMAT$(BC_BILLL::ORDAMT, "#####  ") + &
+		FORMAT$(BC_BILLL::SHPAMT, "#####  ") + &
+		FORMAT$(BC_BILLL::BOAMT,  "#####     ") + &
+		BC_BILLL::LTYPE + "   " + &
+		BC_BILLL::TAXTYP + "   " + &
+		LEFT(BC_BILLL::PRODUCT, 13%) + " " + &
+		LEFT(BC_BILLL::DESCR,20%) + " " + &
+		BC_BILLL::UNITME + "  " + &
+		FORMAT$(BC_BILLL::UNIPRI, "###,###,###.####") + "  " + &
+		FORMAT$(BC_BILLL::AMOUNT, "###,###,###.##") + "  " + &
+		BC_BILLL::ACCOUNT
+
+	!
+	! Add to ar amount
+	!
+	SELECT BC_BILLL::LTYPE
+	CASE "S", "D","O","F","T"
+		AR_AMOUNT = AR_AMOUNT - BC_BILLL::AMOUNT
+	END SELECT
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BC_BILLL::ACCOUNT, &
+		0.0, -BC_BILLL::AMOUNT, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+
+	!
+	! Total in the line
+	!
+	GRAND.TOTAL = FUNC_ROUND(GRAND.TOTAL + BC_BILLL::AMOUNT, 2%)
+	THIS.TOTAL = FUNC_ROUND(THIS.TOTAL + BC_BILLL::AMOUNT, 2%)
+
+	!
+	! Try for next Line
+	!
+	GOTO Get_Next_Line
+
+ LastLine:
+	TEXT$ = "                                                      " + &
+		"                              " + &
+		"AR Total:     " + FORMAT$(AR_AMOUNT, "###,###,###.##") + "  " + &
+		BC_BILLH::ACCOUNT
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -2%)
+
+	THIS.TOTAL = FUNC_ROUND(THIS.TOTAL, 2%)
+	TEXT$ = "                                                      " + &
+		"                              " + &
+		"Order Total:  " + FORMAT$(THIS.TOTAL, "###,###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -2%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -2%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -3%)
+
+	RETURN
+
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	!
+	! Open Sales Journal
+	!
+	CASE 300%
+		FILENAME$ = "BC_BILLH"
+
+	CASE 310%
+		FILENAME$ = "BC_BILLL"
+
+	!
+	! AR Customer file
+	!
+	CASE 330%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 17100%
+		RESUME 17120 IF ERR = 155%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 17000%, 17020%
+		RESUME ExitTotal
+
+	CASE 17740, 17750%
+		RESUME LastLine
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

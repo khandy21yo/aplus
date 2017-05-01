@@ -1,0 +1,19 @@
+	!======================================================================
+	! UTL_TRANSTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_TRANSTYPE.CH%, STAT%)
+	CALL READ_DEVICE('UTL_TRANSTYPE',UTL_TRANSTYPE.DEV$, STAT%)
+
+	UTL_TRANSTYPE.NAME$ = UTL_TRANSTYPE.DEV$+"UTL_TRANSTYPE.TBL"
+
+	OPEN UTL_TRANSTYPE.NAME$ FOR INPUT AS FILE UTL_TRANSTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_TRANSTYPE, &
+		PRIMARY KEY &
+			UTL_TRANSTYPE::CODE, &
+		ALTERNATE KEY &
+			UTL_TRANSTYPE::CLASS &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

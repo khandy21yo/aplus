@@ -1,0 +1,28 @@
+	!======================================================================
+	! AP_OPEN file (create, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_OPEN.CH_NEW%, STAT%)
+	CALL READ_DEVICE('AP_OPEN',AP_OPEN.DEV$, STAT%)
+
+	AP_OPEN.NAME_NEW$ = AP_OPEN.DEV$+"AP_OPEN.LED_NEW"
+
+	OPEN AP_OPEN.NAME_NEW$ FOR OUTPUT AS FILE AP_OPEN.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_OPEN, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			AP_OPEN::VENNUM, &
+			AP_OPEN::TRANKEY &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AP_OPEN::VENNUM, &
+			AP_OPEN::INVNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_OPEN::BATCH &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

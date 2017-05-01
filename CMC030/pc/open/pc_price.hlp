@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Price is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PC__PRICE.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Product Price
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PC__PRICE.MAS\*
+	!	.p
+	!	Product Price.
+	!
+	! Index:
+	!	.x Product Price
+	!	.x PC_PRICE
+	!--

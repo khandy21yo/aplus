@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Purchase Journal Header is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__PJH.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Accounts Payable System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Purchase Journal Header
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__PJH.JRL\*
+	!	.b
+	!	.lm +5
+	!	Purchase Journal Header.
+	!
+	! Index:
+	!	.x Purchase Journal Header
+	!	.x AP_PJH
+	!
+	!--

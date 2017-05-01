@@ -1,0 +1,19 @@
+	!======================================================================
+	! PP_TRANTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PP_TRANTYPE.CH%, STAT%)
+	CALL READ_DEVICE('PP_TRANTYPE',PP_TRANTYPE.DEV$, STAT%)
+
+	PP_TRANTYPE.NAME$ = PP_TRANTYPE.DEV$+"PP_TRANTYPE.TBL"
+
+	OPEN PP_TRANTYPE.NAME$ FOR INPUT AS FILE PP_TRANTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PP_TRANTYPE, &
+		PRIMARY KEY &
+			PP_TRANTYPE::TRANTYPE, &
+		ALTERNATE KEY &
+			PP_TRANTYPE::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,44 @@
+1	!
+	! Special program to blank out unwanted binmaps.
+	!
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[IC.OPEN]IC_BINMAP.HB"
+	MAP (IC_BINMAP) IC_BINMAP_CDD IC_BINMAP
+
+
+100	%INCLUDE "SOURCE:[IC.OPEN]IC_BINMAP.MOD"
+
+
+1000	RESET #IC_BINMAP.CH%
+
+2000	WHEN ERROR IN
+		GET #IC_BINMAP.CH%
+	USE
+		IF ERR = 154%
+		THEN
+			!
+			! Skip locked records
+			!
+			PRINT "X";
+			GET #IC_BINMAP.CH%, REGARDLESS
+			CONTINUE 2000
+		END IF
+		stop
+	END WHEN
+
+	IF IC_BINMAP::BIN(3) = "OXBO"
+	THEN
+		IC_BINMAP::BIN(3) = ""
+		UPDATE #IC_BINMAP.CH%
+		PRINT "+";
+	ELSE
+		PRINT ".";
+	END IF
+
+	PRINT IF CCPOS(I%) >= 50%
+
+	GOTO 2000
+
+32767	END

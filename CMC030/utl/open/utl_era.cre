@@ -1,0 +1,21 @@
+	!======================================================================
+	! UTL_ERA file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_ERA.CH%, STAT%)
+	CALL READ_DEVICE('UTL_ERA',UTL_ERA.DEV$, STAT%)
+	CALL READ_PROTECTION('UTL_ERA',UTL_ERA.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(UTL_ERA.PRO$, STAT%)
+
+	UTL_ERA.NAME$ = UTL_ERA.DEV$+"UTL_ERA.TBL"
+
+	OPEN UTL_ERA.NAME$ AS FILE UTL_ERA.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_ERA, &
+		PRIMARY KEY &
+			UTL_ERA::ERA, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

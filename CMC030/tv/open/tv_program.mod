@@ -1,0 +1,19 @@
+	!======================================================================
+	! TV_PROGRAM file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TV_PROGRAM.CH%, STAT%)
+	CALL READ_DEVICE('TV_PROGRAM',TV_PROGRAM.DEV$, STAT%)
+
+	TV_PROGRAM.NAME$ = TV_PROGRAM.DEV$+"TV_PROGRAM.MAS"
+
+	OPEN TV_PROGRAM.NAME$ FOR INPUT AS FILE TV_PROGRAM.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TV_PROGRAM, &
+		PRIMARY KEY &
+			TV_PROGRAM::PRGNUM, &
+		ALTERNATE KEY &
+			TV_PROGRAM::TITLE &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

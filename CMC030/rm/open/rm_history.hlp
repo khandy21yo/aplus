@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Restaurant Sales and Labor History is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*RM__HISTORY.HIS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Restaurant Management System\* going
+	!	under MASTER and run process again.
+	!
+	! Index:
+	!	.x Restaurant Sales and Labor History
+	!--
+	!++
+	! Abstract:FILE
+	!	^*RM__HISTORY.HIS\*
+	!	.p
+	!	Restaurant Sales and Labor History.
+	!
+	! Index:
+	!	.x Restaurant Sales and Labor History
+	!	.x RM_HISTORY
+	!--

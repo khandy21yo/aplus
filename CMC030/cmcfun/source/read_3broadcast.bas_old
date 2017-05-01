@@ -1,0 +1,109 @@
+1	%TITLE "Handle Broadcast Trapping."
+	%SBTTL "READ_3BROADCAST"
+	%IDENT "V3.3"
+
+	SUB READ_3BROADCAST BY REF(SCOPE_STRUCT SCOPE BY REF, &
+		LONG A2, LONG A3, LONG A4, LONG A5)
+
+	!
+	!		COPYRIGHT (C) 1987 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	! Parameters:
+	!
+	!	The input is five parameters passed through by the
+	!	AST trapping routine.
+	!
+	! Example:
+	!
+	!	DO NOT CALL AS A NORMAL SUB.  This function is
+	!	special to OUTP_LINE("", ).
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:READ_3BROADCAST/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP READ_3BROADCAST
+	!	$ DELETE READ_3BROADCAST.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	09/01/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	OLD_COL
+	!		A long variable that holds the old column of the
+	!	message display.
+	!
+	!	OLD_ROW
+	!		Long variable that holds the old row of the message
+	!	display.
+	!
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	DECLARE LONG OLD_COL, OLD_ROW
+
+	%INCLUDE "FUNC_INCLUDE:SCOPEDEF.COM"
+
+	!
+	! Save row/column of message display
+	!
+	OLD_COL = SMG$CURSOR_COLUMN(SCOPE::SMG_MESSAGE)
+	OLD_ROW = SMG$CURSOR_ROW(SCOPE::SMG_MESSAGE)
+
+
+ Loop:
+	!
+	! Read broadcast messages
+	!
+	SMG_STATUS% = SMG$GET_BROADCAST_MESSAGE(SCOPE::SMG_PBID, TEXT$)
+
+	IF (SMG_STATUS% = 1%)
+	THEN
+		!
+		! Write broadcast messages
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_MESSAGE, TEXT$, '1'L, '1'L)
+		GOTO Loop
+	END IF
+
+	!
+	! Restore cursor position
+	!
+	SMG_STATUS% = SMG$SET_CURSOR_ABS(SCOPE::SMG_MESSAGE, OLD_ROW, OLD_COL)
+	SMG_STATUS% = SMG$FLUSH_BUFFER(SCOPE::SMG_PBID)
+
+	END SUB

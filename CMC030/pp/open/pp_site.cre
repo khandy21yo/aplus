@@ -1,0 +1,26 @@
+	!======================================================================
+	! PP_SITE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PP_SITE.CH%, STAT%)
+	CALL READ_DEVICE('PP_SITE',PP_SITE.DEV$, STAT%)
+	CALL READ_PROTECTION('PP_SITE',PP_SITE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PP_SITE.PRO$, STAT%)
+
+	PP_SITE.NAME$ = PP_SITE.DEV$+"PP_SITE.MAS"
+
+	OPEN PP_SITE.NAME$ AS FILE PP_SITE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PP_SITE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			PP_SITE::HOST, &
+			PP_SITE::SITE, &
+			PP_SITE::STYPE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

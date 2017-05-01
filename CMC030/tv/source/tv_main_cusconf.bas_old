@@ -1,0 +1,510 @@
+1	%TITLE "TV_MAIN_CUSCONF - Customer Conflict File Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_CUSCONF(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the customer conflict file.
+	!
+	! Index:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_CUSCONF/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_CUSCONF
+	!	$ DELETE TV_MAIN_CUSCONF.OBJ;*
+	!
+	! Author:
+	!
+	!	11/20/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/11/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.HB"
+	MAP (TV_CUSTOM_CONFLICT)	TV_CUSTOM_CONFLICT_CDD	TV_CUSTOM_CONFLICT
+	MAP (TV_CUSTOM_CONFLICT_OLD)	TV_CUSTOM_CONFLICT_CDD	TV_CUSTOM_CONFLICT_OLD, TV_CUSTOM_CONFLICT2
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)			AR_CUSTOM_CDD		AR_CUSTOM
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.HB"
+	MAP (TV_COMMER_CONFLICT)	TV_COMMER_CONFLICT_CDD	TV_COMMER_CONFLICT
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_CUSTOM_CONFLICT) &
+		TV_CUSTOM_CONFLICT.CH%, &
+		TV_CUSTOM_CONFLICT.READONLY%
+
+	!
+	! Create array to contain pointers and totals
+	!
+	RECORD RARRAY_RECORD
+		RFA	LINRFA		! Rfa pointer for record
+	END RECORD
+
+	MAP (TT_TV_CUSTOM_CONFLICT) RARRAY_RECORD RARRAY(300%)	! Allocate for 300
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION READ_SET
+
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Line items"
+		SMG_WINDOW::NHELP = "TV_CUSTOM_CONFLICT"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 12%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 8%
+		SMG_WINDOW::NITEMS= 1%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::TOPLIN = 3%
+		SMG_WINDOW::BOTLIN = 12%
+		SMG_WINDOW::LINREC = 1%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_CUSTOM_CONFLICT.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_CUSTOM_CONFLICT.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.CRE"
+		TV_CUSTOM_CONFLICT.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_CUSTOM_CONFLICT.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_CUSTOM_CONFLICT.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_CUSTOM_CONFLICT.CH%
+		RESET #TV_CUSTOM_CONFLICT.CH%
+		GET #TV_CUSTOM_CONFLICT.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"   (01)" + SPACE$(71%), &
+			1%, 1%, , SMG$M_REVERSE)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  Conflict Description" + SPACE$(56%), &
+			2%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Extra display stuff
+	!
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! Paint lines on screen
+		!
+		FOR I% = 1% TO 1%
+
+			A% = VAL%(MID("011", I%*4%-3%, 3%))
+
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_WINDOW::WNUMBER, &
+				1%, A%, SMG_WINDOW::BOTLIN, A%)
+
+		NEXT I%
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		XLINE$ = NUM1$(SMG_WINDOW::CURLIN)
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_CUSTOM_CONFLICT::CONFLICT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";3", TEMP$, &
+				TV_CUSTOM_CONFLICT::CONFLICT, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_CUSTOM_CONFLICT::CONFLICT = &
+					TV_COMMER_CONFLICT::CODE &
+					IF MAIN_WINDOW(TV_MAIN_COMCON.ID, "V0  ") = 1%
+				GOTO E0Loop
+			END IF
+
+			CON.DESCR$ = STRING$(20%,ASCII("?"))
+
+			IF MAIN_WINDOW(TV_MAIN_COMCON.ID,"Q0"+TV_CUSTOM_CONFLICT::CONFLICT) = 1%
+			THEN
+				CON.DESCR$ = TV_COMMER_CONFLICT::DESCR
+			END IF
+
+			CON.DESCR$ = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";12", TEMP$, &
+				CON.DESCR$, 1%, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		TV_MAIN_CUSCONF = 0%
+
+		CASE 1%
+			IF TV_CUSTOM_CONFLICT::CONFLICT = ""
+			THEN
+				TV_MAIN_CUSCONF = 1%
+			ELSE
+			! Is the input defined?
+			!
+			IF MAIN_WINDOW(TV_MAIN_COMCON.ID,"Q0"+TV_CUSTOM_CONFLICT::CONFLICT) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "CONFL"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "CONFL"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_CUSCONF = 1%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_CUSCONF = 1% IF V$ = "N"
+				END IF
+			END IF
+	!
+	! Set TV_CUSTOM_CONFLICT_OLD value
+	!
+20500	CASE OPT_SETOLD
+		TV_CUSTOM_CONFLICT_OLD = TV_CUSTOM_CONFLICT
+
+	!
+	! Restore TV_CUSTOM_CONFLICT_OLD value
+	!
+	CASE OPT_RESETOLD
+		TV_CUSTOM_CONFLICT = TV_CUSTOM_CONFLICT_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		TV_CUSTOM_CONFLICT2 = TV_CUSTOM_CONFLICT
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		TV_CUSTOM_CONFLICT = TV_CUSTOM_CONFLICT2
+
+		!
+		! Set special default values for the key of a new record
+		! which is the most likely case when this function is to
+		! be called.
+		!
+		TV_CUSTOM_CONFLICT::CUSNUM = AR_CUSTOM::CUSNUM
+
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+ !		SELECT MLOOP
+ !
+ !		CASE 0%
+			FIND #TV_CUSTOM_CONFLICT.CH%, &
+				KEY#0 GE TV_CUSTOM_CONFLICT::CUSNUM, &
+				REGARDLESS
+ !		END SELECT
+
+	!
+	! Handle array of records
+	!
+27000	CASE OPT_ARRAY
+
+		!
+		! Select sub-option of array
+		!
+		SELECT MLOOP
+
+		!
+		! Load array with line items
+		!
+		CASE 1%
+
+			!
+			! Empty array
+			!
+			SMG_WINDOW::TOTREC = 0%
+
+27110			!
+			! Search for first record
+			!
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0 GE AR_CUSTOM::CUSNUM, &
+				REGARDLESS
+
+27120			!
+			! Get a record
+			!
+			GET #SMG_WINDOW::CHAN
+
+			IF (TV_CUSTOM_CONFLICT::CUSNUM = AR_CUSTOM::CUSNUM)
+			THEN
+				!
+				! Add information to array
+				!
+				SMG_WINDOW::TOTREC = SMG_WINDOW::TOTREC + 1%
+				RARRAY(SMG_WINDOW::TOTREC)::LINRFA = &
+					GETRFA(SMG_WINDOW::CHAN)
+				GOTO 27120
+			END IF
+
+		!
+		! Remove one element of the array
+		!
+		CASE 2%
+			!
+			! Remove item pointed to by Mflag
+			!
+			FOR I% = MFLAG TO SMG_WINDOW::TOTREC - 1%
+				RARRAY(I%) = RARRAY(I% + 1%)
+			NEXT I%
+
+		!
+		! Set array item to current record
+		!
+		CASE 3%
+			RARRAY(MFLAG)::LINRFA = GETRFA(SMG_WINDOW::CHAN)
+
+		!
+		! Load in current record, locked
+		!
+		CASE 4%
+27200			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA
+
+		!
+		! Load in current record, unlocked
+		!
+		CASE 5%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA, &
+				REGARDLESS
+
+		!
+		! Change the current record's key to match header.  The
+		! new key is probibly passes through MVALUE, unless some
+		! other means is devised.
+		!
+		CASE 6%
+			TV_CUSTOM_CONFLICT::CUSNUM = MID(MVALUE, 2%, 10%)
+
+		END SELECT
+	END SELECT
+
+28000	EXIT FUNCTION
+
+	%PAGE
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		TV_MAIN_CUSCONF = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		TV_MAIN_CUSCONF = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Error while loading array
+	!
+	CASE 27110%
+		!
+		! Nothing to load
+		!
+		RESUME 28000
+
+	CASE 27120%
+		!
+		! Read all records
+		!
+		RESUME 28000 IF ERR = 11%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

@@ -1,0 +1,26 @@
+	!======================================================================
+	! PD_SUBSTITUTE file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PD_SUBSTITUTE.CH%, STAT%)
+	CALL READ_DEVICE('PD_SUBSTITUTE',PD_SUBSTITUTE.DEV$, STAT%)
+
+	PD_SUBSTITUTE.NAME$ = PD_SUBSTITUTE.DEV$+"PD_SUBSTITUTE.MAS"
+
+	OPEN PD_SUBSTITUTE.NAME$ FOR INPUT AS FILE PD_SUBSTITUTE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PD_SUBSTITUTE, &
+		PRIMARY KEY &
+		( &
+			PD_SUBSTITUTE::OUR_PRODUCT, &
+			PD_SUBSTITUTE::THEIR_PRODUCT &
+		)	, &
+		ALTERNATE KEY &
+			PD_SUBSTITUTE::THEIR_PRODUCT, &
+		ALTERNATE KEY &
+		( &
+			PD_SUBSTITUTE::VENDOR, &
+			PD_SUBSTITUTE::THEIR_PRODUCT &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+

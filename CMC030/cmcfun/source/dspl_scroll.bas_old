@@ -1,0 +1,548 @@
+1	%TITLE "Subroutine to Scroll Window One Column"
+	%SBTTL "DSPL_SCROLL"
+	%IDENT "V3.3"
+
+	FUNCTION INTEGER DSPL_SCROLL( &
+		SMG_SCROLL_CDD SMG_SCROLL, &
+		STRING SMG_ARRAY(), &
+		INTEGER SMG_SCOPE.EXIT, &
+		STRING SMG_SCROLL_OPTION)
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function is used to scroll text within a
+	!	virtual window. It will scroll up, down, go to
+	!	next screen, previous screen, top of text,
+	!	bottom of text, and find a line in the text.
+	!	.b
+	!	SMG_SCROLL::SMG_FLAG MEANING( If Set )
+	!	.table 3,25
+	!	.te
+	!	1% Encode the lines
+	!	.te
+	!	2% Draw lines
+	!	.te
+	!	8% No Begin/End updates on scroll
+	!	.te
+	!	128% Advance one line at a time if no prompt
+	!	.end table
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	SMG_SCROLL
+	!		A structure defining the scrolling window.
+	!
+	!	SMG_ARRAY()
+	!		The returned array that holds the Fun Scroll values.
+	!
+	!	SMG_SCOPE.EXIT
+	!		A function key that is assigned a command.
+	!
+	!	SMG_SCROLL_OPTION
+	!		The returned user's options.
+	!
+	! Example:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:DSPL_SCROLL/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP DSPL_SCROLL
+	!	$ DELETE DSPL_SCROLL.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	04/23/87 - B. Craig Larsen
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	11/17/89 - Kevin Handy
+	!		Turned off error trapping because all it did
+	!		was an on error goto 0 in effect.
+	!
+	!	11/17/89 - Kevin Handy
+	!		Put in sharable library (Possible now because
+	!		of disabling ENTR_MESSAGE call)
+	!
+	!	08/06/91 - Kevin Handy
+	!		Removed goofball code that would print a '+'
+	!		on the screen.  I don't know who added this
+	!		junk code (Frank?) but they were too embarrased
+	!		to say they did it in the edit history.
+	!
+	!	03/14/92 - Kevin Handy
+	!		Clean up vars (checkvar)
+	!
+	!	08/05/93 - Kevin Handy
+	!		Deleted commented out code.
+	!		Display prompt only if there is one.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	ROWS
+	!		Long variable used to tell the number of rows.
+	!
+	!	COLS
+	!		Long variable used to tell the number of columns.
+	!
+	!	LEADER
+	!		Variable used to show the prompt.
+	!
+	!	BOT
+	!		Variable used to paint the entire window.
+	!
+	!	HEIGHT
+	!		Long variable telling the height.
+	!
+	!	WIDTH
+	!		Long variable telling the width of the window.
+	!
+	!	VBEG
+	!		Long variable holding the beginning element.
+	!
+	!	VEND
+	!		Long variable holding the end element.
+	!
+	!	VTOPL
+	!		Variable holding the value of top of line.
+	!
+	!	VCURL
+	!		Variable holding current line.
+	!
+	!	WIN_SIZ
+	!		Variable used to change screens.
+	!
+	!	DIRECTION
+	!		Variable used to changing direction.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:SMG_EXTERNALS.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.SMG.SMG_SCROLL"
+
+	DECLARE LONG	ROWS, COLS, LEADER, BOT, HEIGHT, WIDTH, &
+			VBEG, VEND, VTOPL, VCURL, VFIND, WIN_SIZ, &
+			VIDEO_SET, DIRECTION, SELECTED
+
+	EXTERNAL	LONG FUNCTION SMG_PUT_VIRTUAL_DISPLAY_ENCODED
+
+	!
+	! Set Fun Scroll Variables
+	!
+	DSPL_SCROLL	=  0%
+	DIRECTION	= -1%
+
+	PROMPT$		= TRM$(SMG_SCROLL::PROMPT)
+	LEADER		= LEN(PROMPT$)
+	WIN_SIZ		= SMG_SCROLL::SCROLL_BOT - SMG_SCROLL::SCROLL_TOP + '1'L
+	SELECTED	= SMG_SCROLL::V_SELECT_LINE
+
+	VBEG	= FNMAP_AV%(SMG_SCROLL::BEG_ELEMENT)
+	VTOPL	= FNMAP_AV%(SMG_SCROLL::TOP_LINE)
+	VCURL	= FNMAP_AV%(SMG_SCROLL::CUR_LINE)
+	VFIND	= FNMAP_AV%(SMG_SCROLL::FIND_LINE)
+
+	IF SMG_SCROLL::END_ELEMENT > SMG_SCROLL::BOT_ARRAY
+	THEN
+		VEND = FNMAP_AV%(SMG_SCROLL::BOT_ARRAY)
+	ELSE
+		VEND = FNMAP_AV%(SMG_SCROLL::END_ELEMENT)
+	END IF
+
+	IF VEND < VBEG
+	THEN
+		VEND = VBEG
+		SMG_ARRAY(FNMAP_VA%(VBEG)) = ""
+		SMG_ARRAY(FNMAP_VA%(VBEG)) = '2'C + '0'C &
+			IF (SMG_SCROLL::SMG_FLAG AND 1%)
+	END IF
+	VEND = VEND + '1'L IF SELECTED > '0'L
+
+	!
+	! Return the attributes of a virtual display
+	!
+	SMG_STATUS% = SMG$GET_DISPLAY_ATTR (SMG_SCROLL::WINDOW, HEIGHT, WIDTH)
+
+	DRAW_COLS$	= EDIT$(SMG_SCROLL::DRAW_COLS, 2%+4%+256%)
+	DRAW_COLS$	= DRAW_COLS$ + "," IF DRAW_COLS$ <> "" AND &
+				RIGHT$(DRAW_COLS$, LEN(DRAW_COLS$)) <> ","
+
+	!
+	! Remove the Prompt
+	!
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCROLL::WINDOW, SPACE$(LEADER), &
+		(VCURL - VTOPL + SMG_SCROLL::SCROLL_TOP), '1'L) &
+		IF LEADER
+
+ KeyMenu:
+	SELECT SMG_SCOPE.EXIT		! Convert escape sequence to commands
+
+		CASE SMG$K_TRM_DOWN
+
+			IF LEADER OR (SMG_SCROLL::SMG_FLAG AND 128%)
+			THEN
+				VFIND = VCURL + 1%
+			ELSE
+				VFIND = VTOPL + WIN_SIZ
+			END IF
+
+		CASE SMG$K_TRM_UP
+
+			IF LEADER OR (SMG_SCROLL::SMG_FLAG AND 128%)
+			THEN
+				VFIND = VCURL - '1'L
+			ELSE
+				VFIND = VTOPL - 1%
+			END IF
+
+		CASE SMG$K_TRM_PREV_SCREEN
+
+			IF LEADER OR (SMG_SCROLL::SMG_FLAG AND 128%)
+			THEN
+				VFIND = VCURL - WIN_SIZ + 1%
+			ELSE
+				VFIND = VTOPL - WIN_SIZ + 1%
+			END IF
+
+		CASE SMG$K_TRM_NEXT_SCREEN
+
+			IF LEADER OR (SMG_SCROLL::SMG_FLAG AND 128%)
+			THEN
+				VFIND = VCURL + WIN_SIZ - 1%
+			ELSE
+				VFIND = VTOPL + 2*(WIN_SIZ - '1'L)
+			END IF
+
+		CASE SMG$K_TRM_F18		! Top
+
+			VFIND = FNMAP_AV%(SMG_SCROLL::TOP_ARRAY)
+			GOSUB PaintWindow
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_F19		! Bottom
+
+			VFIND = VEND
+			GOSUB PaintWindow
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_SELECT		! Select
+
+			IF SELECTED < '1'L
+			THEN
+				VEND	= VEND + '1'L
+				IF VCURL >= VEND - '1'L
+				THEN
+					SELECTED, SMG_SCROLL::V_SELECT_LINE = &
+						VCURL + '1'L
+					VFIND = VEND
+				ELSE
+					SELECTED, SMG_SCROLL::V_SELECT_LINE = &
+						VCURL
+				END IF
+				SMG_SCOPE.EXIT			=  511%
+				SMG_SCROLL_OPTION		= 'PAINT'
+				GOTO KeyMenu
+			END IF
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_REMOVE		! Remove-select
+
+			IF SELECTED > '0'L
+			THEN
+				VEND  = VEND - '1'L
+				VFIND = VEND IF VCURL >= VEND - '1'L
+				SMG_SCOPE.EXIT			=  511%
+				SMG_SCROLL_OPTION		= 'PAINT'
+				SELECTED, SMG_SCROLL::V_SELECT_LINE	= '0'L
+				GOTO KeyMenu
+			END IF
+			GOTO ExitProgram
+
+		CASE ELSE
+
+			SELECT SMG_SCROLL_OPTION
+				CASE 'PAINT'
+					GOSUB PaintWindow
+					GOTO ExitProgram
+
+				CASE 'FIND'
+
+				CASE ELSE
+					GOTO ExitProgram
+			END SELECT
+	END SELECT
+
+ FindLine:
+	!=======================================================
+	! Find a line
+	!=======================================================
+	SELECT VFIND
+
+		CASE > VEND	! Positive
+
+			VFIND = VEND
+			GOTO FindLine
+
+		CASE < VBEG
+
+			VFIND = VBEG
+			GOTO FindLine
+
+		!
+		! Is it close enough to scroll the screen down
+		!
+		CASE VTOPL - WIN_SIZ TO VTOPL - 1%
+
+			SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE( &
+				SMG_SCROLL::WINDOW) IF (SMG_SCROLL::SMG_FLAG AND 8%)
+
+			FOR I%=VCURL TO VFIND STEP -1%
+				ROWS	= I% - VTOPL + SMG_SCROLL::SCROLL_TOP
+				IF ROWS < SMG_SCROLL::SCROLL_TOP
+				THEN
+					ROWS	= SMG_SCROLL::SCROLL_TOP
+					DIRECTION = SMG$M_DOWN
+				END IF
+				GOSUB PrintLine
+			NEXT I%
+
+
+			SMG_STATUS% = SMG$END_DISPLAY_UPDATE( &
+				SMG_SCROLL::WINDOW) IF (SMG_SCROLL::SMG_FLAG AND 8%)
+
+			DIRECTION	= -1%
+			VTOPL		= VFIND
+
+		!
+		! Is it close enough to scroll the screen up for
+		!
+		CASE VTOPL + WIN_SIZ TO VTOPL + 2*WIN_SIZ - 1%
+
+			SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE( &
+				SMG_SCROLL::WINDOW) &
+				IF (SMG_SCROLL::SMG_FLAG AND 8%)
+
+			FOR I%=VCURL TO VFIND
+				ROWS	= I% - VTOPL + SMG_SCROLL::SCROLL_TOP
+
+				IF ROWS > SMG_SCROLL::SCROLL_BOT
+				THEN
+					ROWS	= SMG_SCROLL::SCROLL_BOT
+					DIRECTION = SMG$M_UP
+				END IF
+
+				SELECTED = '0'L IF I% = VFIND
+				GOSUB PrintLine
+				SELECTED = SMG_SCROLL::V_SELECT_LINE IF I%=VFIND
+
+			NEXT I%
+
+			SMG_STATUS% = SMG$END_DISPLAY_UPDATE( &
+				SMG_SCROLL::WINDOW) &
+				IF (SMG_SCROLL::SMG_FLAG AND 8%)
+
+			DIRECTION	= -1%
+			VTOPL		= VFIND - WIN_SIZ + 1%
+
+		!
+		! Otherwise, repaint all lines, with current
+		! line at the top.
+		!
+		CASE ELSE
+			SELECT VFIND
+			CASE VTOPL TO VTOPL + WIN_SIZ - 1%
+
+				SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE( &
+					SMG_SCROLL::WINDOW) &
+					IF (SMG_SCROLL::SMG_FLAG AND 8%)
+
+				SELECT SMG_SCOPE.EXIT
+				CASE SMG$K_TRM_DOWN, SMG$K_TRM_NEXT_SCREEN
+					FOR I%=VCURL TO VFIND - '1'L
+						ROWS	= I% - VTOPL + &
+							SMG_SCROLL::SCROLL_TOP
+						GOSUB PrintLine
+					NEXT I%
+
+				CASE SMG$K_TRM_UP,   SMG$K_TRM_PREV_SCREEN
+					FOR I%=VCURL - '1'L TO VFIND STEP -1%
+						ROWS	= I% - VTOPL + &
+							SMG_SCROLL::SCROLL_TOP
+						GOSUB PrintLine
+					NEXT I%
+				END SELECT
+
+				SMG_STATUS% = SMG$END_DISPLAY_UPDATE( &
+					SMG_SCROLL::WINDOW) &
+					IF (SMG_SCROLL::SMG_FLAG AND 8%)
+
+			CASE ELSE
+				GOSUB PaintWindow
+
+			END SELECT
+	END SELECT
+
+ ExitProgram:
+
+	!
+	! Print the Prompt
+	!
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCROLL::WINDOW, PROMPT$, &
+		(VFIND - VTOPL + SMG_SCROLL::SCROLL_TOP), '1'L,, SMG$M_BOLD) &
+		IF LEADER
+
+	GOTO ExitFunction
+
+	%PAGE
+
+ PrintLine:
+	!=====================================================================
+	! Print the line and optionally draw the vertical lines
+	!=====================================================================
+
+	VIDEO_SET = '0'L
+
+	IF SELECTED > '0'L
+	THEN
+		SELECT SMG_SCOPE.EXIT
+			CASE SMG$K_TRM_DOWN, SMG$K_TRM_NEXT_SCREEN, &
+				SMG$K_TRM_F19
+
+				VIDEO_SET=SMG_SCROLL::VIDEO_SET IF I%>=SELECTED
+
+			CASE SMG$K_TRM_UP, SMG$K_TRM_PREV_SCREEN, &
+				SMG$K_TRM_F18
+
+				VIDEO_SET = SMG_SCROLL::VIDEO_SET IF I%<SELECTED
+		END SELECT
+	END IF
+
+	SMG_STATUS% = SMG$SCROLL_DISPLAY_AREA(SMG_SCROLL::WINDOW, &
+		SMG_SCROLL::SCROLL_TOP, '1'L, WIN_SIZ,, DIRECTION) &
+			IF DIRECTION > -1%
+
+	RETURN IF I% > VEND - '1'L AND SMG_SCROLL::V_SELECT_LINE > '0'L
+
+	IF (SMG_SCROLL::SMG_FLAG AND 1%)
+	THEN
+		SMG_STATUS% = SMG_PUT_VIRTUAL_DISPLAY_ENCODED( &
+			SMG_SCROLL::WINDOW, INTEGER(LEN(SMG_ARRAY( &
+			FNMAP_VA%(I%))), LONG), SMG_ARRAY(FNMAP_VA%(I%)), &
+			ROWS, LEADER + '1'L, '0'L, '0'L, VIDEO_SET)
+	ELSE
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_SCROLL::WINDOW, &
+			SMG_ARRAY(FNMAP_VA%(I%)), ROWS, LEADER + '1'L,, &
+			VIDEO_SET, SMG_SCROLL::VIDEO_COMP, SMG_SCROLL::CHARSET)
+	END IF
+
+	!
+	! Draw the vertical lines if requested
+	!
+	IF (SMG_SCROLL::SMG_FLAG AND 2%)
+	THEN
+		FOR PC% = 1% TO LEN(DRAW_COLS$) STEP 4%
+			COLS       = VAL%(MID(DRAW_COLS$, PC%, 3%))
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_SCROLL::WINDOW, &
+				'1'L, COLS, HEIGHT, COLS)
+		NEXT PC%
+	END IF
+
+	RETURN
+
+	%PAGE
+
+ PaintWindow:
+	!=====================================================================
+	! Paint the full window
+	!=====================================================================
+	IF (VFIND < VTOPL) OR (VFIND > VTOPL + WIN_SIZ - '1'L)
+	THEN
+		VTOPL = VFIND
+		VTOPL = VEND - WIN_SIZ + 1% IF VTOPL > VEND - WIN_SIZ
+		VTOPL = VBEG IF VTOPL < VBEG
+	END IF
+
+	BOT = VTOPL + WIN_SIZ - 1%
+	BOT = VEND IF BOT > VEND
+
+	SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_SCROLL::WINDOW)
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_SCROLL::WINDOW, &
+		SMG_SCROLL::SCROLL_TOP, '1'L, SMG_SCROLL::SCROLL_BOT, WIDTH)
+
+	FOR I%=VTOPL TO BOT
+		ROWS	= (I% - VTOPL + SMG_SCROLL::SCROLL_TOP)
+		GOSUB PrintLine
+	NEXT I%
+
+	SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_SCROLL::WINDOW)
+
+	RETURN
+
+	%PAGE
+
+	!=====================================================================
+	! Map the actual line into the virtual line
+	!=====================================================================
+	DEF FNMAP_AV%(LONG THELINE) = THELINE - SMG_SCROLL::BEG_ELEMENT + '1'L
+
+	!=====================================================================
+	! Map the virtual line into the actual line
+	!=====================================================================
+	DEF FNMAP_VA%(LONG THELINE)
+		XXXX% = THELINE + SMG_SCROLL::BEG_ELEMENT - '1'L
+		IF XXXX% >= SMG_SCROLL::END_ELEMENT
+		THEN
+			FNMAP_VA% = SMG_SCROLL::END_ELEMENT
+		ELSE
+			FNMAP_VA% = XXXX%
+		END IF
+	END DEF
+
+ ExitFunction:
+	SMG_SCROLL::CUR_LINE	= FNMAP_VA%(VFIND)
+	SMG_SCROLL::CUR_LINE	= FNMAP_VA%(VFIND) + 1% &
+		IF VFIND = VEND AND SELECTED > '0'L
+	SMG_SCROLL::CUR_W_ROW	= VFIND - VTOPL + SMG_SCROLL::SCROLL_TOP
+
+	SMG_SCROLL::TOP_LINE	= FNMAP_VA%(VTOPL)
+	SMG_SCROLL::FIND_LINE	= FNMAP_VA%(VFIND)
+
+	END FUNCTION

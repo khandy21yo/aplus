@@ -1,0 +1,22 @@
+	!======================================================================
+	! SA_TYPE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SA_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('SA_TYPE',SA_TYPE.DEV$, STAT%)
+	CALL READ_PROTECTION('SA_TYPE',SA_TYPE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(SA_TYPE.PRO$, STAT%)
+
+	SA_TYPE.NAME$ = SA_TYPE.DEV$+"SA_TYPE.TBL"
+
+	OPEN SA_TYPE.NAME$ AS FILE SA_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SA_TYPE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			SA_TYPE::TTYPE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

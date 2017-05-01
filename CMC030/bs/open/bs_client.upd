@@ -1,0 +1,26 @@
+	!======================================================================
+	! BS_CLIENT file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BS_CLIENT.CH%, STAT%)
+	CALL READ_DEVICE('BS_CLIENT',BS_CLIENT.DEV$, STAT%)
+
+	BS_CLIENT.NAME$ = BS_CLIENT.DEV$+"BS_CLIENT.MAS"
+
+	OPEN BS_CLIENT.NAME$ FOR INPUT AS FILE BS_CLIENT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BS_CLIENT, &
+		PRIMARY KEY &
+			BS_CLIENT::CLIENT, &
+		ALTERNATE KEY &
+		( &
+			BS_CLIENT::CLIENTNAME, &
+			BS_CLIENT::CLIENT &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			BS_CLIENT::ALPSRT, &
+			BS_CLIENT::CLIENT &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

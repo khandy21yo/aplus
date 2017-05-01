@@ -1,0 +1,25 @@
+	!======================================================================
+	! AR_CUSBAL file (create, modify, allow read)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CUSBAL.CH%, STAT%)
+	CALL READ_DEVICE('AR_CUSBAL',AR_CUSBAL.DEV$, STAT%)
+	CALL READ_PROTECTION('AR_CUSBAL',AR_CUSBAL.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(AR_CUSBAL.PRO$, STAT%)
+
+	AR_CUSBAL.NAME$ = AR_CUSBAL.DEV$+"AR_CUSBAL.MAS"
+
+	OPEN AR_CUSBAL.NAME$ AS FILE AR_CUSBAL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CUSBAL, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			AR_CUSBAL::CUSNUM, &
+			AR_CUSBAL::ACCT &
+		)	, &
+		ACCESS MODIFY, ALLOW READ
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Financial Statement Command File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__FINSTA.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Financial Statement Command File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__FINSTA.MAS\*
+	!	.b
+	!	.lm +5
+	!	Financial Statement Command File.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Financial Statement Command File
+	!	.x GL_FINSTA
+	!
+	!--

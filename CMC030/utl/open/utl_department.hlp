@@ -1,0 +1,19 @@
+	!======================================================================
+	! UTL_DEPARTMENT file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_DEPARTMENT.CH%, STAT%)
+	CALL READ_DEVICE('UTL_DEPARTMENT',UTL_DEPARTMENT.DEV$, STAT%)
+
+	UTL_DEPARTMENT.NAME$ = UTL_DEPARTMENT.DEV$+"UTL_DEPARTMENT.TBL"
+
+	OPEN UTL_DEPARTMENT.NAME$ FOR INPUT AS FILE UTL_DEPARTMENT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_DEPARTMENT, &
+		PRIMARY KEY &
+		( &
+			UTL_DEPARTMENT::LOCATION, &
+			UTL_DEPARTMENT::DEPT_NUM &
+		)	, &
+		
+

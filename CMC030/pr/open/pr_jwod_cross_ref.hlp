@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll JWOD Cross (Identify JWOD Jobs) is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__JWOD__CROSS__REF.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under JWOD and run process again.
+	!
+	! Index:
+	!	.x Payroll JWOD Cross (Identify JWOD Jobs)
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__JWOD__CROSS__REF.TBL\*
+	!	.p
+	!	Payroll JWOD Cross (Identify JWOD Jobs).
+	!
+	! Index:
+	!	.x Payroll JWOD Cross (Identify JWOD Jobs)
+	!	.x PR_JWOD_CROSS_REF
+	!--

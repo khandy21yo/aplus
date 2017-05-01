@@ -1,0 +1,831 @@
+1	%TITLE "Convert from RSTS/E to VMS"
+	%SBTTL "MO_CONV_CONVERT"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1992 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This program is used in the conversion from RSTS/E
+	!	to VMS.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX-II  VMS V4.4  BASIC V2.3
+	!
+	! Compile:
+	!
+	!	$ BAS MO_SOURCE:MO_CONV_CONVERT/LINE
+	!	$ LINK/EXECUTABLE=MO_EXE: MO_CONV_CONVERT, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE MO_CONV_CONVERT.OBJ;*
+	!
+	! Author:
+	!
+	!	09/28/92 - Dan Perkins
+	!
+	! Modification history:
+	!
+	!	10/26/92 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/02/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/05/93 - Kevin Handy
+	!		Clean up (Check)
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+10	ON ERROR GOTO 19000
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.OE.OE_REGHEADER"
+	MAP (OE_REGHEADER)	OE_REGHEADER_CDD	OE_REGHEADER
+
+	%INCLUDE %FROM %CDD "CDD$TOP.OE.OE_REGLINE"
+	MAP (OE_REGLINE)	OE_REGLINE_CDD		OE_REGLINE
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_REGLINE"
+	MAP (MO_REGLINE)	MO_REGLINE_CDD		MO_REGLINE
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_REGLINEOPT"
+	MAP (MO_REGLINEOPT)	MO_REGLINEOPT_CDD	MO_REGLINEOPT
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION ENTR_3YESNO
+
+	!*******************************************************************
+	! Initilize File to Convert
+	!*******************************************************************
+
+	!
+	! Declare channels
+	!
+	CALL ASSG_CHANNEL(MORMS.CH%, STAT%)
+
+	CALL READ_INITIALIZE
+
+	CALL READ_DEVICE('MORMS_ASC', MORMS_ASC.DEV$, STAT%)
+
+	!
+	! Open input file
+	!
+300	OPEN MORMS_ASC.DEV$ + 'MORMS.ASC' FOR INPUT AS FILE MORMS.CH%
+
+	!
+	! Process the input file
+	!
+	FILEFLAG% = 0%
+
+1000	INPUT LINE #MORMS.CH%, INP$
+
+	GOTO 1000 IF INP$ = ""
+
+	INP$ = EDIT$(INP$, 4%)
+	I2%  = INSTR(1%, INP$, ">")
+	FLD$ = SEG$(INP$, 2%, I2%-1%)
+	DTA$ = RIGHT(INP$, I2%+1%)
+
+	SELECT FLD$
+
+		CASE "STARTFILE OE_REGHEADER"
+			CONF$ = EDIT$(ENTR_3YESNO(SCOPE, DISPLAY_ID%, &
+				"9;22", 'Confirm converting OE_REGHEADER file', &
+				"N", 16%, "'", "N"), -1%)
+
+			IF CONF$ = "Y"
+			THEN
+				GOSUB 3000
+				GOSUB InitOERegheaderRec
+				WORKFILE% = 1%
+				FILEFLAG% = -1%
+			END IF
+
+		CASE "ENDFILE OE_REGHEADER"
+			CLOSE #OE_REGHEADER.CH%
+			CALL ASSG_FREECHANNEL(OE_REGHEADER.CH%)
+			FILEFLAG% = 0%
+
+		CASE "STARTFILE OE_REGLINE"
+			CONF$ = EDIT$(ENTR_3YESNO(SCOPE, DISPLAY_ID%, &
+				"9;21", 'Confirm converting OE_REGLINE file', &
+				"N", 16%, "'", "N"), -1%)
+
+			IF CONF$ = "Y"
+			THEN
+				GOSUB 3100
+				GOSUB InitOEReglineRec
+				WORKFILE% = 2%
+				FILEFLAG% = -1%
+			END IF
+
+		CASE "ENDFILE OE_REGLINE"
+			CLOSE #OE_REGLINE.CH%
+			CALL ASSG_FREECHANNEL(OE_REGLINE.CH%)
+			FILEFLAG% = 0%
+
+		CASE "STARTFILE MO_REGLINE"
+			CONF$ = EDIT$(ENTR_3YESNO(SCOPE, DISPLAY_ID%, &
+				"9;21", 'Confirm converting MO_REGLINE file', &
+				"N", 16%, "'", "N"), -1%)
+
+			IF CONF$ = "Y"
+			THEN
+				GOSUB 3200
+				GOSUB InitMOReglineRec
+				WORKFILE% = 2%
+				FILEFLAG% = -1%
+			END IF
+
+		CASE "ENDFILE MO_REGLINE"
+			CLOSE #MO_REGLINE.CH%
+			CALL ASSG_FREECHANNEL(MO_REGLINE.CH%)
+			FILEFLAG% = 0%
+
+		CASE "STARTFILE MO_REGLINEOPT"
+			CONF$ = EDIT$(ENTR_3YESNO(SCOPE, DISPLAY_ID%, &
+				"9;21", 'Confirm converting MO_REGLINEOPT file', &
+				"N", 16%, "'", "N"), -1%)
+
+			IF CONF$ = "Y"
+			THEN
+				GOSUB 3300
+				GOSUB InitMOReglineOptRec
+				WORKFILE% = 2%
+				FILEFLAG% = -1%
+			END IF
+
+		CASE "ENDFILE MO_REGLINEOPT"
+			CLOSE #MO_REGLINEOPT.CH%
+			CALL ASSG_FREECHANNEL(MO_REGLINEOPT.CH%)
+			FILEFLAG% = 0%
+
+	END SELECT
+
+	ON WORKFILE% GOSUB 10000, 11000, 12000, 13000 IF FILEFLAG%
+
+	GOTO 1000
+
+3000	!
+	! Create OE_REGHEADER file
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new OE_REGHEADER file", 1%)
+	KILL OE_REGHEADER.DEV$ + "OE_REGHEADER.HIS"
+
+3010	%INCLUDE "SOURCE:[OE.OPEN]OE_REGHEADER.CRE"
+
+	RETURN
+
+3100	!
+	! Create OE_REGLINE file
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new OE_REGLINE file", 1%)
+	KILL OE_REGLINE.DEV$ + "OE_REGLINE.HIS"
+
+3110	%INCLUDE "SOURCE:[OE.OPEN]OE_REGLINE.CRE"
+
+	RETURN
+
+3200	!
+	! Create MO_REGLINE file
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new MO_REGLINE file", 1%)
+	KILL MO_REGLINE.DEV$ + "MO_REGLINE.HIS"
+
+3210	!======================================================================
+	! MO_REGLINE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_REGLINE.CH%, STAT%)
+	CALL READ_DEVICE('MO_REGLINE',MO_REGLINE.DEV$, STAT%)
+	CALL READ_PROTECTION('MO_REGLINE',MO_REGLINE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(MO_REGLINE.PRO$, STAT%)
+
+	MO_REGLINE.NAME$ = MO_REGLINE.DEV$+"MO_REGLINE.HIS"
+
+	OPEN MO_REGLINE.NAME$ AS FILE MO_REGLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_REGLINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			MO_REGLINE::ORDNUM, &
+			MO_REGLINE::LIN, &
+			MO_REGLINE::TRANTYPE &
+		)	DUPLICATES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINE::PRODUCT, &
+			MO_REGLINE::ORDNUM, &
+			MO_REGLINE::LIN, &
+			MO_REGLINE::TRANTYPE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINE::BATCH, &
+			MO_REGLINE::ORDNUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+
+	RETURN
+
+3300	!
+	! Create MO_REGLINEOPT file
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new MO_REGLINEOPT file", 1%)
+	KILL MO_REGLINEOPT.DEV$ + "MO_REGLINEOPT.HIS"
+
+3310	!======================================================================
+	! MO_REGLINEOPT file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_REGLINEOPT.CH%, STAT%)
+	CALL READ_DEVICE('MO_REGLINEOPT',MO_REGLINEOPT.DEV$, STAT%)
+	CALL READ_PROTECTION('MO_REGLINEOPT',MO_REGLINEOPT.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(MO_REGLINEOPT.PRO$, STAT%)
+
+	MO_REGLINEOPT.NAME$ = MO_REGLINEOPT.DEV$+"MO_REGLINEOPT.HIS"
+
+	OPEN MO_REGLINEOPT.NAME$ AS FILE MO_REGLINEOPT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_REGLINEOPT, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			MO_REGLINEOPT::ORDNUM, &
+			MO_REGLINEOPT::LIN, &
+			MO_REGLINEOPT::OPTLIN &
+		), &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINEOPT::OPTGROUP, &
+			MO_REGLINEOPT::OPTN, &
+			MO_REGLINEOPT::ORDNUM, &
+			MO_REGLINEOPT::LIN, &
+			MO_REGLINEOPT::OPTLIN &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINEOPT::BATCH, &
+			MO_REGLINEOPT::ORDNUM, &
+			MO_REGLINEOPT::LIN, &
+			MO_REGLINEOPT::OPTLIN &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+
+	RETURN
+
+10000	SELECT FLD$
+
+		CASE "ENDRECORD"
+			PUT #OE_REGHEADER.CH% IF ERRFLAG% = 0%
+
+			GOSUB InitOERegheaderRec
+
+		CASE "ORDNUM"
+			RSET OE_REGHEADER::ORDNUM = TRM$(DTA$)
+
+		CASE "ORDTYPE"
+			OE_REGHEADER::ORDTYPE	= DTA$
+
+		CASE "ORDCAT"
+			OE_REGHEADER::ORDCAT	= DTA$
+
+		CASE "ORDDATE"
+			OE_REGHEADER::ORDDATE	= DTA$
+
+		CASE "ASTATUS"
+			OE_REGHEADER::ASTATUS	= DTA$
+
+		CASE "SDATE"
+			OE_REGHEADER::SDATE	= DTA$
+
+		CASE "CUSNUM"
+			OE_REGHEADER::CUSNUM	= DTA$
+
+		CASE "SHIPNAM"
+			OE_REGHEADER::SHIPNAM	= DTA$
+
+		CASE "SHIPLIN"
+			OE_REGHEADER::SHIPLIN	= DTA$
+
+		CASE "ADD1"
+			OE_REGHEADER::ADD1	= DTA$
+
+		CASE "ADD2"
+			OE_REGHEADER::ADD2	= DTA$
+
+		CASE "ADD3"
+			OE_REGHEADER::ADD3	= DTA$
+
+		CASE "CITY"
+			OE_REGHEADER::CITY	= DTA$
+
+		CASE "STATE"
+			OE_REGHEADER::STATE	= DTA$
+
+		CASE "ZIP"
+			OE_REGHEADER::ZIP	= DTA$
+
+		CASE "COUNTRY"
+			OE_REGHEADER::COUNTRY	= DTA$
+
+		CASE "CUSTPO"
+			OE_REGHEADER::CUSTPO	= DTA$
+
+		CASE "SHIPVIA"
+			OE_REGHEADER::SHIPVIA	= DTA$
+
+		CASE "TERMS"
+			OE_REGHEADER::TERMS	= DTA$
+
+		CASE "DISC"
+			OE_REGHEADER::DISC	= VAL(DTA$)
+
+		CASE "TAXCODE"
+			OE_REGHEADER::TAXCODE	= DTA$
+
+		CASE "TAXFLAG"
+			OE_REGHEADER::TAXFLAG	= DTA$
+
+		CASE "LOCATION"
+			OE_REGHEADER::LOCATION	= DTA$
+
+		CASE "COMMAMT"
+			OE_REGHEADER::COMMAMT	= VAL(DTA$)
+
+		CASE "SALESMAN"
+			OE_REGHEADER::SALESMAN	= DTA$
+
+		CASE "OPERATOR"
+			OE_REGHEADER::OPERATOR	= DTA$
+
+		CASE "SALCOMM"
+			OE_REGHEADER::SALCOMM	= VAL(DTA$)
+
+		CASE "UNUSED"
+			OE_REGHEADER::UNUSED	= VAL(DTA$)
+
+		CASE "SHIPNO"
+			OE_REGHEADER::SHIPNO	= DTA$
+
+		CASE "BATCH"
+			OE_REGHEADER::BATCH	= DTA$
+
+	END SELECT
+
+	RETURN
+
+11000	SELECT FLD$
+
+		CASE "ENDRECORD"
+			PUT #OE_REGLINE.CH% IF ERRFLAG% = 0%
+
+			GOSUB InitOEReglineRec
+
+		CASE "ORDNUM"
+			RSET OE_REGLINE::ORDNUM	= TRM$(DTA$)
+
+		CASE "LIN"
+			OE_REGLINE::LIN		= DTA$
+
+		CASE "TRANTYPE"
+			OE_REGLINE::TRANTYPE	= DTA$
+
+		CASE "PRODUCT"
+			OE_REGLINE::PRODUCT	= DTA$
+
+		CASE "QTY"
+			OE_REGLINE::QTY		= VAL(DTA$)
+
+		CASE "TDATE"
+			OE_REGLINE::TDATE	= DTA$
+
+		CASE "PRICE"
+			OE_REGLINE::PRICE	= VAL(DTA$)
+
+		CASE "DISCOUNT"
+			OE_REGLINE::DISCOUNT	= VAL(DTA$)
+
+		CASE "COST"
+			OE_REGLINE::COST	= VAL(DTA$)
+
+		CASE "POSTDATE"
+			OE_REGLINE::POSTDATE	= DTA$
+
+		CASE "POSTTIME"
+			OE_REGLINE::POSTTIME	= DTA$
+
+		CASE "BATCH"
+			OE_REGLINE::BATCH	= DTA$
+
+		CASE "SHIPNO"
+			OE_REGLINE::SHIPNO	= DTA$
+
+		CASE "PROMO"
+			OE_REGLINE::PROMO	= VAL(DTA$)
+
+		CASE "REFNUM"
+			OE_REGLINE::REFNUM	= DTA$
+
+		CASE "MISCH"
+			OE_REGLINE::MISCH	= VAL(DTA$)
+
+		CASE "PERIOD"
+			OE_REGLINE::PERIOD	= DTA$
+
+	END SELECT
+
+	RETURN
+
+12000	SELECT FLD$
+
+		CASE "ENDRECORD"
+			PUT #MO_REGLINE.CH% IF ERRFLAG% = 0%
+
+			GOSUB InitMOReglineRec
+
+		CASE "ORDNUM"
+			RSET MO_REGLINE::ORDNUM	= TRM$(DTA$)
+
+		CASE "OLINE"
+			MO_REGLINE::LIN	= DTA$
+
+		CASE "TRANTYPE"
+			MO_REGLINE::TRANTYPE	= DTA$
+
+		CASE "PRODUCT"
+			MO_REGLINE::PRODUCT	= DTA$
+
+		CASE "QTY"
+			MO_REGLINE::QTY		= VAL(DTA$)
+
+		CASE "TDATE"
+			MO_REGLINE::TDATE	= DTA$
+
+		CASE "PRICE"
+			MO_REGLINE::PRICE	= VAL(DTA$)
+
+		CASE "COST"
+			MO_REGLINE::COST	= VAL(DTA$)
+
+		CASE "POSTDATE"
+			MO_REGLINE::POSTDATE	= DTA$
+
+		CASE "POSTTIME"
+			MO_REGLINE::POSTTIME	= DTA$
+
+		CASE "BATCH"
+			MO_REGLINE::BATCH	= DTA$
+
+		CASE "SHIPNO"
+			MO_REGLINE::SHIPNO	= DTA$
+
+		CASE "MAKE"
+			MO_REGLINE::MAKE	= DTA$
+
+		CASE "YEAR"
+			MO_REGLINE::YEAR	= DTA$
+
+		CASE "MTYPE"
+			MO_REGLINE::MTYPE	= DTA$
+
+		CASE "MSIZE"
+			MO_REGLINE::MSIZE	= DTA$
+
+		CASE "MODELCODE"
+			MO_REGLINE::MODELCODE	= DTA$
+
+	END SELECT
+
+	RETURN
+
+13000	SELECT FLD$
+
+		CASE "ENDRECORD"
+			PUT #MO_REGLINEOPT.CH% IF ERRFLAG% = 0%
+
+			GOSUB InitMOReglineOptRec
+
+		CASE "ORDNUM"
+			RSET MO_REGLINEOPT::ORDNUM = TRM$(DTA$)
+
+		CASE "OLINE"
+			MO_REGLINEOPT::LIN	= DTA$
+
+		CASE "OPTLINE"
+			MO_REGLINEOPT::OPTLIN	= DTA$
+
+		CASE "OPTGROUP"
+			MO_REGLINEOPT::OPTGROUP	= DTA$
+
+		CASE "OPTN"
+			MO_REGLINEOPT::OPTN	= DTA$
+
+		CASE "QTY"
+			MO_REGLINEOPT::QTY	= VAL(DTA$)
+
+		CASE "COST"
+			MO_REGLINEOPT::COST	= VAL(DTA$)
+
+		CASE "PRICE"
+			MO_REGLINEOPT::PRICE	= VAL(DTA$)
+
+		CASE "PRODUCT"
+			MO_REGLINEOPT::PRODUCT	= DTA$
+
+		CASE "TRANTYPE"
+			MO_REGLINEOPT::TRANTYPE	= DTA$
+
+		CASE "BATCH"
+			MO_REGLINEOPT::BATCH	= DTA$
+
+		CASE "SHIPNO"
+			MO_REGLINEOPT::SHIPNO	= DTA$
+
+		CASE "POSTDATE"
+			MO_REGLINEOPT::POSTDATE	= DTA$
+
+		CASE "POSTTIME"
+			MO_REGLINEOPT::POSTTIME	= DTA$
+
+		CASE "OPTDESCR"
+			MO_REGLINEOPT::OPTDESCR	= DTA$
+
+	END SELECT
+
+	RETURN
+
+ InitOERegheaderRec:
+	OE_REGHEADER::ORDNUM	= ""
+	OE_REGHEADER::ORDTYPE	= ""
+	OE_REGHEADER::ORDCAT	= ""
+	OE_REGHEADER::ORDDATE	= ""
+	OE_REGHEADER::ASTATUS	= ""
+	OE_REGHEADER::SDATE	= ""
+	OE_REGHEADER::CUSNUM	= ""
+	OE_REGHEADER::SHIPNAM	= ""
+	OE_REGHEADER::SHIPLIN	= ""
+	OE_REGHEADER::ADD1	= ""
+	OE_REGHEADER::ADD2	= ""
+	OE_REGHEADER::ADD3	= ""
+	OE_REGHEADER::CITY	= ""
+	OE_REGHEADER::STATE	= ""
+	OE_REGHEADER::ZIP	= ""
+	OE_REGHEADER::COUNTRY	= ""
+	OE_REGHEADER::CUSTPO	= ""
+	OE_REGHEADER::SHIPVIA	= ""
+	OE_REGHEADER::TERMS	= ""
+	OE_REGHEADER::DISC	= 0.
+	OE_REGHEADER::TAXCODE	= ""
+	OE_REGHEADER::TAXFLAG	= ""
+	OE_REGHEADER::LOCATION	= ""
+	OE_REGHEADER::COMMAMT	= 0.
+	OE_REGHEADER::SALESMAN	= ""
+	OE_REGHEADER::OPERATOR	= ""
+	OE_REGHEADER::SALCOMM	= 0.
+	OE_REGHEADER::UNUSED	= 0.
+	OE_REGHEADER::SHIPNO	= ""
+	OE_REGHEADER::BATCH	= "CONV"
+
+	ERRFLAG% = 0%
+
+	RETURN
+
+ InitOEReglineRec:
+	OE_REGLINE::ORDNUM	= ""
+	OE_REGLINE::LIN		= ""
+	OE_REGLINE::TRANTYPE	= ""
+	OE_REGLINE::PRODUCT	= ""
+	OE_REGLINE::QTY		= 0.
+	OE_REGLINE::TDATE	= ""
+	OE_REGLINE::PRICE	= 0.
+	OE_REGLINE::DISCOUNT	= 0.
+	OE_REGLINE::COST	= 0.
+	OE_REGLINE::POSTDATE	= "19920801"
+	OE_REGLINE::POSTTIME	= "000000"
+	OE_REGLINE::BATCH	= "CONV"
+	OE_REGLINE::SHIPNO	= ""
+	OE_REGLINE::PROMO	= 0.
+	OE_REGLINE::REFNUM	= ""
+	OE_REGLINE::MISCH	= 0.
+	OE_REGLINE::PERIOD	= ""
+
+	ERRFLAG% = 0%
+
+	RETURN
+
+ InitMOReglineRec:
+	MO_REGLINE::ORDNUM	= ""
+	MO_REGLINE::LIN	= ""
+	MO_REGLINE::TRANTYPE	= ""
+	MO_REGLINE::PRODUCT	= ""
+	MO_REGLINE::QTY		= 0.0
+	MO_REGLINE::TDATE	= ""
+	MO_REGLINE::PRICE	= 0.0
+	MO_REGLINE::COST	= 0.0
+	MO_REGLINE::POSTDATE	= "19920801"
+	MO_REGLINE::POSTTIME	= "000000"
+	MO_REGLINE::BATCH	= "CONV"
+	MO_REGLINE::SHIPNO	= ""
+	MO_REGLINE::MAKE	= ""
+	MO_REGLINE::YEAR	= ""
+	MO_REGLINE::MTYPE	= ""
+	MO_REGLINE::MSIZE	= ""
+	MO_REGLINE::MODELCODE	= ""
+
+	ERRFLAG% = 0%
+
+	RETURN
+
+ InitMOReglineOptRec:
+	MO_REGLINEOPT::ORDNUM	= ""
+	MO_REGLINEOPT::LIN	= ""
+	MO_REGLINEOPT::OPTLIN	= ""
+	MO_REGLINEOPT::OPTGROUP	= ""
+	MO_REGLINEOPT::OPTN	= ""
+	MO_REGLINEOPT::QTY	= 0.0
+	MO_REGLINEOPT::COST	= 0.0
+	MO_REGLINEOPT::PRICE	= 0.0
+	MO_REGLINEOPT::PRODUCT	= ""
+	MO_REGLINEOPT::TRANTYPE	= ""
+	MO_REGLINEOPT::BATCH	= "CONV"
+	MO_REGLINEOPT::SHIPNO	= ""
+	MO_REGLINEOPT::POSTDATE	= "19920801"
+	MO_REGLINEOPT::POSTTIME	= "000000"
+	MO_REGLINEOPT::OPTDESCR	= ""
+
+	ERRFLAG% = 0%
+
+	RETURN
+
+ ExitProgram:
+	!*******************************************************************
+	! Exit program
+	!*******************************************************************
+
+	CLOSE #OERMS.CH%
+	CALL ASSG_FREECHANNEL(OERMS.CH%)
+
+	GOTO 32767
+
+	%PAGE
+
+ HelpError:
+	!*******************************************************************
+	! Help Message for an Error
+	!*******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	GOTO ExitProgram
+
+19000	!*******************************************************************
+	! Error trapping
+	!*******************************************************************
+
+	SELECT ERR
+		CASE 154%	! Locked Block
+			SLEEP 5%
+			RESUME
+	END SELECT
+
+	SELECT ERL
+		CASE 300%
+			!
+			! Conversion file is missing
+			!
+			CALL ENTR_3MESSAGE(SCOPE, "File to convert, MORMS.ASC, is missing", 0%)
+			RESUME ExitProgram
+
+		CASE 1000%
+			!
+			! End of MORMS.ASC file
+			!
+			RESUME ExitProgram
+
+		CASE 3000%
+			!
+			! Can't kill OE_REGHEADER file
+			!
+			RESUME 3010
+
+		CASE 3100%
+			!
+			! Can't kill OE_REGLINE file
+			!
+			RESUME 3110
+
+		CASE 3200%
+			!
+			! Can't kill MO_REGLINE file
+			!
+			RESUME 3210
+
+		CASE 3300%
+			!
+			! Can't kill MO_REGLINEOPT file
+			!
+			RESUME 3310
+
+		CASE 10000%
+			!
+			! Can't put OE_REGHEADER record
+			!
+			IF ERR = 52%
+			THEN
+				ERRFLAG% = -1%
+				RESUME 1000
+			END IF
+
+			RESUME 1000 IF ERR = 134%
+			FILENAME$ = "OE_REGHEADER"
+
+		CASE 11000%
+			!
+			! Can't put OE_REGLINE record
+			!
+			IF ERR = 52%
+			THEN
+				ERRFLAG% = -1%
+				RESUME 1000
+			END IF
+
+			RESUME 1000 IF ERR = 134%
+			FILENAME$ = "OE_REGLINE"
+
+		CASE 12000%
+			!
+			! Can't put MO_REGLINE record
+			!
+			IF ERR = 52%
+			THEN
+				ERRFLAG% = -1%
+				RESUME 1000
+			END IF
+
+			RESUME 1000 IF ERR = 134%
+			FILENAME$ = "MO_REGLINE"
+
+		CASE 13000%
+			!
+			! Can't put MO_REGLINEOPT record
+			!
+			IF ERR = 52%
+			THEN
+				ERRFLAG% = -1%
+				RESUME 1000
+			END IF
+
+			RESUME 1000 IF ERR = 134%
+			FILENAME$ = "MO_REGLINEOPT"
+
+	END SELECT
+
+	RESUME HelpError
+
+32767	END

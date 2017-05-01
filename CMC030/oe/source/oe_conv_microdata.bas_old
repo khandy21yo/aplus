@@ -1,0 +1,517 @@
+1	%TITLE "Convert Microdata files"
+	%SBTTL "OE_CONV_MICRODATA"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1991 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Compile:
+	!
+	!	$ BAS OE_SOURCE:OE_CONV_MICRODATA/LINE
+	!	$ LINK/EXECUTABLE=OE_EXE: OE_CONV_MICRODATA, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE OE_CONV_MICRODATA.OBJ;*
+	!
+	! Author:
+	!
+	!	12/27/91 - Dan Perkins
+	!
+	! Modification history:
+	!
+	!	02/04/92 - Kevin Handy
+	!		Cleaned out junk (check)
+	!
+	!	02/26/92 - Kevin Handy
+	!		Modified to compile "OE_CONV_MICRODATA" instead
+	!		of "IC_CONV_MICRODATA" as Frank had it.
+	!
+	!	04/01/92 - Dan Perkins
+	!		Added Map statements for OE_REGHEADER and OE_REGLINE.
+	!		Hopefully the program will now compile.
+	!
+	!	10/04/93 - Kevin Handy
+	!		Changed "=>" to ">=".
+	!
+	!	04/14/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/06/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/21/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	!
+	! Extrenal Functions
+	!
+	EXTERNAL STRING	FUNCTION ENTR_3YESNO
+	EXTERNAL REAL	FUNCTION PC_READ_COST
+
+10	ON ERROR GOTO 19000
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[IC.OPEN]IC_HISTORY.HB"
+	MAP (IC_HISTORY)	IC_HISTORY_CDD		IC_HISTORY
+
+	%INCLUDE "SOURCE:[OE.OPEN]OE_REGHEADER.HB"
+	MAP (OE_REGHEADER)	OE_REGHEADER_CDD	OE_REGHEADER
+
+	%INCLUDE "SOURCE:[OE.OPEN]OE_REGLINE.HB"
+	MAP (OE_REGLINE)	OE_REGLINE_CDD		OE_REGLINE
+
+	DIM INTEGER QTY_ARRAY(24%)
+	DIM REAL    SALE_ARRAY(24%)
+	DIM REAL    PROFIT_ARRAY(24%)
+
+	!*******************************************************************
+	! Initilize Convert
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	!
+	! Create the data display
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY( 20%, 80%, DISPLAY_ID%,,, )
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY(DISPLAY_ID%)
+
+	!
+	! Paste the data display
+	!
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY( DISPLAY_ID%, PASTE_ID%, 1%, 1% )
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(PASTE_ID%, SMG$M_CURSOR_OFF)
+
+	!
+	! PRINT BANNER
+	!
+	SMG_STATUS% = SMG$PUT_CHARS_WIDE(DISPLAY_ID%, "Convert Microdata IC History files", &
+		2%, 15%,SMG$M_BOLD)
+
+	SMG_STATUS% = SMG$DRAW_LINE(DISPLAY_ID%, 4%, 1%, 4%, 80%, &
+		SMG$M_BOLD)
+
+ ConfirmConv:	! Ask user if they realy would like to convert all files
+
+	SMG_STATUS% = SMG$PUT_CHARS(DISPLAY_ID%, "Convert files :", 9%, 20%)
+
+	CONF$ = EDIT$(ENTR_3YESNO(SCOPE, DISPLAY_ID%, &
+		"9;36", "Confirm Converting", "N", 16%, "'", "N"), -1%)
+
+	!
+	! Check for special keys typed
+	!
+	SELECT SCOPE::SCOPE_EXIT
+	!
+	! Control/C, Uparrow,
+	!
+	CASE 3%, SMG$K_TRM_UP, SMG$K_TRM_DOWN
+		GOTO ConfirmConv	! (Ignored)
+
+	!
+	! Exit key typed
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO ExitProgram
+
+	!
+	! Good Keys
+	!
+	CASE 0%, 10%, 12%, SMG$K_TRM_DO, SMG$K_TRM_CR, &
+		SMG$K_TRM_SELECT
+
+	!
+	! Bad Keys
+	!
+	CASE ELSE
+		GOTO ConfirmConv
+
+	END SELECT
+
+	SMG_STATUS% = SMG$DELETE_CHARS(DISPLAY_ID%, 30%, 9%, 20%)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+	GOTO ExitProgram IF CONF$ <> "Y"
+
+	!
+	! Open the needed files
+	!
+1405	%INCLUDE "SOURCE:[IC.OPEN]IC_HISTORY.CRE"
+
+
+1410	CALL ASSG_CHANNEL(CASE_TEXT.CH%,STAT%)
+	CASE_TEXT.DEV$ = ""
+	CASE_TEXT.NAME$ = CASE_TEXT.DEV$ + "PRDSLS.ASC"
+
+	OPEN CASE_TEXT.NAME$ FOR INPUT AS FILE CASE_TEXT.CH%, &
+		ORGANIZATION SEQUENTIAL, &
+		RECORDSIZE 512%
+
+	GOSUB InitRec
+
+	SMG_STATUS% = SMG$PUT_CHARS(DISPLAY_ID%, "PRODUCT", 9%, 14%)
+
+ GetNextCaseRec:
+	!
+1420	! Start the actual conversion
+	!
+	LINPUT #CASE_TEXT.CH%, LINE$
+
+1430	!
+	! Build conversion record - basic field
+	!
+	X% = POS(LINE$, ">", 1%)
+
+	GOTO 1420 IF X% <= 1%
+
+	MASK$ = LEFT$(LINE$, X%)
+
+	LINE$ = RIGHT$(LINE$, X% + 1%)
+
+	GOTO 1435 IF MASK$ <> "<END>"
+
+
+1431	V% = VAL(OE_REGHEADER::CUSNUM)
+
+	SMG_STATUS% = SMG$PUT_CHARS(DISPLAY_ID%, IC_HISTORY::PRODUCT + " " + &
+			IC_HISTORY::LOCATION, 9%, 20%)
+
+1432	FOR I% = 1% TO ITEM%
+		PROMO = 0.0
+		!OE_REGLINE = OE_RLINE(I%)
+		OE_REGLINE::ORDNUM = OE_REGHEADER::ORDNUM
+		OE_REGLINE::TRANTYPE = "01"
+		OE_REGLINE::LIN = FORMAT$(I%, "<0>###")
+		OE_REGLINE::TDATE = OE_REGHEADER::SDATE
+
+		OE_REGLINE::COST = PC_READ_COST(OE_REGLINE::PRODUCT, &
+				OE_REGHEADER::LOCATION, "", "")
+
+		IF OE_REGLINE::PROMO <> 0.0
+		THEN
+			PROMO = OE_REGLINE::PROMO
+			OE_REGLINE::PROMO = 0.0
+			OE_REGHEADER::SHIPNO = "01"
+		END IF
+
+		PUT #IC_HISTORY.CH%
+
+		SMG_STATUS% = SMG$PUT_CHARS(DISPLAY_ID%, OE_REGLINE::PRODUCT, 10%, 20%)
+
+		IF PROMO <> 0.0
+		THEN
+			OE_REGLINE::TRANTYPE = "02"
+			OE_REGLINE::QTY = PROMO
+
+			PUT #OE_REGLINE.CH%
+		END IF
+
+	NEXT I%
+
+1433	PUT #OE_REGHEADER.CH%
+
+ InitRec:
+	IC_HISTORY::PRODUCT	= ""
+	IC_HISTORY::LOCATION	= ""
+	IC_HISTORY::PERIOD	= ""
+	IC_HISTORY::TRANSTYPE	= "SA"
+	IC_HISTORY::BQUANTITY	= 0.0
+	IC_HISTORY::PQUANTITY	= 0.0
+	IC_HISTORY::POSTDATE	= "19910930"
+	IC_HISTORY::POSTTIME	= "000000"
+	IC_HISTORY::BATCH	= "MICROD"
+	IC_HISTORY::SALEAMT	= 0.0
+	IC_HISTORY::COSTAMT	= 0.0
+
+	FOR I% = 1% TO 24%
+		QTY_ARRAY(I%) = 0%
+		SALE_ARRAY(I%) = 0.0
+		PROFIT_ARRAY(I%) = 0.0
+	NEXT I%
+
+	RETURN
+
+	GOTO 1420
+
+1435	SELECT MASK$
+
+	CASE "<0>"
+		MARK% = POS(LINE$, "!", 1%)
+		IC_HISTORY::PRODUCT = RIGHT$(LINE$, MARK% + 1%)
+		IC_HISTORY::LOCATION = MID$(LINE$, MARK% - 3%, 3%)
+
+	CASE "<7>"
+	!	IC_HISTORY::
+
+	CASE "<8>"
+	!	IC_HISTORY::
+
+	CASE "<9>"
+	!	IC_HISTORY::
+
+	CASE "<10>"
+	!	IC_HISTORY::
+
+	CASE "<11>"
+	!	IC_HISTORY::
+
+	CASE "<12>"
+	!	IC_HISTORY::
+
+	CASE "<13>"
+	!	IC_HISTORY::
+
+1440	CASE "<14>"
+	!	IC_HISTORY::
+
+	CASE "<15>"
+	!	IC_HISTORY::
+
+	CASE "<SLSM>"
+		OE_REGHEADER::SALESMAN = LINE$
+
+	CASE "<TERMS>"
+		OE_REGHEADER::TERMS = LEFT$(LINE$, 2%)
+
+	CASE "<PRODUCT>"
+		!
+		! this can be a multirecord line
+		! the delimiter between records is CHR$(253%)
+		!
+		ITEM% = 0%
+		S% = 0%
+		E% = 1%
+
+		LINE$ = CHR$(253%) + LINE$ + CHR$(253%)
+
+		WHILE E%
+			S% = INSTR(S%+1%, LINE$, CHR$(253%))
+			E% = INSTR(S%+1%, LINE$, CHR$(253%))
+
+			IF E% - S% > 1% AND MID(LINE$, S%+1%, E%-S%-1%)<>"C"
+			THEN
+				ITEM% = ITEM% + 1%
+				!OE_RLINE(ITEM%)::PRODUCT = MID(LINE$, S%+1%, E%-S%-1%)
+			END IF
+			S% = E% - 1%
+		NEXT
+
+1450	CASE "<COMM-RATE>"
+		S% = INSTR(1%, LINE$, "!")
+		E% = INSTR(S%+1%, LINE$, "!")
+
+		OE_REGHEADER::SALCOMM = VAL(MID(LINE$, S%+1%, S%-E%+1%))
+
+1460	CASE "<GROSS-PRICE>"
+		!
+		! this can be a multirecord line
+		! the delimiter between records is CHR$(253%)
+		!
+		I% = 0%
+		S% = 0%
+		E% = 1%
+		LINE$ = CHR$(253%) + LINE$ + CHR$(253%)
+
+		WHILE E%
+			S% = INSTR(S%+1%, LINE$, CHR$(253%))
+			E% = INSTR(S%+1%, LINE$, CHR$(253%))
+
+			IF E%-S%>1%
+			THEN
+				I% = I% + 1%
+				!OE_RLINE(I%)::PRICE = VAL(MID(LINE$, S%+1%, E%-S%-1%)) / 1000.
+			END IF
+			S% = E% - 1%
+		NEXT
+
+1470	CASE "<DISCOUNT>"
+		!
+		! this can be a multirecord line
+		! the delimiter between records is CHR$(253%)
+		!
+		I% = 0%
+		S% = 0%
+		E% = 1%
+		LINE$ = CHR$(253%) + LINE$ + CHR$(253%)
+
+		WHILE E%
+			S% = INSTR(S%+1%, LINE$, CHR$(253%))
+			E% = INSTR(S%+1%, LINE$, CHR$(253%))
+
+			IF  E% - S% > 1%
+			THEN
+				I% = I% + 1%
+				!OE_RLINE(I%)::DISCOUNT = VAL(MID(LINE$, S%+1%, E%-S%-1%)) / 100.
+			END IF
+			S% =  E% - 1%
+		NEXT
+
+1480	CASE "<COST>"
+		!
+		! this can be a multirecord line
+		! the delimiter between records is CHR$(253%)
+		!
+		I% = 0%
+		S% = 0%
+		E% = 1%
+		LINE$ = CHR$(253%) + LINE$ + CHR$(253%)
+
+		WHILE E%
+			S% = INSTR(S%+1%, LINE$, CHR$(253%))
+			E% = INSTR(S%+1%, LINE$, CHR$(253%))
+
+			IF E% - S% > 1%
+			THEN
+				I% = I% + 1%
+				!OE_RLINE(I%)::COST = VAL(MID(LINE$, S%+1%, E%-S%-1%)) / 100.
+			END IF
+			S% = E% - 1%
+		NEXT
+
+1490	CASE "<ON-OPEN/O>"
+		!
+		! this can be a multirecord line
+		! the delimiter between records is CHR$(253%)
+		!
+		I% = 0%
+		S% = 0%
+		E% = 1%
+		LINE$ = CHR$(253%) + LINE$ + CHR$(253%)
+
+		WHILE E%
+			S% = INSTR(S%+1%, LINE$, CHR$(253%))
+			E% = INSTR(S%+1%, LINE$, CHR$(253%))
+
+			IF E% - S% > 1%
+			THEN
+				I% = I% + 1%
+				!OE_RLINE(I%)::QTY = VAL(MID(LINE$, S%+1%, E%-S%-1%))
+			END IF
+			S% = E% - 1%
+		NEXT
+
+1495	CASE "<SHIPPED>","<TOT.SHIPPED>"
+		!
+		! this can be a multirecord line
+		! the delimiter between records is CHR$(253%)
+		!
+		I% = 0%
+		S% = 0%
+		E% = 1%
+		LINE$ = CHR$(253%) + LINE$ + CHR$(253%)
+
+		WHILE E%
+			S% = INSTR(S%+1%, LINE$, CHR$(253%))
+			E% = INSTR(S%+1%, LINE$, CHR$(253%))
+
+			IF E% - S% > 1%
+			THEN
+				I% = I% + 1%
+				!OE_RLINE(I%)::PROMO = OE_RLINE(I%)::PROMO + VAL(MID(LINE$, S%+1%, E%-S%-1%))
+			END IF
+			S% = E% - 1%
+		NEXT
+
+	CASE "<TAXABLE?>"
+		OE_REGHEADER::TAXFLAG = LEFT$(LINE$, 1%)
+
+	END SELECT
+
+	GOTO 1420
+
+ ExitProgram:
+15000	!*******************************************************************
+	! Exit program
+	!*******************************************************************
+
+	IF CONF$ = "Y"
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE,"Conversion Process Complete", 0%)
+	ELSE
+		CALL ENTR_3MESSAGE(SCOPE,"Aborting Conversion Process", 0%)
+	END IF
+	CALL ENTR_3MESSAGE(SCOPE, "", 1%)
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(PASTE_ID%, SMG$M_CURSOR_ON)
+	SMG_STATUS% = SMG$DELETE_PASTEBOARD(PASTE_ID%)
+	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(DISPLAY_ID%)
+
+	GOTO 32767
+
+	%PAGE
+
+ HelpError:
+	!*******************************************************************
+	! Help Message for an Error
+	!*******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	CONF$ = "N"
+	GOTO ExitProgram
+
+19000	!*******************************************************************
+	! Error trapping
+	!*******************************************************************
+
+	SELECT ERL
+
+	CASE 1405%
+		FILENAME$ = "IC_HISTORY"
+
+	CASE 1431%
+		RESUME InitRec
+
+	CASE 1435%
+		RESUME 1420 IF ERR = 52%
+
+	CASE 1420%
+		IF ERR = 157%
+		THEN
+			SMG_STATUS% = SMG$PUT_CHARS(DISPLAY_ID%, MASK$ +"         ", 11%, 54%)
+			RESUME
+		END IF
+		RESUME 15000 IF ERR = 11%
+		FILENAME$ = "ORDER.ASC"
+
+	END SELECT
+
+	RESUME HelpError
+
+32767

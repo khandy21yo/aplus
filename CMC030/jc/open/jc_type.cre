@@ -1,0 +1,22 @@
+	!======================================================================
+	! JC_TYPE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(JC_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('JC_TYPE',JC_TYPE.DEV$, STAT%)
+	CALL READ_PROTECTION('JC_TYPE',JC_TYPE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(JC_TYPE.PRO$, STAT%)
+
+	JC_TYPE.NAME$ = JC_TYPE.DEV$+"JC_TYPE.TBL"
+
+	OPEN JC_TYPE.NAME$ AS FILE JC_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP JC_TYPE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			JC_TYPE::TTYPE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

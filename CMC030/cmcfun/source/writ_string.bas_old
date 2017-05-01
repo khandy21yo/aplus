@@ -1,0 +1,133 @@
+1	%TITLE "Write Out a Terminal Control String"
+	%SBTTL "WRIT_STRING"
+	%IDENT "V3.6 Calico"
+
+	SUB WRIT_STRING(TARGET$, RESULT$)
+
+	!
+	!		COPYRIGHT (C) 1985 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	This function is used to format a device comtrol string
+	!	to prepare to write it out to a device.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	TARGET$
+	!		The passed string the user wants written out in terminal
+	!		control.
+	!
+	!	RESULT$
+	!		The returned result of the string written out in a terminal
+	!		control string.
+	!
+	! Example:
+	!
+	!	CALL WRIT_STRING(SEQ$,RESULT$)
+	!
+	! Index:
+	!
+	!	.x Write>String
+	!	.x String>Write
+	!	.x Device>Write
+	!	.x Write>Device
+	!	.x Control>String
+	!	.x String>Control
+	!	.x Write>Control
+	!	.x Control>Write
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:WRIT_STRING/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP WRIT_STRING
+	!	$ DELETE WRIT_STRING.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	12/13/85 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	01/03/85 - Cal Rasmussen
+	!		Allow either "/" or "\" in control string
+	!
+	!	04/12/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	I%
+	!		An integer that acts as a loop.
+	!
+	!	STRNG$
+	!		A string that holds the value of TARGET$.
+	!
+	!	SLASH$
+	!		A string that holds a slash.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	ON ERROR GO BACK
+
+	I% = 0%
+	RESULT$ = ""
+
+	STRNG$ = TRM$(TARGET$)
+	SLASH$ = "\"
+	SLASH$ = "/" IF INSTR(1%,STRNG$,"/")
+
+	!
+	! Loop through string
+	!
+1000	I1% = INSTR(I% + 1%, STRNG$, SLASH$)
+
+	!
+	! If there is a slash, then handle it
+	!
+	IF I1%
+	THEN
+		RESULT$ = RESULT$ + &
+			SEG$(STRNG$, I%+1%, I1%-1%) + &
+			CHR$(VAL%(MID(STRNG$, I1%+1%, 3%)))
+		I% = I1% + 3%
+		GOTO 1000
+	END IF
+
+	!
+	! No slash, so must be the end of the string. Dump out rest and exit.
+	!
+	RESULT$ = RESULT$ + RIGHT(STRNG$, I%+1%)
+
+	END SUB

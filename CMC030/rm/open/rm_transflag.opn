@@ -1,0 +1,22 @@
+	!======================================================================
+	! RM_TRANSFLAG file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(RM_TRANSFLAG.CH%, STAT%)
+	CALL READ_DEVICE('RM_TRANSFLAG',RM_TRANSFLAG.DEV$, STAT%)
+
+	RM_TRANSFLAG.NAME$ = RM_TRANSFLAG.DEV$+"RM_TRANSFLAG.TBL"
+
+	OPEN RM_TRANSFLAG.NAME$ FOR INPUT AS FILE RM_TRANSFLAG.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP RM_TRANSFLAG, &
+		PRIMARY KEY &
+		( &
+			RM_TRANSFLAG::PRODUCT, &
+			RM_TRANSFLAG::TRANSTYPE &
+		)	, &
+		ALTERNATE KEY &
+			RM_TRANSFLAG::TRANSTYPE &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

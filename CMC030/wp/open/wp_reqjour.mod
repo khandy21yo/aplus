@@ -1,0 +1,19 @@
+	!======================================================================
+	! WP_REQJOUR file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_REQJOUR.CH%, STAT%)
+	CALL READ_DEVICE('WP_REQJOUR',WP_REQJOUR.DEV$, STAT%)
+
+	WP_REQJOUR.NAME$ = WP_REQJOUR.DEV$+"WP_REQJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN WP_REQJOUR.NAME$ FOR INPUT AS FILE WP_REQJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_REQJOUR, &
+		PRIMARY KEY &
+		( &
+			WP_REQJOUR::JOB, &
+			WP_REQJOUR::LLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+

@@ -1,0 +1,594 @@
+1	%TITLE "Product Indented Structure"
+	%SBTTL "RI_RPRT_INDENTED"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RI002
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Product Indented Tree\* report provides the means to
+	!	print a report showing ingredients of selected products by
+	!	levels. The report will show the product structure to the
+	!	lowest level if the content of field (07) Level(s) is blank.
+	!	The report will show the product structure to the highest level
+	!	if the content of field (07) Level(s) is 1. This report may be used
+	!	for searching of infinite trees (product of ingredient in its
+	!	structure).
+	!	.p
+	!	All products with ingredients on level 6 (or greater) will have
+	!	an infinite tree.
+	!	.p
+	!	This report includes the following fields:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Product Description
+	!	.le
+	!	Level
+	!	.le
+	!	Item
+	!	.le
+	!	Type
+	!	.le
+	!	Ingredient Number
+	!	.le
+	!	Ingredient Description
+	!	.le
+	!	Ingredient Unit of Measure
+	!	.le
+	!	Type
+	!	.le
+	!	Category
+	!	.le
+	!	Units of Measure
+	!	.le
+	!	Quantity
+	!	.le
+	!	Operation
+	!	.le
+	!	Scrap
+	!	.els
+	!
+	! Index:
+	!	.x Product Indented Tree>Report
+	!	.x Report>Product Indented Tree
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RI_SOURCE:RI_RPRT_INDENTED/LINE
+	!	$ LINK/EXE=RI_EXE: RI_RPRT_INDENTED, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RI_RPRT_INDENTED.OBJ;*
+	!
+	! Author:
+	!
+	!	10/11/87 - Frank Starman
+	!
+	! Modification History:
+	!
+	!	06/28/89 - Frank Starman
+	!		Check for recursive tree
+	!
+	!	03/13/92 - Kevin Handy
+	!		Removed duplicate error trap (check)
+	!
+	!	04/22/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/12/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/02/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/26/97 - Kevin Handy
+	!		Use 'val%' instead of 'val'
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.HB"
+	MAP	(RI_RELATION)	RI_RELATION_CDD	RI_RELATION
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)	PD_PRODUCT_CDD	PD_PRODUCT
+
+	DIM RFA RFA_LEVEL(500%)
+	DIM REAL QTY_LEVEL(500%)
+	DIM STRING TEST_PRODUCT(500%)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Item\*
+	!	.p
+	!	The ^*From Item\* field provides a means to begin the report
+	!	with a selected item by entering the selection in this field.
+	!	.p
+	!	A blank field will cause the report to begin with the first
+	!	item in the file.
+	!
+	! Index:
+	!	.x From Item>Product Indented Structure
+	!	.x Product Indented Structure>From Item
+	!	.x Item>Item
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Item\*
+	!	.p
+	!	The ^*To Item\* field provides a means to enter an item
+	!	with which the report will end by entering the selected
+	!	item in this field.
+	!	.p
+	!	A blank setting will cause the report to end with the
+	!	last item in the file.
+	!
+	! Index:
+	!	.x To Item>Product Indented Structure
+	!	.x Product Indented Structure>To Item
+	!	.x Item>To
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field provides the means to select designated
+	!	items to be printed on the report by entering a "Wildcard"
+	!	selection in this field.
+	!
+	! Index:
+	!	.x Wildcard>Product Indented Structure
+	!	.x Product Indented Structure>Wildcard
+	!
+	!--
+
+	WLDLEVEL$ = EDIT$(UTL_REPORTX::OPTDEF(6%), -1%)
+
+	!++
+	! Abstract:FLD07
+	!	^*(07) Level(s)\*
+	!	.p
+	!	The ^*Level(s)\* option provides the means to print the
+	!	report showing only desired levels.
+	!	.p
+	!	A blank setting will cause the report to print
+	!	all levels.
+	!	.p
+	!	Wildcarding may also be used in this field to select
+	!	designated levels.
+	!
+	! Index:
+	!	.x Levels>Product Indented Structure
+	!	.x Product Indented Structure>Levels
+	!
+	!--
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(9%), 132%)
+
+	!++
+	! Abstract:FLD10
+	!	^*(10) Sort (C,D,P,T)\*
+	!	.p
+	!	The ^*Sort\* field provides the means to select an order
+	!	by which the report will print.
+	!	.p
+	!	Valid settings are:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	C = Product Category
+	!	.le
+	!	D = Product Description
+	!	.le
+	!	P = Product Number
+	!	.le
+	!	T = Product Type
+	!	.els
+	!	.lm -10
+	!	.p
+	!	An entry is required in this field.
+	!
+	! Index:
+	!	.x Sort>Product Indented Structure
+	!	.x Product Indented Structure>Sort
+	!
+	!--
+
+
+	SELECT SORT.BY$
+	CASE "C"
+		SORT.KEY% = 2%
+		ADD.TITLE$ = "BY  CATEGORY"
+	CASE "D"
+		SORT.KEY% = 3%
+		ADD.TITLE$ = "BY  DESCRIPTION"
+	CASE "P"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  PRODUCT  NUMBER"
+	CASE "T"
+		SORT.KEY% = 1%
+		ADD.TITLE$ = "BY  PRODUCT  TYPE"
+	END SELECT
+
+	MAX.LEVEL% = 500%
+	GOTO OpenFile IF WLDLEVEL$ = ""
+
+	LEVEL$ = WLDLEVEL$
+	MAX.LEVEL% = 0%
+	LEVEL$ = LEVEL$ + ","
+
+200	WHILE LEVEL$ <> ""
+		COMMA% = INSTR(1%,LEVEL$,",")
+		TEST.LEVEL$ = LEVEL$
+		LEVEL$ = RIGHT(LEVEL$,COMMA%+1%)
+		TEST.LEVEL% = VAL%(LEFT(TEST.LEVEL$, COMMA% - 1%))
+		MAX.LEVEL% = TEST.LEVEL% IF MAX.LEVEL% < TEST.LEVEL%
+	NEXT
+
+ OpenFile:
+
+300	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.OPN"
+
+310	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+320	PD_PRODUCT2.CH% = PD_PRODUCT.CH%
+	PD_PRODUCT.CH% = 0%
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "PRODUCT  INDENTED  TREE  "+ADD.TITLE$
+	TITLE$(2%) = "Recipe Ingredients System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "Product#       Description                   "+ &
+		"           Type Cat  UOM"
+
+	TITLE$(5%) = SPACE$(25%)+"Level  Item Type Ingredient#    "+ &
+		"Description                              UOM     "+ &
+		"Quantity Operation   Scrap"
+
+	TITLE$(6%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #PD_PRODUCT.CH%,KEY#SORT.KEY%
+	ELSE
+		FIND #PD_PRODUCT.CH%, KEY#SORT.KEY% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #PD_PRODUCT.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO GetNextRec IF PD_PRODUCT::SSTATUS <> "A"
+
+	SELECT SORT.BY$
+
+	CASE "C"
+		GOTO ExitTotal IF (PD_PRODUCT::CATEGORY > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		IF TEST_CATEGORY$ <> PD_PRODUCT::CATEGORY AND &
+			TEST_CATEGORY$ <>"" AND PRINT.LINE%
+		THEN
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), " ", 2%)
+			PRINT.LINE% = 0%
+		END IF
+
+		TEST_CATEGORY$ = PD_PRODUCT::CATEGORY
+
+	CASE "D"
+		GOTO ExitTotal IF (PD_PRODUCT::DESCRIPTION > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::DESCRIPTION,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "P"
+		GOTO ExitTotal IF (PD_PRODUCT::PRODUCT_NUM > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "T"
+		GOTO ExitTotal IF (PD_PRODUCT::PROD_TYPE> TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE,-1%), &
+			WLDCRD$) = 0%
+
+		IF TEST_PRODTYPE$ <> PD_PRODUCT::PROD_TYPE AND &
+			TEST_PRODTYPE$ <>"" AND PRINT.LINE%
+		THEN
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), " ", 2%)
+			PRINT.LINE% = 0%
+		END IF
+
+		TEST_PRODTYPE$ = PD_PRODUCT::PROD_TYPE
+
+	END SELECT
+
+17200	GET #RI_RELATION.CH%, KEY#0% EQ PD_PRODUCT::PRODUCT_NUM, &
+		REGARDLESS
+
+17300	PD_PRODUCT$ = RI_RELATION::PRODUCT
+
+	TEXT.TEXT$ = RI_RELATION::PRODUCT + " " + &
+		PD_PRODUCT::DESCRIPTION+" "+ &
+		PD_PRODUCT::PROD_TYPE+"   "+ &
+		PD_PRODUCT::CATEGORY+" "+ &
+		PD_PRODUCT::UOM
+
+	TEXT.TEXT% = 0%
+	QTY_LEVEL(0%),LEVEL% = 1%
+
+ GoDownTree:
+	!
+	GOTO GoUpTree IF LEVEL%>MAX.LEVEL%
+
+	TEST_PRODUCT(LEVEL%) = RI_RELATION::PRODUCT
+	QTY_LEVEL(LEVEL%) = QTY_LEVEL(LEVEL%-1%) * RI_RELATION::QUANTITY
+	RFA_LEVEL(LEVEL%) = GETRFA(RI_RELATION.CH%)
+
+	GOTO ExitProgram IF RI_RELATION::PRODUCT = TEST_PRODUCT(I%) &
+			FOR I% = 1% TO LEVEL%-1%
+
+	GOSUB 18000
+
+17320	GET #RI_RELATION.CH%, KEY#0% EQ RI_RELATION::INGREDIENT
+
+
+	LEVEL% = LEVEL% + 1%
+	GOTO GoDownTree
+
+ GoUpTree:
+	!
+	LEVEL% = LEVEL% - 1%
+	GOTO 17350 IF LEVEL%=0%
+
+17330	GET #RI_RELATION.CH%, RFA RFA_LEVEL(LEVEL%), REGARDLESS
+
+	GET #RI_RELATION.CH%, REGARDLESS
+
+	IF RI_RELATION::PRODUCT <> TEST_PRODUCT(LEVEL%)
+	THEN
+		GOTO GoUpTree
+	ELSE
+		GOTO GoDownTree
+	END IF
+
+17350	GOTO ExitProgram IF UTL_REPORTX::STAT
+	!
+	! Try for next record
+	!
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%) &
+		IF TEXT.TEXT%
+
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+
+ ExitProgram:
+
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+18000	IF COMP_STRING(NUM1$(LEVEL%),WLDLEVEL$) <> 0% OR &
+		EDIT$(WLDLEVEL$,-1%) = ""
+	THEN
+		PD_PRODUCT$ = RI_RELATION::INGREDIENT
+		GOSUB 18500
+
+		IF TEXT.TEXT% = 0%
+		THEN
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), &
+				TEXT.TEXT$, 0%)
+			TEXT.TEXT% = -1%
+		END IF
+
+		TEXT$ = TEST_PRODUCT(1%)+SPACE$(12%)+ &
+			FORMAT$(LEVEL%,	"####")+"  "+ &
+			RI_RELATION::ITEMNUM+" "+ &
+			PD_PRODUCT::PROD_TYPE+"   "+ &
+			RI_RELATION::INGREDIENT+" "+ &
+			PD_PRODUCT::DESCRIPTION+" "+ &
+			PD_PRODUCT::UOM +"   "+ &
+			FORMAT$(QTY_LEVEL(LEVEL%),"###,###.###")+" "+ &
+			RI_RELATION::OPERATION+"   "+ &
+			FORMAT$(0.01*RI_RELATION::SCRAP,"<%>##.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	END IF
+
+	RETURN
+
+18500	!
+	! Read Product File
+	!
+	PD_PRODUCT::DESCRIPTION = &
+		STRING$(LEN(PD_PRODUCT::DESCRIPTION),ASCII("?"))
+	PD_PRODUCT::CATEGORY    = &
+		STRING$(LEN(PD_PRODUCT::CATEGORY),ASCII("?"))
+	PD_PRODUCT::PROD_TYPE    = &
+		STRING$(LEN(PD_PRODUCT::PROD_TYPE),ASCII("?"))
+	PD_PRODUCT::UOM    = &
+		STRING$(LEN(PD_PRODUCT::UOM),ASCII("?"))
+	GET #PD_PRODUCT2.CH%, KEY#0% EQ PD_PRODUCT$,REGARDLESS
+
+18510	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 200%
+		RESUME 200
+
+	CASE 300%, 17000%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 310%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 320%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 17200%
+		RESUME GetNextRec IF ERR = 155%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 17320%	! Can't find ingredient
+		IF ERR = 155%
+		THEN
+			RESUME 17330
+		END IF
+		FILENAME$ = "RI_RELATION"
+
+	CASE 17330%	! Can't find ingredient
+		IF ERR = 155% OR ERR = 11%
+		THEN
+			RESUME GoUpTree
+		END IF
+		FILENAME$ = "RI_RELATION"
+
+	CASE 18500%	! Undefined product
+		RESUME 18510 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "PD_PRODUCT2"
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

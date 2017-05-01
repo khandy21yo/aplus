@@ -1,0 +1,46 @@
+	!------------------------------------------------------------------
+	! Keyboard open routine
+	!------------------------------------------------------------------
+
+	EXTERNAL LONG FUNCTION SYS$ASSIGN, SYS$TRNLOG
+
+	EXTERNAL LONG CONSTANT SS$_NORMAL, IO$_SETMODE
+
+	DECLARE  LONG SYS_STAT
+
+	!***************************
+	! Set up output channel
+	!***************************
+	OPEN "SYS$OUTPUT" AS FILE SCOPE.CH%
+
+	!***************************
+	! Set up input channel
+	!***************************
+
+	!
+	! Translate SYS$INPUT
+	!
+	RSN_BUF$ = SPACE$(80%)
+
+	SYS_STAT = SYS$TRNLOG("SYS$INPUT", RSN_LEN%, RSN_BUF$,,,,)
+
+	SELECT SYS_STAT
+		CASE SS$_NORMAL
+			DEV_NAM$ = SEG$(RSN_BUF$, 1, RSN_LEN%)
+		CASE ELSE
+			SCOPE.CH% = -1%
+			PRINT "ERROR FROM SYS$TRNLOG = "; SYS_STAT
+			STOP
+	END SELECT
+
+	!
+	! Assign SYS$INPUT
+	!
+	SYS_STAT = SYS$ASSIGN(DEV_NAM$, SCOPE1.CH%,,,)
+
+	IF (SYS_STAT AND 1%) <> 1%
+	THEN
+		PRINT "ERROR FROM SYS$ASSIGN = ";SYS_STAT
+		STOP
+	END IF
+

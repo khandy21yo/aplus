@@ -1,0 +1,786 @@
+1	%TITLE "Copy Restaurant Product Journal"
+	%SBTTL "RM_FUNC_COPYBATCH"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_FUNC_COPYBATCH
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Copy\*  function copies the restaurant worksheet batch to
+	!	the rest transaction journal.
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_FUNC_COPYBATCH/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_FUNC_COPYBATCH
+	!	$ DELETE RM_FUNC_COPYBATCH.OBJ;*
+	!
+	! Author:
+	!
+	!	11/24/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	07/11/88 - Frank F. Starman
+	!		Change "make copy" to "create template"
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/02/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.HB"
+	MAP (RM_JOURNAL)	RM_JOURNAL_CDD	RM_JOURNAL
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSFLAG.HB"
+	MAP (RM_TRANSFLAG)	RM_TRANSFLAG_CDD	RM_TRANSFLAG
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.HB"
+	MAP (RM_JOURPROD)	RM_JOURPROD_CDD	RM_JOURPROD
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.HB"
+	MAP (RM_JOURPOST)	RM_JOURPOST_CDD	RM_JOURPOST
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD	PD_PRODUCT
+
+	!
+	! Array for listing
+	!
+	DECLARE INTEGER CONSTANT MAX.ITEM = 6%
+
+	!
+	! Declare constants
+	!
+	DECLARE LONG SMG_COPY
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (BATCH_RM_JOURNAL) &
+		BATCH_NO$ = 2%
+
+	!
+	! External functions
+	!
+	EXTERNAL REAL   FUNCTION PC_READ_PRICE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	TEMP_PROGRAM$ = SCOPE::PRG_PROGRAM
+	SCOPE::PRG_PROGRAM = "RM_FUNC_COPYBATCH"
+	RM_FUNC_COPYBATCH = 0%
+
+300	!
+	! Open main file (existing) for modification
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.OPN"
+
+	SCOPE::PRG_ITEM = "CONFIRM"
+
+	CALL ENTR_3MESSAGE(SCOPE, &
+		"Post file exist. Can't create worksheet", 0%)
+	GOTO ExitFunction
+
+310
+	!
+	! Open main file (existing) for modification
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.CRE"
+
+320	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+330	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSFLAG.OPN"
+
+	%PAGE
+
+ Paint:
+	!
+	! Paint the background
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		8%, &
+		50%, &
+		SMG_COPY, &
+		SMG$M_BORDER &
+	)
+
+	SMG_STATUS% = SMG$LABEL_BORDER &
+	( &
+		SMG_COPY, &
+		"Creating Worksheet", &
+		SMG$K_TOP &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_COPY, &
+		SCOPE::SMG_PBID, &
+		10%, &
+		5% &
+	)
+
+	!******************************************************************
+	! Declare defaults for screen
+	!******************************************************************
+
+	SORT.BY$ = "P"
+	FROM.ITEM$ = SPACE$(20%)
+	TO.ITEM$ = SPACE$(20%)
+	WILDCARD$ = "*"+SPACE$(19%)
+	SCAN.BY$ = " "
+	SCAN$ = "*"+SPACE$(19%)
+
+
+500	!******************************************************************
+	! Main option menu
+	!******************************************************************
+
+	GOSUB Repaint
+
+510	!
+	! Enter options
+	!
+	SCOPE::PRG_ITEM = ""
+	OPTLIST$ = "Change Blank Go Help eXit"
+
+	OPT$ = ENTR_3OPTION(SCOPE, "COMMAND", OPTLIST$, OPT%, 0%)
+
+	SELECT SCOPE::SCOPE_EXIT
+	!
+	! Control c
+	!
+	CASE 3%
+		GOTO 500
+
+	!
+	! Exit key
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO ExitFunction
+
+	END SELECT
+
+	SELECT OPT$
+
+	CASE "C"
+ Changer:
+		!*****************************************************
+		! Change information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to change", 0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 500
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 510
+
+		END SELECT
+
+		GOTO 510 IF LOOP% = 0%
+		GOTO Changer IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		LOOP1% = LOOP%
+
+ Changer1:	FLAG% = 0%
+		GOSUB DataEntry
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 500
+
+		!
+		! Uparrow
+		!
+		CASE SMG$K_TRM_UP
+			LOOP% = LOOP% - 1% IF LOOP% > 1%
+			GOTO Changer1
+
+		!
+		! SMG$K_TRM_DOWN
+		!
+		CASE SMG$K_TRM_DOWN
+			LOOP% = LOOP% + 1% IF LOOP% < MAX.ITEM
+			GOTO Changer1
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 510
+
+		END SELECT
+
+		GOTO Changer
+
+	CASE "B"
+ BlankR:	!*****************************************************
+		! Blank information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to Blank", 0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 500
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 510
+
+		END SELECT
+
+		GOTO 510 IF LOOP% = 0%
+		GOTO Blankr IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		SELECT LOOP%
+
+		CASE 1%
+			LSET SORT.BY$ = "P"
+
+		CASE 2%
+			LSET FROM.ITEM$ = SPACE$(20%)
+
+		CASE 3%
+			LSET TO.ITEM$ = SPACE$(20%)
+
+		CASE 4%
+			LSET WILDCARD$ = "*"+SPACE$(19%)
+
+		CASE 5%
+			LSET SCAN.BY$ = " "
+
+		CASE 6%
+			LSET SCAN$ = "*"+SPACE$(19%)
+
+		END SELECT
+
+		FLAG% = 1%
+		GOSUB DataEntry
+
+		GOTO Blankr
+
+	CASE "G"
+		GOTO 1000
+
+	!
+	! Help
+	!
+	! This option calls out a help message describing the
+	! program.
+	!
+	CASE "H"
+		CALL HELP_3MESSAGE(SCOPE, "", "PROG", &
+			SCOPE::PRG_PROGRAM, "HELP")
+		GOTO 500
+
+	CASE "X"
+		GOTO ExitFunction
+
+	END SELECT
+
+	GOTO 510
+
+	%PAGE
+
+1000	!******************************************************************
+	! Copy
+	!******************************************************************
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	!
+	! Display message
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating Worksheet ... ",1%+16%)
+
+	SEQ.NUMBER% = 0%
+	RESET #RM_JOURPROD.CH%
+
+ NextLine:
+	GET #RM_JOURPROD.CH%, REGARDLESS
+	SEQ.NUMBER% = VAL%(RM_JOURPROD::SEQNUM)
+	GOTO NextLine
+
+ Init:
+	FROM.ITEM$ = EDIT$(FROM.ITEM$, 132%)
+	TO.ITEM$ = EDIT$(TO.ITEM$, 132%)
+	WLDCRD$ = EDIT$(WLDCRD$, -1%)
+	SORT.BY$ = EDIT$(SORT.BY$, 132%)
+	SCAN.BY$ = EDIT$(SCAN.BY$, 132%)
+	SCAN$ = EDIT$(SCAN$, -1%)
+
+	SELECT SORT.BY$
+	CASE "C"
+		SORT.KEY% = 2%
+	CASE "D"
+		SORT.KEY% = 3%
+	CASE "P"
+		SORT.KEY% = 0%
+	CASE "T"
+		SORT.KEY% = 1%
+	END SELECT
+
+1003	IF FROM.ITEM$ = ""
+	THEN
+		RESET #PD_PRODUCT.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #PD_PRODUCT.CH%, KEY#SORT.KEY% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+ GetNextRec:
+1005	!
+	! Main loop starts here
+	!
+	!
+	! Get next record
+	!
+	GET #PD_PRODUCT.CH%, REGARDLESS
+
+	SELECT SCOPE::SCOPE_EXIT
+	!
+	! Control c
+	!
+	CASE 3%
+		GOTO 1500
+
+	!
+	! Exit key
+	!
+	CASE 3%,SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO 1500
+
+	END SELECT
+
+	!
+	! Check current record
+	!
+	SELECT SORT.BY$
+
+	CASE "C"
+		GOTO 1500 IF (PD_PRODUCT::CATEGORY > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::CATEGORY,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "D"
+		GOTO 1500 IF (PD_PRODUCT::DESCRIPTION > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::DESCRIPTION,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "P"
+		GOTO 1500 IF (PD_PRODUCT::PRODUCT_NUM > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "T"
+		GOTO 1500 IF (PD_PRODUCT::PROD_TYPE> TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE,-1%), &
+			WLDCRD$) = 0%
+
+	END SELECT
+
+	SELECT SCAN.BY$
+
+	CASE "C"
+		GOTO GetNextRec IF SCAN$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::CATEGORY,-1%), SCAN$) = 0%
+
+	CASE "D"
+		GOTO GetNextRec IF SCAN$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::DESCRIPTION,-1%), &
+			SCAN$) = 0%
+
+	CASE "P"
+		GOTO GetNextRec IF SCAN$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM,-1%), &
+			SCAN$) = 0%
+
+	CASE "T"
+		GOTO GetNextRec IF SCAN$ <> "" AND &
+			COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE,-1%), &
+			SCAN$) = 0%
+
+	END SELECT
+
+	! Check transaction flag
+	!
+1010	FIND #RM_TRANSFLAG.CH%, KEY#0% EQ PD_PRODUCT::PRODUCT_NUM + &
+		RM_JOURNAL::TRANSTYPE,REGARDLESS
+	GOTO GetNextRec
+
+1040	IF EDIT$(RM_JOURNAL::PRICETYPE,-1%)=""
+	THEN
+		PRICE = 0.
+	ELSE
+		PRICE = PC_READ_PRICE(PD_PRODUCT::PRODUCT_NUM, &
+			RM_JOURNAL::LOCATION,RM_JOURNAL::PRICETYPE, &
+			RM_JOURNAL::STARTDATE,"000000","","")
+	END IF
+
+	!
+	! Add copy from RM_JOURPROD (BATCH)
+	!
+	SEQ.NUMBER% = SEQ.NUMBER% + 1%
+
+	RM_JOURPROD::LOCATION	= RM_JOURNAL::LOCATION
+	RM_JOURPROD::STARTDATE	= RM_JOURNAL::STARTDATE
+	RM_JOURPROD::TRANSTYPE	= RM_JOURNAL::TRANSTYPE
+	RM_JOURPROD::SEQNUM	= FORMAT$(SEQ.NUMBER%,"<0>###")
+	RM_JOURPROD::PRODUCT	= PD_PRODUCT::PRODUCT_NUM
+	RM_JOURPROD::PRICE	= PRICE
+	RM_JOURPROD::QUANTITY(0%)= 0.
+	RM_JOURPROD::QUANTITY(1%)= 0.
+	RM_JOURPROD::QUANTITY(2%)= 0.
+	RM_JOURPROD::QUANTITY(3%)= 0.
+	RM_JOURPROD::QUANTITY(4%)= 0.
+	RM_JOURPROD::QUANTITY(5%)= 0.
+	RM_JOURPROD::QUANTITY(6%)= 0.
+
+	PUT #RM_JOURPROD.CH%
+
+	GOTO 1005
+
+1500	CALL ENTR_3MESSAGE(SCOPE, "Process completed ", 1%)
+
+ ExitFunction:
+	CLOSE PD_PRODUCT.CH%
+	CLOSE RM_JOURPROD.CH%
+	CLOSE RM_TRANSFLAG.CH%
+	CALL ASSG_FREECHANNEL(RM_JOURPROD.CH%)
+	CALL ASSG_FREECHANNEL(RM_JOURPOST.CH%)
+	CALL ASSG_FREECHANNEL(PD_PRODUCT.CH%)
+	CALL ASSG_FREECHANNEL(RM_TRANSFLAG.CH%)
+	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_COPY)
+
+	SCOPE::PRG_PROGRAM = TEMP_PROGRAM$
+
+	EXIT FUNCTION
+
+	%PAGE
+
+ Repaint:
+	!******************************************************************
+	! Repaint the screen
+	!******************************************************************
+
+	SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_COPY)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_COPY)
+
+
+	DATA	02,05, "(01) Sort By", &
+		03,05, "(02) From Item", &
+		04,05, "(03) To Item", &
+		05,05, "(04) Wildcard", &
+		06,05, "(05) Scan By", &
+		07,05, "(06) Wildcard", &
+		0, 0, ""
+
+	RESTORE
+
+	READ XPOS%, YPOS%, XSTR$
+
+	WHILE (XPOS% <> 0)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_COPY, &
+			XSTR$, XPOS%, YPOS%)
+		READ XPOS%, YPOS%, XSTR$
+	NEXT
+
+	FLAG% = 1%
+	GOSUB DataEntry FOR LOOP% = 1% TO MAX.ITEM
+
+	SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_COPY)
+
+	RETURN
+
+ DataEntry:
+	!******************************************************************
+	! Enter/Diaplay items
+	!******************************************************************
+
+	TEMP$ = TRM$(SCOPE::PRG_ITEM)
+	SCOPE::PRG_ITEM = "FLD" + FORMAT$(LOOP%, "<0>##")
+ Reenter:
+
+	SELECT LOOP%
+
+	CASE 1%
+		SORT.BY$ = ENTR_3STRING(SCOPE, SMG_COPY, "02;25", &
+			"Sort (C,D,P,T) ", SORT.BY$, FLAG%, "'E", DEFLT$)
+
+		GOTO Reenter IF COMP_STRING(EDIT$(SORT.BY$,-1%), "C,D,P,T") = 0%
+
+	CASE 2%
+		FROM.ITEM$= ENTR_3STRING(SCOPE, SMG_COPY, "03;25", &
+			"From Item ", FROM.ITEM$, FLAG%, "'E", DEFLT$)
+
+	CASE 3%
+		TO.ITEM$  = ENTR_3STRING(SCOPE, SMG_COPY, "04;25", &
+			"To Item ", TO.ITEM$, FLAG%, "'E", DEFLT$)
+
+	CASE 4%
+		WILDCARD$ = ENTR_3STRING(SCOPE, SMG_COPY, "05;25", &
+			"Wildcard ", WILDCARD$, FLAG%, "'E", DEFLT$)
+
+	CASE 5%
+		SCAN.BY$  = ENTR_3STRING(SCOPE, SMG_COPY, "06;25", &
+			"Scan (C,D,P,T) ", SCAN.BY$, FLAG%, "'E", DEFLT$)
+
+		GOTO Reenter IF COMP_STRING(EDIT$(SCAN.BY$,-1%), "C,D,P,T")=0% &
+			AND TRM$(SCAN.BY$)<>""
+
+	CASE 6%
+		SCAN$ = ENTR_3STRING(SCOPE, SMG_COPY, "07;25", "Wildcard ", &
+			SCAN$, FLAG%, "'E", DEFLT$)
+
+	END SELECT
+
+	SCOPE::PRG_ITEM = TEMP$
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	RM_FUNC_COPYBATCH = 1%
+	GOTO ExitFunction
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		RESUME 310 IF ERR = 5%
+		FILENAME$ = "RM_JOURPOST"
+
+	CASE 310%
+		FILENAME$ = "RM_JOURPROD"
+
+	CASE 320%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 330%
+		RESUME Paint IF ERR = 5%
+		FILENAME$ = "RM_TRANSFLAG"
+
+	CASE 1000%
+		RESUME Init
+
+	CASE 1003%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 1005% ! End of the file
+		IF ERR = 11%
+		THEN
+			RESUME 1500
+		END IF
+
+	CASE 1010%	! Check flag
+		RESUME 1040 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "RM_TRANSFLAG"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END FUNCTION
+	!+-+-+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Sort By\*
+	!	.p
+	!	The ^*Sort By\* field provides the means to enter a code which causes the
+	!	report to be sorted in the indicated manner. Valid codes for entry are:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	C - Category
+	!	.le
+	!	D - Description
+	!	.le
+	!	P - Product
+	!	.le
+	!	T - Type
+	!	.els
+	!	.lm -10
+	!	.p
+	!	An entry is required in this field and only the above codes are valid.
+	!
+	! Index:
+	!	.x Sort By
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD002
+	!	^*(02) From Item\*
+	!	.p
+	!	The ^*From Item\* entered in this field causes the copying of the report
+	!	to begin with a particular item.  The value must be in agreement with the
+	!	value entered in field (01).
+	!	.p
+	!	A blank field causes the report to begin with the first item in the file
+	!
+	! Index:
+	!	.x From Item
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD003
+	!	^*(03) To Item\*
+	!	.p
+	!	The ^*To Item\* entered in this field causes the copying of the report to
+	!	end with a particular item.  The value must be in agreement with the value
+	!	entered in field (01).
+	!	.p
+	!	A blank field causes the report to end with the last item in the file.
+	!
+	! Index:
+	!	.x To Item
+	!	.x Item>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field enables the user to copy a report including selected
+	!	items only using the wildcarding techniques.
+	!	.p
+	!	Valid wildcard characters are an asterisk (_*) or a question mark (?).  An
+	!	asterisk (_*) indicates all items will be selected.  A question mark (?)
+	!	in a field position indicates an item with any character in that equivalent
+	!	position will be selected.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Scan By\*
+	!	.p
+	!	The ^*Scan By\* field provides the means to print only specific items within the
+	!	sort list and specified items.  A valid code must be entered for the restriction
+	!	to work accurately. Wildcarding techniques may be used.
+	!
+	! Index:
+	!	.x Scan By
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field provides the means for the user to copy only selected
+	!	items within the sort by using wildcarding techniques.
+	!	.p
+	!	Valid wildcard characters are an asterisk (_*) or a question mark (_?). An
+	!	asterisk (_*) indicates all items will be selected.  A question mark (_?)
+	!	in a field position indicates an item with any character in that equivalant
+	!	position will be selected.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--

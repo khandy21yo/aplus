@@ -1,0 +1,796 @@
+1	%TITLE "Restaurant Journal Entry"
+	%SBTTL "RM_MAIN_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_MAIN_JOURNAL(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Restaurant Journal Entry\* program provides the means to enter and
+	!	maintain the Restaurant journal file.
+	!
+	! Index:
+	!	.x Restaurant Journal Entry
+	!	.x Journal Entry
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_MAIN_JOURNAL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_MAIN_JOURNAL
+	!	$ DELETE RM_MAIN_JOURNAL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/12/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	05/19/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	06/29/88 - Frank Starman
+	!		Change layout
+	!
+	!	04/28/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	05/07/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	06/12/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	03/02/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	06/11/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:RM_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.HB"
+	MAP (RM_JOURNAL)	RM_JOURNAL_CDD		RM_JOURNAL
+	MAP (RM_JOURNAL2) RM_JOURNAL_CDD RM_JOURNAL_OLD, RM_JOURNAL2
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP (UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP (UTL_TRANSTYPE)	UTL_TRANSTYPE_CDD	UTL_TRANSTYPE
+
+	%INCLUDE "SOURCE:[PC.OPEN]PC_PRCTYPE.HB"
+	MAP (PC_PRCTYPE)	PC_PRCTYPE_CDD		PC_PRCTYPE
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (BATCH_RM_JOURNAL) &
+		BATCH_NO$	= 2%
+
+	COM (CH_RM_JOURNAL) &
+		RM_JOURNAL.CH%, &
+		RM_JOURNAL.READONLY%
+
+	COM (TT_RM_JOURNAL) &
+		DAY.WEEK$(7%)	= 9%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION RM_FUNC_JOURSET
+	EXTERNAL LONG	FUNCTION RM_FUNC_JOURRESET
+	EXTERNAL LONG	FUNCTION RM_FUNC_COPYBATCH
+	EXTERNAL LONG	FUNCTION MAIN_WINDOW
+	EXTERNAL LONG	FUNCTION MAIN_JOURNAL
+	EXTERNAL LONG	FUNCTION FIND_FILEEXISTS
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	!
+	! Declare data types
+	!
+	DECLARE LONG XPOS, YPOS
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Restaurant Transaction Journal "+ BATCH_NO$
+		SMG_WINDOW::NHELP = "RM_MAIN_JOURNAL"
+		SMG_WINDOW::CHAN  = RM_JOURNAL.CH%
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 6%
+
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Location"
+			SMG_WINDOW::KFIELD(0%, 0%) = 3%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+			SMG_WINDOW::KFIELD(0%, 3%) = 3%
+
+		DAY.WEEK$(1%) = "Monday   "
+		DAY.WEEK$(2%) = "Tuesday  "
+		DAY.WEEK$(3%) = "Wednesday"
+		DAY.WEEK$(4%) = "Thursday "
+		DAY.WEEK$(5%) = "Friday   "
+		DAY.WEEK$(6%) = "Saturday "
+		DAY.WEEK$(7%) = "Sunday   "
+
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF RM_JOURNAL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF RM_JOURNAL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.CRE"
+		RM_JOURNAL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		RM_JOURNAL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		!IF FLAGOPEN%
+		!THEN
+		!	ST% = LIB$FREE_LUN(RM_JOURNAL.CH%)
+		!	RM_JOURNAL.CH% = 0%
+		!ELSE
+		!	RM_JOURNAL.CH% = -RM_JOURNAL.CH%
+		!END IF
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = RM_JOURNAL.CH%
+		RESET #RM_JOURNAL.CH%
+		GET #RM_JOURNAL.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		!
+		! Main screen
+		!
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+			DATA	02,  05, "(01) Location", &
+				03,  05, "(02) From Date", &
+				04,  05, "(03) Trans Type", &
+				05,  05, "(04) Price Type", &
+				06,  05, "(05) Inv Exp Acct", &
+				07,  05, "(06) Stationman", &
+				0,  0, ""
+
+			RESTORE
+
+		READ XPOS, YPOS, XSTR$
+		I%=0%
+		WHILE (XPOS <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS, YPOS) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS, YPOS, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! More options
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Transaction exPand copY "
+
+	!
+	! Handle additional options
+	!
+	CASE OPT_MOREMENU
+		SELECT EDIT$(MVALUE, -1%)
+
+		!
+		! Units transaction entry
+		!
+		CASE "TRANSACTION"
+			IF RM_FUNC_JOURRESET = 0%
+			THEN
+				RM_MAIN_JOURNAL = &
+					MAIN_JOURNAL(RM_MAIN_JOURPROD.ID, "")
+			END IF
+		!
+		! Units posting file
+		!
+		CASE "EXPAND"
+			IF RM_FUNC_JOURSET = 0%
+			THEN
+				RM_MAIN_JOURNAL = &
+					MAIN_JOURNAL(RM_MAIN_JOURPOST.ID, "")
+			END IF
+
+		!
+		! Copy batch template
+		!
+		CASE "COPY"
+			RM_MAIN_JOURNAL = RM_FUNC_COPYBATCH
+
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF RM_JOURNAL_OLD::LOCATION+ &
+				RM_JOURNAL_OLD::STARTDATE + &
+				RM_JOURNAL_OLD::TRANSTYPE <> &
+				RM_JOURNAL::LOCATION+RM_JOURNAL::STARTDATE+ &
+				RM_JOURNAL::TRANSTYPE
+			THEN
+				TEMP$ = RM_JOURNAL::LOCATION + &
+					RM_JOURNAL::STARTDATE+ &
+					RM_JOURNAL::TRANSTYPE+ ""
+				RM_JOURNAL = RM_JOURNAL_OLD
+
+				CALL READ_DEVICE("RM_JOURPROD", &
+					RM_JOURPROD.DEV$, STAT%)
+				RM_MAIN_JOURNAL = &
+					MAIN_JOURNAL(RM_MAIN_JOURPROD.ID, &
+					"C" + TEMP$) &
+					IF FIND_FILEEXISTS(RM_JOURPROD.DEV$+ &
+					"RM_JOURPROD_"+BATCH_NO$+".JRL",0%)
+
+				CALL READ_DEVICE("RM_JOURPOST", &
+					RM_JOURPOST.DEV$, STAT%)
+				RM_MAIN_JOURNAL = &
+					MAIN_JOURNAL(RM_MAIN_JOURPOST.ID, &
+					"C" + TEMP$) &
+					IF FIND_FILEEXISTS(RM_JOURPOST.DEV$+ &
+					"RM_JOURPOST_"+BATCH_NO$+".JRL",0%)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			CALL READ_DEVICE("RM_JOURPROD", &
+				RM_JOURPROD.DEV$, STAT%)
+			RM_MAIN_JOURNAL = MAIN_JOURNAL(RM_MAIN_JOURPROD.ID, &
+				"E") &
+				IF FIND_FILEEXISTS(RM_JOURPROD.DEV$+ &
+				"RM_JOURPROD_"+BATCH_NO$+".JRL",0%)
+
+			CALL READ_DEVICE("RM_JOURPOST", &
+				RM_JOURPOST.DEV$, STAT%)
+			RM_MAIN_JOURNAL = MAIN_JOURNAL(RM_MAIN_JOURPOST.ID, &
+				"E") &
+				IF FIND_FILEEXISTS(RM_JOURPOST.DEV$+ &
+				"RM_JOURPOST_"+BATCH_NO$+".JRL",0%)
+
+
+		END SELECT
+
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View "
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Reenter:	SELECT MLOOP
+
+		CASE 1%
+			RM_JOURNAL::LOCATION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "2;30", TEMP$, &
+				RM_JOURNAL::LOCATION, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_LOCATION.ID, "V0") = 1%
+				THEN
+				RM_JOURNAL::LOCATION = &
+						UTL_LOCATION::LOCATION
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 2%
+			RM_JOURNAL::STARTDATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, "3;30", TEMP$, &
+				RM_JOURNAL::STARTDATE, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+			RM_JOURNAL::TRANSTYPE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "4;30", TEMP$, &
+				RM_JOURNAL::TRANSTYPE, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0") = 1%
+				THEN
+				RM_JOURNAL::TRANSTYPE = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 4%
+			RM_JOURNAL::PRICETYPE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "5;30", TEMP$, &
+				RM_JOURNAL::PRICETYPE, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(PC_MAIN_PRCTYPE.ID, "V0") = 1%
+				THEN
+				RM_JOURNAL::PRICETYPE= &
+						PC_PRCTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 5%
+			RM_JOURNAL::EXPACCOUNT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "6;30", TEMP$, &
+				RM_JOURNAL::EXPACCOUNT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(GL_MAIN_CHART.ID, "VX") = 1%
+				THEN
+				RM_JOURNAL::EXPACCOUNT= GL_CHART::ACCT
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 6%
+			RM_JOURNAL::STATIONMAN = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "7;30", TEMP$, &
+				RM_JOURNAL::STATIONMAN, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+20300	CASE OPT_TESTENTRY
+
+		RM_MAIN_JOURNAL = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			RM_MAIN_JOURNAL = FUNC_TESTENTRY( SMG_WINDOW, &
+				RM_JOURNAL::LOCATION, &
+				UTL_LOCATION::LOCNAME, &
+				"RM", MLOOP, "PRG", &
+				"Location", UTL_MAIN_LOCATION.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				UTL_LOCATION::LOCNAME,2%,41%, ,SMG$M_BOLD)
+
+		CASE 2%
+			IF RM_JOURNAL::STARTDATE = ""
+			THEN
+				RM_MAIN_JOURNAL = 1%
+			ELSE
+				WEEK.DAY$ = &
+					DAY.WEEK$(DATE_DAYOFWEEK(DATE_DAYCODE(RM_JOURNAL::STARTDATE)))
+
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					WEEK.DAY$,3%,41%, ,SMG$M_BOLD)
+
+			END IF
+
+		CASE 3%
+			RM_MAIN_JOURNAL = FUNC_TESTENTRY( SMG_WINDOW, &
+				RM_JOURNAL::TRANSTYPE, &
+				UTL_TRANSTYPE::DESCRIPTION, &
+				"RM", MLOOP, "PRG", &
+				"Transaction type", UTL_MAIN_TRANSTYPE.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				UTL_TRANSTYPE::DESCRIPTION,4%,41%, ,SMG$M_BOLD)
+
+			IF (MVALUE = "ADD")
+			THEN
+				GET #RM_JOURNAL.CH%, &
+					KEY#0% EQ RM_JOURNAL::LOCATION + &
+					RM_JOURNAL::STARTDATE + &
+					RM_JOURNAL::TRANSTYPE, &
+					REGARDLESS
+
+				RM_MAIN_JOURNAL = 2%
+				CALL ENTR_3MESSAGE(SCOPE, &
+					"Record Already Exists", 1%)
+
+			END IF
+
+		CASE 4%
+			IF RM_JOURNAL::PRICETYPE <> ""
+			THEN
+				RM_MAIN_JOURNAL = FUNC_TESTENTRY( SMG_WINDOW, &
+					RM_JOURNAL::PRICETYPE, &
+					PC_PRCTYPE::DESCRIPTION, &
+					"RM", MLOOP, "PRG", &
+					"Price type", PC_MAIN_PRCTYPE.ID)
+			END IF
+
+		CASE 5%
+			IF RM_JOURNAL::EXPACCOUNT <> ""
+			THEN
+				RM_MAIN_JOURNAL = FUNC_TESTENTRY( SMG_WINDOW, &
+					RM_JOURNAL::EXPACCOUNT, &
+					GL_CHART::DESCR, &
+					"RM", MLOOP, "PRG", &
+					"Account", GL_MAIN_CHART.ID)
+			END IF
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			DISPLAYLOC$ = STRING$(40%,63%)
+
+			DISPLAYLOC$ = UTL_LOCATION::LOCNAME &
+				IF MAIN_WINDOW(UTL_MAIN_LOCATION.ID, &
+				"Q0" + RM_JOURNAL::LOCATION) = 1%
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				DISPLAYLOC$,2%,41%, ,SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			WEEK.DAY$ = STRING$(9%,63%)
+			WEEK.DAY$ = &
+				DAY.WEEK$(DATE_DAYOFWEEK(DATE_DAYCODE(RM_JOURNAL::STARTDATE))) &
+				IF EDIT$(RM_JOURNAL::STARTDATE,-1%) <> ""
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				WEEK.DAY$,3%,41%, ,SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			TRANSDESC$  = STRING$(20%,63%)
+
+			TRANSDESC$  = UTL_TRANSTYPE::DESCRIPTION &
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, &
+				"Q0"+RM_JOURNAL::TRANSTYPE) = 1%
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				TRANSDESC$,4%,41%, ,SMG$M_BOLD)
+		END IF
+
+20500	CASE OPT_SETOLD
+		RM_JOURNAL_OLD = RM_JOURNAL
+
+	CASE OPT_RESETOLD
+		RM_JOURNAL = RM_JOURNAL_OLD
+
+	CASE OPT_SETDEFAULT
+		RM_JOURNAL2 = RM_JOURNAL
+
+	CASE OPT_RESETDEFAULT
+		RM_JOURNAL = RM_JOURNAL2
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		CASE 1%
+			MVALUE = "  Loc FromDate   TransType PriceType"
+
+		CASE 2%
+			MVALUE = "005,017,028"
+
+		CASE 3%
+			MVALUE = RM_JOURNAL::LOCATION + "  " + &
+				PRNT_DATE(RM_JOURNAL::STARTDATE,8%)+" " + &
+				RM_JOURNAL::TRANSTYPE + "          " + &
+				RM_JOURNAL::PRICETYPE
+		END SELECT
+
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #RM_JOURNAL.CH%, &
+				KEY#0% GE RM_JOURNAL::LOCATION + &
+				RM_JOURNAL::STARTDATE + &
+				RM_JOURNAL::TRANSTYPE, &
+				REGARDLESS
+
+		END SELECT
+
+	END SELECT
+
+28000	EXIT FUNCTION
+
+29000	!*******************************************************************
+
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		RM_MAIN_JOURNAL = ERR
+		RESUME 770
+
+	CASE 760%
+		RM_MAIN_JOURNAL = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION
+	!+-+-+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Location\*
+	!	.p
+	!	The ^*Location\* code provides the means to enter the location where the
+	!	transaction was added and calculated.
+	!	.p
+	!	Pressing ^*<List Choices>\* will the cursor in located at this field causes
+	!	a list of valid location codes to be displayed.
+	!
+	! Index:
+	!	.x Location
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD002
+	!	^*(02) From Date\*
+	!	.p
+	!	The ^*From Date\* entered in this field causes the report to begin with a
+	!	certain month, day, and year.
+	!	.p
+	!	The formate for entry is MMDDYYYY.
+	!
+	! Index:
+	!	.x From Date
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Transaction Type\*
+	!	.p
+	!	The ^*Transaction Type\* field provides the means to enter a code for a
+	!	particular transaction which has been established in the Transaction Type
+	!	Table.
+	!	.p
+	!	The field accommodates two (2) alphanumeric characters.
+	!
+	! Index:
+	!	.x Transaction Type
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Price Type\*
+	!	.p
+	!	The ^*Price Type\* field contains a valid code for a specific price which has
+	!	been established in the Price Type Table.
+	!	.p
+	!	By pressing ^*<List Choices>\* in this field, a list of valid price types
+	!	will be displayed.  This field accommodates two (2) alphanumeric characters.
+	!
+	! Index:
+	!	.x Price Type
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Stationman\*
+	!	.p
+	!	The ^*Stationman\* field provides for entry of the name or other information
+	!	to identify the person responsible for the transaction.
+	!	.p0
+	!	The field accommodates ten (10) alphanumeric  characters.
+	!
+	! Index:
+	!	.x Stationman
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Inventory Expense Account\*
+	!	.p
+	!	The ^*Inventory Expense Account\* field provides the means to enter the account
+	!	number of the conta account against the inventory.  This account is considered
+	!	a cost of sales account.
+	!
+	! Index:
+	!	.x Inventory Expense Account
+	!	.x Account>Inventory Expense
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:TRANSACTION
+	!	^*Transaction\*
+	!	.p
+	!	The ^*Transaction\* option in the COMMAND menu provides access to the screen
+	!	where the number of transactions for each day of the week are entered
+	!	corresponding with their product number.
+	!
+	! Index:
+	!	.x Transaction
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:COPY
+	!	^*Copy\*
+	!	.p
+	!	The ^*Copy\* option in the COMMAND menu provides the means to copy specified
+	!	information from the journal to a worksheet which the system constructions.
+	!
+	! Index:
+	!	.x Copy
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:EXPAND
+	!	^*Expand\*
+	!	.p
+	!	The ^*Expand\* option in the COMMAND menu provides the means to expand the
+	!	entry to include the inventory of all ingredients used.  This option helps
+	!	the user to know the amount of all ingredients in stock after posting has
+	!	been completed.
+	!
+	! Index:
+	!	.x Expand
+	!
+	!--

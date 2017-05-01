@@ -1,0 +1,1017 @@
+1	%TITLE "Sales Journal Line Item Maintenance"
+	%SBTTL "BC_MAIN_BILL_LINE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BC_MAIN_BILL_LINE(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	This program maintains the Marketing SJH file.
+	!
+	! Index:
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BC_SOURCE:BC_MAIN_BILL_LINE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BC_MAIN_BILL_LINE
+	!	$ DELETE BC_MAIN_BILL_LINE.OBJ;*
+	!
+	! Author:
+	!
+	!	07/06/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/16/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	07/25/88 - Kevin Handy
+	!		Added nOtes to journal.
+	!
+	!	09/29/88 - Kevin Handy
+	!		Increased price to 4 digits.
+	!
+	!	03/18/91 - Frank F. Starman
+	!		Increased qty ordered to 6 digits.
+	!
+	!	05/30/91 - Frank F. Starman
+	!		Do not enter automatically notes if adding.
+	!
+	!	05/07/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	06/16/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	03/01/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!
+	!	08/02/94 - Kevin Handy
+	!		Added one mode digit to price field, and two
+	!		more to amount field for NWC.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/30/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/28/97 - Kevin Handy
+	!		Lose unecessary external definitions
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/08/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:BC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLL.HB"
+	MAP (BC_BILLL)		BC_BILLL_CDD		BC_BILLL
+	MAP (BC_BILLL_OLD)	BC_BILLL_CDD		BC_BILLL_OLD, BC_BILLL2
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLH.HB"
+	MAP (BC_BILLH)		BC_BILLH_CDD		BC_BILLH
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	!
+	! Create array to contain pointers and totals
+	!
+	RECORD RARRAY_RECORD
+		RFA	LINRFA		! Rfa pointer for record
+		STRING	SLINE = 3	! Line number
+		REAL	AMOUNT		! Amount for record
+		REAL	QTYORD		! Quanity for record
+		REAL	QTYSHP		! Quanity for record
+		REAL	QTYBO		! Quanity for record
+	END RECORD
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (TT_BC_BILLL_1) &
+		CATTITLE$ = 20%, &
+		CATTYPE$(8%) = 20%, &
+		TAXTITLE$ = 20%, &
+		TAXTYPE$(8%) = 40%
+
+	COM (TT_BC_BILLL) RARRAY_RECORD RARRAY(300%)	! Allocate for 300
+
+	COM (CH_BC_BILLH) &
+		BC_BILLH.CH%, &
+		BC_BILLH.READONLY%, &
+		BATCH_NO$
+
+	COM (CH_BC_BILLL) &
+		BC_BILLL.CH%, &
+		BC_BILLL.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION LIBR_EXTRACTVAR
+	EXTERNAL LONG   FUNCTION LIBR_INSERTTEXT
+	EXTERNAL LONG   FUNCTION LIBR_DELETE
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Line items"
+		SMG_WINDOW::NHELP = "BC_MAIN_BILL_LINE"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 9%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 11%
+		SMG_WINDOW::NITEMS= 11%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::TOPLIN = 3%
+		SMG_WINDOW::BOTLIN = 8%
+		SMG_WINDOW::LINREC = 2%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+		!
+		! Category
+		!
+		CATTITLE$ = "Type   Description"
+		CATTYPE$(0%) = "8"
+		CATTYPE$(1%) = "N    Not Recorded"
+		CATTYPE$(2%) = "S    Sales"
+		CATTYPE$(3%) = "D    Discount"
+		CATTYPE$(4%) = "F    Freight"
+		CATTYPE$(5%) = "T    Sales Tax"
+		CATTYPE$(6%) = "C    Cost of Sales"
+		CATTYPE$(7%) = "I    Inventory"
+		CATTYPE$(8%) = "O    Other"
+
+		!
+		! Tax type
+		!
+		TAXTITLE$ = "Type   Description"
+		TAXTYPE$(0%) = "7"
+		TAXTYPE$(1%) = "0    Not recorded"
+		TAXTYPE$(2%) = "1    Taxable"
+		TAXTYPE$(3%) = "2    Service"
+		TAXTYPE$(4%) = "3    Freight"
+		TAXTYPE$(5%) = "4    Resale"
+		TAXTYPE$(6%) = "5    Out of state"
+		TAXTYPE$(7%) = "6    Church, School, and Government"
+
+700		!
+		! Declare channels
+		!
+		IF BC_BILLL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BC_BILLL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BC.OPEN]BC_BILLL.CRE"
+		BC_BILLL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BC.OPEN]BC_BILLL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BC_BILLL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BC_BILLL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BC_BILLL.CH%
+		RESET #BC_BILLL.CH%
+		GET #BC_BILLL.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  (01)   (02)   (03)   (04) Product   06 07 (08) " + &
+			"(09) Price  (11)             ", &
+			1%, 1%, , SMG$M_REVERSE)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  Order  Ship   BackOr (05) Descr     Ty Tx UOM  " + &
+			"(10) Amount Account          ", &
+			2%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Extra display stuff
+	!
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! Generate totals
+		!
+		AMOUNT = 0.0
+
+		FOR I% = 1% TO SMG_WINDOW::TOTREC
+
+			AMOUNT = AMOUNT + RARRAY(I%)::AMOUNT
+			QTYORD = QTYORD + RARRAY(I%)::QTYORD
+			QTYSHP = QTYSHP + RARRAY(I%)::QTYSHP
+			QTYBO  = QTYBO  + RARRAY(I%)::QTYBO
+
+		NEXT I%
+
+		!
+		! Display totals
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			FORMAT$(QTYORD, " ######") + &
+			FORMAT$(QTYSHP, " ######") + &
+			FORMAT$(QTYBO, " ######") + &
+			"  Number of lines" + &
+			FORMAT$(SMG_WINDOW::TOTREC, "###") + &
+			"        " + &
+			FORMAT$(AMOUNT, " ######.##") + &
+			"                   ", &
+			SMG_WINDOW::VSIZE, 1%, , SMG$M_REVERSE)
+
+		!
+		! Paint lines on screen
+		!
+		FOR I% = 1% TO 8%
+
+			A% = VAL%(MID("009,016,023,038,041,044,049,061", &
+				I%*4%-3%, 3%))
+
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_WINDOW::WNUMBER, &
+				1%, A%, SMG_WINDOW::BOTLIN, A%)
+
+		NEXT I%
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Select function
+	!
+	CASE OPT_OPTLIST
+
+		MVALUE = MVALUE + " nOtes"
+
+	!
+	! Direction
+	!
+	CASE OPT_MOREMENU
+
+		SELECT SCOPE::PRG_ITEM
+		CASE "nOtes"
+			!
+			! Display notes
+			!
+			CALL READ_DEVICE("BC_BILL",BC_BILL.DEV1$,STAT%)
+
+			ST% = LIBR_EXTRACTVAR( &
+				TRM$(BC_BILL.DEV1$) + "BC_BILL", &
+				LAST_NOTE$, &
+				TRM$(BC_BILLL::ORDER + BC_BILLL::LINENO))
+
+			LAST_NOTE$ = ENTR_NOTE(SMG_WINDOW::WNUMBER, &
+				"8;1", TEMP$, &
+				LAST_NOTE$, 64%, "11;78", MVALUE)
+
+			CALL READ_PROTECTION("BC_BILL", BC_BILL.PRO$, STAT%)
+			CALL READ_CURPROTECTION(OLD_PROT$, STAT%)
+			CALL WRIT_CURPROTECTION(BC_BILL.PRO$, STAT%)
+
+			ST% = LIBR_INSERTTEXT( &
+				TRM$(BC_BILL.DEV1$) + "BC_BILL", &
+				LAST_NOTE$, &
+				TRM$(BC_BILLL::ORDER + BC_BILLL::LINENO))
+
+			CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+
+		END SELECT
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		XLINE$ = NUM1$(SMG_WINDOW::CURLIN)
+		XLINE1$ = NUM1$(SMG_WINDOW::CURLIN + 1%)
+
+		TEMP1% = SCOPE::SCOPE_EXIT
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Order\*
+	!	.p
+	!	The ^*Order\* field provides the means to enter the quantity
+	!	ordered.
+	!	.p
+	!	The field will accommodate six (06) alphanumeric characters.
+	!
+	! Index:
+	!	.x Order
+	!
+	!--
+
+			BC_BILLL::ORDAMT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";3", TEMP$, &
+				BC_BILLL::ORDAMT, MFLAG, "######", MVALUE)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Ship\*
+	!	.p
+	!	The ^*Ship\* field provides for entry of the quantity
+	!	shipped.
+	!	.p
+	!	The field will accommodate six (06) alphanumeric characters.
+	!
+	! Index:
+	!	.x Ship
+	!
+	!--
+
+			BC_BILLL::SHPAMT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";10", TEMP$, &
+				BC_BILLL::SHPAMT, MFLAG, &
+				"######", MVALUE)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Back Order\*
+	!	.p
+	!	The ^*Back Order\* field contains the quantity
+	!	of items on backorder.
+	!	.p
+	!	The field will accept six (6) numerical characters.
+	!
+	! Index:
+	!	.x Back Order
+	!
+	!--
+
+			BC_BILLL::BOAMT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";17", TEMP$, &
+				BC_BILLL::BOAMT, MFLAG, &
+				"######", MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!
+	!	^*(04) Product\*
+	!	.p
+	!	The ^*Product\* field is provided to enter an item number
+	!	or code for this particular line item.
+	!	.p
+	!	The field provides fourteen (14) spaces for an alphanumeric
+	!	entry.
+	!
+	! Index:
+	!	.x Product
+	!--
+
+			BC_BILLL::PRODUCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";24", TEMP$, &
+				BC_BILLL::PRODUCT, MFLAG, "'LLLLLLLLLLLLL", &
+				MVALUE)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!
+	!	^*(05) Description\*
+	!	.p
+	!	The ^*Description\* field provides a means to enter a brief
+	!	description of the line item.  Depending upon user requirements,
+	!	this field may be left blank.
+	!	.p
+	!	The field will accommodate forty (40) alphanumeric characters.
+	!
+	! Index:
+	!	.x Description
+	!--
+
+			BC_BILLL::DESCR = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE1$ + ";24", TEMP$, &
+				BC_BILLL::DESCR, MFLAG, "'LLLLLLLLLLLLL", &
+				MVALUE)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!	^*(06) TY\*
+	!	.p
+	!	The ^*Type\* field defines the type of transaction.
+	!	.p
+	!	Legal values are:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	N = Not recorded
+	!	.le
+	!	S = Sales
+	!	.le
+	!	D = Discount
+	!	.le
+	!	F = Freight
+	!	.le
+	!	T = Sales Tax
+	!	.le
+	!	C = Cost of Sales
+	!	.le
+	!	I = Inventory
+	!	.le
+	!	O = Other
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field will provide
+	!	a list of valid type codes.
+	!
+	! Index:
+	!	.x Type>Transaction
+	!	.x Transaction>Type
+	!	.x Type>Transaction
+	!
+	!--
+
+			BC_BILLL::LTYPE = ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";40", TEMP$, &
+				BC_BILLL::LTYPE, MFLAG, "'", MVALUE, &
+				CATTYPE$(), CATTITLE$, "005")
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!
+	!	^*(07) TX\*
+	!	.p
+	!	The ^*Tax\* field refers to the taxability of the order
+	!	with regard to sales tax.
+	!	.p
+	!	This field is bypassed unless the Type (field 05) is
+	!	type "S" (Sales).
+	!	.p
+	!	Valid values are:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	0 = Not Recorded
+	!	.le
+	!	1 = Taxable
+	!	.le
+	!	2 = Service
+	!	.le
+	!	3 = Freight
+	!	.le
+	!	4 = Resale
+	!	.le
+	!	5 = Out of State
+	!	.le
+	!	6 = Church, School, and Government
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Pressing ^*<List Choices>\*, at this field, will provide a list
+	!	of valid tax codes.
+	!
+	! Index:
+	!	.x Sales Tax
+	!--
+
+			IF (TEMP$ = "Add") AND (BC_BILLL::LTYPE <> "S")
+			THEN
+				TEMP% = MFLAG OR 1%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			BC_BILLL::TAXTYP = ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";43", TEMP$, &
+				BC_BILLL::TAXTYP, TEMP%, "'", MVALUE, &
+				TAXTYPE$(), TAXTITLE$, "005")
+
+			SCOPE::SCOPE_EXIT = TEMP1% IF TEMP% AND 1%
+
+		CASE 8%
+
+	!++
+	! Abstract:FLD008
+	!
+	!	^*(08) UOM\*
+	!	.p
+	!	The ^*Unit of Measure\* field is provided to enter an abbreviation for
+	!	the quantity of units ordered, such as Ea. (Each), Ct. (Carton).
+	!	.p
+	!	The field will accept two (2) alphanumeric characters.
+	!
+	! Index:
+	!	.x UOM
+	!	.x Unit of Measure
+	!--
+
+			BC_BILLL::UNITME = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";46", TEMP$, &
+				BC_BILLL::UNITME, MFLAG, "'E", MVALUE)
+
+		CASE 9%
+
+	!++
+	! Abstract:FLD009
+	!	^*(09) Price\*
+	!	.p
+	!	The ^*Price\* field provides the means to enter the Unit
+	!	(field 07) price.
+	!	.p
+	!	The field will accommodate a figure as large as
+	!	99999.99.
+	!
+	! Index:
+	!	.X Price
+	!
+	!--
+
+			BC_BILLL::UNIPRI = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";50", TEMP$, &
+				BC_BILLL::UNIPRI, MFLAG, "######.####", MVALUE)
+
+		CASE 10%
+
+	!++
+	! Abstract:FLD010
+	!
+	!	^*(10) Amount\*
+	!	.p
+	!	The ^*Amount\* field is automatically entered by the system if
+	!	field (02), ship, and field (10), amount, have been entered.  Otherwise,
+	!	the field will require a manual entry.  The field will accept a figure
+	!	as large as 99,999.99.
+	!
+	! Index:
+	!--
+
+			BC_BILLL::AMOUNT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE1$ + ";50", TEMP$, &
+				BC_BILLL::AMOUNT, MFLAG, "########.##", MVALUE)
+
+		CASE 11%
+
+	!++
+	! Abstract:FLD011
+	!	^*(11) Account\*
+	!	.p
+	!	The ^*Account\* field refers to the General
+	!	Ledger account number to which this particular line item
+	!	has reference.
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field will provide
+	!	a list of valid General Ledger account numbers.
+	!
+	! Index:
+	!	.x General Ledger>Account Number
+	!
+	!--
+
+			BC_BILLL::ACCOUNT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";62", TEMP$, &
+				BC_BILLL::ACCOUNT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					BC_BILLL::ACCOUNT = GL_CHART::ACCT
+				END IF
+				GOTO E0Loop
+			END IF
+
+		END SELECT
+
+		GOSUB CalcAmt &
+			IF ((MFLAG AND 1%) = 0%) AND &
+			((MLOOP=2%) OR (MLOOP=9%))
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BC_MAIN_BILL_LINE = 0%
+
+		SELECT MLOOP
+
+		CASE 11%
+			!
+			! Is the input defined?
+			!
+			BC_MAIN_BILL_LINE = FUNC_TESTENTRY(SMG_WINDOW, &
+				BC_BILLL::ACCOUNT, &
+				GL_CHART::DESCR, &
+				"BC", MLOOP, "PRG", &
+				"Account number", GL_MAIN_CHART.ID)
+
+		END SELECT
+
+	!
+	! Set BC_BILLL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BC_BILLL_OLD = BC_BILLL
+
+	!
+	! Restore BC_BILLL_OLD value
+	!
+	CASE OPT_RESETOLD
+		BC_BILLL = BC_BILLL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BC_BILLL2 = BC_BILLL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BC_BILLL = BC_BILLL2
+
+		!
+		! Set special default values for the key of a new record
+		! which is the most likely case when this function is to
+		! be called.
+		!
+		BC_BILLL::ORDER = BC_BILLH::ORDER
+
+		IF SMG_WINDOW::TOTREC = 0%
+		THEN
+			BC_BILLL::LINENO = "001"
+		ELSE
+			BC_BILLL::LINENO = &
+				FORMAT$(VAL%(RARRAY(SMG_WINDOW::TOTREC)::SLINE) + 1%, &
+				"<0>##")
+		END IF
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BC_BILLL.CH%, &
+				KEY#0% GE BC_BILLL::ORDER + "", &
+				REGARDLESS
+		END SELECT
+
+	!
+	! After option
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Need to remove under old key, and insert under
+		! (possibly) new key
+		!
+		CASE "Change", "Blank", "Initialize"
+
+			CALL READ_DEVICE("BC_BILL",BC_BILL.DEV1$,STAT%)
+
+			ST% = LIBR_EXTRACTVAR( &
+				TRM$(BC_BILL.DEV1$) + "BC_BILL", &
+				LAST_NOTE$, &
+				TRM$(BC_BILLL_OLD::ORDER + &
+				BC_BILLL_OLD::LINENO))
+
+			ST% = LIBR_DELETE( &
+				TRM$(BC_BILL.DEV1$) + "BC_BILL", &
+				TRM$(BC_BILLL_OLD::ORDER + &
+				BC_BILLL_OLD::LINENO))
+
+			ST% = LIBR_INSERTTEXT( &
+				TRM$(BC_BILL.DEV1$) + "BC_BILL", &
+				LAST_NOTE$, &
+				TRM$(BC_BILLL::ORDER + BC_BILLL::LINENO))
+
+		!
+		! Need to remove text
+		!
+		CASE "Erase"
+
+			ST% = LIBR_DELETE( &
+				TRM$(BC_BILL.DEV1$) + "BC_BILL", &
+				TRM$(BC_BILLL::ORDER + BC_BILLL::LINENO))
+
+		END SELECT
+	!
+	! Handle array of records
+	!
+27000	CASE OPT_ARRAY
+
+		!
+		! Select sub-option of array
+		!
+		SELECT MLOOP
+
+		!
+		! Load array with line items
+		!
+		CASE 1%
+
+			!
+			! Empty array
+			!
+			SMG_WINDOW::TOTREC = 0%
+
+27110			!
+			! Search for first record
+			!
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0% GE BC_BILLH::ORDER + "", &
+				REGARDLESS
+
+27120			!
+			! Get a record
+			!
+			GET #SMG_WINDOW::CHAN
+
+			IF BC_BILLL::ORDER = BC_BILLH::ORDER
+			THEN
+				!
+				! Add information to array
+				!
+				SMG_WINDOW::TOTREC = SMG_WINDOW::TOTREC + 1%
+				RARRAY(SMG_WINDOW::TOTREC)::LINRFA = &
+					GETRFA(SMG_WINDOW::CHAN)
+				RARRAY(SMG_WINDOW::TOTREC)::SLINE = &
+					BC_BILLL::LINENO
+				RARRAY(SMG_WINDOW::TOTREC)::AMOUNT = &
+					BC_BILLL::AMOUNT
+				RARRAY(SMG_WINDOW::TOTREC)::QTYORD = &
+					BC_BILLL::ORDAMT
+				RARRAY(SMG_WINDOW::TOTREC)::QTYSHP = &
+					BC_BILLL::SHPAMT
+				RARRAY(SMG_WINDOW::TOTREC)::QTYBO = &
+					BC_BILLL::BOAMT
+				GOTO 27120
+			END IF
+
+		!
+		! Remove one element of the array
+		!
+		CASE 2%
+			!
+			! Remove item pointed to by Mflag
+			!
+			FOR I% = MFLAG TO SMG_WINDOW::TOTREC - 1%
+				RARRAY(I%) = RARRAY(I% + 1%)
+			NEXT I%
+
+		!
+		! Set array item to current record
+		!
+		CASE 3%
+			RARRAY(MFLAG)::LINRFA = GETRFA(SMG_WINDOW::CHAN)
+			RARRAY(MFLAG)::SLINE = BC_BILLL::LINENO
+			RARRAY(MFLAG)::AMOUNT = BC_BILLL::AMOUNT
+			RARRAY(MFLAG)::QTYORD = BC_BILLL::ORDAMT
+			RARRAY(MFLAG)::QTYSHP = BC_BILLL::SHPAMT
+			RARRAY(MFLAG)::QTYBO  = BC_BILLL::BOAMT
+
+		!
+		! Load in current record, locked
+		!
+		CASE 4%
+27200			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA
+
+		!
+		! Load in current record, unlocked
+		!
+		CASE 5%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA, &
+				REGARDLESS
+
+		!
+		! Change the current record's key to match header.  The
+		! new key is probibly passes through MVALUE, unless some
+		! other means is devised.
+		!
+		CASE 6%
+			BC_BILLL::ORDER = RIGHT(MVALUE, 2%)
+
+		END SELECT
+	END SELECT
+
+28000	EXIT FUNCTION
+
+28200	!*******************************************************************
+	! Calculate amount
+	!*******************************************************************
+
+ CalcAmt:
+
+	BC_BILLL::AMOUNT = &
+		FUNC_ROUND(BC_BILLL::SHPAMT * BC_BILLL::UNIPRI, 2%)
+
+	TEMP = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+		XLINE1$ + ";52", TEMP$, &
+		BC_BILLL::AMOUNT, 1%, "######.##", MVALUE)
+
+	RETURN
+
+	%PAGE
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BC_MAIN_BILL_LINE = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BC_MAIN_BILL_LINE = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Error while loading array
+	!
+	CASE 27110%
+		!
+		! Nothing to load
+		!
+		RESUME 28000
+
+	CASE 27120%
+		!
+		! Read all records
+		!
+		RESUME 28000 IF ERR = 11%
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

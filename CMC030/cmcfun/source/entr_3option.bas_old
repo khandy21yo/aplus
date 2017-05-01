@@ -1,0 +1,526 @@
+1	%TITLE "Function to Enter an Option"
+	%SBTTL "ENTR_3OPTION"
+	%IDENT "V3.3"
+
+	FUNCTION STRING ENTR_3OPTION(SCOPE_STRUCT SCOPE, &
+		STRING OP_GROUP, STRING OP_POSSIBLE, LONG OP_CUROP, &
+		LONG OP_FLAGW)
+
+	!
+	! COPYRIGHT (C) 1986 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!
+	!	OP_FLAGW flags
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!		1 - Wide menu (132 columns) (IGNORED - NOT NECESSARY)
+	!	.le
+	!		2 - Leave menu on (IGNORED - NOT NECESSARY)
+	!	.le
+	!		4 - Flag stating that the menu is already displayed
+	!		    (IGNORED - NOT NECESSARY)
+	!	.le
+	!		8 - Don't add on to the HELP key field.
+	!	.end list
+	!
+	! Parameters:
+	!
+	!	OP_GROUP
+	!		The passed string that tells what type of option it is.
+	!
+	!	OP_POSSIBLE
+	!		The passed choice of options the user gets.
+	!
+	!	OP_CUROP
+	!		The returned integer that holds the number of options and
+	!		which option is currently being looked at.
+	!
+	!
+	!	Returned value
+	!		This function is used by the maintainence programs
+	!		to enter an option.  It returns the option to
+	!		the user through a variable.
+	!
+	! Example:
+	!
+	!	OPT$ = ENTR_3OPTION("COMMAND", "Blank Store eXit", 1%, 0%)
+	!
+	! Index:
+	!
+	!	.x Enter>Option
+	!	.x Option>Enter
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! AUTHOR:
+	!
+	!	09/01/85 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:ENTR_3OPTION/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP ENTR_3OPTION
+	!	$ DELETE ENTR_3OPTION.OBJ;*
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	12/30/85 - Cal Rasmussen
+	!		Allow exit withouth hitting return.
+	!
+	!	02/03/87 - Kevin Handy
+	!		Modified for SMG.
+	!
+	!	12/07/89 - Kevin Handy
+	!		Made sharable version.
+	!
+	!	02/18/90 - Kevin Handy
+	!		Modified to highlight the character used to select
+	!		the options.
+	!
+	!	04/27/90 - Kevin Handy
+	!		Fixed bug that caused it to lose spaces at end
+	!		of an option if the last letter was capitolized.
+	!		("" <> " " was false, replaced with not("" == " ") ).
+	!
+	!	04/28/90 - Frank F. Starman
+	!		Replace ENTR_3MESSAGE function with HELP_34MESSAGE.
+	!
+	!	08/28/90 - Frank F. Starman
+	!		Add flag 16.
+	!
+	!	03/14/92 - Kevin Handy
+	!		Cleaned up vars (checkvar)
+	!
+	!	03/25/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	03/30/93 - Frank F. Starman
+	!		Allow to display more options on the first line.
+	!
+	!	04/05/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	07/21/93 - Kevin Handy
+	!		Removed code stuck between two functions but
+	!		inaccessible.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	OP%()
+	!		Array to contain start character of each line
+	!
+	!	C_WIDTH
+	!		Long variable used to calculate the screen width.
+	!
+	!	TOTLINE%
+	!		Integer used to search for the space
+	!		preciding first option on next line.
+	!
+	!	EPOS%
+	!		Integer that holds the column to print the option.
+	!
+	!	START_ITEM$
+	!		String used to display current option.
+	!
+	!	CUROP$
+	!		String used to hold the option characters.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPEDEF.COM"
+
+	!
+	! External stuff
+	!
+	EXTERNAL WORD FUNCTION ENTR_4ENTRY
+	EXTERNAL WORD FUNCTION ENTR_4SPECIALKEYS
+	EXTERNAL LONG FUNCTION STR$FIND_FIRST_IN_SET
+
+	!
+	! Array to contain start character of each line
+	!
+	DIM OP%(5%)
+
+	DECLARE LONG C_WIDTH
+
+	%PAGE
+
+1000	!
+	! Mutilate the list of options
+	!
+	TOTLINE%	= 1%
+	OP%(1%)		= 1%
+	POSSIBLE%	= LEN(OP_POSSIBLE)
+	EPOS%		= LEN(OP_GROUP) + 3%
+	OP_CUROP	= 1% IF OP_CUROP < 1% OR OP_CUROP > POSSIBLE%
+	START_ITEM$	= TRM$(SCOPE::PRG_ITEM)
+
+	!
+	! Calculate screen width
+	!
+	SMG_STATUS% = SMG$CHANGE_PBD_CHARACTERISTICS(SCOPE::SMG_PBID, , C_WIDTH)
+
+1100	!
+	! Search for space preciding first option on next line
+	!
+	I% = OP%(TOTLINE%) + C_WIDTH - 2% - LEN(OP_GROUP)
+
+	GOTO 1200 IF I% > POSSIBLE%
+
+	FOR I1% = I% TO OP%(TOTLINE%) STEP -1%
+		IF MID(OP_POSSIBLE, I1%, 1%) = " "
+		THEN
+			TOTLINE% = TOTLINE% + 1%
+			OP%(TOTLINE%) = I1% + 1%
+			GOTO 1100
+		END IF
+	NEXT I1%
+
+1200	!
+	! The last item plus one must point to the end of the string
+	!
+	OP%(TOTLINE% + 1%) = POSSIBLE% + 2%
+
+	!
+	! Display initial list of options
+	!
+	SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SCOPE::SMG_OPTION)
+
+	SMG_STATUS% = SMG$PUT_CHARS &
+	( &
+		SCOPE::SMG_OPTION,	! Window &
+		OP_GROUP + ": ", &
+		'1'L,		! Line &
+		'1'L,		! Column &
+		'1'L,		! Erase line &
+		'0'L,		! Attributes &
+	)
+
+	X% = FNWRT%(LEFT(OP_POSSIBLE, OP%(2%) - 1%))
+
+	SMG_STATUS% = SMG$PUT_CHARS &
+	( &
+		SCOPE::SMG_OPTION,	! Window &
+		"", &
+		'2'L,			! Line &
+		LEN(OP_GROUP) + 3%,	! Column &
+		1%, &
+		0%, &
+	)
+
+	X% = FNWRT%(SEG$(OP_POSSIBLE, OP%(2%), OP%(3%) - 1%))
+
+	V$ = FNXXX$(OP_CUROP, 0%)
+
+	SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SCOPE::SMG_OPTION)
+
+2000	!
+	! Request the current option desired
+	!
+	SMG_STATUS% = SMG$PUT_CHARS &
+	( &
+		SCOPE::SMG_OPTION,	! Window &
+		" ", &
+		TOTLINE% * '1'L,! Line &
+		(POSSIBLE% - OP%(TOTLINE%) + EPOS% + 2%) * '1'L, ! Column &
+		'0'L,		! Erase line &
+		'0'L,		! Attributes &
+	)
+
+
+6000	!
+	! Enter one character
+	!
+	GETC% = ENTR_4ENTRY(SCOPE::SCOPE_EXIT, SCOPE::SMG_OPTION by value, 0% by value)
+	GETC% = ENTR_4SPECIALKEYS(SCOPE::SCOPE_EXIT, SCOPE::SMG_OPTION by value, 0% by value, GETC% BY VALUE)
+	CUROP$ = EDIT$(CHR$(GETC%), 32%)
+
+	SCOPE::SCOPE_EXIT = 0%
+
+	!
+	! Handle as many cases here as possible
+	!
+	SELECT GETC%
+		!
+		! Null input
+		!
+		CASE 0%
+			GOTO 6000
+
+		!
+		! Right Arrow
+		!
+		CASE 277%
+			I% = OP_CUROP
+			OP_CUROP = INSTR(OP_CUROP, OP_POSSIBLE, " ")
+			IF OP_CUROP
+			THEN
+				OP_CUROP = OP_CUROP + 1%
+			ELSE
+				OP_CUROP = 1%
+			END IF
+			V$ = FNXXX$(OP_CUROP, I%)
+			GOTO 2000
+
+		!
+		! Left arrow
+		!
+		CASE 276%
+			I% = OP_CUROP
+			OP_CUROP = OP_CUROP - 2%
+			OP_CUROP = POSSIBLE% IF OP_CUROP < 1%
+			OP_CUROP = OP_CUROP - 1% &
+				UNTIL OP_CUROP < 1% OR &
+				MID(OP_POSSIBLE, OP_CUROP, 1%) = " "
+			OP_CUROP = OP_CUROP + 1%
+			OP_CUROP = 1% IF OP_CUROP < 1%
+			V$ = FNXXX$(OP_CUROP, I%)
+			GOTO 2000
+
+		!
+		! Function key
+		!
+		CASE < 32%, 127% TO 159%, > 254%
+
+			SCOPE::SCOPE_EXIT = GETC%
+
+		!
+		! Search for the character typed
+		!
+		CASE ELSE
+			GOTO 2000 IF CUROP$ = " "	! Ignore nulls
+
+			I% = INSTR(1%, OP_POSSIBLE, CUROP$)
+
+			IF I%
+			THEN
+				I% = I% - 1% &
+					UNTIL I% = 0% OR &
+					MID(OP_POSSIBLE, I%, 1%) = " "
+				I% = I% + 1%
+				V$ = FNXXX$(I%, OP_CUROP)
+				OP_CUROP = I%
+				GOTO ExitHere
+			END IF
+
+			CALL HELP_34MESSAGE(SCOPE, CUROP$+" invalid option here", &
+					"W","ENTR_3OPTION","","INVOPT")
+
+	!++
+	! Warning:INVOPT
+	!	^*Invalid Option\*
+	!	.b
+	!	.lm +5
+	!	^*Explanation:\*
+	!	.b
+	!	An invalid option has been selected.
+	!	.b
+	!	^*User Action\*
+	!	.b
+	!	Check typed option and re-enter.
+	!	.b
+	!	^*Note:\* Only highlighted capital letters can be selected as a option.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Invalid>Option
+	!
+	!--
+
+			GOTO 2000
+
+	END SELECT
+
+
+
+	!
+	! Exit key typed (CTL/C, Enter, Return, Do, Select,
+	!	uparrow, downarrow, etc.)
+	!
+
+ ExitHere:
+	!
+	! Assume failure
+	!
+	ENTR_3OPTION = "??"
+
+	!
+	! Return capital letter for option
+	!
+	FOR I% = OP_CUROP TO POSSIBLE%
+		CUROP$ = MID(OP_POSSIBLE, I%, 1%)
+
+		!
+		! Space flags end of possible option (error)
+		!
+		GOTO ExitHere1 IF CUROP$ = " "
+
+		!
+		! If not lower case letter, then is option
+		!
+		IF CUROP$ < "a" OR CUROP$ > "z"
+		THEN
+			ENTR_3OPTION = CUROP$
+			GOTO ExitHere1
+		END IF
+	NEXT I%
+
+
+	!
+	! Exit from the function
+	!
+ ExitHere1:
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_MESSAGE)
+
+	EXIT FUNCTION
+
+	!
+	! Function to display current option in bold
+	!
+	DEF FNXXX$(A%, B%)
+		IF B%
+		THEN
+			IF B% <> A%
+			THEN
+				XXX$ = FNXX1$(B%, 0%)
+				XXX$ = FNXX1$(A%, SMG$M_BOLD )
+				SCOPE::PRG_ITEM = XXX$
+				SCOPE::PRG_ITEM = START_ITEM$ + XXX$ &
+						IF (OP_FLAGW AND 8%)
+				SCOPE::PRG_ITEM = START_ITEM$ &
+						IF (OP_FLAGW AND 16%)
+			ELSE
+				XXX$ = ""
+			END IF
+		ELSE
+			XXX$ = FNXX1$(A%, SMG$M_BOLD)
+			SCOPE::PRG_ITEM = XXX$
+			SCOPE::PRG_ITEM = START_ITEM$ + XXX$ &
+						IF (OP_FLAGW AND 8%)
+			SCOPE::PRG_ITEM = START_ITEM$ IF (OP_FLAGW AND 16%)
+		END IF
+		FNXXX$ = XXX$
+	FNEND
+
+	!
+	! There is only one help message for exit
+	!
+ !	SCOPE::PRG_ITEM = "EXIT" IF EDIT$(XXX$,-1%) = "EXIT"
+
+	!
+	! Function to calculate how to print out an option name
+	!
+	DEF FNXX1$(A%, XMODE%)
+		X%  = 1%
+		X%  = X1% IF OP%(X1%+1%) > A% FOR X1% = TOTLINE% TO 1% STEP -1%
+		X1% = INSTR(A%, OP_POSSIBLE, " ")
+		X1% = POSSIBLE% UNLESS X1%
+
+		IF XMODE% <> SMG$M_BOLD
+		THEN
+			SMG_STATUS% = SMG$SET_CURSOR_ABS &
+			( &
+				SCOPE::SMG_OPTION,	! Window &
+				X%,			! Line &
+				(A% - OP%(X%) + EPOS%)	! Column &
+			)
+
+			V% = FNWRT%(SEG$(OP_POSSIBLE, A%, X1%))
+		ELSE
+			SMG_STATUS% = SMG$PUT_CHARS &
+			( &
+				SCOPE::SMG_OPTION,	! Window &
+				SEG$(OP_POSSIBLE, A%, X1%), &
+				X%,		! Line &
+				(A% - OP%(X%) + EPOS%),	! Column &
+				'0'L,		! Erase line &
+				XMODE%,		! Attributes &
+			)
+		END IF
+
+		FNXX1$ = SEG$(OP_POSSIBLE, A%, X1%)
+
+	FNEND
+
+	DEF FNWRT%(XX$)
+
+		XX1$ = XX$
+
+		WHILE NOT (XX1$ == "")
+
+			XX1% = STR$FIND_FIRST_IN_SET(XX1$, "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+			IF XX1%
+			THEN
+				XX2$ = LEFT(XX1$, XX1% - 1%)
+				XX3$ = MID(XX1$, XX1%, 1%)
+				XX1$ = RIGHT(XX1$, XX1% + 1%)
+			ELSE
+				XX2$ = XX1$
+				XX3$ = ""
+				XX1$ = ""
+			END IF
+
+			IF NOT(XX2$ == "")
+			THEN
+				SMG_STATUS% = SMG$PUT_CHARS &
+				( &
+					SCOPE::SMG_OPTION,	! Window &
+					XX2$, &
+					,	! Line &
+					,	! Column &
+					0%,	! Erase line &
+					0%,	! Attributes &
+				)
+			END IF
+
+			IF XX3$ <> ""
+			THEN
+				SMG_STATUS% = SMG$PUT_CHARS &
+				( &
+					SCOPE::SMG_OPTION,	! Window &
+					XX3$, &
+					,		! Line &
+					,		! Column &
+					0%,		! Erase line &
+					SMG$M_BOLD,	! Attributes &
+				)
+			END IF
+
+		NEXT
+	FNEND
+
+	END FUNCTION

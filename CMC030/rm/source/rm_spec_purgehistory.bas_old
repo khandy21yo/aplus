@@ -1,0 +1,499 @@
+1	%TITLE "Purge History File"
+	%SBTTL "RM_SPEC_PURGEHISTORY"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Purge\* program purges the inventory History file.
+	!
+	! Index:
+	!	.x Purge
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_SPEC_PURGEHISTORY/LINE
+	!	$ LINK/EXE=RM_EXE: RM_SPEC_PURGEHISTORY, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_SPEC_PURGEHISTORY.OBJ;*
+	!
+	! Author:
+	!
+	!	10/16/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!		Changed SMG_PURGE to SMG_PURGE%.
+	!
+	!	05/16/97 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map file
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.HB"
+	MAP	(RM_HISTORY)		RM_HISTORY_CDD		RM_HISTORY
+
+	!
+	! Array for listing
+	!
+	DECLARE INTEGER CONSTANT MAX.ITEM = 3%
+
+	!
+	! Declare constants
+	!
+	DECLARE LONG XLONG, YLONG
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+300	!
+	! Open price file
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.UPD"
+
+
+500	!******************************************************************
+	! Declare defaults for screen
+	!******************************************************************
+
+	CATEGORY.ITEM$ = "*" + SPACE$(19%)
+	STORE.ITEM$ = "*" + SPACE$(19%)
+
+	DATE.ITEM$ = DATE_TODAY
+
+900	!
+	! Create a display window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		18%, &
+		78%, &
+		SMG_PURGE%, &
+		SMG$M_BORDER &
+	)
+
+	!
+	! Label the display
+	!
+	SMG_STATUS% = SMG$LABEL_BORDER(SMG_PURGE%, &
+		"Purge History file" )
+
+	GOSUB Repaint
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_PURGE%, &
+		SCOPE::SMG_PBID, &
+		2%, &
+		2% &
+	)
+
+	%PAGE
+
+1000	!******************************************************************
+	! Main option menu
+	!******************************************************************
+
+	GOSUB Repaint
+
+1100	!
+	! Enter options
+	!
+	SCOPE::PRG_ITEM = ""
+	OPTLIST$ = "Change Blank Go Help eXit"
+	OPT$ = ENTR_3OPTION(SCOPE, "COMMAND", OPTLIST$, OPT%, 0%)
+
+	SELECT SCOPE::SCOPE_EXIT
+	!
+	! Control c
+	!
+	CASE 3%
+		GOTO 1000
+
+	!
+	! Exit key
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO ExitProgram
+
+	END SELECT
+
+	SELECT OPT$
+
+	CASE "C"
+ Changer:
+		!*****************************************************
+		! Change information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to change", &
+			0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO 1100 IF LOOP% = 0%
+		GOTO Changer IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		LOOP1% = LOOP%
+
+ Changer1:	FLAG% = 0%
+		GOSUB DataEntry
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Uparrow
+		!
+		CASE SMG$K_TRM_UP
+			LOOP% = LOOP% - 1% IF LOOP% > 1%
+			GOTO Changer1
+
+		!
+		! SMG$K_TRM_DOWN
+		!
+		CASE SMG$K_TRM_DOWN
+			LOOP% = LOOP% + 1% IF LOOP% < MAX.ITEM
+			GOTO Changer1
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO Changer
+
+	CASE "B"
+ BlankR:	!*****************************************************
+		! Blank information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to Blank", 0.0, &
+			4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO 1100 IF LOOP% = 0%
+		GOTO Blankr IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		SELECT LOOP%
+
+		CASE 1%
+			CALL ENTR_3MESSAGE(SCOPE, "Sorry, Unable to blank", 0%)
+
+		CASE 2%
+			LSET CATEGORY.ITEM$ = "*"
+
+		CASE 3%
+			LSET STORE.ITEM$ = "*"
+
+		END SELECT
+
+		FLAG% = 1%
+		GOSUB DataEntry
+
+		GOTO Blankr
+
+	CASE "G"
+		GOSUB Purge
+		GOTO ExitProgram
+
+	!
+	! Help
+	!
+	! This option calls out a help message describing the
+	! program.
+	!
+	CASE "H"
+		CALL HELP_3MESSAGE(SCOPE, "", "PROG", &
+			SCOPE::PRG_PROGRAM, "HELP")
+		GOTO 1000
+
+	CASE "X"
+		GOTO ExitProgram
+
+	END SELECT
+
+	GOTO 1100
+
+	%PAGE
+
+ ExitProgram:
+	!******************************************************************
+	! Exit the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+ Repaint:
+	!******************************************************************
+	! Repaint the screen
+	!******************************************************************
+
+	DATA	6,20, "(01) To Date", &
+		7,20, "(02) Category", &
+		8,20, "(03) Store#", &
+		0, 0, ""
+
+	RESTORE
+	READ XLONG, YLONG, ATEXT$
+
+	WHILE XLONG
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_PURGE%, ATEXT$, XLONG, YLONG)
+		READ XLONG, YLONG, ATEXT$
+	NEXT
+
+	FLAG% = 1%
+	GOSUB DataEntry FOR LOOP% = 1% TO MAX.ITEM
+
+	RETURN
+
+	%PAGE
+
+ DataEntry:
+	!******************************************************************
+	! Enter/Diaplay items
+	!******************************************************************
+
+	TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+	SCOPE::PRG_ITEM = "FLD" + FORMAT$(LOOP%, "<0>##")
+
+	SELECT LOOP%
+
+	CASE 1%
+		DATE.ITEM$ = ENTR_3DATE(SCOPE, SMG_PURGE%, &
+			"06;45", "To Date", DATE.ITEM$, FLAG%, "'E", &
+			DEFLT$)
+
+	CASE 2%
+		CATEGORY.ITEM$ = ENTR_3STRING(SCOPE, &
+			SMG_PURGE%, "7;45", "Category", &
+			CATEGORY.ITEM$, FLAG%, "'E", DEFLT$)
+
+	CASE 3%
+		STORE.ITEM$ = ENTR_3STRING(SCOPE, &
+			SMG_PURGE%, "8;45", "Store #", &
+			STORE.ITEM$, FLAG%, "'E", DEFLT$)
+
+	END SELECT
+
+	SCOPE::PRG_ITEM = TEMP$
+
+	RETURN
+
+ Purge:
+	!*****************************************************
+	! Purge History file
+	!*****************************************************
+
+	SCOPE::PRG_ITEM = "CONFIRM"
+	INP$ = ENTR_3YESNO(SCOPE, SMG_PURGE%, &
+		"", "Confirm purging - then press <Do> ", "N", 0%, "", "")
+
+	SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_OPTION, SPACE$(80%), 1%, 1%)
+
+	IF INP$ <> "Y"
+	THEN
+		GOTO ExitProgram
+	END IF
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_PURGE%, "Examine Store# ", 12%, 5%)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_PURGE%, "Remove            ", 14%, 5%)
+
+	CALL ENTR_3MESSAGE(SCOPE, "",1%+16%)
+
+	!
+	! Purge
+	!
+	RESET #RM_HISTORY.CH%
+
+2000	!
+	! Main loop starts here
+	!
+	!
+
+ GetNextRec:
+
+	GET #RM_HISTORY.CH%
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_PURGE%, RM_HISTORY::LOCATION, &
+		12%, 22%)
+
+	GOTO GetNextRec IF RM_HISTORY::ACTION_DATE > DATE.ITEM$
+
+	GOTO GetNextRec IF COMP_STRING(RM_HISTORY::CATEGORY,CATEGORY.ITEM$) = 0%
+
+	GOTO GetNextRec IF COMP_STRING(RM_HISTORY::LOCATION,STORE.ITEM$) = 0%
+
+	!
+	! Remove reord from the file
+	!
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_PURGE%, RM_HISTORY::LOCATION+" "+ &
+		RM_HISTORY::ACTION_DATE+" "+RM_HISTORY::CATEGORY, &
+		14%, 22%,,SMG$M_REVERSE)
+
+	DELETE #RM_HISTORY.CH%
+
+	GOTO GetNextRec
+
+2100	RETURN
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 2000%
+		RESUME 2100 IF ERR=11%
+		FILENAME$ = "RM_HISTORY"
+
+	END SELECT
+
+
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD001
+	!	^*(01) To Date\*
+	!	.p
+	!	The value entered in the ^*To Date\* field causes the purging to end with the
+	!	selected date.
+	!	.p
+	!	A blank setting causes the purging to continue to the end of the file.
+	!
+	! Index:
+	!	.x To Date
+	!	.x Date>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Category\*
+	!	.p
+	!	The ^*Category\* field provides the means to enter the category which will
+	!	be purged.  Wildcarding techniques may be used in this field.
+	!
+	! Index:
+	!	.x Category
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Store Number\*
+	!	.p
+	!	The ^*Store Number\* field provides the means to enter the store number to
+	!	be purged during the purging process.  Wildcarding techniques may be used
+	!	in this field.
+	!
+	! Index:
+	!	.x Store Number
+	!	.x Number>Store
+	!
+	!--

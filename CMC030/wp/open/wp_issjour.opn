@@ -1,0 +1,20 @@
+	!======================================================================
+	! WP_ISSJOUR file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_ISSJOUR.CH%, STAT%)
+	CALL READ_DEVICE('WP_ISSJOUR',WP_ISSJOUR.DEV$, STAT%)
+
+	WP_ISSJOUR.NAME$ = WP_ISSJOUR.DEV$+"WP_ISSJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN WP_ISSJOUR.NAME$ FOR INPUT AS FILE WP_ISSJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_ISSJOUR, &
+		PRIMARY KEY &
+		( &
+			WP_ISSJOUR::REQNUM, &
+			WP_ISSJOUR::JOB, &
+			WP_ISSJOUR::LLINE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

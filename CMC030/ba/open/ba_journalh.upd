@@ -1,0 +1,16 @@
+	!======================================================================
+	! BA_JOURNALH file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BA_JOURNALH.CH%, STAT%)
+	CALL READ_DEVICE('BA_JOURNALH',BA_JOURNALH.DEV$, STAT%)
+
+	BA_JOURNALH.NAME$ = BA_JOURNALH.DEV$+"BA_JOURNALH_"+BATCH_NO$+".JRL"
+
+	OPEN BA_JOURNALH.NAME$ FOR INPUT AS FILE BA_JOURNALH.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BA_JOURNALH, &
+		PRIMARY KEY &
+			BA_JOURNALH::BILLNUM, &
+		ACCESS MODIFY, ALLOW NONE
+

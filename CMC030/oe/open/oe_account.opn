@@ -1,0 +1,20 @@
+	!======================================================================
+	! OE_ACCOUNT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_ACCOUNT.CH%, STAT%)
+	CALL READ_DEVICE('OE_ACCOUNT',OE_ACCOUNT.DEV$, STAT%)
+
+	OE_ACCOUNT.NAME$ = OE_ACCOUNT.DEV$+"OE_ACCOUNT.TBL"
+
+	OPEN OE_ACCOUNT.NAME$ FOR INPUT AS FILE OE_ACCOUNT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_ACCOUNT, &
+		PRIMARY KEY &
+		( &
+			OE_ACCOUNT::CUSTTYPE, &
+			OE_ACCOUNT::ORDTYPE, &
+			OE_ACCOUNT::LOCATION &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

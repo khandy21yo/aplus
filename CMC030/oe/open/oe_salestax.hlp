@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Sales Tax Code Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__SALESTAX.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Order Entry System\* going
+	!	under MASTER and TABLE and run the process again.
+	!
+	! Index:
+	!	.x Sales Tax Code Table
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__SALESTAX.TBL\*
+	!	.p
+	!	Sales Tax Code Table.
+	!
+	! Index:
+	!	.x Sales Tax Code Table
+	!	.x OE_SALESTAX
+	!--

@@ -1,0 +1,205 @@
+1	%TITLE "No Digital Standard Runoff for Text Array"
+	%SBTTL "LIBR_NODIGSR"
+	%IDENT "V3.3"
+
+	FUNCTION LONG LIBR_NODIGSR(LIB_NAME$, KEY_NAME$, CODE$())
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This subroutine takes the filename and given array and
+	!	opens the file and writes the file to the array without
+	!	any conversions.
+	!
+	! Parameters:
+	!
+	!	LIB_NAME$
+	!		The passed name of the library to pull the text from.
+	!
+	!	KEY_NAME$
+	!		The passed name of the key to use to select the
+	!		right text.
+	!
+	!	CODE$(0%)
+	!		Contains the number of lines already in
+	!		use in the CODE$() array.
+	!
+	!	CODE$()
+	!		The text returned back in PRNT_ENCODED format.
+	!	CODE$(0%) is modified to point to the last line.
+	!
+	!	Returns a status code.
+	!
+	! Example:
+	!
+	!	TEXT$(0%) = "0"
+	!	ST% = LIBR_NODIGSR("HELP_GL", "ADDRESS", TEXT$())
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:LIBR_NODIGSR/LINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP LIBR_NODIGSR
+	!	$ DELETE LIBR_NODIGSR.OBJ;*
+	!
+	! Author:
+	!
+	!	02/20/87 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!	07/08/87 - Kevin Handy
+	!		Modified to pull text out of a library.
+	!
+	!	09/30/87 - Kevin Handy
+	!		Added code for LIST ELEMENT stuff.
+	!
+	!	10/01/87 - Kevin Handy
+	!		Fixed bug where too many parameters on a line
+	!		caused the program to crash.
+	!
+	!	07/19/88 - Kevin Handy
+	!		Removed defaulting to REF:
+	!
+	!	06/16/89 - Kevin Handy
+	!		Modified so it would fit in sharable library.
+	!
+	!	10/17/89 - Kevin Handy
+	!		Extended maximum length of a line.
+	!--
+
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TXRFA
+	!		Variable used to test the data.
+	!
+	!	CURR_LINE%
+	!		Integer used to insert data into arrays.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+	!
+	! Declare variables
+	!
+	DECLARE RFA TXRFA
+
+	%PAGE
+
+	!
+	! Assume success
+	!
+	LIBR_NODIGSR = '1'L
+
+	!
+	! Initilization
+	!
+	ON ERROR GOTO 19000
+
+	CURR_LINE% = 0%
+
+50	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(LR.INDEX%, LBR$C_READ)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		CURR_LINE% = 1%
+		CODE$(CURR_LINE%) = "Unable to initilize library " + NUM1$(ST%)
+		LIBR_NODIGSR = ST%
+		GOTO ExitProgram
+	END IF
+
+	ST% = LBR$OPEN(LR.INDEX%, LIB_NAME$, , ".TLB")
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_NODIGSR = ST%
+		GOTO ExitProgram
+	END IF
+
+	ST% = LBR$LOOKUP_KEY(LR.INDEX%, KEY_NAME$, TXRFA)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_NODIGSR = ST%
+		GOTO ExitProgram
+	END IF
+
+100	!
+	! Load text into the array
+	!
+	FOR CURR_LINE% = 1% TO 6000%
+
+		TEXT$ = SPACE$(150%)
+		ST% = LBR$GET_RECORD(LR.INDEX%, TEXT$)
+		GOTO ExitProgram IF (ST% AND 1%) = 0%
+
+		CODE$(CURR_LINE%)	= TRM$(TEXT$)
+
+	NEXT CURR_LINE%
+
+ ExitProgram:
+	CODE$(0%)	= NUM1$(CURR_LINE% - 1%)
+
+	!
+	! TEXT file(close)
+	!
+	ST% = LBR$CLOSE(LR.INDEX%)
+
+	EXIT FUNCTION
+
+19000	!
+	! Trap errors
+	!
+
+	SELECT ERL
+		CASE 50%	! Cant find file or account
+			RESUME ExitProgram IF ERR = 5%
+
+		CASE 100%	! EOF on input file
+			RESUME ExitProgram IF ERR = 11%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

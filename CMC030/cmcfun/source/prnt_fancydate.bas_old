@@ -1,0 +1,126 @@
+1	%TITLE "Fancy Date Formatter"
+	%SBTTL "PRNT_FANCYDATE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING PRNT_FANCYDATE(ADATE$)
+
+	!
+	! COPYRIGHT (C) 1986 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function takes a date in one of the DATE_STOREDATE formats
+	!	and sets up a fancy print string like: September 1, 1986.
+	!	This function differs from PRNT_MONTHYYYY in that it prints out
+	!	the whole date, where PRNT_MONTHYYYY only prints the month and
+	!	year.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	ADATE$
+	!		The passed date the user enters to have formatted into a
+	!		fancy string.
+	!
+	!
+	!	Returned value
+	!		This function formats the date the user specifies into a
+	!		fancy date by changing the month into a readable word and
+	!		pulling it all together.
+	!
+	! Example:
+	!
+	!	DATES$ = PRNT_FANCYDATE('10231988')
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:PRNT_FANCYDATE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP PRNT_FANCYDATE
+	!	$ DELETE PRNT_FANCYDATE.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	07/31/86 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	XDATE$
+	!		This string gets the date in eight character format.
+	!
+	!	YDATE$
+	!		This string takes the month and formats it into a word.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	ON ERROR GOTO 19000
+
+	!
+	! Get a date in eight character format
+	!
+	IF LEN(ADATE$) = 8%
+	THEN
+		XDATE$ = ADATE$
+	ELSE
+		XDATE$ = "19" + ADATE$
+	END IF
+
+	!
+	! Get the month in a nice foemat
+	!
+	YDATE$ = MID( &
+		"January  February March    April    May      June     " + &
+		"July     August   SeptemberOctober  November December ", &
+		VAL%(MID(XDATE$, 5%, 2%)) * 9% - 8%, 9%)
+
+	!
+	! Create output string
+	!
+	PRNT_FANCYDATE = TRM$(YDATE$) + " " + NUM1$(VAL%(RIGHT(XDATE$, 7%))) + ", " + &
+		LEFT(XDATE$, 4%)
+
+ L1:	EXIT FUNCTION
+
+19000	!
+	! Error trapping
+	!
+	PRNT_FANCYDATE = ADATE$ + " ? " + NUM1$(ERR)
+	RESUME L1
+
+	END FUNCTION

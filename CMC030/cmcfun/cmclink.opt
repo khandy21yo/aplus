@@ -1,0 +1,5 @@
+FUNC_LIB:CMCFUN/LIBRARY
+cmc:cmc_36share/shareable
+!func_lib:cmc_3vector/library
+!CMC:CMC_36SHARE/LIBRARY
+!sys$share:VAXCRTLG.EXE/SHARE

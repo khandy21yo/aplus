@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Current Procedural Terminology Codes is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__CPT.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Current Procedural Terminology Codes
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__CPT.MAS\*
+	!	.p
+	!	Current Procedural Terminology Codes.
+	!
+	! Index:
+	!	.x Current Procedural Terminology Codes
+	!	.x BI_CPT
+	!--

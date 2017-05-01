@@ -1,0 +1,19 @@
+	!======================================================================
+	! GL_PERIOD file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_PERIOD.CH%, STAT%)
+	CALL READ_DEVICE('GL_PERIOD',GL_PERIOD.DEV$, STAT%)
+	CALL READ_PROTECTION('GL_PERIOD',GL_PERIOD.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(GL_PERIOD.PRO$, STAT%)
+
+	GL_PERIOD.NAME$ = GL_PERIOD.DEV$+"GL_PERIOD.CTR"
+
+	OPEN GL_PERIOD.NAME$ AS FILE GL_PERIOD.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP GL_PERIOD, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

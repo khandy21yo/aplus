@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Cycle Count Map by Day is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__STOREMAP.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Inventory Control System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Cycle Count Map by Day
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__STOREMAP.MAS\*
+	!	- Cycle Count Map by Day.
+	!
+	! Index:
+	!	.x Cycle Count Map by Day
+	!	.x IC_STOREMAP
+	!--

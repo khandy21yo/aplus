@@ -1,0 +1,273 @@
+1	%TITLE "CPT Patient File List"
+	%SBTTL "BI_RPRT_INSURED"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BI011
+	!
+	! Abstract:HELP
+	!	.p
+	!	This program prints out a list of the Patient file
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_RPRT_INSURED/LINE
+	!	$ LINK/EXE=BI_EXE: BI_RPRT_INSURED, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BI_RPRT_INSURED.OBJ;*
+	!
+	! Author:
+	!
+	!	11/18/88 - J. Shad Rydalch
+	!
+	! Modification History:
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/03/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.HB"
+	MAP	(BI_INSURED)	BI_INSURED_CDD	BI_INSURED
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+
+	SELECT SORT.BY$
+	CASE "I"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  INSURANCE"
+
+	CASE "B"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  BIRTHDATE"
+	END SELECT
+
+300	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "CPT  PATIENT  FILE  LIST  " + ADD.TITLE$
+	TITLE$(2%) = "Billing Insurance System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "InsuredNum  InsuredName                             "+ &
+		"  AlhpaSortField   ReferenceNumber   Birthdate   Sex"+ &
+		"  OnsetDate "
+
+	TITLE$(5%) = "          InsuredAddress1            InsuredAddress2"+ &
+		"           City                  State  ZipCode"+ &
+		"     Country  County  Phone     "
+
+	TITLE$(6%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BI_INSURED.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #BI_INSURED.CH%, KEY#0% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BI_INSURED.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	SELECT SORT.BY$
+
+	CASE "I"
+		GOTO ExitTotal IF (BI_INSURED::INSURED > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(BI_INSURED::INSURED,-1%), &
+			WLDCRD$) = 0%
+
+	CASE "B"
+		GOTO ExitTotal IF (BI_INSURED::BIRTHDATE > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <> "" AND &
+			COMP_STRING(EDIT$(BI_INSURED::BIRTHDATE,-1%), &
+			WLDCRD$) = 0%
+
+	END SELECT
+
+17300	!
+	! Print 1st line
+	!
+	TEXT$ = BI_INSURED::INSURED + "  " + &
+		BI_INSURED::INSNAME + "  " + &
+		BI_INSURED::ALPSRT + "  " + &
+		PRNT_DATE(BI_INSURED::BIRTHDATE,8%) + "  " + &
+		BI_INSURED::SEX + "  " + &
+		PRNT_DATE(BI_INSURED::ONSETDATE,8%)
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	!
+	! Print 2nd line
+	!
+	TEXT$ = BI_INSURED::ADD1 + "  " + &
+		BI_INSURED::ADD2 + "  " + &
+		BI_INSURED::CITY + "  " + &
+		BI_INSURED::STATE + "     " + &
+		BI_INSURED::ZIP + "  " + &
+		BI_INSURED::COUNTRY + "      " + &
+		BI_INSURED::PHONE
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "BI_INSURED"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "BI_INSURED"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

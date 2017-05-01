@@ -1,0 +1,16 @@
+	!======================================================================
+	! PO_RECJOUR file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_RECJOUR.CH%, STAT%)
+	CALL READ_DEVICE('PO_RECJOUR',PO_RECJOUR.DEV$, STAT%)
+
+	PO_RECJOUR.NAME$ = PO_RECJOUR.DEV$+"PO_RECJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN PO_RECJOUR.NAME$ FOR INPUT AS FILE PO_RECJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_RECJOUR, &
+		PRIMARY KEY &
+			PO_RECJOUR::PO, &
+		ACCESS MODIFY, ALLOW NONE
+

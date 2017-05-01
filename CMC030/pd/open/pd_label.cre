@@ -1,0 +1,21 @@
+	!======================================================================
+	! PD_LABEL file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PD_LABEL.CH%, STAT%)
+	CALL READ_DEVICE('PD_LABEL',PD_LABEL.DEV$, STAT%)
+	CALL READ_PROTECTION('PD_LABEL',PD_LABEL.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PD_LABEL.PRO$, STAT%)
+
+	PD_LABEL.NAME$ = PD_LABEL.DEV$+"PD_LABEL.TBL"
+
+	OPEN PD_LABEL.NAME$ AS FILE PD_LABEL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PD_LABEL, &
+		PRIMARY KEY &
+			PD_LABEL::CODE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

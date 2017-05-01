@@ -1,0 +1,22 @@
+	!======================================================================
+	! BI_INSURED file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_INSURED.CH%, STAT%)
+	CALL READ_DEVICE('BI_INSURED',BI_INSURED.DEV$, STAT%)
+
+	BI_INSURED.NAME$ = BI_INSURED.DEV$+"BI_INSURED.MAS"
+
+	OPEN BI_INSURED.NAME$ FOR INPUT AS FILE BI_INSURED.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_INSURED, &
+		PRIMARY KEY &
+			BI_INSURED::INSURED, &
+		ALTERNATE KEY &
+			BI_INSURED::INSNAME &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			BI_INSURED::ALPSRT &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

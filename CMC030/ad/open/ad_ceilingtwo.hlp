@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Two Dimensional Optional Ceiling Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CEILINGTWO.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Two Dimensional Optional Ceiling Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CEILINGTWO.TBL\*
+	!	.p
+	!	Two Dimensional Optional Ceiling Table.
+	!
+	! Index:
+	!	.x Two Dimensional Optional Ceiling Table
+	!	.x AD_CEILINGTWO
+	!--

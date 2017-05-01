@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Cycle Counting Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__CYCLEJOUR.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Inventory Control System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Cycle Counting Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__CYCLEJOUR.JRL\*
+	!	- Cycle Counting Journal.
+	!
+	! Index:
+	!	.x Cycle Counting Journal
+	!	.x IC_CYCLEJOUR
+	!--

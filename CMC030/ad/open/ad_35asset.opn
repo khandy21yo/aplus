@@ -1,0 +1,35 @@
+	!======================================================================
+	! AD_35ASSET file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_35ASSET.CH%, STAT%)
+	CALL READ_DEVICE('AD_35ASSET',AD_35ASSET.DEV$, STAT%)
+
+	AD_35ASSET.NAME$ = AD_35ASSET.DEV$+"AD_35ASSET.MAS"
+
+	OPEN AD_35ASSET.NAME$ FOR INPUT AS FILE AD_35ASSET.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_35ASSET, &
+		PRIMARY KEY &
+			AD_35ASSET::ASSET_NUM, &
+		ALTERNATE KEY &
+		( &
+			AD_35ASSET::ASSET_TYPE, &
+			AD_35ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_35ASSET::SERVDATE, &
+			AD_35ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_35ASSET::LOCATION, &
+			AD_35ASSET::DEPT_NUM, &
+			AD_35ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+			AD_35ASSET::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

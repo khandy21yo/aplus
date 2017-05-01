@@ -1,0 +1,28 @@
+	!======================================================================
+	! AP_OPEN file (open read only)
+	! Special version which allows reading file on another account
+	! by setting the device before calling.
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_OPEN.CH%, STAT%)
+
+	AP_OPEN.NAME$ = AP_OPEN.DEV$+"AP_OPEN.LED"
+
+	OPEN AP_OPEN.NAME$ FOR INPUT AS FILE AP_OPEN.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_OPEN, &
+		PRIMARY KEY &
+		( &
+			AP_OPEN::VENNUM, &
+			AP_OPEN::TRANKEY &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AP_OPEN::VENNUM, &
+			AP_OPEN::INVNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_OPEN::BATCH &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

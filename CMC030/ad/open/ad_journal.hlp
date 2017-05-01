@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Depreciation Units Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__JOURNAL.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Assets Depreciation System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Depreciation Units Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__JOURNAL.JRL\*
+	!	.p
+	!	Depreciation Units Journal.
+	!
+	! Index:
+	!	.x Depreciation Units Journal
+	!	.x AD_JOURNAL
+	!--

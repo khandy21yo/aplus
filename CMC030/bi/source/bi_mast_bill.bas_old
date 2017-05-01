@@ -1,0 +1,268 @@
+1	%TITLE "Billing Insurance Bill Maintenance"
+	%SBTTL "BI_MAST_BILL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Journal Entry\* option provides for entry of the data which
+	!	is to be billed to a specific insurance carrier.
+	!
+	! Index:
+	!	.x Journal Entry
+	!
+	! Option:
+	!
+	!	BI_MAIN_BILL$HELP
+	!	BI_MAIN_BILLSERVICE$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAST_BILL/LINE
+	!	$ LINK/EXE=BI_EXE: BI_MAST_BILL,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BI_MAST_BILL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/04/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	03/16/92 - Dan Perkins
+	!		Allow to process batches.
+	!
+	!	04/13/95 - Kevin Handy
+	!		(V3.6)
+	!		Update source to v3.6 standards.
+	!		Change last param of entr_3choice from "" to 0%
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/25/97 - Kevin Handy
+	!		Change 'val' to 'val%'
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+
+	!
+	! Set up COMMON areas
+	!
+	COM (CH_BI_BILLH) &
+		BATCH_NO$ = 2%, &
+		BI_BILLH.CH%
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	! Look up device
+	!
+	CALL  READ_DEVICE("BI_BILLH", BI_BILLH.DEV$, STAT%)
+
+310	!
+	! Set things do display the BATCH
+	!
+	CALL FIND_FILE(BI_BILLH.DEV$ + "BI_BILLH_%%.JRL", BI_BILLH_FILE$(), &
+		16%, "", "")
+
+	BI_BILLH_FILE% = VAL%(BI_BILLH_FILE$(0%))
+
+	IF BI_BILLH_FILE%
+	THEN
+		BI_BILLH_FILE$(LOOP%) = &
+			MID(BI_BILLH_FILE$(LOOP%),10%,2%) &
+				FOR LOOP% = 1% TO BI_BILLH_FILE%
+
+		TEMP$ = "Billing Journal Batch"
+
+		X% = ENTR_3CHOICE(SCOPE, "", "", BI_BILLH_FILE$(), "", &
+			0%, TEMP$, "", 0%)
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(BI_BILLH_FILE$(X%),-1%)
+			GOTO 400
+		END IF
+	END IF
+
+	SELECT SCOPE::SCOPE_EXIT
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask for batch number
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		20%, &
+		80%, &
+		SMG_SCREEN_DATA% &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		1%, &
+		1% &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Batch number:", 11%, 30%)
+
+320	!
+	! Set up the help message
+	!
+	SCOPE::PRG_ITEM = "FLD01BATCH"
+
+	!
+	! Assign default batch number
+	!
+	BATCH_NO$ = "01"
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 11%, 43%, BATCH_NO$, -1%, 16%)
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	BATCH_NO$ = EDIT$(BATCH_NO$, -1%)
+
+	IF LEN(TRM$(BATCH_NO$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Please enter the batch number in XX format", 0%)
+		GOTO 320
+	END IF
+
+400	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(BI_MAIN_BILL.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19990	END
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	EXTERNAL LONG FUNCTION MAIN_JOURNAL
+
+	EXTERNAL LONG FUNCTION BI_MAIN_INSURED
+	EXTERNAL LONG FUNCTION BI_MAIN_CARRIER
+	EXTERNAL LONG FUNCTION BI_MAIN_BILL
+	EXTERNAL LONG FUNCTION BI_MAIN_DIAG
+	EXTERNAL LONG FUNCTION BI_MAIN_CPT
+	EXTERNAL LONG FUNCTION BI_MAIN_PATIENT
+	EXTERNAL LONG FUNCTION BI_MAIN_BILLSERVICE
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE BI_MAIN_CARRIER.ID
+		MAINT_GROUP = BI_MAIN_CARRIER(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BI_MAIN_BILL.ID
+		MAINT_GROUP = BI_MAIN_BILL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " Service"
+
+		CASE OPT_MOREMENU
+			SELECT EDIT$(MVALUE, -1%)
+			!
+			! Service
+			!
+			CASE "SERVICE"
+				MAINT_GROUP = &
+					MAIN_JOURNAL(BI_MAIN_BILLSERVICE.ID, "")
+			END SELECT
+		END SELECT
+
+	CASE BI_MAIN_PATIENT.ID
+		MAINT_GROUP = BI_MAIN_PATIENT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BI_MAIN_CPT.ID
+		MAINT_GROUP = BI_MAIN_CPT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BI_MAIN_DIAG.ID
+		MAINT_GROUP = BI_MAIN_DIAG(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BI_MAIN_INSURED.ID
+		MAINT_GROUP = BI_MAIN_INSURED(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BI_MAIN_BILLSERVICE.ID
+		MAINT_GROUP = BI_MAIN_BILLSERVICE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

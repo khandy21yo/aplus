@@ -1,0 +1,27 @@
+	!======================================================================
+	! MO_MAKELINE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MAKELINE.CH%, STAT%)
+	CALL READ_DEVICE('MO_MAKELINE',MO_MAKELINE.DEV$, STAT%)
+
+	MO_MAKELINE.NAME$ = MO_MAKELINE.DEV$+"MO_MAKELINE.MAS"
+
+	OPEN MO_MAKELINE.NAME$ FOR INPUT AS FILE MO_MAKELINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MAKELINE, &
+		PRIMARY KEY &
+		( &
+			MO_MAKELINE::MAKE, &
+			MO_MAKELINE::YEAR, &
+			MO_MAKELINE::MTYPE, &
+			MO_MAKELINE::MSIZE, &
+			MO_MAKELINE::MODELCODE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			MO_MAKELINE::MODELCODE, &
+			MO_MAKELINE::MAKE &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

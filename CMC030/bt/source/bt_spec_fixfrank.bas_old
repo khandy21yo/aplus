@@ -1,0 +1,173 @@
+1	%TITLE "Fix Customer type because Frank decided to change it"
+	%SBTTL "BT_SPEC_FIXFRANK"
+	%IDENT "V3.6a Calico"
+
+	!
+	!	COPYRIGHT (C) 1991 BY
+	!	Computer Management Center, Inc.
+	!	Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	This program is designed to fix the customer type
+	!	since Frank decided to re-arrange things in the
+	!	files, and then left for two weeks after installing
+	!	the system on Northwest Center without fixing up
+	!	their data files in any way.
+	!
+	! Index:
+	!	.x Fix>Frank's Ugly Mess
+	!	.x Frank's Ugly Mess>Fix
+	!
+	! Option:
+	!
+	!
+	! Example:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_SPEC_FIXFRANK
+	!	$ LINK/EXEC=BT_EXE:*.EXE BT_SPEC_FIXFRANK, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BT_SPEC_FIXFRANK.OBJ;*
+	!
+	! Author:
+	!
+	!	04/18/91 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	10/16/98 - Kevin Handy
+	!		Lose an excessive number of %PAGE
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CUSTOMEX.HB"
+	MAP (BT_CUSTOMEX)	BT_CUSTOMEX_CDD		BT_CUSTOMEX
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilization
+	!*******************************************************************
+
+	ON ERROR GOTO 19000
+
+100	!======================================================================
+	! AR_35CUSTOM file (open read/write)
+	!======================================================================
+
+	AR_35CUSTOM.CH% = 10%
+	AR_35CUSTOM.DEV$ = "$disk2:[nwest]"
+
+	AR_35CUSTOM.NAME$ = AR_35CUSTOM.DEV$+"AR_35CUSTOM.MAS"
+
+	OPEN AR_35CUSTOM.NAME$ FOR INPUT AS FILE AR_35CUSTOM.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_35CUSTOM, &
+		PRIMARY KEY &
+			AR_35CUSTOM::CUSNUM, &
+		ALTERNATE KEY &
+		( &
+			AR_35CUSTOM::TTYPE, &
+			AR_35CUSTOM::CUSNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AR_35CUSTOM::CATEGORY, &
+			AR_35CUSTOM::CUSNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AR_35CUSTOM::ALPSRT, &
+			AR_35CUSTOM::CUSNUM &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+110	!======================================================================
+	! BT_CUSTOMEX file (open read only)
+	!======================================================================
+
+	BT_CUSTOMEX.CH% = 12%
+	BT_CUSTOMEX.DEV$ = ""
+
+	BT_CUSTOMEX.NAME$ = BT_CUSTOMEX.DEV$+"BT_CUSTOMEX.MAS"
+
+	OPEN BT_CUSTOMEX.NAME$ FOR INPUT AS FILE BT_CUSTOMEX.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BT_CUSTOMEX, &
+		PRIMARY KEY &
+			BT_CUSTOMEX::CUSNUM, &
+		ACCESS READ, ALLOW MODIFY
+
+1000	!
+	! Main Loop
+	!
+	RESET #BT_CUSTOMEX.CH%
+
+1100	GET #BT_CUSTOMEX.CH%
+
+1200	GET #AR_35CUSTOM.CH%, KEY #0% EQ BT_CUSTOMEX::CUSNUM
+
+1300	AR_35CUSTOM::TTYPE = BT_CUSTOMEX::CUSTYP
+
+	UPDATE #AR_35CUSTOM.CH%
+
+	PRINT BT_CUSTOMEX::CUSNUM
+
+	GOTO 1100
+
+2000	CLOSE AR_35CUSTOM.CH%
+
+	CLOSE BT_CUSTOMEX.CH%
+
+	GOTO 32767
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap Errors
+	!*******************************************************************
+
+	SELECT ERL
+	CASE 1100%
+		RESUME 2000 IF ERR = 11%
+
+	CASE 1200%
+		RESUME 1100
+	END SELECT
+
+	ON ERROR GOTO 0
+
+32767	END

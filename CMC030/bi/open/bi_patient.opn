@@ -1,0 +1,24 @@
+	!======================================================================
+	! BI_PATIENT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_PATIENT.CH%, STAT%)
+	CALL READ_DEVICE('BI_PATIENT',BI_PATIENT.DEV$, STAT%)
+
+	BI_PATIENT.NAME$ = BI_PATIENT.DEV$+"BI_PATIENT.MAS"
+
+	OPEN BI_PATIENT.NAME$ FOR INPUT AS FILE BI_PATIENT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_PATIENT, &
+		PRIMARY KEY &
+		( &
+			BI_PATIENT::INSURED, &
+			BI_PATIENT::PATIENT &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			BI_PATIENT::PATIENT, &
+			BI_PATIENT::INSURED &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

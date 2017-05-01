@@ -1,0 +1,27 @@
+	!======================================================================
+	! AR_CLOSED file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CLOSED.CH%, STAT%)
+	CALL READ_DEVICE('AR_CLOSED',AR_CLOSED.DEV$, STAT%)
+
+	AR_CLOSED.NAME$ = AR_CLOSED.DEV$+"AR_CLOSED.LED"
+
+	OPEN AR_CLOSED.NAME$ FOR INPUT AS FILE AR_CLOSED.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CLOSED, &
+		PRIMARY KEY &
+		( &
+			AR_CLOSED::CUSNUM, &
+			AR_CLOSED::INVNUM, &
+			AR_CLOSED::TRATYP &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AR_CLOSED::SALNUM, &
+			AR_CLOSED::CUSNUM, &
+			AR_CLOSED::INVNUM, &
+			AR_CLOSED::TRATYP &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

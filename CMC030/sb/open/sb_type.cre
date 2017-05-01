@@ -1,0 +1,22 @@
+	!======================================================================
+	! SB_TYPE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('SB_TYPE',SB_TYPE.DEV$, STAT%)
+	CALL READ_PROTECTION('SB_TYPE',SB_TYPE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(SB_TYPE.PRO$, STAT%)
+
+	SB_TYPE.NAME$ = SB_TYPE.DEV$+"SB_TYPE.TBL"
+
+	OPEN SB_TYPE.NAME$ AS FILE SB_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_TYPE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			SB_TYPE::TTYPE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

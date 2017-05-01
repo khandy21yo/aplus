@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Retired Asset is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__RETIRED.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Retired Asset
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__RETIRED.MAS\*
+	!	.p
+	!	Retired Asset.
+	!
+	! Index:
+	!	.x Retired Asset
+	!	.x AD_RETIRED
+	!--

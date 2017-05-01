@@ -1,0 +1,51 @@
+	!======================================================================
+	! AD_ASSET file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_ASSET.CH%, STAT%)
+	CALL READ_DEVICE('AD_ASSET',AD_ASSET.DEV$, STAT%)
+
+	AD_ASSET.NAME$ = AD_ASSET.DEV$+"AD_ASSET.MAS"
+
+	OPEN AD_ASSET.NAME$ FOR INPUT AS FILE AD_ASSET.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_ASSET, &
+		PRIMARY KEY &
+			AD_ASSET::ASSET_NUM, &
+		ALTERNATE KEY &
+		( &
+			AD_ASSET::ASSET_TYPE, &
+			AD_ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_ASSET::SERVDATE, &
+			AD_ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_ASSET::LOCATION, &
+			AD_ASSET::DEPT_NUM, &
+			AD_ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+			AD_ASSET::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		
+
+	!++
+	! Abstract:FILE
+	!	^*AD__ASSET.MAS\*
+	!	- Asset Description
+	!	.b
+	!	.lm +5
+	!	This is a master file for fixed assets. Included in this file is a complete
+	!	description of the assets including all necessary information for sale and
+	!	depreciation.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Asset Description
+	!	.x AD_ASSET
+	!
+	!--

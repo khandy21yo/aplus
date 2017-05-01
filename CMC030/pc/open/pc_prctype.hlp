@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Price Type Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PC__PRCTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Price Type Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PC__PRCTYPE.TBL\*
+	!	.p
+	!	Price Type Description.
+	!
+	! Index:
+	!	.x Price Type Description
+	!	.x PC_PRCTYPE
+	!--

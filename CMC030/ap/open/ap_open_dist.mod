@@ -1,0 +1,22 @@
+	!======================================================================
+	! AP_OPEN_DIST file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_OPEN_DIST.CH%, STAT%)
+	CALL READ_DEVICE('AP_OPEN_DIST',AP_OPEN_DIST.DEV$, STAT%)
+
+	AP_OPEN_DIST.NAME$ = AP_OPEN_DIST.DEV$+"AP_OPEN_DIST.LED"
+
+	OPEN AP_OPEN_DIST.NAME$ FOR INPUT AS FILE AP_OPEN_DIST.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_OPEN_DIST, &
+		PRIMARY KEY &
+		( &
+			AP_OPEN_DIST::TRANKEY, &
+			AP_OPEN_DIST::SLINE &
+		)	, &
+		ALTERNATE KEY &
+			AP_OPEN_DIST::BTHNUM &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

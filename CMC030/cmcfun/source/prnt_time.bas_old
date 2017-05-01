@@ -1,0 +1,153 @@
+1	%TITLE "Format Time into HH:MM:SS (24-hour)"
+	%SBTTL "PRNT_TIME"
+	%IDENT "V3.3"
+
+	FUNCTION STRING PRNT_TIME(INTIME$,FLAG%)
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function formats a time into HH:MM:SS (24-hour) or
+	!	into HH:MM:SS am/pm time depending on the FLAG% flag.
+	!	.b
+	!	AM/PM If FLAG% AND 2%
+	!	24-hour Else
+	!	Strips off leading 00's if FLAG% and 8%
+	!	FLAG% AND 4096% - Displays only hours
+	!	FLAG% AND 2048% - Displays only hours and minutes
+	!	.b
+	!	It expects the time to be in HHMMSS (24-hour) form.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	INTIME$
+	!		The passed variable that holds the time the user wants to
+	!		have formatted.
+	!
+	!	Returned value
+	!		It returns the value of the time in HH:MM:SS form.
+	!
+	! Example:
+	!
+	!	TIME$ = PRNT_TIME("113425",2048%)
+	!
+	!
+	! Environment:
+	!
+	!	VAX VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:PRNT_TIME/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP PRNT_TIME
+	!	$ DELETE PRNT_TIME.OBJ;*
+	!
+	! Author:
+	!
+	!	05/28/86 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!	01/19/87 - Kevin Handy
+	!		Added ability to strip off leading 00's with
+	!		FLAG% AND 8%
+	!
+	!	02/25/88 - B. Craig Larsen
+	!		Modified to display only hours or only hours and minutes
+	!
+	!	07/06/93 - Kevin Handy
+	!		Modified to use VAL%( instead of VAL( for a tiny
+	!		bit more speed.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	AMPM$
+	!		String that tells if time is AM or PM.
+	!
+	!	THRS$
+	!		String that extracts the hours.
+	!
+	!	TMIN$
+	!		String that extracts the minutes.
+	!
+	!	TSEC$
+	!		String that extracts the seconds.
+	!
+	!	TTIM$
+	!		String is used to format the time.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	AMPM$	= ''
+
+	THRS$	= LEFT(INTIME$,2%)
+	TMIN$	= MID(INTIME$, 3%, 2%)
+	TSEC$	= MID(INTIME$, 5%, 2%)
+
+	IF FLAG% AND 2%
+	THEN
+		AMPM$	= ' PM'	IF THRS$ >= "12" AND THRS$ <  "24"
+		AMPM$	= ' AM'	IF THRS$ <  "12" AND THRS$ >= "00" OR &
+					THRS$ = "24"
+		THRS$	= FORMAT$(VAL%(THRS$) - 12%, "<0>") &
+					IF THRS$ >= "13" AND THRS$ <= "24"
+
+	END IF
+
+	THRS$	= '  ' IF THRS$	= ''
+	TMIN$	= '  ' IF TMIN$	= ''
+	TSEC$	= '  ' IF TSEC$	= ''
+
+	TTIM$	= THRS$ + ':' + TMIN$ + ':' + TSEC$ + AMPM$
+	TTIM$	= LEFT( TTIM$, 2% ) IF FLAG% AND 4096%
+	TTIM$	= LEFT( TTIM$, 5% ) IF FLAG% AND 2048%
+
+	!
+	! Strip off leading "00" or leading "00:00"
+	!
+	IF FLAG% AND 8%
+	THEN
+		IF LEFT(TTIM$, 5%) = "00:00" OR LEFT(TTIM$, 5%) = "  :  "
+		THEN
+			TTIM$ = "     " + RIGHT(TTIM$, 6%)
+		ELSE
+			TTIM$ = "   " + RIGHT(TTIM$, 4%) &
+				IF LEFT(TTIM$, 3%) = "00:"
+		END IF
+	END IF
+
+	PRNT_TIME = TTIM$
+
+	END FUNCTION

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The One Dimensional Optional Depreciation Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__TABLEONE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x One Dimensional Optional Depreciation Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__TABLEONE.TBL\*
+	!	.p
+	!	One Dimensional Optional Depreciation Table.
+	!
+	! Index:
+	!	.x One Dimensional Optional Depreciation Table
+	!	.x AD_TABLEONE
+	!--

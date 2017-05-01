@@ -1,0 +1,481 @@
+1	%TITLE "Copy Product to Product"
+	%SBTTL "RI_SPEC_COPY"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Copy Product to Product\* option will provide
+	!	a means to copy, from a selected product, all of the
+	!	records contained in the Product Ingredients file to
+	!	a designated product.
+	!
+	! Index:
+	!	.x Copy>Product to Product
+	!	.x Product>Copy
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RI_SOURCE:RI_SPEC_COPY
+	!	$ LINK/EXE=RI_EXE: RI_SPEC_COPY, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RI_SPEC_COPY.OBJ;*
+	!
+	! Author:
+	!
+	!	10/22/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!		Changed SMG_COPY to SMG_COPY%
+	!
+	!	10/28/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	06/02/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map file
+	!
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.HB"
+	MAP	(RI_RELATION)	RI_RELATION_CDD	RI_RELATION
+
+	!
+	! Array for listing
+	!
+	DECLARE INTEGER CONSTANT MAX.ITEM = 2%
+
+	!
+	! Declare constants
+	!
+	DECLARE LONG XLONG, YLONG
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+300	!
+	! Open relation file
+	!
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.MOD"
+
+
+500	!******************************************************************
+	! Declare defaults for screen
+	!******************************************************************
+
+	PRODUCT.ITEM$ = SPACE$(14%)
+	COPY.ITEM$ = SPACE$(14%)
+
+900	!
+	! Create a display window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		18%, &
+		78%, &
+		SMG_COPY%, &
+		SMG$M_BORDER &
+	)
+
+	!
+	! Label the display
+	!
+	SMG_STATUS% = SMG$LABEL_BORDER(SMG_COPY%, &
+		"Copy Product to Product" )
+
+	GOSUB Repaint
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_COPY%, &
+		SCOPE::SMG_PBID, &
+		2%, &
+		2% &
+	)
+
+	%PAGE
+
+1000	!******************************************************************
+	! Main option menu
+	!******************************************************************
+
+	GOSUB Repaint
+
+1100	!
+	! Enter options
+	!
+	SCOPE::PRG_ITEM = ""
+	OPTLIST$ = "Change Blank Go Help eXit"
+	OPT$ = ENTR_3OPTION(SCOPE, "COMMAND", OPTLIST$, OPT%, 0%)
+
+	SELECT SCOPE::SCOPE_EXIT
+	!
+	! Control c
+	!
+	CASE 3%
+		GOTO 1000
+
+	!
+	! Exit key
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO ExitProgram
+
+	END SELECT
+
+	SELECT OPT$
+
+	CASE "C"
+ Changer:
+		!*****************************************************
+		! Change information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to change", 0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO 1100 IF LOOP% = 0%
+		GOTO Changer IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		LOOP1% = LOOP%
+
+ Changer1:	FLAG% = 0%
+		GOSUB DataEntry
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Uparrow
+		!
+		CASE SMG$K_TRM_UP
+			LOOP% = LOOP% - 1% IF LOOP% > 1%
+			GOTO Changer1
+
+		!
+		! SMG$K_TRM_DOWN
+		!
+		CASE SMG$K_TRM_DOWN
+			LOOP% = LOOP% + 1% IF LOOP% < MAX.ITEM
+			GOTO Changer1
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO Changer
+
+	CASE "B"
+ BlankR:	!*****************************************************
+		! Blank information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION,"", &
+			"Item to Blank", 0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO 1100 IF LOOP% = 0%
+		GOTO Blankr IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		SELECT LOOP%
+
+		CASE 1%
+			LSET PRODUCT.ITEM$ = ""
+
+		CASE 2%
+			LSET COPY.ITEM$ = ""
+
+		END SELECT
+
+		FLAG% = 1%
+		GOSUB DataEntry
+
+		GOTO Blankr
+
+	CASE "G"
+		GOSUB Copy
+		CALL ENTR_3MESSAGE(SCOPE, "Copy completed . . . ",1%)
+
+	!
+	! Help
+	!
+	! This option calls out a help message describing the
+	! program.
+	!
+	CASE "H"
+		CALL HELP_3MESSAGE(SCOPE, "", "PROG", &
+			SCOPE::PRG_PROGRAM, "HELP")
+		GOTO 1000
+
+	CASE "X"
+		GOTO ExitProgram
+
+	END SELECT
+
+	GOTO 1100
+
+	%PAGE
+
+ ExitProgram:
+	!******************************************************************
+	! Exit the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+ Repaint:
+	!******************************************************************
+	! Repaint the screen
+	!******************************************************************
+
+	DATA	6,20, "(01) From Product#", &
+		8,20, "(02) To Product#", &
+		0, 0, ""
+
+	RESTORE
+	READ XLONG, YLONG, ATEXT$
+
+	WHILE XLONG
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_COPY%, ATEXT$, XLONG, YLONG)
+		READ XLONG, YLONG, ATEXT$
+	NEXT
+
+	FLAG% = 1%
+	GOSUB DataEntry FOR LOOP% = 1% TO MAX.ITEM
+
+	RETURN
+
+	%PAGE
+
+ DataEntry:
+	!******************************************************************
+	! Enter/Diaplay items
+	!******************************************************************
+
+	TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+	SCOPE::PRG_ITEM = "FLD" + FORMAT$(LOOP%, "<0>##")
+
+	SELECT LOOP%
+
+	CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) From Product _#\*
+	!	.p
+	!	The ^*From Product _#\* entered in this field will provide
+	!	the means to copy the records contained in the Product Ingredients
+	!	file, for this product _#, to a selected product _# which will
+	!	be entered in field (02).
+	!
+	! Index:
+	!	.x From Product Number>Copy Product to Product
+	!	.x Copy Product to Product>From Product Number
+	!	.x Number>From Product
+	!	.x From>Product Number
+	!
+	!--
+
+		PRODUCT.ITEM$ = ENTR_3STRING(SCOPE, SMG_COPY%, &
+			"6;45", "Product #", &
+			PRODUCT.ITEM$, FLAG%, "'E", DEFLT$)
+
+	CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) To Product _#\*
+	!	.p
+	!	The ^*To Product _#\* entered in this field will determine
+	!	the product _# into which the selected product entered in
+	!	field (01) will be copied.
+	!
+	! Index:
+	!	.x To Product Number>Copy Product to Product
+	!	.x Copy Product to Product>To Product Number
+	!	.x To>Product Number
+	!	.x Number>To Product
+	!
+	!--
+
+		COPY.ITEM$ = ENTR_3STRING(SCOPE, SMG_COPY%, &
+			"8;45", "Product #", &
+			COPY.ITEM$, FLAG%, "'E", DEFLT$)
+
+	END SELECT
+
+	SCOPE::PRG_ITEM = TEMP$
+
+	RETURN
+
+ Copy:
+	!*****************************************************
+	! Copy
+	!*****************************************************
+
+	SCOPE::PRG_ITEM = "CONFIRM"
+	INP$ = ENTR_3YESNO(SCOPE, SMG_COPY%, &
+		"", "Confirm copy  - then press <Do> ", "N", 0%, "", "")
+
+	SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_OPTION, SPACE$(80%), 1%, 1%)
+
+	IF INP$ <> "Y"
+	THEN
+		GOTO ExitProgram
+	END IF
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_COPY%, "Copy              ", 14%, 5%)
+
+	CALL ENTR_3MESSAGE(SCOPE, "",1%+16%)
+
+	!
+	! Add
+	!
+	FIND #RI_RELATION.CH%, KEY#0% EQ PRODUCT.ITEM$, REGARDLESS
+
+2000	!
+	! Main loop starts here
+	!
+
+	!
+	! Get next record
+	!
+	GET #RI_RELATION.CH%, REGARDLESS
+
+	GOTO 2100 IF PRODUCT.ITEM$ <> RI_RELATION::PRODUCT
+
+	RI_RELATION::PRODUCT = COPY.ITEM$
+	PUT #RI_RELATION.CH%
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_COPY%, RI_RELATION::ITEMNUM+" "+ &
+		RI_RELATION::INGREDIENT, &
+		14%, 22%,,SMG$M_REVERSE)
+
+2050	!
+	! Try for next record
+	!
+	GOTO 2000
+
+2100	SMG_STATUS% = SMG$PUT_CHARS(SMG_COPY%, SPACE$(19%), &
+		14%, 22%)
+	RETURN
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 2000%
+		RESUME 2100 IF ERR=11%
+		FILENAME$ = "RI_RELATION"
+
+	END SELECT
+
+
+	RESUME HelpError
+
+32767	END

@@ -1,0 +1,10 @@
+	!++
+	! Abstract:FILE
+	!	^*SA__COMMACCT.TBL\*
+	!	.p
+	!	Commision GL Accounts Table.
+	!
+	! Index:
+	!	.x Commision GL Accounts Table
+	!	.x SA_COMMACCT
+	!--

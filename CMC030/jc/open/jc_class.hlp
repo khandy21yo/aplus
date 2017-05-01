@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Job Class Description File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*JC__CLASS.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Job Costing System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Job Class Description File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*JC__CLASS.TBL\*
+	!	.p
+	!	Job Class Description File.
+	!
+	! Index:
+	!	.x Job Class Description File
+	!	.x JC_CLASS
+	!--

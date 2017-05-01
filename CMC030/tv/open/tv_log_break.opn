@@ -1,0 +1,23 @@
+	!======================================================================
+	! TV_LOG_BREAK file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TV_LOG_BREAK.CH%, STAT%)
+	CALL READ_DEVICE('TV_LOG_BREAK',TV_LOG_BREAK.DEV$, STAT%)
+
+	TV_LOG_BREAK.NAME$ = TV_LOG_BREAK.DEV$+"TV_LOG_BREAK_"+SCHED_DATE$+".LED"
+
+	OPEN TV_LOG_BREAK.NAME$ FOR INPUT AS FILE TV_LOG_BREAK.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TV_LOG_BREAK, &
+		PRIMARY KEY &
+			TV_LOG_BREAK::PRGNUM &
+			DUPLICATES , &
+		ALTERNATE KEY &
+			TV_LOG_BREAK::SCH_TIME &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			TV_LOG_BREAK::RUN_TIME &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

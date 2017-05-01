@@ -1,0 +1,25 @@
+	!======================================================================
+	! PO_REGLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_REGLINE.CH%, STAT%)
+	CALL READ_DEVICE('PO_REGLINE',PO_REGLINE.DEV$, STAT%)
+
+	PO_REGLINE.NAME$ = PO_REGLINE.DEV$+"PO_REGLINE.HIS"
+
+	OPEN PO_REGLINE.NAME$ FOR INPUT AS FILE PO_REGLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_REGLINE, &
+		PRIMARY KEY &
+		( &
+			PO_REGLINE::PO_NUM, &
+			PO_REGLINE::ITEM &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			PO_REGLINE::PRODUCT_NUM, &
+			PO_REGLINE::STORE_NUM, &
+			PO_REGLINE::PO_NUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

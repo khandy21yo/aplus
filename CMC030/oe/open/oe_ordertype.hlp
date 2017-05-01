@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Sales Order Type Description Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__ORDERTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Order Entry System\* going
+	!	under MASTER and TABLE and run the process again.
+	!
+	! Index:
+	!	.x Sales Order Type Description Table
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__ORDERTYPE.TBL\*
+	!	.p
+	!	Sales Order Type Description Table.
+	!
+	! Index:
+	!	.x Sales Order Type Description Table
+	!	.x OE_ORDERTYPE
+	!--

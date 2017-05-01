@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Asset Depreciation History is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__HISTORY.HIS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating.  Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Asset Depreciation History
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__HISTORY.HIS\*
+	!	.p
+	!	Asset Depreciation History.
+	!
+	! Index:
+	!	.x Asset Depreciation History
+	!	.x AD_HISTORY
+	!--

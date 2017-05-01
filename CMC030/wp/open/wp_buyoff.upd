@@ -1,0 +1,16 @@
+	!======================================================================
+	! WP_BUYOFF file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_BUYOFF.CH%, STAT%)
+	CALL READ_DEVICE('WP_BUYOFF',WP_BUYOFF.DEV$, STAT%)
+
+	WP_BUYOFF.NAME$ = WP_BUYOFF.DEV$+"WP_BUYOFF_"+BATCH_NO$+".JRL"
+
+	OPEN WP_BUYOFF.NAME$ FOR INPUT AS FILE WP_BUYOFF.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_BUYOFF, &
+		PRIMARY KEY &
+			WP_BUYOFF::JOB, &
+		ACCESS MODIFY, ALLOW NONE
+

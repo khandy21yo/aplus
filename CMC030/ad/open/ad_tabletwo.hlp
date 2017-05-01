@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Two Dimensional Optional Depreciation Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__TABLETWO.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Two Dimensional Optional Depreciation Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__TABLETWO.TBL\*
+	!	.p
+	!	Two Dimensional Optional Depreciation Table.
+	!
+	! Index:
+	!	.x Two Dimensional Optional Depreciation Table
+	!	.x AD_TABLETWO
+	!--

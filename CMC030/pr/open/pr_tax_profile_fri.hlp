@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Tax Fringe Expense Distribution is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TAX__PROFILE__FRI.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Tax Fringe Expense Distribution
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TAX__PROFILE__FRI.TBL\*
+	!	.p
+	!	Payroll Tax Fringe Expense Distribution.
+	!
+	! Index:
+	!	.x Payroll Tax Fringe Expense Distribution
+	!	.x PR_TAX_PROFILE_FRI
+	!--

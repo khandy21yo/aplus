@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Payroll Fringe Cross Reference is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__FRI__CROSS.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Fringe Cross Reference
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__FRI__CROSS.TBL\*
+	!	.b
+	!	.lm +5
+	!	Payroll Fringe Cross Reference.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Payroll Fringe Cross Reference
+	!	.x PR_FRI_CROSS
+	!
+	!--

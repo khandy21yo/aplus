@@ -1,0 +1,612 @@
+1	%TITLE "Legal Accounts Receivable Aging Report"
+	%SBTTL "AR_RPRT_LBAGE01"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:AR040
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Aging Report\* program prints the Accounts Receivable Aging report from
+	!	the specified date.  The option to print zero balances is also available.
+	!	This report includes the following fields:
+	!	.table 3,25
+	!	.te
+	!	Customer Number
+	!	.te
+	!	Name
+	!	.te
+	!	Phone Number
+	!	.te
+	!	Current
+	!	.te
+	!	31 to 60 Days
+	!	.te
+	!	61 to 90 Days
+	!	.te
+	!	91 to 120 Days
+	!	.te
+	!	121 and Over
+	!	.te
+	!	Balance
+	!	.end table
+	!
+	! Index:
+	!	.x Aging Report
+	!	.x Report>Aging
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	03/03/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_RPRT_LBAGE01/LINE
+	!	$ LINK/EXECUTABLE=AR_EXE:*.EXE AR_RPRT_LBAGE01, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AR_RPRT_LBAGE01.OBJ;*
+	!
+	! Modification history:
+	!
+	!	04/22/88 - Kevin Handy
+	!		Added totals to bottom of report
+	!
+	!	11/22/88 - Kevin Handy
+	!		Modified to use modified LB_FUNC_AGEAR.
+	!
+	!	06/21/90 - Aaron Redd
+	!		Added line layout information so that the report could
+	!		also be sent to either a spreadsheet or a DIF file.
+	!
+	!	06/06/91 - Kevin Handy
+	!		Cleaned junk out of error trapping.
+	!
+	!	06/14/93 - Kevin Handy
+	!		Added REGARDLESS and CLOSE to AR_CONTROL.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSBAL"
+	MAP (AR_CUSBAL)		AR_CUSBAL_CDD		AR_CUSBAL
+	DIM			AR_CUSBAL_CDD		ARRAY_CUSBAL(50%)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN"
+	MAP (AR_OPEN)		AR_OPEN_CDD		AR_OPEN
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_MATTER"
+	MAP (LB_MATTER)		LB_MATTER_CDD		LB_MATTER
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_35WIP"
+	MAP (LB_35WIP)		LB_35WIP_CDD		LB_35WIP
+
+	COM (CH_LB_MATTER) LB_MATTER.CH%
+	COM (CH_AR_OPEN) AR_OPEN.CH%
+	COM (CH_LB_35WIP) LB_35WIP.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING		FUNCTION DATE_STOREDATE
+	EXTERNAL STRING		FUNCTION PRNT_DATE
+	EXTERNAL STRING		FUNCTION PRNT_PHONE
+	EXTERNAL LONG		FUNCTION LB_FUNC_AGEAR
+	EXTERNAL REAL		FUNCTION FUNC_ROUND
+
+	!
+	! Declare variables and constants
+	!
+	DECLARE	STRING	LYT_LINE
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	%PAGE
+
+ Init:
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Item\*
+	!	.b
+	!	.lm +5
+	!	The value entered in the ^*From Item\* setting causes the
+	!	report to begin printing or displaying with a specified item.
+	!	.b
+	!	A blank setting will cause the report to start with the first
+	!	item in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x From Item
+	!
+	!--
+
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Item\*
+	!	.b
+	!	.lm +5
+	!	The value entered in the ^*To Item\* setting causes the
+	!	report to end printing or displaying with a specified item.
+	!	.b
+	!	A blank setting causes the report to end with the last
+	!	item in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x To Item
+	!	.x Item>To
+	!
+	!--
+
+	ZERO.BALANCE$	= EDIT$(UTL_REPORTX::OPTDEF(3%), 132%)
+	!++
+	! Abstract:FLD04
+	!	^*(04) Print zero Balance\*
+	!	.b
+	!	.lm +5
+	!	The ^*Print zero Balance\* field provides the means to suppress the printing
+	!	of accounts with a zero balance.
+	!	.b
+	!	Valid codes are:
+	!	.table 3,25
+	!	.te
+	!	^*Y\* - Yes
+	!	.te
+	!	^*N\* - No
+	!	.end table
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Zero Balances>Print
+	!	.x Balances>Zero>Print
+	!	.x Print>Balances>Zero
+	!
+	!--
+
+	SORTBY$		= EDIT$(UTL_REPORTX::OPTDEF(4%), -1%)
+	!++
+	! Abstract:FLD05
+	!	^*(05) Sort by\*
+	!	.b
+	!	.lm +5
+	!	The setting in the ^*Sort By\* field determines the order in which the report
+	!	will print or be displayed.
+	!	.b
+	!	Valid settings are:
+	!	.table 3,25
+	!	.te
+	!	^*N\* - Number
+	!	.te
+	!	^*T\* - Type
+	!	.te
+	!	^*C\* - Category
+	!	.te
+	!	^*A\* - Alphabetical
+	!	.end table
+	!	A setting is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sort by
+	!
+	!--
+
+	AGE.DATE$	= DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), -1%))
+	!++
+	! Abstract:FLD06
+	!	^*(06) Age as of date\*
+	!	.b
+	!	.lm +5
+	!	The ^*Age as of date\* field provides the means to enter the base date from
+	!	which account balances will be aged.
+	!	.b
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x Age as of date
+	!	.x Date>Age as of
+	!
+	!--
+
+	SELECT SORTBY$
+		CASE 'N'
+			K_NUM%		= 0%
+		CASE 'T'
+			K_NUM%		= 1%
+		CASE 'C'
+			K_NUM%		= 2%
+		CASE 'A'
+			K_NUM%		= 3%
+	END SELECT
+
+300	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+310	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+
+	GET #AR_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	CLOSE #AR_CONTROL.CH%
+
+320	!
+	! Open AR open file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+
+330	!
+	! Now format the interval for aging
+	!
+	INTRVL$(I%) = EDIT$(AR_CONTROL::AGENAM(I%), 140%) FOR I% = 0% TO 4%
+
+	INTRVL$(I%) = LEFT(SPACE$(13%-LEN(INTRVL$(I%))) + &
+		INTRVL$(I%), 13%) + "  " &
+			FOR I% = 0% TO 4%
+
+	!
+	! Open Matter files
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_MATTER.OPN"
+
+340	!
+	! Open the WIP file
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_35WIP.OPN"
+
+	%Page
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "Legal Aging Report as of " + PRNT_DATE(AGE.DATE$, 8%)
+	TITLE$(2%) = "AR System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	INTRVL$(I%) = LEFT(SPACE$(12% - LEN(EDIT$(AR_CONTROL::AGENAM(I%),-1%))) + &
+		EDIT$(AR_CONTROL::AGENAM(I%),140%), 12%) + " " &
+			FOR I% = 0% TO 4%
+
+	TITLE$(4%) = LEFT(AR_CONTROL::CTITLE, 10%) + &
+		" Name                           Phone        " + &
+		INTRVL$(0%) + INTRVL$(1%) + INTRVL$(2%) + &
+		INTRVL$(3%) + INTRVL$(4%) + "    Balance"
+	TITLE$(5%) = ""
+
+	!
+	! Layouts for printed lines
+	!
+	LYT_LINE =	"$" + AR_CONTROL::CTITLE + ":010,$Name:041," + &
+		"PPhoneNum:055,V" + INTRVL$(0%) + "Balance:067,V" + &
+		INTRVL$(1%) + "Balance:080,V" + INTRVL$(2%) + &
+		"Balance:0093,V" + INTRVL$(3%) + "Balance:0106,V" + &
+		INTRVL$(4%) + "Balance:119,VEndBalance:132"
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #AR_35CUSTOM.CH%, KEY#K_NUM%
+	ELSE
+		FIND #AR_35CUSTOM.CH%, KEY#K_NUM% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #AR_35CUSTOM.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	SELECT SORTBY$
+		CASE 'N'
+			GOTO ExitTotal IF (AR_35CUSTOM::CUSNUM > TO.ITEM$) AND &
+				TO.ITEM$ <> ""
+		CASE 'T'
+			GOTO ExitTotal IF (AR_35CUSTOM::TTYPE > TO.ITEM$) AND &
+				TO.ITEM$ <> ""
+		CASE 'C'
+			GOTO ExitTotal IF (AR_35CUSTOM::CATEGORY > TO.ITEM$) AND &
+				TO.ITEM$ <> ""
+		CASE 'A'
+			GOTO ExitTotal IF (AR_35CUSTOM::ALPSRT > TO.ITEM$) AND &
+				TO.ITEM$ <> ""
+	END SELECT
+
+	!
+	! Collect aging information
+	!
+
+	!
+	! Clear totals
+	!
+	BALANCE = 0.0
+	AR_CUSBAL::AGING(I%) = 0.0 FOR I% = 0% TO 4%
+	AR_CUSBAL::CHARGE = 0.0
+
+	!
+	! Collect aging information
+	!
+	IF LB_FUNC_AGEAR(AR_35CUSTOM::CUSNUM, &
+		AGE.DATE$, &
+		"", &
+		"", &
+		"", &
+		NUM_ACCT%, &
+		ARRAY_CUSBAL()) <> 0%
+	THEN
+		TEXT$ = "           *** Unable to age ***"
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	ELSE
+		!
+		! Add aging information
+		!
+		FOR THIS_ACCT% = 1% TO NUM_ACCT%
+			AR_CUSBAL::AGING(I%) = AR_CUSBAL::AGING(I%) + &
+				ARRAY_CUSBAL(THIS_ACCT%)::AGING(I%) &
+				FOR I% = 0% TO 4%
+			AR_CUSBAL::CHARGE = AR_CUSBAL::CHARGE + &
+				ARRAY_CUSBAL(THIS_ACCT%)::CHARGE
+		NEXT THIS_ACCT%
+	END IF
+
+	!
+	! Grand total
+	!
+	TOTAL_CUSBAL(J%) = TOTAL_CUSBAL(J%) + AR_CUSBAL::AGING(J%) &
+		FOR J% = 0% TO 4%
+	TOTAL_SRVCHG = TOTAL_SRVCHG + AR_CUSBAL::CHARGE
+
+	!
+	! Accumulate balance
+	!
+	BALANCE = &
+		FUNC_ROUND(AR_CUSBAL::AGING(0%) + &
+		AR_CUSBAL::AGING(1%) + &
+		AR_CUSBAL::AGING(2%) + &
+		AR_CUSBAL::AGING(3%) + &
+		AR_CUSBAL::AGING(4%) + &
+		AR_CUSBAL::CHARGE, 2%)
+
+	IF BALANCE <> 0.0 OR ZERO.BALANCE$ = "Y"
+	THEN
+		!
+		! Print aging line
+		!
+		TEXT$ = AR_35CUSTOM::CUSNUM + " " + &
+			LEFT(AR_35CUSTOM::CUSNAM, 30%) + " " + &
+			PRNT_PHONE(AR_35CUSTOM::PHONE, 0%) + &
+			FORMAT$(AR_CUSBAL::AGING(0%) + &
+				AR_CUSBAL::CHARGE, "#########.## ") + &
+			FORMAT$(AR_CUSBAL::AGING(1%), "#########.## ") + &
+			FORMAT$(AR_CUSBAL::AGING(2%), "#########.## ") + &
+			FORMAT$(AR_CUSBAL::AGING(3%), "#########.## ") + &
+			FORMAT$(AR_CUSBAL::AGING(4%), "#########.## ") + &
+			FORMAT$(BALANCE, "########.##")
+
+		CALL OUTP_LINE(LYT_LINE, UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+
+		!
+		! Add a blank line to seperate the records
+		!
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	BALANCE = &
+		TOTAL_CUSBAL(0%) + &
+		TOTAL_CUSBAL(1%) + &
+		TOTAL_CUSBAL(2%) + &
+		TOTAL_CUSBAL(3%) + &
+		TOTAL_CUSBAL(4%) + &
+		TOTAL_SRVCHG
+
+	TEXT$ = "           " + &
+		"Total" + SPACE$(39%) + &
+		FORMAT$(TOTAL_CUSBAL(0%) + TOTAL_SRVCHG, "#########.## ") + &
+		FORMAT$(TOTAL_CUSBAL(1%), "#########.## ") + &
+		FORMAT$(TOTAL_CUSBAL(2%), "#########.## ") + &
+		FORMAT$(TOTAL_CUSBAL(3%), "#########.## ") + &
+		FORMAT$(TOTAL_CUSBAL(4%), "#########.## ") + &
+		FORMAT$(BALANCE, "########.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+		CASE 154%	! Locked record
+			SLEEP 1%
+			RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+		!
+		! Error in customer file
+		!
+		CASE 300%, 17000%
+			FILENAME$ = "AR_35CUSTOM"
+
+		!
+		! Error in control file
+		!
+		CASE 310%
+			IF ERR = 5%
+			THEN
+				!
+				! Fake a control file
+				!
+				AR_CONTROL::CTITLE = "Client"
+				AR_CONTROL::AR_ACCT = ""
+				AR_CONTROL::RETAIN = 0%
+				AR_CONTROL::LASTPERCLOSE = 0%
+				AR_CONTROL::YEAR = ""
+				AR_CONTROL::CLOSEFLAG = "0"
+				AR_CONTROL::CTITLE = "Customer"
+				AR_CONTROL::AGEPER(0) = 30%
+				AR_CONTROL::AGENAM(0) = "Current"
+				AR_CONTROL::AGEPER(1) = 30%
+				AR_CONTROL::AGENAM(1) = "31 to 60 days"
+				AR_CONTROL::AGEPER(2) = 30%
+				AR_CONTROL::AGENAM(2) = "61 to 90 days"
+				AR_CONTROL::AGEPER(3) = 30%
+				AR_CONTROL::AGENAM(3) = "91 to 120 days"
+				AR_CONTROL::AGEPER(4) = 30%
+				AR_CONTROL::AGENAM(4) = "121 and over"
+
+				RESUME 320
+			END IF
+
+			FILENAME$ = "AR_CONTROL"
+
+		!
+		! Error in open item file
+		!
+		CASE 320%
+			FILENAME$ = "AR_OPEN"
+
+		!
+		! Error in LB Matter file
+		!
+		CASE 330%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! Error in LB WIP file
+		!
+		CASE 340%
+			FILENAME$ = "LB_35WIP"
+
+		CASE 17020%	! End of file
+			RESUME ExitTotal IF ERR = 11%
+			FILENAME$ = "AR_35CUSTOM"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

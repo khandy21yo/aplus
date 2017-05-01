@@ -1,0 +1,445 @@
+1	%TITLE "Product Relation Edit List"
+	%SBTTL "RI_RPRT_RELATION"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RI004
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Product Ingredients\* option in the Master List menu provides
+	!	the means to print single level reports from the product ingredients
+	!	file.
+	!	.p
+	!	The report may be printed by product number, showing each of
+	!	the ingredients used in each product, or printed by ingredient
+	!	number, showing each product in which an ingredient is used.
+	!	.p
+	!	This report includes the following fields:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Product Description
+	!	.le
+	!	Item
+	!	.le
+	!	Ingredient Number
+	!	.le
+	!	Ingredient Description
+	!	.le
+	!	Quantity
+	!	.le
+	!	Operation
+	!	.le
+	!	Scrap (%)
+	!	.els
+	!
+	! Index:
+	!	.x Report>Product Structure
+	!	.x Product Structure>Report
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RI_SOURCE:RI_RPRT_RELATION/LINE
+	!	$ LINK/EXECUTABLE=RI_EXE: RI_RPRT_RELATION, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RI_RPRT_RELATION.OBJ;*
+	!
+	! Author:
+	!
+	!	09/10/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	06/20/90 - Aaron Redd
+	!		Added line layout information so that the report could
+	!		be sent to either a spreadsheet or to a DIF file.
+	!
+	!	04/22/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	01/29/96 - Kevin Handy
+	!		Reformat source code.
+	!		Change STRING$(...,ASCII(" ")) to "" in
+	!		several places.
+	!
+	!	05/16/97 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/02/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.HB"
+	MAP	(RI_RELATION)	RI_RELATION_CDD	RI_RELATION
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)	PD_PRODUCT_CDD	PD_PRODUCT
+
+	!
+	! External functions
+	!
+	EXTERNAL INTEGER FUNCTION COMP_STRING
+
+	!
+	! Declare variables and constants
+	!
+	DECLARE	STRING	LYT_LINE
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+ Init:
+	!
+	! Initialize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Item\*
+	!	.p
+	!	The ^*From Item\* field in the Product Structure Report Setting
+	!	Screen provides the means to begin the report with a selected
+	!	product number by entering the selection in this field.
+	!
+	! Index:
+	!	.x From Item>Product Ingredients
+	!	.x Product Ingredients>From Item
+	!	.x Item>From
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Item\*
+	!	.p
+	!	The ^*To Item\* field in the Product Structure Report Setting
+	!	Screen provides the means to select a specific product with which
+	!	the report will end by entering the selection in this field.
+	!
+	! Index:
+	!	.x To Item>Product Ingredients
+	!	.x Product Ingredients>To Item
+	!	.x Item>To
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	This ^*Wildcard\* field in the Product Structure Report Setting Screen
+	!	provides a means to select certain products to be printed in the report
+	!	wildcarding techniques.
+	!
+	! Index:
+	!	.x Wildcard>Product Ingredients
+	!	.x Product Ingredients>Wildcard
+	!
+	!--
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(9%), 132%)
+
+	!++
+	! Abstract:FLD10
+	!	^*(10) Sort (P,I)\*
+	!	.p
+	!	The ^*Sort (P,I)\* field in the Product Structure Report Setting
+	!	Screen provides the means to enter a flag which determines if the
+	!	report will print by product number, or showing the ingredients in each
+	!	product by ingredient number, showing the products in which
+	!	each ingredient is used.
+	!	.p
+	!	This field requires and entry and will accommodate one (1)
+	!	alphabetic character only. Valid characters are:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	^*P\* = Sort by Product
+	!	.le
+	!	^*I\* = Sort by Ingredient
+	!	.els
+	!
+	! Index:
+	!	.x Sort>Product Ingredients
+	!	.x Product Ingredients>Sort
+	!
+	!--
+
+	SELECT SORT.BY$
+	CASE "I"
+		SORT.KEY% = 1%
+		ADD.TITLE$ = "BY  INGREDIENT"
+	CASE "P"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  PRODUCT  NUMBER"
+	END SELECT
+
+
+300	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.OPN"
+
+310	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "PRODUCT  STRUCTURE  LIST  "+ADD.TITLE$
+	TITLE$(2%) = "Recipe Ingredients System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "Product#       Description               "+ &
+		"    Item   Ingredient#    Description         "+ &
+		"           Quantity Operation   Scrap(%)"
+	TITLE$(5%) = "."
+
+	!
+	! Line layouts
+	!
+	LYT_LINE = "$ProductNum:014,$ProductDescr:043,$ItemNum:049," + &
+		"$IngredientNum:066,$IngredientDescr:095,VQuantity:106," + &
+		"$Operation:116,VPercentScrap:128"
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #RI_RELATION.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #RI_RELATION.CH%, KEY#SORT.KEY% GE FROM.ITEM$,REGARDLESS
+
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #RI_RELATION.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+
+	SELECT SORT.BY$
+	CASE "P"
+		GOTO ExitTotal IF (RI_RELATION::PRODUCT > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_STRING(EDIT$(RI_RELATION::PRODUCT,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+
+	CASE "I"
+		GOTO ExitTotal IF (RI_RELATION::INGREDIENT > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF (RI_RELATION::PRODUCT < FROM.ITEM$) &
+			AND FROM.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_STRING(EDIT$(RI_RELATION::INGREDIENT,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+	END SELECT
+
+17200	PD_PRODUCT_PRODUCT$ = &
+		STRING$(LEN(PD_PRODUCT::DESCRIPTION),ASCII("?"))
+	GET #PD_PRODUCT.CH%, KEY#0% EQ RI_RELATION::PRODUCT,REGARDLESS
+	PD_PRODUCT_PRODUCT$ = PD_PRODUCT::DESCRIPTION
+
+17210	PD_PRODUCT::DESCRIPTION = &
+		STRING$(LEN(PD_PRODUCT::DESCRIPTION),ASCII("?"))
+	GET #PD_PRODUCT.CH%, KEY#0% EQ RI_RELATION::INGREDIENT,REGARDLESS
+
+17300	!
+	! Print out one line
+	!
+	SELECT SORT.BY$
+	CASE "I"
+		IF TEST_PRODUCT$<>""
+		THEN
+			IF TEST_PRODUCT$ = RI_RELATION::INGREDIENT
+			THEN
+				PD_PRODUCT::DESCRIPTION = ""
+			END IF
+		END IF
+		TEST_PRODUCT$  = RI_RELATION::INGREDIENT
+	CASE "P"
+		IF TEST_PRODUCT$<>""
+		THEN
+			IF TEST_PRODUCT$ = RI_RELATION::PRODUCT
+			THEN
+				PD_PRODUCT_PRODUCT$ = ""
+			END IF
+		END IF
+		TEST_PRODUCT$  = RI_RELATION::PRODUCT
+	END SELECT
+
+	TEXT$ =  RI_RELATION::PRODUCT + " " + &
+		LEFT(PD_PRODUCT_PRODUCT$,28%)+"  "+ &
+		RI_RELATION::ITEMNUM + "   " + &
+		RI_RELATION::INGREDIENT + " " + &
+		LEFT(PD_PRODUCT::DESCRIPTION,28%)+ &
+		FORMAT$(RI_RELATION::QUANTITY, &
+			"###,###.###")+ " "+ &
+		RI_RELATION::OPERATION + "     " + &
+		FORMAT$(RI_RELATION::SCRAP/100.0, &
+			"<%>##.##")
+
+	CALL OUTP_LINE(LYT_LINE, UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 300%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 310%
+		RESUME ReportTitle IF ERR = 5%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 17200%	! Undefined product
+		RESUME 17210 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 17210%	! Undefined ingredient
+		RESUME 17300 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "PD_PRODUCT"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

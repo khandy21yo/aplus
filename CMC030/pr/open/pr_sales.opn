@@ -1,0 +1,26 @@
+	!======================================================================
+	! PR_SALES file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_SALES.CH%, STAT%)
+	CALL READ_DEVICE('PR_SALES',PR_SALES.DEV$, STAT%)
+
+	PR_SALES.NAME$ = PR_SALES.DEV$+"PR_SALES.MAS"
+
+	OPEN PR_SALES.NAME$ FOR INPUT AS FILE PR_SALES.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_SALES, &
+		PRIMARY KEY &
+		( &
+			PR_SALES::LOCATION, &
+			PR_SALES::DEPARTMENT, &
+			PR_SALES::SALEDATE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			PR_SALES::SALEDATE, &
+			PR_SALES::LOCATION, &
+			PR_SALES::DEPARTMENT &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

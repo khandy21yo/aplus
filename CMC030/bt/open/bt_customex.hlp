@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Extra Info for Customer File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BT__CUSTOMEX.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Tuition System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Extra Info for Customer File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BT__CUSTOMEX.MAS\*
+	!	.p
+	!	Extra Info for Customer File.
+	!	all additional information pertaining to each customer.
+	!
+	! Index:
+	!	.x Extra Info for Customer File
+	!	.x BT_CUSTOMEX
+	!
+	!--

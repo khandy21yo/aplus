@@ -1,0 +1,19 @@
+	!======================================================================
+	! AD_JOURNAL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_JOURNAL.CH%, STAT%)
+	CALL READ_DEVICE('AD_JOURNAL',AD_JOURNAL.DEV$, STAT%)
+
+	AD_JOURNAL.NAME$ = AD_JOURNAL.DEV$+"AD_JOURNAL_"+BATCH_NO$+".JRL"
+
+	OPEN AD_JOURNAL.NAME$ FOR INPUT AS FILE AD_JOURNAL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_JOURNAL, &
+		PRIMARY KEY &
+		( &
+			AD_JOURNAL::DEP_OBJECT, &
+			AD_JOURNAL::ACTION_DATE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

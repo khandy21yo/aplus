@@ -1,0 +1,25 @@
+	!======================================================================
+	! OE_SHIPTO file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_SHIPTO.CH%, STAT%)
+	CALL READ_DEVICE('OE_SHIPTO',OE_SHIPTO.DEV$, STAT%)
+	CALL READ_PROTECTION('OE_SHIPTO',OE_SHIPTO.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(OE_SHIPTO.PRO$, STAT%)
+
+	OE_SHIPTO.NAME$ = OE_SHIPTO.DEV$+"OE_SHIPTO.MAS"
+
+	OPEN OE_SHIPTO.NAME$ AS FILE OE_SHIPTO.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_SHIPTO, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			OE_SHIPTO::CUSNUM, &
+			OE_SHIPTO::LINES &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

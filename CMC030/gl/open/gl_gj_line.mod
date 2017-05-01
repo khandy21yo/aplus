@@ -1,0 +1,19 @@
+	!======================================================================
+	! GL_GJ_LINE file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_GJ_LINE.CH%, STAT%)
+	CALL READ_DEVICE('GL_GJ_LINE',GL_GJ_LINE.DEV$, STAT%)
+
+	GL_GJ_LINE.NAME$ = GL_GJ_LINE.DEV$+"GL_GJ_"+JRL_TYPE$+".JRL"
+
+	OPEN GL_GJ_LINE.NAME$ FOR INPUT AS FILE GL_GJ_LINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_GJ_LINE, &
+		PRIMARY KEY &
+		( &
+			GL_GJ_LINE::JOURNAL, &
+			GL_GJ_LINE::ITEMNUM &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+

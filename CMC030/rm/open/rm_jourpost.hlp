@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Restaurant Journal Posting File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*RM__JOURPOST.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Restaurant Management System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Restaurant Journal Posting File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*RM__JOURPOST.JRL\*
+	!	.p
+	!	Restaurant Journal Posting File.
+	!
+	! Index:
+	!	.x Restaurant Journal Posting File
+	!	.x RM_JOURPOST
+	!--

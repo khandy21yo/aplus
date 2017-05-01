@@ -1,0 +1,21 @@
+	!======================================================================
+	! OE_PROMO file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_PROMO.CH%, STAT%)
+	CALL READ_DEVICE('OE_PROMO',OE_PROMO.DEV$, STAT%)
+
+	OE_PROMO.NAME$ = OE_PROMO.DEV$+"OE_PROMO.TBL"
+
+	OPEN OE_PROMO.NAME$ FOR INPUT AS FILE OE_PROMO.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_PROMO, &
+		PRIMARY KEY &
+			OE_PROMO::REFPROMO, &
+		ALTERNATE KEY &
+		( &
+			OE_PROMO::TODATE, &
+			OE_PROMO::REFPROMO &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,248 @@
+1	%TITLE "Billing for Services Journal"
+	%SBTTL "BS_MAST_BILL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	This program maintains the Billing for services journal file.
+	!
+	! Compile:
+	!
+	!	$ BAS BS_SOURCE:BS_MAST_BILL/LINE
+	!	$ LINK/EXE=BS_EXE: BS_MAST_BILL, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BS_MAST_BILL.OBJ;*
+	!
+	! Author:
+	!
+	!	09/26/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/13/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards.
+	!		Change last param on entr_3choices from "" to 0%
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/25/97 - Kevin Handy
+	!		Change 'val' to 'val%'
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	08/06/99 - Kevin Handy
+	!		Trim BATCH_NO$ before taking it's length (MAP
+	!		variable never changes length)
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BS_WINDOW.INC"
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	! This common area must be mapped in both the main program and
+	! in MAINT_GROUP.
+	!
+	COM (BATCH_BS_BILL) &
+		BATCH_NO$ = 6%
+
+	COM (CH_BS_BILL) &
+		BS_BILL.CH%, &
+		BS_BILL.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG		FUNCTION MAINT_GROUP
+
+	%PAGE
+
+	!
+	! Initilization section - Prepare to do anything
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Initialize all the standard stuff through an external call
+	!
+	CALL READ_INITIALIZE
+
+300	!
+	! Query user for year of file
+	!
+	CALL READ_DEVICE("BS_BILL",BS_BILL.DEV$,STAT%)
+	CALL FIND_FILE( BS_BILL.DEV$ + "BS_BILL_*.JRL", BS_BILL_FILE$(), &
+		16%,"","")
+
+	BS_BILL_FILE% = VAL%(BS_BILL_FILE$(0%))
+
+	IF BS_BILL_FILE%
+	THEN
+		BS_BILL_FILE$(LOOP%) = &
+			MID(BS_BILL_FILE$(LOOP%),9%,6%) &
+				FOR LOOP% = 1% TO BS_BILL_FILE%
+
+		TEMP$ = "Billing Journal Files"
+
+		X% = ENTR_3CHOICE(SCOPE, "", "", BS_BILL_FILE$(), "", &
+			0%, TEMP$, "", 0%)
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(BS_BILL_FILE$(X%), -1%)
+			GOTO 400
+		END IF
+	END IF
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask for year
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		20%, &
+		80%, &
+		SMG_SCREEN_DATA% &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		1%, &
+		1% &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Period:", 11%, 30%)
+
+320	BATCH_NO$ = "      "
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 11%, 43%, BATCH_NO$, -1%, 16%)
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	BATCH_NO$ = EDIT$(BATCH_NO$, -1%)
+
+	IF LEN(TRM$(BATCH_NO$)) <> 6%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Please enter the Period in YYYYPP format", 0%)
+		GOTO 320
+	END IF
+
+400	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+1000	!******************************************************************
+	! Handle the main file
+	!******************************************************************
+
+	!
+	! Maintain file
+	!
+	V% = MAIN_WINDOW(BS_MAIN_BILL.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	ON ERROR GOTO 0
+
+19990	END
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "FUNC_INCLUDE:BS_WINDOW.INC"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION BS_MAIN_BILL
+	EXTERNAL LONG FUNCTION BS_MAIN_CLIENT
+	EXTERNAL LONG FUNCTION BS_MAIN_PROGRAM
+
+	%PAGE
+
+	SELECT SMG_WINDOW::IDENT
+
+	CASE BS_MAIN_BILL.ID
+		MAINT_GROUP = BS_MAIN_BILL(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE BS_MAIN_CLIENT.ID
+		MAINT_GROUP = BS_MAIN_CLIENT(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE BS_MAIN_PROGRAM.ID
+		MAINT_GROUP = BS_MAIN_PROGRAM(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

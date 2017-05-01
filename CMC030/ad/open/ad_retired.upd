@@ -1,0 +1,21 @@
+	!======================================================================
+	! AD_RETIRED file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_RETIRED.CH%, STAT%)
+	CALL READ_DEVICE('AD_RETIRED',AD_RETIRED.DEV$, STAT%)
+
+	AD_RETIRED.NAME$ = AD_RETIRED.DEV$+"AD_RETIRED.MAS"
+
+	OPEN AD_RETIRED.NAME$ FOR INPUT AS FILE AD_RETIRED.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_RETIRED, &
+		PRIMARY KEY &
+			AD_RETIRED::ASSET_NUM, &
+		ALTERNATE KEY &
+		( &
+			AD_RETIRED::RET_DATE, &
+			AD_RETIRED::ASSET_NUM &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

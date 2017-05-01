@@ -1,0 +1,31 @@
+	!======================================================================
+	! UTL_LOCATION file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_LOCATION.CH%, STAT%)
+	CALL READ_DEVICE('UTL_LOCATION',UTL_LOCATION.DEV$, STAT%)
+
+	UTL_LOCATION.NAME$ = UTL_LOCATION.DEV$+"UTL_LOCATION.TBL"
+
+	OPEN UTL_LOCATION.NAME$ FOR INPUT AS FILE UTL_LOCATION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_LOCATION, &
+		PRIMARY KEY &
+			UTL_LOCATION::LOCATION, &
+		ALTERNATE KEY &
+		( &
+			UTL_LOCATION::REGION, &
+			UTL_LOCATION::LOCATION &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			UTL_LOCATION::LOCGROUP, &
+			UTL_LOCATION::LOCATION &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			UTL_LOCATION::STATE, &
+			UTL_LOCATION::LOCATION &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

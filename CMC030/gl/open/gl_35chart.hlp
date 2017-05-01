@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The CHART OF ACCOUNTS is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__35CHART.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x CHART OF ACCOUNTS
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__35CHART.MAS\*
+	!	.p
+	!	CHART OF ACCOUNTS.
+	!
+	! Index:
+	!	.x CHART OF ACCOUNTS
+	!	.x GL_35CHART
+	!--

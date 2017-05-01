@@ -1,0 +1,665 @@
+1	%TITLE "Calculate Service Charges for Legal Billing"
+	%SBTTL "AR_SPEC_LBSERCHRG"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:ARSCLB
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Calculated\* program provides the means to calculate the service charges
+	!	for each overdue account.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Calculate Service Charge
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_SPEC_LBSERCHRG/LINE
+	!	$ LINK/EXE=AR_EXE: AR_SPEC_LBSERCHRG, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AR_SPEC_LBSERCHRG.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	03/08/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/25/88 - Kevin Handy
+	!		Fixed problem where a customer without a country
+	!		didn't get charged service charge.  Forced the
+	!		country to "US" (United States Bias).
+	!
+	!	04/27/88 - Kevin Handy
+	!		Changed from asking for CUTOFF DATE to ask for
+	!		CUTOFF PERIOD, which is what is actually is.
+	!
+	!	04/29/88 - Kevin Handy
+	!		Fixed bug in summary.
+	!
+	!	06/06/91 - Kevin Handy
+	!		Unwound error trapping.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	MAP (UTL_REPORTX)	UTL_REPORTX_CDD	UTL_REPORTX
+
+	!
+	! Include files
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP	(AR_CONTROL)	AR_CONTROL_CDD	AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_SERCHG"
+	MAP	(AR_SERCHG)	AR_SERCHG_CDD	AR_SERCHG
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN"
+	MAP	(AR_OPEN)	AR_OPEN_CDD	AR_OPEN
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_SJH"
+	MAP	(AR_SJH)	AR_SJH_CDD	AR_SJH
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_SJL"
+	MAP	(AR_SJL)	AR_SJL_CDD	AR_SJL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP	(AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSBAL"
+	MAP (AR_CUSBAL)	AR_CUSBAL_CDD	AR_CUSBAL
+	DIM AR_CUSBAL_CDD ARRAY_CUSBAL(1%)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_MATTER"
+	MAP (LB_MATTER)	LB_MATTER_CDD	LB_MATTER
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_35WIP"
+	MAP (LB_35WIP)	LB_35WIP_CDD	LB_35WIP
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_CONTROL"
+	MAP (LB_CONTROL) LB_CONTROL_CDD LB_CONTROL
+
+	!MAP (DP_OUTP_XUNSOL) RRR_FLAG%
+
+	COM (CH_AR_35CUSTOM) AR_35CUSTOM.CH%
+	COM (CH_AR_SJH)    AR_SJH.CH%
+	COM (CH_AR_SJL)    AR_SJL.CH%
+	COM (CH_AR_OPEN) AR_OPEN.CH%
+	COM (CH_LB_35WIP) LB_35WIP.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION DATE_STOREDATE
+	EXTERNAL STRING  FUNCTION PRNT_DATE
+	EXTERNAL REAL    FUNCTION FUNC_ROUND
+
+	EXTERNAL LONG    FUNCTION LB_FUNC_AGEAR
+	EXTERNAL INTEGER FUNCTION FUNC_INCREMENT
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+
+	CALL READ_INITIALIZE
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	BASE_DAY$	= DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(0%), 128%))
+	!++
+	! Abstract:FLD01
+	!	.x Age Date
+	!	^*(01) Age Date\*
+	!	.b
+	!	.lm +5
+	!	The ^*Age Date\* field indicates the date at which the system will begin
+	!	considering services charges. Any invoice equal to or older than this date
+	!	that has not been paid (or partially paid) will be considered for service
+	!	charge. If the customer flag in the customer master file has been set
+	!	to "^*N\*", no consideration will be given for service charge.
+	!	.b
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	CUTOFF$		= LEFT(EDIT$(UTL_REPORTX::OPTDEF(1%), 128%), 6%)
+	!++
+	! Abstract:FLD02
+	!	.x Cut Off
+	!	^*(02) Cut Off\*
+	!	.b
+	!	.lm +5
+	!	The ^*Cutoff Period\* field allows for entry of the last period to be considered
+	!	for the service charge calculation.  Invoices that have a date more
+	!	recent than the period entered will not be considered for service charges.
+	!	.b
+	!	The format for entry is YYYYPP.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	REF_NO$		= EDIT$(UTL_REPORTX::OPTDEF(2%), 128%)
+	!++
+	! Abstract:FLD03
+	!	^*(03) Reference Number\*
+	!	.b
+	!	.lm +5
+	!	The ^*Reference Number\* field defines the Service Charge Invoice number to
+	!	assign to the first service charge entry made to the sales journal. This
+	!	number is incremented after each invoice is created, therefore, this should be
+	!	a numeric number. Suggested use is to block out a group of numbers (ie:
+	!	"900000" to "999999") for use with service charges. This allows
+	!	identifying service charge invoices quickly.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Reference Number
+	!
+	!--
+
+	BATCH_NO$	= "SC"
+
+	CALL  READ_DEVICE("AR_SJH", AR_SJH.DEV$, STAT%)
+	CALL  READ_DEVICE("AR_SJL", AR_SJL.DEV$, STAT%)
+
+200	!
+	KILL AR_SJH.DEV$ + "AR_SJH_" + BATCH_NO$ + ".JRL" FOR I% = 1% TO 10%
+
+210	KILL AR_SJL.DEV$ + "AR_SJL_" + BATCH_NO$ + ".JRL" FOR I% = 1% TO 10%
+
+300	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+
+	GET #AR_CONTROL.CH%, RECORD 1%
+
+	CLOSE #AR_CONTROL.CH%
+
+310	!
+	! LB Control file
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_CONTROL.OPN"
+
+	GET #LB_CONTROL.CH%, REGARDLESS
+
+	UNLOCK #LB_CONTROL.CH%
+
+	LB_CONTROL::LAST_BILL = XLATE(LB_CONTROL::LAST_BILL, &
+		STRING$(48%,0%) + "0123456789")
+
+320	!
+	! Open service charge file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_SERCHG.OPN"
+
+330	!
+	! Open register file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+
+340	!
+	! Open the matter file
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_MATTER.OPN"
+
+350	!
+	! Open the WIP file
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_35WIP.OPN"
+
+360	!
+	! Open customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+370	!
+	! Open sales journal file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_SJH.CRE"
+
+380	!
+	! Open sales journal line item file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_SJL.CRE"
+
+	%PAGE
+
+17000	!******************************************************************
+	! Process
+	!******************************************************************
+
+	RESET #LB_MATTER.CH%
+
+	CALL ENTR_3MESSAGE(SCOPE, "Calculating...", 1%)
+
+ GetNextRec:
+17020	!
+	! Get a customer
+	!
+	GET #LB_MATTER.CH%, REGARDLESS
+
+
+17030	!
+	! Look up the client in the client file
+	!
+	GET #AR_35CUSTOM.CH%, KEY#0% EQ LB_MATTER::CLIENT_TO_BILL, REGARDLESS
+
+	!
+	! Skip if flagged no service charge
+	!
+	GOTO 17020 IF AR_35CUSTOM::SERCHRG = "N"
+
+	!
+	! Tell them who we are working on
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Calculating...  " + AR_35CUSTOM::CUSNUM, 1%)
+
+	!*******************************************************************
+	! Calculate customer balances by account numbers
+	!*******************************************************************
+
+	IF LB_FUNC_AGEAR(AR_35CUSTOM::CUSNUM, &
+		BASE_DAY$, &
+		CUTOFF$, &
+		LB_MATTER::MATTER_NUM, &
+		LB_MATTER::B_METHOD, &
+		NUM_ACCT%, &
+		ARRAY_CUSBAL())
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Error aging " + AR_35CUSTOM::CUSNUM, 0%)
+		GOTO ExitProgram
+	END IF
+
+	%PAGE
+
+ CalcServ:
+17400	!******************************************************************
+	! Calculate service charges
+	!******************************************************************
+	!
+	! Scan for an exact match on service charge
+	!
+	AR_35CUSTOM::COUNTRY = "US" IF AR_35CUSTOM::COUNTRY = ""
+
+	GET #AR_SERCHG.CH%, KEY #0 EQ AR_35CUSTOM::COUNTRY + &
+		AR_35CUSTOM::STATE + &
+		AR_CONTROL::AR_ACCT, &
+		REGARDLESS
+
+	GOTO 17440
+
+17410	!
+	! Scan for a match for country only on service charge
+	!
+	GET #AR_SERCHG.CH%, KEY #0 EQ AR_35CUSTOM::COUNTRY + &
+		"  " + &
+		AR_CONTROL::AR_ACCT, &
+		REGARDLESS
+
+	GOTO 17440
+
+17440	!
+	! Calculate amount past due as everything except
+	! the current amount.
+	!
+	AMOUNT_DUE = 0.0
+	AMOUNT_DUE = AMOUNT_DUE + ARRAY_CUSBAL(1%)::AGING(LOOP%) &
+		FOR LOOP% = 1% TO 4%
+
+	!
+	! Check against minimum amount
+	!
+	GOTO 17490 IF AMOUNT_DUE < AR_SERCHG::DOLLAR
+
+	!
+	! Calculate service charge
+	!
+	SC_AMT = FUNC_ROUND(AMOUNT_DUE * AR_SERCHG::SERCHG / 100.0, 2%)
+	SC_AMT = AR_SERCHG::MINIMUM IF SC_AMT < AR_SERCHG::MINIMUM
+
+	!
+	! Create SJ header record for service charge
+	!
+	AR_SJH::INVNUM	= REF_NO$		! Invoice #
+
+	STAT% = FUNC_INCREMENT(REF_NO$)		! Increment invoice number
+
+	AR_SJH::CUSNUM	= AR_35CUSTOM::CUSNUM	! Customer number
+	AR_SJH::TRATYP	= "04"			! Service charge
+	AR_SJH::TRADAT	= BASE_DAY$		! Transaction Date
+	AR_SJH::AMOUNT	= SC_AMT		! Sales amount
+	AR_SJH::ARACCT	= AR_SERCHG::ACCT	! GL number
+	AR_SJH::RECNUM	= ""			! Receipt number
+	AR_SJH::CHECK	= ""			! Check number
+	AR_SJH::DEPOSIT	= ""			! Deposit number
+	AR_SJH::DESCR	= "Service Charge"	! Description
+
+	!
+	! Create SJ line item record
+	!
+	AR_SJL::INVNUM	= AR_SJH::INVNUM	! Invoice number
+	AR_SJL::SLINE	= "001"			! Line number
+	AR_SJL::ACCT	= AR_SERCHG::SCREV	! Account number
+	AR_SJL::SUBACCT	= LB_MATTER::MATTER_NUM	! Sub Account
+	AR_SJL::LTYPE	= "S"			! Invoice type
+	AR_SJL::DESCR	= "Service Charge"	! Description
+	AR_SJL::AMOUNT	= -SC_AMT		! Amount
+	AR_SJL::QTY	= 0.0			! Quantity
+	AR_SJL::TAXTYP	= "0"			! Tax Type
+
+17450	!
+	! Put SJH record to file
+	!
+	PUT #AR_SJH.CH%
+
+17460	!
+	! Put SJL record to file
+	!
+	PUT #AR_SJL.CH%
+
+17470	!
+	! Store header totals by account for summary
+	!
+	FOR LOOP% = 1% TO SUMMARY_H%
+		GOTO 17476 IF SUMMARY_H$(LOOP%) = AR_SERCHG::ACCT
+		GOTO 17473 IF SUMMARY_H$(LOOP%) > AR_SERCHG::ACCT
+	NEXT LOOP%
+
+	LOOP% = SUMMARY_H% + 1%
+
+17473	FOR LOOP2% = SUMMARY_H% TO LOOP% STEP -1%
+		SUMMARY_H$(LOOP2% + 1%) = SUMMARY_H$(LOOP2%)
+		SUMMARY_H(LOOP2% + 1%)  = SUMMARY_H(LOOP2%)
+	NEXT LOOP2%
+
+	SUMMARY_H$(LOOP%) = AR_SERCHG::ACCT
+	SUMMARY_H(LOOP%) = 0.0
+	SUMMARY_H% = SUMMARY_H% + 1%
+
+17476	SUMMARY_H(LOOP%) = SUMMARY_H(LOOP%) + SC_AMT
+
+17480	!
+	! Store header totals by account for summary
+	!
+	FOR LOOP% = 1% TO SUMMARY_L%
+		GOTO 17486 IF SUMMARY_L$(LOOP%) = AR_SERCHG::SCREV
+		GOTO 17483 IF SUMMARY_L$(LOOP%) > AR_SERCHG::SCREV
+	NEXT LOOP%
+
+	LOOP% = SUMMARY_L% + 1%
+
+17483	FOR LOOP2% = SUMMARY_L% TO LOOP% STEP -1%
+		SUMMARY_L$(LOOP2% + 1%) = SUMMARY_L$(LOOP2%)
+		SUMMARY_L(LOOP2% + 1%)  = SUMMARY_L(LOOP2%)
+	NEXT LOOP2%
+
+	SUMMARY_L$(LOOP%) = AR_SERCHG::SCREV
+	SUMMARY_L(LOOP%) = 0.0
+	SUMMARY_L% = SUMMARY_L% + 1%
+
+17486	SUMMARY_L(LOOP%) = SUMMARY_L(LOOP%) + SC_AMT
+
+17490	!
+
+17500	!
+	! Loop back around for another customer
+	!
+	GOTO GetNextRec
+
+17600	!*******************************************************************
+	! Print out summary
+	!*******************************************************************
+
+	!
+	! Set up header
+	!
+	TITLE$(1%) = "Service Charge Calculation"
+	TITLE$(2%) = "For the base date of " + PRNT_DATE(BASE_DAY$, 8%)
+	TITLE$(3%) = "Cutoff period of " + CUTOFF$
+	TITLE$(4%) = "AR System"
+	TITLE$(5%) = ""
+	TITLE$(6%) = "   Account            Amount"
+	TITLE$(7%) = ""
+
+	!
+	! Print out header account summary
+	!
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+	TOTAL_BAL = 0.0
+	TEXT$ = "AR Account Summary"
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 10%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FOR LOOP% = 1% TO SUMMARY_H%
+		!
+		! Print one line of header info
+		!
+		TEXT$ = "   " + &
+			SUMMARY_H$(LOOP%) + " " + &
+			FORMAT$(SUMMARY_H(LOOP%), "######.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 2%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+
+		TOTAL_BAL = TOTAL_BAL + SUMMARY_H(LOOP%)
+	NEXT LOOP%
+
+	!
+	! Print total of header info
+	!
+	TEXT$ = "     Total            " + &
+		FORMAT$(TOTAL_BAL, "######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Print out header account summary
+	!
+	TOTAL_BAL = 0.0
+	TEXT$ = "Service Charge Account Summary"
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 10%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FOR LOOP% = 1% TO SUMMARY_L%
+		!
+		! Print one line of header info
+		!
+		TEXT$ = "   " + &
+			SUMMARY_L$(LOOP%) + " " + &
+			FORMAT$(SUMMARY_L(LOOP%), "######.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+
+		TOTAL_BAL = TOTAL_BAL + SUMMARY_L(LOOP%)
+	NEXT LOOP%
+
+	!
+	! Print total of header info
+	!
+	TEXT$ = "    Total             " + &
+		FORMAT$(TOTAL_BAL, "######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+ HelpError:
+	!**********************************************************
+	! Help Message for an error
+	!**********************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	! if this is a report then
+	UTL_REPORTX::STAT = -1%
+
+	GOTO ExitProgram
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	!
+	! Record locked
+	!
+	IF ERR=154%
+	THEN
+		SLEEP 5%
+		RESUME
+	END IF
+
+	FILENAME$ = ""
+	SELECT ERL
+
+		!
+		! Kill sales journal
+		!
+		CASE 200%
+			RESUME 210
+
+		CASE 210%
+			RESUME 300
+
+		!
+		! No ageday file
+		!
+		CASE 300%
+			FILENAME$ = "AR_CONTROL"
+
+		!
+		! No lb control file
+		!
+		CASE 310%
+			FILENAME$ = "LB_CONTROL"
+
+
+		!
+		! No service charge file
+		!
+		CASE 320%
+			FILENAME$ = "AR_SERCHG"
+
+		!
+		! No ar open file
+		!
+		CASE 330%
+			RESUME 340 IF ERR = 5%
+			FILENAME$ = "AR_OPEN"
+
+		!
+		! No LB matter file
+		!
+		CASE 17020%
+			RESUME 17600 IF ERR = 11%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! No LB matter file
+		!
+		CASE 340%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! No LB Wip file
+		!
+		CASE 350%
+			FILENAME$ = "LB_35WIP"
+
+		!
+		! No customer file
+		!
+		CASE 360%
+			FILENAME$ = "AR_35CUSTOM"
+
+		!
+		! No customer file
+		!
+		CASE 17030%
+			RESUME 17020 IF ERR = 155%
+			FILENAME$ = "AR_35CUSTOM"
+
+		!
+		! SJH file
+		!
+		CASE 370%, 17450%
+			FILENAME$ = "AR_SJH"
+
+		!
+		! SJL file
+		!
+		CASE 380%, 17460%
+			FILENAME$ = "AR_SJL"
+
+		!
+		! Error in search for service charge information
+		!
+		CASE 17400%
+			RESUME 17410
+
+		CASE 17410%
+			RESUME 17490
+
+
+	END SELECT
+
+	RESUME HelpError
+
+32767	END

@@ -1,0 +1,329 @@
+1	%TITLE "Employee Billing Description"
+	%SBTTL "BA_RPRT_BILTBL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BA051
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*List Billing Table\* option provides a report which
+	!	contains the following information:
+	!	.b
+	!	.lm +10
+	!	.list 0,"*"
+	!	.le
+	!	Employee _#
+	!	.le
+	!	Customer _#
+	!	.le
+	!	Contract
+	!	.le
+	!	From Date
+	!	.le
+	!	To Date
+	!	.le
+	!	Method
+	!	.le
+	!	Rate
+	!	.le
+	!	Billable
+	!	.le
+	!	Bill To Date
+	!	.els
+	!	.lm -10
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_RPRT_BILTBL/LINE
+	!	$ LINK/EXE=BA_EXE: BA_RPRT_BILTBL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BA_RPRT_BILTBL.OBJ;*
+	!
+	! Author:
+	!
+	!	05/04/88 - Lance Williams
+	!
+	! Modification history:
+	!
+	!	06/22/90 - Aaron Redd
+	!		Added line layout information so that the report could
+	!		also be sent to either a spreadsheet or a DIF file.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/30/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.HB"
+	MAP (BA_BILTBL) BA_BILTBL_CDD BA_BILTBL
+
+	!
+	! Declare variables and constants
+	!
+	DECLARE	STRING	LYT_LINE
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Client\*
+	!	.p
+	!	A ^*From Client\* value entered in this field causes the
+	!	printing of the report to begin with the selected Client.
+	!	.p
+	!	A blank setting will cause the report to begin with the first
+	!	Client in the file.
+	!
+	! Index:
+	!	.x From Client
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Client\*
+	!	.p
+	!	A ^*To Client\* value entered in this field causes the
+	!	printing of the report to end with the selected Client.
+	!	.p
+	!	A blank setting will cause the report to end with the last
+	!	Client in the file.
+	!
+	! Index:
+	!	.x To Client
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+
+	!++
+	! Abstract:FLD03
+	!
+	!	^*(03) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field provides the means to select designated
+	!	Clients to be printed by entering a "wildcard" value in this field.
+	!
+	! Index:
+	! Datatype:TEXT
+	! Size:10
+	!--
+
+
+300	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.OPN"
+
+	%PAGE
+
+ ReportTitle:
+	!
+	! Set up titles
+	!
+	TITLE$(1%) = "BILLING  DEPARTMENT  REPORT"
+	TITLE$(2%) = "Billing Agency System"
+	TITLE$(3%) = ""
+
+	!
+	! Column headings
+	!
+	TITLE$(4%) = "Client #       Agency #                 " + &
+		"Contract    FromDate     ToDate  Method          Rate     " + &
+		"Billable   BilToDate"
+	TITLE$(5%) = "."
+
+	!
+	! Line layouts
+	!
+	LYT_LINE = "$EmpNum:010,$CusNum:024,$Contract:048," + &
+		"DFromDate:060,DToDate:071,$Method:079,VRate:093," + &
+		"VBillableAmt:106,VBillToDate:118"
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BA_BILTBL.CH%
+	ELSE
+		FIND #BA_BILTBL.CH%, KEY#0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BA_BILTBL.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (BA_BILTBL::EMPNUM > TO.ITEM$) AND TO.ITEM$ <> ""
+
+	GOTO GetNextRec &
+		IF COMP_STRING(EDIT$(BA_BILTBL::EMPNUM,-1%), WLDCRD$) = 0% &
+		AND WLDCRD$ <> ""
+
+17300	!
+	! Print out one line
+	!
+	IF (BA_BILTBL::EMPNUM <> EMPLOYEE$) AND (EMPLOYEE$ <> "")
+	THEN
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	END IF
+
+	TEXT$ = BA_BILTBL::EMPNUM + "    " + &
+		BA_BILTBL::CUSNUM + "    " + &
+		BA_BILTBL::CONTRACT + "  " + &
+		PRNT_DATE(BA_BILTBL::FROMDATE,8%) + " " + &
+		PRNT_DATE(BA_BILTBL::TODATE,8%) + "       " + &
+		BA_BILTBL::METHOD + "     " + &
+		FORMAT$(BA_BILTBL::RATE,"######.##") + "    " + &
+		FORMAT$(BA_BILTBL::BILLABLE,"######.##") + "   " + &
+		FORMAT$(BA_BILTBL::BILTODAT,"######.##")
+
+	CALL OUTP_LINE(LYT_LINE, UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	EMPLOYEE$ = BA_BILTBL::EMPNUM
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "BA_BILTBL"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "BA_BILTBL"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

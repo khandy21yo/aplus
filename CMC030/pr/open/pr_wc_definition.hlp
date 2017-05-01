@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Workman Comp Definition File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__WC__DEFINITION.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Workman Comp Definition File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__WC__DEFINITION.TBL\*
+	!	.p
+	!	Workman Comp Definition File.
+	!
+	! Index:
+	!	.x Workman Comp Definition File
+	!	.x PR_WC_DEFINITION
+	!--

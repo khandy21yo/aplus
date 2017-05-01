@@ -1,0 +1,31 @@
+	!++
+	! Error:5
+	!	^*The Accounts Receivable Customer File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__CUSTOM.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Receivable System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Accounts Receivable Customer File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__CUSTOM.MAS\*
+	!	.b
+	!	.lm +5
+	!	The Accounts Receivable Customer File
+	!	contains information concerning each customer including the address and phone,
+	!	plus much more.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Accounts Receivable Customer File
+	!	.x AR_CUSTOM
+	!
+	!--

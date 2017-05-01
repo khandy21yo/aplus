@@ -1,0 +1,19 @@
+	!======================================================================
+	! OE_CATEGORY file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_CATEGORY.CH%, STAT%)
+	CALL READ_DEVICE('OE_CATEGORY',OE_CATEGORY.DEV$, STAT%)
+
+	OE_CATEGORY.NAME$ = OE_CATEGORY.DEV$+"OE_CATEGORY.TBL"
+
+	OPEN OE_CATEGORY.NAME$ FOR INPUT AS FILE OE_CATEGORY.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_CATEGORY, &
+		PRIMARY KEY &
+			OE_CATEGORY::ORDCAT, &
+		ALTERNATE KEY &
+			OE_CATEGORY::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

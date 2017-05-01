@@ -1,0 +1,16 @@
+	!======================================================================
+	! AD_DEPCLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_DEPCLASS.CH%, STAT%)
+	CALL READ_DEVICE('AD_DEPCLASS',AD_DEPCLASS.DEV$, STAT%)
+
+	AD_DEPCLASS.NAME$ = AD_DEPCLASS.DEV$+"AD_DEPCLASS.TBL"
+
+	OPEN AD_DEPCLASS.NAME$ FOR INPUT AS FILE AD_DEPCLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_DEPCLASS, &
+		PRIMARY KEY &
+			AD_DEPCLASS::DEPCLASS, &
+		ACCESS READ, ALLOW MODIFY
+

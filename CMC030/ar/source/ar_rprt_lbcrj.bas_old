@@ -1,0 +1,484 @@
+1	%TITLE "LB Cash Receipts Journal Report"
+	%SBTTL "AR_RPRT_LBCRJ"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:ARLBCJ
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Print Cash Receipts Journal\* option will provide a report
+	!	containing the following information:
+	!	.table 3,25
+	!	.te
+	!	Customer	Check _#
+	!	.te
+	!	Deposit _#	Description
+	!	.te
+	!	Date	Invoice _#
+	!	.te
+	!	Line(type of allocation)	Matter _#
+	!	.te
+	!	Staff Number	Account
+	!	.te
+	!	Amount
+	!	.end table
+	!	Please note that the letter beside the line number denotes if this
+	!	is a (C)Cost, (E)Service charge or a (F)Fee.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Print>Cash Receipts Journal
+	!	.x Cash Receipts Journal>Print
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	05/16/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$  BAS AR_SOURCE:AR_RPRT_LBCRJ.BAS/LINE
+	!	$  LINK/EXE=AR_EXE: AR_RPRT_LBCRJ, FUNC_LIB:CMCLINK/OPTION
+	!	$  DELETE AR_RPRT_LBCRJ.OBJ;*
+	!
+	! Modification history:
+	!
+	!	08/10/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/06/91 - Kevin Handy
+	!		Unwound error trapping.
+	!
+	!	06/10/91 - Craig Tanner
+	!		Modified Debit/Credit summary to use GL_OUTP_ACCTSUM
+	!		to do last page.
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of change
+	!		to that function.
+	!
+	!	03/18/93 - Kevin Handy
+	!		Added arguement to GL_OUTP_ACCTSUM for units.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:CODES.INC"
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_LBCRJH"
+	MAP (AR_LBCRJH)		AR_LBCRJH_CDD		AR_LBCRJH
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_LBCRJL"
+	MAP (AR_LBCRJL)		AR_LBCRJL_CDD		AR_LBCRJL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+	EXTERNAL REAL	FUNCTION FUNC_ROUND
+	EXTERNAL STRING	FUNCTION PRNT_DATE
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Declare some variables
+	!
+	TOTAL = 0.0
+	THIS.TOTAL = 0.0
+	CASH.TOTAL = 0.0
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	BATCH_NO$	= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Batch to Print\*
+	!	.b
+	!	.lm +5
+	!	The ^*Batch to Print\* field refers to a particular batch number
+	!	which is to be printed.
+	!	.b
+	!	Only one batch at a time may be printed.
+	!	.b
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) From Receipt\*
+	!	.b
+	!	.lm +5
+	!	The value entered in the ^*From Receipt\* setting causes the
+	!	report to begin printing or displaying with a specified receipt number.
+	!	.b
+	!	A blank setting will cause the report to start with the first
+	!	receipt number in the file.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) To Receipt\*
+	!	.b
+	!	.lm +5
+	!	The value entered in the ^*To Receipt\* setting causes the
+	!	report to end printing or displaying with a specified receipt number.
+	!	.b
+	!	A blank setting causes the report to end with the last
+	!	receipt number in the file.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+
+300	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_LBCRJH.OPN"
+
+310	!
+	! Open AR_LBCRJL file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_LBCRJL.OPN"
+
+320	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+	GET #AR_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+330	!
+	! Open customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) =	"LB Cash Receipt File List"
+	TITLE$(2%) =	"List of Cash Receipts - Batch #" + BATCH_NO$
+	TITLE$(3%) =	"AR System"
+	TITLE$(4%) =	""
+
+	!
+	! Headings
+	!
+	TITLE$(5%) =	"Rec #     " + LEFT(AR_CONTROL::CTITLE, 10%) + &
+		"  Chk #   Deposit Description                Date      " + &
+		"                           Account                Amount"
+
+	TITLE$(6%) =	"                    "  + &
+		"                                            " + &
+		"Invoice   Line Matter #    Staff#"
+	TITLE$(7%) =	"."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #AR_LBCRJH.CH%
+	ELSE
+		FIND #AR_LBCRJH.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #AR_LBCRJH.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (AR_LBCRJH::RECNUM > TO.ITEM$) AND TO.ITEM$ <> ""
+
+17030	!
+	! Look up customer name
+	!
+	AR_35CUSTOM::CUSNAM = STRING$(LEN(AR_35CUSTOM::CUSNAM), 63%)
+	GET #AR_35CUSTOM.CH%, KEY #0% EQ AR_LBCRJH::CUSNUM, REGARDLESS
+
+17040	!
+	! Print the cash receipt line
+	!
+	TEXT$ =	AR_LBCRJH::RECNUM + "  " + &
+		AR_LBCRJH::CUSNUM + "  " + &
+		AR_35CUSTOM::CUSNAM
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 5%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	TEXT$ = SPACE$(22%) + &
+		AR_LBCRJH::CHECK + "  " + &
+		AR_LBCRJH::DEPOSIT + "  " + &
+		AR_LBCRJH::DESCR + " " + &
+		PRNT_DATE(AR_LBCRJH::TRADAT, 8%) + " " + &
+		"                           " + &
+		AR_LBCRJH::ACCT + "  " + &
+		FORMAT$(AR_LBCRJH::AMNT, "######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 5%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	TOTAL = TOTAL + AR_LBCRJH::AMNT
+	THIS.TOTAL = AR_LBCRJH::AMNT
+	CASH.TOTAL = CASH.TOTAL + AR_LBCRJH::AMNT
+
+	!
+	! Print out line items
+	!
+	GOSUB Print_Lines
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, AR_LBCRJH::ACCT, &
+		0.0, AR_LBCRJH::AMNT, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+17200	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	TOTAL = FUNC_ROUND(TOTAL, 2%)
+	TEXT$ =	"                                                  " + &
+		"                                                  " + &
+		"      Journal Total:  " + FORMAT$(TOTAL, "######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 3%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	CASH.TOTAL = FUNC_ROUND(CASH.TOTAL, 2%)
+	TEXT$ =	"                                                  " + &
+		"                                                  " + &
+		" Total Cash Receipt:  " + FORMAT$(CASH.TOTAL, "######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	IF TOTAL <> 0.0
+	THEN
+		TEXT$ =	"       **** ERROR: Journal does not balance ****"
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	V% = GL_OUTP_ACCTSUM (OPT_SUMMARY, "", 0.0, 0.0, 0.0, TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Print_Lines:
+17740	!****************************************************************
+	!*  Subroutine for printing out Line Items			*
+	!****************************************************************
+	!
+
+	FIND #AR_LBCRJL.CH%, KEY #0% GE AR_LBCRJH::RECNUM, REGARDLESS
+
+ Get_Next_Line:
+17750
+	!
+	! Loop starts here
+	!
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	!
+	! Get next line item
+	!
+	GET #AR_LBCRJL.CH%, REGARDLESS
+
+	!
+	! Check current line item
+	!
+	GOTO LastLine IF AR_LBCRJL::RECNUM <> AR_LBCRJH::RECNUM
+
+	!
+	! Print the line item line
+	!
+	TEXT$ = "                                                   " + &
+		"             " + AR_LBCRJL::INVNUM + "  " + &
+		AR_LBCRJL::LLINE + &
+		AR_LBCRJL::ALLOCATE + " " + &
+		AR_LBCRJL::MATTER_NUM + "  " + &
+		AR_LBCRJL::STAFF + " " + &
+		AR_LBCRJL::ACCT + "  " + &
+		FORMAT$(AR_LBCRJL::AMOUNT, "######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	TOTAL = TOTAL + AR_LBCRJL::AMOUNT
+	THIS.TOTAL = THIS.TOTAL + AR_LBCRJL::AMOUNT
+
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, AR_LBCRJL::ACCT, &
+		0.0, AR_LBCRJL::AMOUNT, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Try for next Line
+	!
+	GOTO Get_Next_Line
+
+ LastLine:
+	THIS.TOTAL = FUNC_ROUND(THIS.TOTAL, 2%)
+	IF THIS.TOTAL <> 0.0
+	THEN
+		TEXT$ =	"                                                  " + &
+			"                       " + &
+			"              *** Receipt does not balance ***" + &
+			":  " + FORMAT$(THIS.TOTAL, "######.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -3%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -2%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+	GOTO LastLine IF UTL_REPORTX::STAT
+
+	THIS.TOTAL = 0.0
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+		CASE 154%	! Locked record
+			SLEEP 1%
+			RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+		CASE 330%
+			FILENAME$ = "AR_35CUSTOM"
+
+		CASE 17030%
+			RESUME 17040 IF ERR = 155%
+			FILENAME$ = "AR_35CUSTOM"
+
+		CASE 17000%, 17020%
+			RESUME ExitTotal
+
+		CASE 17740, 17750%
+			RESUME LastLine
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

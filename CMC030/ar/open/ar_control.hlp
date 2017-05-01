@@ -1,0 +1,30 @@
+	!++
+	! Error:5
+	!	^*The Accounts Receivable Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Accounts Receivable System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Accounts Receivable Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__CONTROL.CTR\*
+	!	.B
+	!	.LM +5
+	!	Accounts Receivable Control File.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Accounts Receivable Control File
+	!	.x AR_CONTROL
+	!
+	!--

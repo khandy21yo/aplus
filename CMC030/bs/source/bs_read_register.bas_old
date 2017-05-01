@@ -1,0 +1,158 @@
+1	%TITLE "Read Service Register File"
+	%SBTTL "BS_READ_REGISTER"
+	%IDENT "V3.6a Calico"
+
+	SUB BS_READ_REGISTER(STRING XCLIENT, &
+		STRING XPROGRAM, &
+		STRING XFROM.PERIOD, &
+		STRING XTO.PERIOD, &
+		STRING XUOM, &
+		REAL XAMOUNT(), &
+		REAL XLENGTH())
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function returns Client program balances
+	!
+	! Input:
+	!
+	!	XCLIENT is a client number
+	!	XPROGRAM is a program number
+	!	XFROM.PERIOD   is a beginning period to be read
+	!	XTO.PERIOD   is a ending period to be read
+	!	XUOM is a time unit of measurement
+	!	XAMOUNT()  balance YTD and balance CTD
+	!	XLENGHT()  time lenght YTD and balance CTD
+	!
+	! Output:
+	!
+	!	Balance array
+	!
+	! Example:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BS_SOURCE:BS_READ_REGISTER/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BS_READ_REGISTER
+	!	$ DELETE BS_READ_REGISTER.OBJ;*
+	!
+	! Author:
+	!
+	!	09/28/89 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	03/24/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/23/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	COM (READ_BS_REGISTER) BS_REGISTER.CH%
+
+	%INCLUDE "SOURCE:[BS.OPEN]BS_REGISTER.HB"
+	MAP (BS_REGISTER) BS_REGISTER_CDD	BS_REGISTER
+
+	DECLARE STRING YEAR
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+	! Set initial value
+	!
+	XAMOUNT(I%),XLENGTH(I%) = 0. FOR I%=0% TO 1%
+	YEAR = ""
+
+1000	IF BS_REGISTER.CH% <= 0%
+	THEN
+		%INCLUDE "SOURCE:[BS.OPEN]BS_REGISTER.OPN"
+	END IF
+
+2000	FIND #BS_REGISTER.CH%, KEY#0% EQ XCLIENT + XPROGRAM, REGARDLESS
+
+ GetNextRec:
+	GET #BS_REGISTER.CH%, REGARDLESS
+
+	GOTO Balance IF BS_REGISTER::PERIOD > XTO.PERIOD AND XTO.PERIOD <> "" &
+		OR BS_REGISTER::CLIENT+BS_REGISTER::PRG <> &
+		XCLIENT + XPROGRAM
+
+	IF XUOM = BS_REGISTER::RATEUOM OR TRM$(XUOM)=""
+	THEN
+		XAMOUNT(1%),XLENGTH(1%) = 0.0 &
+			IF YEAR <> LEFT(BS_REGISTER::PERIOD,4%)
+		FOR I%=0% TO 1%
+			XAMOUNT(I%) = XAMOUNT(I%) + BS_REGISTER::AMOUNT
+			XLENGTH(I%) = XLENGTH(I%) + BS_REGISTER::LENGTH
+		NEXT I%
+		XUOM = BS_REGISTER::RATEUOM
+	END IF
+
+	YEAR = LEFT(BS_REGISTER::PERIOD,4%)
+	GOTO GetNextRec
+
+ Balance:
+	EXIT SUB
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+	IF ERR=154%
+	THEN
+		SLEEP 1%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+	CASE 1000%
+		RESUME Balance IF ERR = 5%
+
+	CASE 2000%
+		RESUME Balance IF ERR = 11% OR ERR = 155% OR ERR = 9%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+	END SUB
+

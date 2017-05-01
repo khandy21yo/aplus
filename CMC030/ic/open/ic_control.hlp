@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Inventory Control is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Inventory Control System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Inventory Control
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__CONTROL.CTR\*
+	!	- Inventory Control.
+	!
+	! Index:
+	!	.x Inventory Control
+	!	.x IC_CONTROL
+	!--

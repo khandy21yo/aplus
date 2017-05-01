@@ -1,0 +1,16 @@
+	!======================================================================
+	! PD_PACK file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PD_PACK.CH%, STAT%)
+	CALL READ_DEVICE('PD_PACK',PD_PACK.DEV$, STAT%)
+
+	PD_PACK.NAME$ = PD_PACK.DEV$+"PD_PACK.TBL"
+
+	OPEN PD_PACK.NAME$ FOR INPUT AS FILE PD_PACK.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PD_PACK, &
+		PRIMARY KEY &
+			PD_PACK::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

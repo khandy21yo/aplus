@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Convention Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CONVENTION.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Convention Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CONVENTION.TBL\*
+	!	.p
+	!	Convention Description.
+	!
+	! Index:
+	!	.x Convention Description
+	!	.x AD_CONVENTION
+	!--

@@ -1,0 +1,20 @@
+	!======================================================================
+	! AD_CEILINGTWO file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_CEILINGTWO.CH%, STAT%)
+	CALL READ_DEVICE('AD_CEILINGTWO',AD_CEILINGTWO.DEV$, STAT%)
+
+	AD_CEILINGTWO.NAME$ = AD_CEILINGTWO.DEV$+"AD_CEILINGTWO.TBL"
+
+	OPEN AD_CEILINGTWO.NAME$ FOR INPUT AS FILE AD_CEILINGTWO.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_CEILINGTWO, &
+		PRIMARY KEY &
+		( &
+			AD_CEILINGTWO::OPTTABLE, &
+			AD_CEILINGTWO::EFFDATE, &
+			AD_CEILINGTWO::DEP_YEAR &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

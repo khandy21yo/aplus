@@ -1,0 +1,142 @@
+1	%TITLE "Add Time"
+	%SBTTL "TIME_ADD"
+	%IDENT "V3.3"
+
+	FUNCTION STRING TIME_ADD(STRING INT_TIME, OPERATION, ADD_TIME)
+
+	!
+	!		COPYRIGHT (C) 1987 BY
+	!		Computer Management Center
+	!		Idaho Falls, Idaho
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center
+	!
+	! Computer Management Center assumes no responsibility for the use
+	! or reliability of its software on equipment which is not supported
+	! by Computer Management Center.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function calculates total of two times
+	!
+	! Parameters:
+	!
+	!	INT_TIME
+	!
+	!	ADD_TIME in format hours:minuts:seconds
+	!
+	!	OPERATION "+" or "-"
+	!
+	!	TIME_ADD in format HH:MM:SS
+	!
+	! Example:
+	!
+	!	INT_TIME = 10:40:20
+	!	ADD_TIME = :100:10
+	!	OPERATION = "+"
+	!	TIME_ADD = 12:20:30
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:TIME_ADD/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP TIME_ADD
+	!	$ DELETE TIME_ADD.OBJ;*
+	!
+	! Author:
+	!
+	!	09/30/87 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	03/26/93 - Kevin Handy
+	!		Clean up (Check)
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	INT_SECOND
+	!		Integer in initial seconds.
+	!
+	!	FIN_SECOND
+	!		Integer for the final seconds.
+	!
+	!	FIN_MINUTE
+	!		Integer for the final minutes.
+	!
+	!	FIN_HOURS
+	!		Integer for the final hours.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION TIME_STORETIME
+
+	DECLARE LONG INT_SECOND,FIN_SECOND,FIN_MINUTE,FIN_HOURS
+
+	!
+	! Convert initial time to seconds
+	!
+	INT_SECOND = 3600% * VAL%(LEFT(TIME_STORETIME(INT_TIME,''),2%))+ &
+			60% * VAL%(MID(TIME_STORETIME(INT_TIME,''),3%,2%))+ &
+			VAL%(RIGHT(TIME_STORETIME(INT_TIME,''),5%))
+
+	!
+	! Convert add time to seconds
+	!
+	H% = INSTR(1%,ADD_TIME,":")
+	M% = INSTR(H%+1%,ADD_TIME,":")
+	ADD_SECOND = 3600% * VAL%(LEFT(ADD_TIME,H%-1%))+ &
+			60% * VAL%(MID(ADD_TIME,H%+1%,M%-H%-1%))+ &
+			VAL%(RIGHT(ADD_TIME,M%+1%))
+
+	SELECT OPERATION
+
+	CASE "+"
+		INT_SECOND = INT_SECOND + ADD_SECOND
+
+	CASE "-"
+		INT_SECOND = INT_SECOND - ADD_SECOND
+	!	INT_SECOND = INT_SECOND + 86400 IF INT_SECOND < 0%
+		INT_SECOND = INT_SECOND + 86400 WHILE INT_SECOND < 0%
+
+	END SELECT
+
+	!
+	! Reverse seconds to hours, minutes and seconds
+	!
+
+	FIN_HOURS = INT(INT_SECOND/3600%)
+	FIN_MINUTE= INT_SECOND - 3600% * FIN_HOURS
+	FIN_MINUTE= INT(FIN_MINUTE/60%)
+
+	FIN_SECOND= INT_SECOND - 3600% * FIN_HOURS - 60% * FIN_MINUTE
+	FIN_MINUTE= FIN_MINUTE -  60% * INT(FIN_MINUTE/60%)
+	FIN_HOURS = FIN_HOURS  -  24% * INT(FIN_HOURS/24%)
+
+	TIME_ADD = FORMAT$(FIN_HOURS,"<0>#:")+FORMAT$(FIN_MINUTE,"<0>#:")+ &
+			FORMAT$(FIN_SECOND,"<0>#")
+
+	END FUNCTION

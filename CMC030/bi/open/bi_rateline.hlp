@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The CPT Time Rate Line File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__RATELINE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x CPT Time Rate Line File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__RATELINE.TBL\*
+	!	.p
+	!	CPT Time Rate Line File.
+	!
+	! Index:
+	!	.x CPT Time Rate Line File
+	!	.x BI_RATELINE
+	!--

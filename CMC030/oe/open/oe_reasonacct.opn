@@ -1,0 +1,19 @@
+	!======================================================================
+	! OE_REASONACCT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_REASONACCT.CH%, STAT%)
+	CALL READ_DEVICE('OE_REASONACCT',OE_REASONACCT.DEV$, STAT%)
+
+	OE_REASONACCT.NAME$ = OE_REASONACCT.DEV$+"OE_REASONACCT.TBL"
+
+	OPEN OE_REASONACCT.NAME$ FOR INPUT AS FILE OE_REASONACCT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_REASONACCT, &
+		PRIMARY KEY &
+		( &
+			OE_REASONACCT::CREASON, &
+			OE_REASONACCT::LOCATION &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

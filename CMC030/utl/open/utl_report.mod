@@ -1,0 +1,26 @@
+	!======================================================================
+	! UTL_REPORT file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_REPORT.CH%, STAT%)
+	CALL READ_DEVICE('UTL_REPORT',UTL_REPORT.DEV$, STAT%)
+
+	UTL_REPORT.NAME$ = UTL_REPORT.DEV$+"UTL_REPORT.IDX"
+
+	OPEN UTL_REPORT.NAME$ FOR INPUT AS FILE UTL_REPORT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_REPORT, &
+		PRIMARY KEY &
+			UTL_REPORT::REPNUM, &
+		ALTERNATE KEY &
+		( &
+			UTL_REPORT::SYSTEM, &
+			UTL_REPORT::REPNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			UTL_REPORT::SUBSYS, &
+			UTL_REPORT::REPNUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

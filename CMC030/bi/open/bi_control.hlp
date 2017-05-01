@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Billing to Insurance Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controlling file in the ^*Billing Insurance System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Billing to Insurance Control File
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__CONTROL.CTR\*
+	!	.p
+	!	Billing to Insurance Control File.
+	!
+	! Index:
+	!	.x Billing to Insurance Control File
+	!	.x BI_CONTROL
+	!--

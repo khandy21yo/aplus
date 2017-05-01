@@ -1,0 +1,508 @@
+1	%TITLE "Billing Agency GL Posting Fixup Program"
+	%SBTTL "BA_POST_GL"
+	%IDENT "V3.6a Calico"
+
+	!
+	!COPYRIGHT (C) 1990 BY
+	!Computer Management Center, Inc
+	!Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BAPST
+	!
+	!Abstract:HELP
+	!	.p
+	!	The ^*Post GL Folder\* option is provided to post entries
+	!	from the General Ledger System to
+	!	the Billing Agancy Table.
+	!	.p
+	!	This program is used to fix the problem that the journal
+	!	post was not posting the billed to date amount in the
+	!	Billing Agency Table.
+	!	.p
+	!	After the posting is completed, the system will return to the BA
+	!	Journal Menu.
+	!	.note
+	!	If you run this on a gl folder that has information posted
+	!	into the billing agency table, than the billed to date
+	!	amount will be badly damaged.
+	!	.end note
+	!
+	! Index:
+	!	.x Post>GL
+	!	.x GL>Post
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_POST_GL/LINE
+	!	$ LINK/EXE=BA_EXE: BA_POST_GL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BA_POST_GL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/05/90 - Kevin Handy
+	!
+	! Modification History:
+	!
+	!	08/06/91 - Craig Tanner
+	!		Declare CHECK_PERIOD so that post will check dates.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/30/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include constants and and some functions
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.HB"
+	MAP	(BA_BILTBL)	BA_BILTBL_CDD	BA_BILTBL
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.HB"
+	MAP	(GL_YYYY_PP)	GL_YYYY_PP_CDD	GL_YYYY_PP
+
+	COM (BA_BILTBL_CH) &
+		BA_BILTBL.CH%
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION	ASSG_POSTBATCH
+	EXTERNAL LONG	FUNCTION	BA_TRAN_POST
+	EXTERNAL STRING	FUNCTION	DATE_TODAY
+	EXTERNAL STRING	FUNCTION	TIME_NOW
+
+	!
+	! Declare internal variables
+	!
+	DECLARE	UTL_REPORTX_CDD		UTL_REPORTX
+
+	DECLARE	LONG			EXIT_STATUS
+	DECLARE	LONG			INTR_STATUS
+	DECLARE	LONG			PRNT_SUMMARY
+	DECLARE LONG			CHECK_PERIOD
+
+	DECLARE	STRING			BATCH_NUMBER
+	DECLARE	STRING			GLPERIOD
+	DECLARE	STRING			AR.INTER.PERIOD
+	DECLARE	STRING			GL.INTER.PERIOD
+	DECLARE	STRING			POSTDATE
+	DECLARE	STRING			POSTTIME
+	DECLARE	STRING			TEXT
+	DECLARE	STRING			TITLE(10%)
+
+	%PAGE
+
+	!**************************************************************
+	! Get some stuff done before we start
+	!**************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Title
+	!
+	TITLE(1%) = "BILLING  GL  POSTING  PROTOCOL"
+	TITLE(2%) = "Billing Agency System"
+	TITLE(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE(4%) = "."
+
+	%PAGE
+
+	!**************************************************************
+	! Process `from user' input
+	!**************************************************************
+
+	!
+	! Set user defined fields
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GLPERIOD = TRM$(UTL_REPORTX::OPTDEF(0%))
+	YYYY_PP$ = LEFT(GLPERIOD, 4%) + "_" + RIGHT(GLPERIOD, 5%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) GL Period YYYYPP\*
+	!	.p
+	!	The ^*GL Period\* field is provided to enter the year and the
+	!	accounting period from which the corresponding journal records are
+	!	to be read from the General Ledger.
+	!	.p
+	!	The format for entry is YYYYPP.
+	!
+	! Index:
+	!	.x Post>Period
+	!	.x Period>Post
+	!
+	!--
+
+	!
+	! Supply a definition for the `user-defined' batch number
+	!
+	BATCH_NO$ = ""
+
+	CHECK_PERIOD = SUBOPT_NOOPT
+	CHECK_PERIOD = SUBOPT_CHECK IF (CHECK_DATE$ = "Y")
+
+310	!
+	! Open GL period file
+	!
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.OPN"
+
+330	!
+	! Open billing table
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.UPD"
+
+	%PAGE
+
+	!******************************************************************
+	!	1) See if the posting process has been interrupted
+	!	2) If not interrupted, go on
+	!	3) If interrupted, delete the superceded ledger records
+	!		and then continue
+	!******************************************************************
+
+	!******************************************************************
+	! Check if posting process has been interrupted
+	!******************************************************************
+
+	!
+	! Open up batch control file and check if interrupted
+	!
+	INTR_STATUS = ASSG_POSTBATCH(OPT_RESTART, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "GL_YYYY_PP", BATCH_NO$, &
+		GL.INTER.PERIOD, AR.INTER.PERIOD)
+
+	SELECT INTR_STATUS
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Process was interrupted
+	!
+	CASE CMC$_WARNING
+
+	!
+	! Abort post process
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	GOTO Aborted IF &
+		BA_TRAN_POST(OPT_RESTART, SUBOPT_NOOPT, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		"", GL.INTER.PERIOD) <> CMC$_NORMAL
+
+
+	%PAGE
+
+ AssignBatch:
+	!******************************************************************
+	!	1) Assign a batch number
+	!	2) Make sure no legitimate records in the ledger already
+	!		have this batch number; if any records do have
+	!		this newly assigned number, go back to (1) and
+	!		get a new one.
+	!******************************************************************
+	!
+	! Open up batch control file and get a batch number
+	!
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ASSIGN, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "GL_YYYY_PP", &
+		BATCH_NO$, GLPERIOD, "") <> CMC$_NORMAL
+
+	%PAGE
+
+	!******************************************************************
+	!	1) List the debits/credits transmittal for the user while
+	!		also putting the journal data in temporary files
+	!	2) If confirmation, then go on
+	!******************************************************************
+
+	!******************************************************************
+	! Create transmittal
+	!******************************************************************
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ADDREC, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "GL_YYYY_PP", &
+		BATCH_NO$, "", "") <> CMC$_NORMAL
+
+	POSTDATE = DATE_TODAY
+	POSTTIME = TIME_NOW
+
+	!
+	! Blank flags
+	!
+	CUSTNUM$, HDRACCT$, TRANDAT$ = " "
+
+ ReadHeader:
+	!
+	! Read in one record from the header file
+	!
+3100	GET #GL_YYYY_PP.CH%
+
+	!
+	! Set some initial variable values
+	!
+	TOTAL_FEE = 0.0
+	PRINTHEAD% = 0%
+
+ ProcessLines:
+	!
+	! Find the first line item for the header
+	!
+3500	IF (GL_YYYY_PP::SOURCE = "BA") AND &
+		(TRM$(GL_YYYY_PP::SUBACC) <> "")
+	THEN
+
+		BA_BILTBL::EMPNUM	= GL_YYYY_PP::SUBACC
+		BA_BILTBL::CUSNUM	= GL_YYYY_PP::XREFNO
+		BA_BILTBL::FROMDATE	= GL_YYYY_PP::TRANDAT
+		BA_BILTBL::BILTODAT	= -GL_YYYY_PP::AMOUNT
+
+		!
+		! Put the record into the temporary file
+		!
+		GOTO Aborted IF BA_TRAN_POST(OPT_ADDREC, SUBOPT_NOOPT, "", &
+			TITLE(), UTL_REPORTX, BA_BILTBL, &
+			"") <> CMC$_NORMAL
+
+	END IF
+
+3690	GOTO 3100
+
+ Confirm:
+	!******************************************************************
+	! Confirm posting
+	!******************************************************************
+
+	%PAGE
+
+	!******************************************************************
+	!	1) Since everything's correct and we have the user's
+	!		permission, transfer all data from the temporary
+	!		files into the ledger
+	!******************************************************************
+	!
+	! Begin posting
+	!
+	!
+	! Reset period in the BA Control file -
+	! If we can't reset the period, then the user can do it manually
+	!
+	GOTO Interrupt IF &
+		BA_TRAN_POST(OPT_POSTFILE, SUBOPT_NOOPT, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, BA_BILTBL, GLPERIOD) <> CMC$_NORMAL
+
+	%PAGE
+
+ Complete:
+	!******************************************************************
+	!	1) Set the Batch Control file so that if we stopped now,
+	!		the post would not show up as "interrupted"
+	!		(after all, we're finished)
+	!******************************************************************
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_COMPLETE, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "BA_JOURNALH", &
+		BATCH_NO$, "", "")
+
+	PRNT_SUMMARY = SUBOPT_FINAL
+
+	!
+	! Remove files
+	!
+4200	!
+
+ ExitProgram:
+	!******************************************************************
+	! Exit normally
+	!******************************************************************
+
+	!
+	! Finish up the transmittal
+	!
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Aborted:
+	!******************************************************************
+	! Abort process
+	!******************************************************************
+	IF INTR_STATUS <> CMC$_WARNING
+	THEN
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_ABORT,	BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"BA_JOURNALH", BATCH_NO$, "", "")
+		GOTO ExitProgram
+	END IF
+
+	%PAGE
+
+ Interrupt:
+	!******************************************************************
+	! Interrupt process
+	!******************************************************************
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_INTERRUPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, &
+		"BA_JOURNALH", BATCH_NO$, "", "")
+
+	GOTO ExitProgram
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Errors by Error number
+	!
+	SELECT ERR
+	!
+	! Locked Block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	!
+	! Errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+	!
+	! Unable to open the BA Journal Header file
+	!
+	CASE 310%
+		FILENAME$ = "BA_JOURNALH"
+
+	!
+	! Unable to open the BA Billing Table
+	!
+	CASE 330%
+		FILENAME$ = "BA_BILTBL"
+
+	!
+	! End of the BA Journal Header file
+	!
+	CASE 3100%
+		RESUME Confirm
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+	%PAGE
+
+32000	!******************************************************************
+	! End of posting program BA_POST_GL
+	!******************************************************************
+
+	END
+	!+-+-+
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Post GL Folder\* option is provided to post entries
+	!	from the General Ledger System to
+	!	the Billing Agency Table.
+	!	.p
+	!	This program is used to fix the problem that the journal
+	!	post was not posting the billed to date amount in the
+	!	Billing Agency Table.
+	!	.p
+	!	After the posting is completed, the system will return to the BA
+	!	Journal Menu.
+	!	.note
+	!	If you run this on a GL folder that has information posted
+	!	into the billing agency table, than the billed to date
+	!	amount will be badly damaged.
+	!	.end note
+	!
+	! Index:
+	!	.x Post>GL
+	!	.x GL>Post
+	!
+	!--

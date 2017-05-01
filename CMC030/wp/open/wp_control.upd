@@ -1,0 +1,14 @@
+	!======================================================================
+	! WP_CONTROL file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('WP_CONTROL',WP_CONTROL.DEV$, STAT%)
+
+	WP_CONTROL.NAME$ = WP_CONTROL.DEV$+"WP_CONTROL.CTR"
+
+	OPEN WP_CONTROL.NAME$ FOR INPUT AS FILE WP_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP WP_CONTROL, &
+		ACCESS MODIFY, ALLOW NONE
+

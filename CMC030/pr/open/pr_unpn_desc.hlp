@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Union Pension Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__UNPN__DESC.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Union Pension Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__UNPN__DESC.TBL\*
+	!	.p
+	!	Payroll Union Pension Description.
+	!
+	! Index:
+	!	.x Payroll Union Pension Description
+	!	.x PR_UNPN_DESC
+	!--

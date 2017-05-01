@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Employee Rate File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__EMP__RATE.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Payroll Employee Rate File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__EMP__RATE.MAS\*
+	!	.p
+	!	Payroll Employee Rate File.
+	!
+	! Index:
+	!	.x Payroll Employee Rate File
+	!	.x PR_EMP_RATE
+	!--

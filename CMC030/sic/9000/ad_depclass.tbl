@@ -1,0 +1,63 @@
+A.013-Year ACRS Personal Property           AAACRS03.0  YRAC.A        NYY
+A.023-Year Straight Line                    AASL  03.0MOMO            YNN
+A.033-Year Straight Line (tax)              AASL  03.0MOMO            NYY
+A.043-Year Pre-1981 Property                D SL  03.0MOMO            YNN
+B.015-Year Pre-1981 Double Declining to SL  D DDS 05.0MOMO            YYY
+B.025-Year Pre-1981 Property                D SL  05.0MOMO            YNN
+B.035-Year Straight Line (tax)              ABSL  05.0MOMO            NYY
+B.045-Years ACRS Personal Property          ABACRS05.0  YRAC.B        NYY
+B.055-Year Straight Line                    ABSL  05.0MOMO            YNN
+B.065-Year MACRS Property,HY                MBDDS 05.0HYYR            NYY
+B.075-Year MACRS Property,MQ                MBDDS 05.0MQYR            NYY
+C.017-Year Pre-1981 Double Declining to SL  D DDS 07.0MOMO            YYY
+C.027-Year Pre-1981 Property                D SL  07.0MOMO            YNN
+C.037-Years Pre-1981 Straight Line(tax)     D SL  07.0MOMO            YYY
+C.047-Years Property                        MCSL  07.0HYMO            YNN
+C.057-Years MACRS Property,HY               MCDDS 07.0HYYR            NYY
+C.067-Year MACRS Property,MQ                MCDDS 07.0MQYR            NYY
+C.077-Year Pre-1981 Double Declinig         D DD  07.0MOMO            YNN
+D.0110-Year ACRS Personal Property          ADACRS10.0  YRAC.D        NYY
+D.0210-Year Straight Line,HY                ADSL  10.0HYMO            YNN
+D.0310-Year Straigth Line,MO                ADSL  10.0MOMO            YNN
+D.0410-Year Straight Line (tax)             ADSL  10.0MOMO            NYY
+E.0115-Year Pre-1981 Double Decl to SL(tax) D DDS 15.0MOMO            YYY
+E.0215-Year Pre-1981 Property,SL            D SL  15.0MOMO            YNN
+E.0315-Year Pre-1981 Property,SL(tax)       D SL  15.0MOMO            YYY
+E.0415-Year ACRS Real Property              AEACRS15.0  MOAC.E        NYY
+E.0515-Year Property                        AESL  15.0HYMO            YNN
+E.0615-Year Pre-1981 Double Decl to SL      D DDS 15.0MOMO            YNN
+H.0118-Year ACRS Real Property              AHACRS18.0  MOAC.HS       NYY
+H.0218-Year Straight Line,HY                AHSL  18.0MOMO            YNN
+H.0318-Year ACRS Straight Line,HY           AHSL  18.0HYMO            NYY
+H.0418-Year ACRS Straight Line,MO           AHSL  18.0MOMO            NYY
+I.0119-Year ACRS Real Property              AIACRS19.0  MOAC.IS       NYY
+I.0219-Year Straight Line                   AISL  19.0HYMO            NYY
+I.0319-Year 150% Declining                  AI150S19.0HYMO            NYY
+I.0419-Year ACRS Real Property              AIACRS19.0  MOAC.I        NYY
+K.0127.5-Year MACR Residental Rent Property MKSL  27.5MMMM            NYY
+L.0131.5-Year MACRS Real Property           MLSL  31.5MMMM            NYY
+L.0231.5-Year 150% Declining                ML150S31.5HYMO            NYY
+O.011-Year property                         MBSL  01.0MOMO            YNN
+P.012-Year Pre-1981 Property                D SL  02.0MOMO            YNN
+P.022-Year property                         MBSL  02.0MOMO            YNN
+Q.014-Year Pre-1981 Property (tax)          D SL  04.0MOMO            YYY
+Q.024-Year Pre-1981 Property                D SL  04.0MOMO            YNN
+R.0125-Year Pre-1981 Property               D SL  25.0MOMO            NYY
+R.0225-Year Pre-1981 Straight Line          D SL  25.0MOMO            YNN
+S.0132.5 Pre-1981 Property                  D SL  32.5MOMO            YNN
+SL39STRAIGHT LINE 39 YR                     BUSL  39.0MOMO            NNN
+T.016-Year Straight Line                    ATSL  06.0MOMO            YNN
+V.0111-Year Straight Line                   AVSL  11.0MOMO            YNN
+W.0120-Year Straight Line (tax)             D SL  20.0MOMO            NYY
+W.0220-Year Pre-1981 Straight Line          D SL  20.0MOMO            YNN
+X.0113-Year Pre-1981 Straight Line(tax)     D SL  13.0MOMO            YYY
+X.0213-Year Pre-1981 Property               D SL  13.0MOMO            YNN
+Y.0114-Year Pre-1981 Straight Line(tax)     D SL  14.0MOMO            YYY
+Y.0214-Year Pre-1981 Property               D SL  14.0MOMO            YNN
+Y.0314-Year Pre-1981 Double Decl to SL(tax) D DDS 14.0MOMO            YYY
+Y.0414-Year Pre-1981 Double Decl to SL      D DDS 14.0MOMO            YNN
+Z.018-Year Pre-1981 Double Declining to SL  D DDS 08.0MOMO            YYY
+Z.028-Year Pre-1981 Property                D SL  08.0MOMO            YNN
+Z.038-Year Pre-1981 Straight Line(tax)      D SL  08.0MOMO            YYY
+Z.048-Year Pre-1981 Double Decl to SL,HY    D DDS 08.0HYMO            YYY
+Z.058-Year Pre-1981 Straight Line,HY        D SL  08.0HYMO            NYY

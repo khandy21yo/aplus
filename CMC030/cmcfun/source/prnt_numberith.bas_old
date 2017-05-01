@@ -1,0 +1,104 @@
+1	%TITLE "Figure out follower for a number (st,nd,...)"
+	%SBTTL "PRNT_NUMBERITH"
+	%IDENT "V3.3"
+
+	FUNCTION STRING PRNT_NUMBERITH(AMOUNT%)
+
+	!
+	! COPYRIGHT (C) 1992 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho  83402
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function determines the code to stick on the
+	!	end of a number to make it read right, (1st,2nd,
+	!	40897th, ...)
+	!
+	! Parameters:
+	!
+	!	AMOUNT%
+	!		A passed number (max 999,999,999.99, min 0)
+	!
+	!	The return is a string of the format:
+	!
+	!		st,nd,rd,th
+	!
+	! Example:
+	!
+	!	PRNT_NUMBERITH(100)
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:PRNT_NUMBERITH
+	!	$ LIB FUNC_LIB:CMCFUN/REP PRNT_NUMBERITH
+	!	$ DELETE PRNT_NUMBERITH.OBJ;*
+	!
+	! Author:
+	!
+	!	04/09/92 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+
+	%PAGE
+
+	!++
+	!
+	! Variables
+	!
+	!	AMOUNT$
+	!		String convert into a print using format.
+	!
+	!--
+
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Get last digit
+	!
+	AMOUNT$ = NUM1$(AMOUNT%)
+	AMOUNT$ = RIGHT(AMOUNT$, LEN(AMOUNT$))
+
+	!
+	! Determine correct ending
+	!
+	SELECT AMOUNT$
+
+		CASE "1"
+			PRNT_NUMBERITH = "st"
+
+		CASE "2"
+			PRNT_NUMBERITH = "nd"
+
+		CASE "3"
+			PRNT_NUMBERITH = "rd"
+
+		CASE ELSE
+			PRNT_NUMBERITH = "th"
+	END SELECT
+
+	END FUNCTION

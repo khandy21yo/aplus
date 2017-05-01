@@ -1,0 +1,24 @@
+	!======================================================================
+	! GL_USERLIST file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_USERLIST.CH%, STAT%)
+	CALL READ_DEVICE('GL_USERLIST',GL_USERLIST.DEV$, STAT%)
+
+	GL_USERLIST.NAME$ = GL_USERLIST.DEV$+"GL_USERLIST.MAS"
+
+	OPEN GL_USERLIST.NAME$ FOR INPUT AS FILE GL_USERLIST.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_USERLIST, &
+		PRIMARY KEY &
+		( &
+			GL_USERLIST::USER, &
+			GL_USERLIST::ACCOUNT &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			GL_USERLIST::ACCOUNT, &
+			GL_USERLIST::USER &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

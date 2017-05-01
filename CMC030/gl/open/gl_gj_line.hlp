@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The General Journal Line File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__GJ__LINE.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*General Ledger System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x General Journal Line File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__GJ__LINE.JRL\*
+	!	.b
+	!	.lm +5
+	!	General Journal Line File.
+	!	.lm -5
+	!
+	! Index:
+	!	.x General Journal Line File
+	!	.x GL_GJ_LINE
+	!
+	!--

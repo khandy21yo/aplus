@@ -1,0 +1,34 @@
+	!++
+	! Error:5
+	!	^*The Sales Order Account Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__ACCOUNT.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Order Entry System\* going
+	!	under MASTER and TABLE and run the process again.
+	!
+	! Index:
+	!	.x Sales Order Account Table
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__ACCOUNT.TBL\*
+	!	.B
+	!	.LM +5
+	!	Sales Order Account Table.
+	!	
+	!	
+	!	
+	!	
+	!	.LM -5
+	!
+	! Index:
+	!	.x Sales Order Account Table
+	!	.x OE_ACCOUNT
+	!
+	!--

@@ -1,0 +1,20 @@
+	!======================================================================
+	! UTL_WORKCENTER file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_WORKCENTER.CH%, STAT%)
+	CALL READ_DEVICE('UTL_WORKCENTER',UTL_WORKCENTER.DEV$, STAT%)
+
+	UTL_WORKCENTER.NAME$ = UTL_WORKCENTER.DEV$+"UTL_WORKCENTER.TBL"
+
+	OPEN UTL_WORKCENTER.NAME$ FOR INPUT AS FILE UTL_WORKCENTER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_WORKCENTER, &
+		PRIMARY KEY &
+		( &
+			UTL_WORKCENTER::LOCATION, &
+			UTL_WORKCENTER::DEPT_NUM, &
+			UTL_WORKCENTER::WORK_CENTER &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

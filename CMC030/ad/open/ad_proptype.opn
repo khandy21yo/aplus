@@ -1,0 +1,16 @@
+	!======================================================================
+	! AD_PROPTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_PROPTYPE.CH%, STAT%)
+	CALL READ_DEVICE('AD_PROPTYPE',AD_PROPTYPE.DEV$, STAT%)
+
+	AD_PROPTYPE.NAME$ = AD_PROPTYPE.DEV$+"AD_PROPTYPE.TBL"
+
+	OPEN AD_PROPTYPE.NAME$ FOR INPUT AS FILE AD_PROPTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_PROPTYPE, &
+		PRIMARY KEY &
+			AD_PROPTYPE::PROPTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

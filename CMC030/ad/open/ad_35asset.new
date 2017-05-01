@@ -1,0 +1,36 @@
+	!======================================================================
+	! AD_35ASSET file (create _new, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_35ASSET.CH_NEW%, STAT%)
+	CALL READ_DEVICE('AD_35ASSET',AD_35ASSET.DEV$, STAT%)
+
+	AD_35ASSET.NAME_NEW$ = AD_35ASSET.DEV$+"AD_35ASSET.MAS_NEW"
+
+	OPEN AD_35ASSET.NAME_NEW$ FOR OUTPUT AS FILE AD_35ASSET.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_35ASSET, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			AD_35ASSET::ASSET_NUM, &
+		ALTERNATE KEY &
+		( &
+			AD_35ASSET::ASSET_TYPE, &
+			AD_35ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_35ASSET::SERVDATE, &
+			AD_35ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_35ASSET::LOCATION, &
+			AD_35ASSET::DEPT_NUM, &
+			AD_35ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+			AD_35ASSET::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

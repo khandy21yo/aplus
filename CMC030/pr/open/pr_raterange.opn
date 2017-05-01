@@ -1,0 +1,19 @@
+	!======================================================================
+	! PR_RATERANGE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_RATERANGE.CH%, STAT%)
+	CALL READ_DEVICE('PR_RATERANGE',PR_RATERANGE.DEV$, STAT%)
+
+	PR_RATERANGE.NAME$ = PR_RATERANGE.DEV$+"PR_RATERANGE.TBL"
+
+	OPEN PR_RATERANGE.NAME$ FOR INPUT AS FILE PR_RATERANGE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_RATERANGE, &
+		PRIMARY KEY &
+		( &
+			PR_RATERANGE::LOCATION, &
+			PR_RATERANGE::AGE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

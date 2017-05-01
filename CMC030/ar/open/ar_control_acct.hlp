@@ -1,0 +1,30 @@
+	!++
+	! Error:5
+	!	^*The Valid Accounts for Accounts Receivable is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__CONTROL__ACCT.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Accounts Receivable System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Valid Accounts for Accounts Receivable
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__CONTROL__ACCT.CTR\*
+	!	.B
+	!	.LM +5
+	!	Valid Accounts for Accounts Receivable.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Valid Accounts for Accounts Receivable
+	!	.x AR_CONTROL_ACCT
+	!
+	!--

@@ -1,0 +1,613 @@
+1	%TITLE "Patient File Maintenance"
+	%SBTTL "BI_MAIN_PATIENT"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_PATIENT(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Patient\* program provides the means to maintain the  Patient file.
+	!
+	! Index:
+	!	.x Patient
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_PATIENT/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_MAIN_PATIENT
+	!	$ DELETE BI_MAIN_PATIENT.OBJ;*
+	!
+	! Author:
+	!
+	!	11/01/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_PATIENT.HB"
+	MAP (BI_PATIENT)	BI_PATIENT_CDD		BI_PATIENT
+	MAP (BI_PATIENT_OLD)	BI_PATIENT_CDD		BI_PATIENT_OLD, BI_PATIENT2
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.HB"
+	MAP (BI_INSURED)	BI_INSURED_CDD		BI_INSURED
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BI_PATIENT) &
+		BI_PATIENT.CH%, &
+		BI_PATIENT.READONLY%
+
+	COM (TT_BI_PATIENT) &
+		RELTITLE$ = 20%, &
+		REL$(4%) = 20%
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION FUNC_TESTENTRY
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!******************************************************************
+		! Set up information
+		!******************************************************************
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Patient File"
+		SMG_WINDOW::CURREC = -2%
+		SMG_WINDOW::NHELP = "BI_MAIN_PATIENT"
+		SMG_WINDOW::HSIZE = 76%
+		SMG_WINDOW::VSIZE = 11%
+		SMG_WINDOW::HPOS  = 3%
+		SMG_WINDOW::VPOS  = 8%
+		SMG_WINDOW::FLAGS = 0%
+		SMG_WINDOW::NITEMS= 4%
+
+		SMG_WINDOW::HVIEW = 76%
+		SMG_WINDOW::VVIEW = 11%
+		SMG_WINDOW::VVPOS = 8%
+		SMG_WINDOW::VHPOS = 3%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Patient"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		!
+		! Relationship
+		!
+		RELTITLE$= "Rel Description"
+		REL$(0%) = "4"
+		REL$(1%) = "C   Child"
+		REL$(2%) = "P   Spouse"
+		REL$(3%) = "S   Self"
+		REL$(4%) = "X   Other"
+
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BI_PATIENT.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BI_PATIENT.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BI.OPEN]BI_PATIENT.CRE"
+		BI_PATIENT.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_PATIENT.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BI_PATIENT.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BI_PATIENT.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BI_PATIENT.CH%
+		RESET #BI_PATIENT.CH%
+		GET #BI_PATIENT.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+
+		DATA	02,05, "(01) Patient #", &
+			03,05, "(02) Relationship", &
+			04,05, "(03) Insurance Carrier", &
+			05,05, "(04) Group #", &
+			0, 0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ ReEnter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Patient _#\*
+	!	.p
+	!	The ^*Patient _#\* field is provided to enter the number
+	!	which identifies a particular patient.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located
+	!	at this field will display a list of valid patient numbers.
+	!
+	! Index:
+	!	.x Patient Number>Patient File
+	!	.x Patient File>Patient Number
+	!
+	!--
+
+			BI_PATIENT::PATIENT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"02;28", TEMP$, &
+				BI_PATIENT::PATIENT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(BI_MAIN_INSURED.ID, "V0") = 1%
+				THEN
+					BI_PATIENT::PATIENT = &
+					BI_INSURED::INSURED
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Relationship\*
+	!	.p
+	!	The ^*Relationship\* field provides the means to enter a patients
+	!	relationship to the insured.
+	!	.p
+	!	Valid relationship codes are:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	C = Child
+	!	.le
+	!	P = Spouse
+	!	.le
+	!	S = Self
+	!	.le
+	!	X = Other
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at this
+	!	field will display a list of valid relationship codes.
+	!
+	! Index:
+	!	.x Relationship>Patient File
+	!	.x Patient File>Relationship
+	!
+	!--
+
+			BI_PATIENT::FAMRELAT = EDIT$(ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"03;28", TEMP$, &
+				BI_PATIENT::FAMRELAT, MFLAG, "'", MVALUE, &
+				REL$(), RELTITLE$, "004"), -1%)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Insurance Carrier\*
+	!	.p
+	!	The ^*Insurance Carrier\* field is provided to enter the
+	!	code for a particular insurance company.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located
+	!	at this field will display a list of valid insurance
+	!	carrier codes.
+	!
+	! Index:
+	!	.x Insurance Carrier>Patient File
+	!	.x Patient File>Insurance Carrier
+	!	.x Carrier>Insurance
+	!
+	!--
+
+			BI_PATIENT::INSURANCE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"04;28", TEMP$, &
+				BI_PATIENT::INSURANCE, MFLAG, "'E", MVALUE)
+
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(BI_MAIN_CARRIER.ID, "V0") = 1%
+				THEN
+					BI_PATIENT::INSURANCE = &
+					AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Group _#\*
+	!	.p
+	!	The ^*Group _#\* field contains the identification
+	!	number of the group insurance.
+	!	.p
+	!	The field will accept up to ten (10) alphanumeric characters.
+	!
+	! Index:
+	!	.x Group Number
+	!
+	!--
+
+			BI_PATIENT::GROUPNO = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"05;28", TEMP$, &
+				BI_PATIENT::GROUPNO, MFLAG, "'E", MVALUE)
+
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BI_MAIN_PATIENT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			!
+			! Is the input defined?
+			!
+			BI_MAIN_PATIENT = FUNC_TESTENTRY(SMG_WINDOW, &
+				BI_PATIENT::PATIENT, &
+				BI_INSURED::INSNAME, &
+				"BI", MLOOP, "PATIENT", &
+				"Patient Number", BI_MAIN_INSURED.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				BI_INSURED::INSNAME, 2%, 40%, , SMG$M_BOLD)
+
+			IF (MVALUE = "ADD")
+			THEN
+				GET #BI_PATIENT.CH%, &
+					KEY#0% EQ BI_PATIENT::INSURED + &
+					BI_PATIENT::PATIENT, &
+					REGARDLESS
+
+				BI_MAIN_PATIENT = 2%
+				CALL ENTR_3MESSAGE(SCOPE, &
+					"Record Already Exists", 1%)
+			END IF
+
+		CASE 3%
+			!
+			! Is the input defined?
+			!
+			BI_MAIN_PATIENT = FUNC_TESTENTRY(SMG_WINDOW, &
+				BI_PATIENT::INSURANCE, &
+				AR_35CUSTOM::CUSNAM, &
+				"BI", MLOOP, "INS", &
+				"Insurance Number", BI_MAIN_CARRIER.ID)
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			BI_INSURED::INSNAME = &
+				STRING$(LEN(BI_INSURED::INSNAME),ASCII("?")) &
+			IF MAIN_WINDOW(BI_MAIN_INSURED.ID, &
+				"Q0" + BI_PATIENT::PATIENT) <> 1%
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				BI_INSURED::INSNAME, 2%, 40%, , SMG$M_BOLD)
+		END IF
+
+	!
+	! Set BI_PATIENT_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BI_PATIENT_OLD = BI_PATIENT
+
+	!
+	! Restore BI_PATIENT_OLD value
+	!
+	CASE OPT_RESETOLD
+		BI_PATIENT = BI_PATIENT_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BI_PATIENT2 = BI_PATIENT
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BI_PATIENT = BI_PATIENT2
+		BI_PATIENT::INSURED = MVALUE
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  RefNumber        Name                           "+ &
+				"Sex Birthdate  Rel"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "017,050,054,065"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = BI_PATIENT::PATIENT + " "+ &
+				BI_PATIENT::FAMRELAT+ " " + &
+				BI_PATIENT::INSURANCE + " "+ &
+				BI_PATIENT::GROUPNO
+
+		END SELECT
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #SMG_WINDOW::CHAN, &
+				KEY#0% GE BI_PATIENT::INSURED+ &
+				BI_PATIENT::PATIENT, &
+				REGARDLESS
+
+		END SELECT
+
+	!
+	! Handle array of records
+	!
+	CASE OPT_SUBWIND
+
+		SELECT MLOOP
+
+		!
+		! Find first record (if there is any)
+		!
+		CASE 1%
+
+			!
+			! Set init value
+			!
+			SMG_WINDOW::CURREC = -1%
+
+			!
+27110			!
+			! Search for first record
+			!
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0% EQ MVALUE, REGARDLESS
+
+			!
+			! Get a record
+			!
+			GET #SMG_WINDOW::CHAN
+			SMG_WINDOW::CURREC = 0%
+
+		!
+		! Check if still right key
+		!
+		CASE 3%
+			SMG_WINDOW::CURREC = -1%
+			IF BI_PATIENT::INSURED = MVALUE
+			THEN
+				SMG_WINDOW::CURREC = 0%
+			END IF
+
+		!
+		! Set the new key
+		CASE 6%
+			BI_PATIENT::INSURED = MVALUE
+
+		END SELECT
+
+
+	END SELECT
+
+28000	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+	SELECT ERL
+
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BI_MAIN_PATIENT = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BI_MAIN_PATIENT = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Error while searching for the first record
+	!
+	CASE 27110%
+		RESUME 28000 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

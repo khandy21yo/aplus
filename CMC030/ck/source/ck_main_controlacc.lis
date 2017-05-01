@@ -1,0 +1,2890 @@
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 1
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	      1 1	%TITLE "Account Control Maintenance"
+	      2 	%SBTTL "CK_MAIN_CONTROLACC"
+	      3 	%IDENT "V3.6a Calico"
+	      4 
+	      5 	FUNCTION LONG CK_MAIN_CONTROLACC(CDD_WINDOW_CDD SMG_WINDOW, &
+	      6 		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+	      7 
+	      8 	!
+	      9 	! COPYRIGHT (C) 1988 BY
+	     10 	!
+	     11 	! Computer Management Center, Inc.
+	     12 	! Idaho Falls, Idaho.
+	     13 	!
+	     14 	! This software is furnished under a license and may be used and
+	     15 	! copied only in accordance with terms of such license and with
+	     16 	! the inclusion of the above copyright notice.  This software or
+	     17 	! any other copies thereof may not be provided or otherwise made
+	     18 	! available to any other person.  No title to and ownership of
+	     19 	! the software is hereby transferred.
+	     20 	!
+	     21 	! The information in this software is subject to change without
+	     22 	! notice and should not be construed as a commitment by
+	     23 	! Computer Management Center, Inc.
+	     24 	!
+	     25 	! CMC assumes no responsibility for the use or reliability of
+	     26 	! its software on equipment which is not supported by CMC.
+	     27 	!
+	     28 	!++
+	     29 	! Abstract:HELP
+	     30 	!	.b
+	     31 	!	.lm +5
+	     32 	!	The ^*Account Control Maintenance\* program maintains the Account control file
+	     33 	!	for the Check reconciliation.
+	     34 	!	.lm -5
+	     35 	!
+	     36 	! Index:
+	     37 	!	.x Account Control Maintenance
+	     38 	!	.x Control Maintenance>Account
+	     39 	!	.x Maintenance>Control>Account
+	     40 	!
+	     41 	! Option:
+	     42 	!
+	     43 	!
+	     44 	! Compile:
+	     45 	!
+	     46 	!	$ BAS CK_SOURCE:CK_MAIN_CONTROLACC/LINE
+	     47 	!	$ LIB FUNC_LIB:CMCFUN/REP CK_MAIN_CONTROLACC
+	     48 	!	$ DELETE CK_MAIN_CONTROLACC.OBJ;*
+	     49 	!
+	     50 	! Author:
+	     51 	!
+	     52 	!	03/24/88 - Lance Williams
+	     53 	!
+	     54 	! Modification history:
+	     55 	!
+	     56 	!	04/28/88 - Kevin Handy
+	     57 	!		Modified to allow R/O open of file if R/W fails.
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 2
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	     58 	!
+	     59 	!	05/07/92 - Dan Perkins
+	     60 	!		Use FUNC_TESTENTRY to test input.
+	     61 	!
+	     62 	!	06/16/92 - Kevin Handy
+	     63 	!		Clean up (check)
+	     64 	!
+	     65 	!	03/02/93 - Dan Perkins
+	     66 	!		Changed "V0" to "VX" on chart of accounts to be
+	     67 	!		able to list accounts starting at a particular
+	     68 	!		account.
+	     69 	!
+	     70 	!	04/15/95 - Kevin Handy
+	     71 	!		(V3.6)
+	     72 	!		Update to V3.6 coding standards
+	     73 	!
+	     74 	!	10/17/96 - Kevin Handy
+	     75 	!		Reformat source code
+	     76 	!
+	     77 	!	05/01/97 - Kevin Handy
+	     78 	!		Clean up source code.
+	     79 	!		Use integer for #key
+	     80 	!
+	     81 	!	08/19/98 - Kevin Handy
+	     82 	!		(V3.6a Calico)
+	     83 	!		Update to V3.6a coding standards
+	     84 	!
+	     85 	!	03/10/99 - Kevin Handy
+	     86 	!		Fix FIND bug
+	     87 	!--
+	     88 
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 3
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	     89 	%PAGE
+	     90 
+	     91 	!
+	     92 	! Set up compiling options
+	     93 	!
+	     94 	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+	     95 
+	     96 	!
+	     97 	! Include files
+	     98 	!
+	     99 	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+	    100 
+I1	    101 	!++
+I1	    102 	!*******************************************************************
+I1	    103 	! FUNCTION.HB - Defines information necessary for proper
+I1	    104 	! compilation of accounting programs
+I1	    105 	!
+I1	    106 	! Version 3.6
+I1	    107 	!
+I1	    108 	! This file is closely related to SCOPEDEF.COM and must be
+I1	    109 	! changed at the same time.
+I1	    110 	!*******************************************************************
+I1	    111 	!
+I1	    112 	! Modification History:
+I1	    113 	!
+I1	    114 	!	03/20/95 - Kevin Handy
+I1	    115 	!		Created new header file to handle definition
+I1	    116 	!		of common functions to help find compiling
+I1	    117 	!		problems.
+I1	    118 	!
+I1	    119 	!	04/03/95 - Kevin Handy
+I1	    120 	!		Merged in SCOPE.COM so I can control the order
+I1	    121 	!		in which things are defined.
+I1	    122 	!
+I1	    123 	!	04/13/95 - Kevin Handy
+I1	    124 	!		Created Special/Temporary section.
+I1	    125 	!
+I1	    126 	!	04/19/95 - Kevin Handy
+I1	    127 	!		Add even more functions to this header.
+I1	    128 	!
+I1	    129 	!	04/20/95 - Kevin Handy
+I1	    130 	!		Fix a couple of definitions.
+I1	    131 	!
+I1	    132 	!	10/27/95 - Kevin Handy
+I1	    133 	!		Added OUTP_CREATESTR.
+I1	    134 	!--
+I1	    135 
+I1	    136 	%NOCROSS
+I1	    137 
+I1	    138 	!
+I1	    139 	! Special/temporary definitions
+I1	    140 	!
+I1	    141  !	EXTERNAL LONG FUNCTION SMG$CREATE_VIRTUAL_DISPLAY(LONG, LONG, LONG)
+I1	    142  !	EXTERNAL LONG FUNCTION SMG$LABEL_BORDER(LONG, STRING)
+I1	    143 	EXTERNAL LONG FUNCTION SMG$DELETE_VIRTUAL_DISPLAY(LONG)
+I1	    144 
+I1	    145 	!
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 4
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CMCFUN.INCLUDE]FUNCTION.HB;81
+
+I1	    146 	! CMC$ Codes
+I1	    147 	!
+I1	    148 	%INCLUDE "FUNC_INCLUDE:CONSTANTS.INC"
+I2	    149 
+I2	    198 	%LIST
+I2	    199 	%CROSS
+I1	    200 
+I1	    201 	!
+I1	    202 	! Here are some some codes for the various OUTP types
+I1	    203 	!
+I1	    204 	DECLARE INTEGER CONSTANT OUTP_TODISPLAY		= 1%
+I1	    205 	DECLARE INTEGER CONSTANT OUTP_TOSPOOL		= 2%
+I1	    206 	DECLARE INTEGER CONSTANT OUTP_TODEVICE		= 3%
+I1	    207 	DECLARE INTEGER CONSTANT OUTP_TOFILE		= 4%
+I1	    208 	DECLARE INTEGER CONSTANT OUTP_TOLOCAL		= 5%
+I1	    209 	DECLARE INTEGER CONSTANT OUTP_TOWP		= 7%
+I1	    210 	DECLARE INTEGER CONSTANT OUTP_TODOCUMENT	= 9%
+I1	    211 	DECLARE INTEGER CONSTANT OUTP_TO2020		= 10%
+I1	    212 	DECLARE INTEGER CONSTANT OUTP_TOPL		= 11%
+I1	    213 
+I1	    214 	!
+I1	    215 	! Scope definition
+I1	    216 	!
+I1	    217 	%INCLUDE "FUNC_INCLUDE:SCOPEDEF.COM"
+I2	    218 	!*******************************************************************
+I2	    219 	! SCOPEDEF.COM - Defines scope type terminal functions so that
+I2	    220 	! they are easily changed.
+I2	    221 	!
+I2	    222 	! This file is closely related to SCOPE.COM and must be changed
+I2	    223 	! at the same time.
+I2	    224 	!*******************************************************************
+I2	    225 
+I2	    226 	!
+I2	    227 	! External SMG$ functions declarations
+I2	    228 	!
+I2	    229 	%INCLUDE "FUNC_INCLUDE:SMG_EXTERNALS.COM"
+I3	   4948 	%LIST
+I3	   4949 	%CROSS
+I3	   4950 
+I2	   4951 
+I2	   4952 	!
+I2	   4953 	! Common area
+I2	   4954 	!
+I2	   4955 	%NOCROSS
+I2	   4956 
+I2	   4957 	RECORD SCOPE_STRUCT
+I2	   4958 		LONG SCOPE_EXIT		! Exit status of entry routines
+I2	   4959 		LONG SCOPE_TIMEOUT	! Time for input timeout in seconds
+I2	   4960 		LONG SMG_KBID		! Keyboard buffer name
+I2	   4961 		LONG SMG_PBID		! Pastboard buffer name
+I2	   4962 		LONG SMG_OPTION		! Option display
+I2	   4963 		LONG SMG_MESSAGE	! Message display
+I2	   4964 		LONG MACROFLAG		! Macro command flag
+I2	   4965 		STRING PRG_COMPANY=64	! Company name
+I2	   4966 		STRING PRG_IDENT=4	! Message type 
+I2	   4967 		STRING PRG_PROGRAM=40	! Program Name
+I2	   4968 		STRING PRG_ITEM=16	! Item for help
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 5
+V3.6a Calico                    CK_MAIN_CONTROLACC              17-MAY-2000 11:27:25  [CMC030.][CMCFUN.INCLUDE]SCOPEDEF.COM;5
+
+I2	   4969 		LONG SCREEN_WIDTH	! Width of created screen
+I2	   4970 		LONG IMENU_LEVELS	! Interupt Menu Levels
+I2	   4971 	END RECORD
+I2	   4972 
+I2	   4973 	%CROSS
+I1	   4974 
+I1	   4975 	!
+I1	   4976 	! Function definitions for Software Solutions programs
+I1	   4977 	!
+I1	   4978 	! Always include complete definition of parameters for
+I1	   4979 	! better error detection.
+I1	   4980 	!
+I1	   4981 	EXTERNAL STRING FUNCTION ASSG_MAKEBATCH(STRING, STRING)
+I1	   4982 	EXTERNAL LONG	FUNCTION COMP_ARRAY(STRING, STRING)
+I1	   4983 	EXTERNAL LONG	FUNCTION COMP_STRING(STRING, STRING)
+I1	   4984 	EXTERNAL STRING	FUNCTION CONV_STRING(STRING, LONG)
+I1	   4985 	EXTERNAL LONG	FUNCTION COPY_COPYRECORDS(STRING, STRING)
+I1	   4986 	EXTERNAL LONG	FUNCTION COPY_COPYFILE(STRING, STRING)
+I1	   4987 	EXTERNAL STRING FUNCTION DATE_3SELECT(SCOPE_STRUCT, STRING)
+I1	   4988 	EXTERNAL LONG	FUNCTION DATE_DAYCODE(STRING)
+I1	   4989 	EXTERNAL LONG	FUNCTION DATE_DAYOFWEEK(LONG)
+I1	   4990 	EXTERNAL STRING FUNCTION DATE_DUEDATE(STRING, LONG, STRING)
+I1	   4991 	EXTERNAL STRING	FUNCTION DATE_INVDCODE(LONG)
+I1	   4992 	EXTERNAL STRING	FUNCTION DATE_INVMCODE(LONG)
+I1	   4993 	EXTERNAL LONG	FUNCTION DATE_MONCODE(STRING)
+I1	   4994 	EXTERNAL STRING	FUNCTION DATE_STOREDATE(STRING)
+I1	   4995 	EXTERNAL STRING	FUNCTION DATE_TODAY()
+I1	   4996 	EXTERNAL LONG	FUNCTION ENTR_3CHOICE(SCOPE_STRUCT, STRING, &
+I1	   4997 		STRING, STRING DIM (), STRING, LONG, STRING, &
+I1	   4998 		STRING, LONG)
+I1	   4999 	EXTERNAL STRING	FUNCTION ENTR_3DATE(SCOPE_STRUCT, LONG, &
+I1	   5000 		STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5001 	EXTERNAL LONG	FUNCTION ENTR_3ENTER(SCOPE_STRUCT, LONG, &
+I1	   5002 		LONG, LONG, STRING, LONG, LONG)
+I1	   5003 	EXTERNAL REAL	FUNCTION ENTR_3NUMBER(SCOPE_STRUCT, LONG, &
+I1	   5004 		STRING, STRING, REAL, LONG, STRING, STRING)
+I1	   5005 	EXTERNAL REAL	FUNCTION ENTR_3TIMEKEEPER(SCOPE_STRUCT, LONG, &
+I1	   5006 		STRING, STRING, REAL, LONG, STRING, STRING)
+I1	   5007 	EXTERNAL STRING	FUNCTION ENTR_3OPTION(SCOPE_STRUCT, STRING, &
+I1	   5008 		STRING, LONG, LONG)
+I1	   5009 	EXTERNAL STRING FUNCTION ENTR_3PHONE(SCOPE_STRUCT, LONG, &
+I1	   5010 		STRING, STRING, STRING, LONG, LONG, STRING)
+I1	   5011 	EXTERNAL STRING FUNCTION ENTR_3PRODUCT(SCOPE_STRUCT, LONG, &
+I1	   5012 		STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5013 	EXTERNAL STRING FUNCTION ENTR_3SSN(SCOPE_STRUCT, LONG, &
+I1	   5014 		STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5015 	EXTERNAL STRING	FUNCTION ENTR_3STRING(SCOPE_STRUCT, LONG, &
+I1	   5016 		STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5017 	EXTERNAL STRING	FUNCTION ENTR_3STRINGLIST(SCOPE_STRUCT, &
+I1	   5018 		LONG, STRING, STRING, STRING, LONG, &
+I1	   5019 		STRING, STRING, STRING DIM (), STRING, STRING)
+I1	   5020 	EXTERNAL STRING FUNCTION ENTR_3TIME(SCOPE_STRUCT, &
+I1	   5021 		LONG, STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5022 	EXTERNAL STRING	FUNCTION ENTR_3YESNO(SCOPE_STRUCT, LONG, &
+I1	   5023 		STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5024 	EXTERNAL LONG   FUNCTION ENTR_4ENTRY(SCOPE_STRUCT, &
+I1	   5025 		LONG by value, LONG by value)
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 6
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:37  [CMC030.][CMCFUN.INCLUDE]FUNCTION.HB;81
+
+I1	   5026 	EXTERNAL LONG	FUNCTION ENTR_4SPECIALKEYS(SCOPE_STRUCT, LONG by value, &
+I1	   5027 		LONG by value, LONG by value)
+I1	   5028 	EXTERNAL STRING FUNCTION ENTR_BIT(LONG, STRING, &
+I1	   5029 		STRING, STRING, LONG, STRING, STRING, STRING, LONG, LONG)
+I1	   5030 	EXTERNAL STRING FUNCTION ENTR_DATUM(LONG, STRING, &
+I1	   5031 		STRING, STRING, LONG, STRING, STRING)
+I1	   5032 	EXTERNAL LONG   FUNCTION ENTR_MACRO(SCOPE_STRUCT)
+I1	   5033 	EXTERNAL STRING	FUNCTION ENTR_NOTE(LONG, &
+I1	   5034 		STRING, STRING, STRING, LONG, STRING, STRING)
+I1	   5035 	EXTERNAL STRING	FUNCTION ENTR_PERIOD(LONG, STRING, &
+I1	   5036 		STRING, STRING, LONG, STRING, STRING)
+I1	   5037 	EXTERNAL LONG	FUNCTION FIND_FILEEXISTS(STRING, LONG)
+I1	   5038 	EXTERNAL LONG	FUNCTION FUNC_BANNERCODE(STRING)
+I1	   5039 	EXTERNAL STRING FUNCTION FUNC_BITSTRING(LONG, STRING, LONG, STRING)
+I1	   5040 	EXTERNAL STRING FUNCTION FUNC_BITSWITCH(LONG, STRING, LONG)
+I1	   5041 	EXTERNAL LONG	FUNCTION FUNC_INCREMENT(STRING)
+I1	   5042 	EXTERNAL LONG   FUNCTION FUNC_MCLCOMMAND(SCOPE_STRUCT, &
+I1	   5043 		STRING DIM (), LONG, STRING, STRING)
+I1	   5044 	EXTERNAL LONG	FUNCTION FUNC_MODULUS(LONG, LONG)
+I1	   5045 	EXTERNAL LONG	FUNCTION FUNC_NUMBERADD(STRING, LONG)
+I1	   5046 	EXTERNAL STRING FUNCTION FUNC_REFORMAT(REAL, LONG, LONG)
+I1	   5047 	EXTERNAL REAL	FUNCTION FUNC_ROUND(REAL, LONG)
+I1	   5048 	EXTERNAL REAL	FUNCTION FUNC_ROUNDPAYROLL(REAL, STRING)
+I1	   5049 	EXTERNAL LONG	FUNCTION LIBR_3INSERT(STRING, STRING, STRING)
+I1	   5050 	EXTERNAL LONG   FUNCTION LIBR_CONNECT(STRING, STRING, STRING)
+I1	   5051 	EXTERNAL LONG	FUNCTION LIBR_DELETE(STRING, STRING)
+I1	   5052 	EXTERNAL LONG   FUNCTION LIBR_DIGSR(STRING, STRING, STRING DIM ())
+I1	   5053 	EXTERNAL LONG   FUNCTION LIBR_EDIT(STRING, STRING)
+I1	   5054 	EXTERNAL LONG	FUNCTION LIBR_EXTRACT(STRING, STRING, STRING)
+I1	   5055 	EXTERNAL LONG   FUNCTION LIBR_EXTRACTFILE(STRING, LONG, STRING, LONG)
+I1	   5056 	EXTERNAL LONG	FUNCTION LIBR_EXTRACTVAR(STRING, STRING, STRING)
+I1	   5057 	EXTERNAL LONG	FUNCTION LIBR_INSERTTEXT(STRING, STRING, STRING)
+I1	   5058 	EXTERNAL LONG   FUNCTION LIBR_INSERTVAR(STRING, STRING, STRING)
+I1	   5059 	EXTERNAL LONG	FUNCTION LIBR_MAINT(STRING, STRING, STRING, LONG)
+I1	   5060 	EXTERNAL LONG	FUNCTION LIBR_MAINTNODSR(STRING, STRING, STRING, LONG)
+I1	   5061 	EXTERNAL LONG   FUNCTION LIBR_NODIGSR(STRING, STRING, STRING DIM ())
+I1	   5062 	EXTERNAL STRING FUNCTION LIBR_SELECT(STRING, STRING, STRING, STRING)
+I1	   5063 	EXTERNAL LONG	FUNCTION MAIN_FAKEHEADER(LONG, STRING)
+I1	   5064 	EXTERNAL LONG	FUNCTION MAIN_JOURNAL(LONG, STRING)
+I1	   5065 	EXTERNAL LONG	FUNCTION MAIN_WINDOW(LONG, STRING)
+I1	   5066 	EXTERNAL STRING FUNCTION OUTP_CREATESTR(STRING, STRING)
+I1	   5067 	EXTERNAL STRING FUNCTION PRNT_CHECKPROTECT(REAL)
+I1	   5068 	EXTERNAL STRING	FUNCTION PRNT_DATE(STRING, LONG)
+I1	   5069 	EXTERNAL STRING FUNCTION PRNT_DATUM(STRING, LONG)
+I1	   5070 	EXTERNAL STRING FUNCTION PRNT_FANCYDATE(STRING)
+I1	   5071 	EXTERNAL STRING FUNCTION PRNT_MONTHYYYY(STRING)
+I1	   5072 	EXTERNAL STRING FUNCTION PRNT_NUMBERITH(LONG)
+I1	   5073 	EXTERNAL STRING FUNCTION PRNT_NUMBERTEXT(LONG)
+I1	   5074 	EXTERNAL STRING	FUNCTION PRNT_PHONE(STRING, LONG)
+I1	   5075 	EXTERNAL STRING	FUNCTION PRNT_SSN(STRING, LONG)
+I1	   5076 	EXTERNAL STRING	FUNCTION PRNT_TIME(STRING, LONG)
+I1	   5077 	EXTERNAL LONG	FUNCTION READ_BIT(LONG, STRING, LONG)
+I1	   5078 	EXTERNAL STRING	FUNCTION READ_DEFAULT()
+I1	   5079 	EXTERNAL LONG	FUNCTION READ_OWNERPID(LONG)
+I1	   5080 	EXTERNAL LONG	FUNCTION READ_PERIOD(STRING, STRING, STRING, &
+I1	   5081 		STRING, STRING, STRING, STRING, LONG)
+I1	   5082 	EXTERNAL STRING FUNCTION READ_SET(STRING, STRING)
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 7
+V3.6a Calico                    CK_MAIN_CONTROLACC              17-MAY-2000 11:27:25  [CMC030.][CMCFUN.INCLUDE]FUNCTION.HB;81
+
+I1	   5083 	EXTERNAL LONG	FUNCTION READ_SYSDETACH()
+I1	   5084 	EXTERNAL STRING FUNCTION READ_SYSJOB()
+I1	   5085 	EXTERNAL STRING FUNCTION READ_SYSLOG(STRING)
+I1	   5086 	EXTERNAL STRING FUNCTION READ_SYSPID()
+I1	   5087 	EXTERNAL STRING FUNCTION READ_SYSPN()
+I1	   5088 	EXTERNAL STRING FUNCTION READ_USERNAME()
+I1	   5089 	EXTERNAL STRING FUNCTION TIME_ADD(STRING, STRING, STRING)
+I1	   5090 	EXTERNAL LONG	FUNCTION TIME_CODE(STRING)
+I1	   5091 	EXTERNAL STRING FUNCTION TIME_INVCODE(LONG)
+I1	   5092 	EXTERNAL STRING	FUNCTION TIME_NOW()
+I1	   5093 	EXTERNAL STRING FUNCTION TIME_STORETIME(STRING, STRING)
+I1	   5094 	EXTERNAL STRING FUNCTION OUTP_CODE39(STRING, LONG, LONG)
+I1	   5095 	EXTERNAL STRING FUNCTION ZIPC_BARCODE(STRING)
+I1	   5096 
+I1	   5097 	!
+I1	   5098 	! Subroutine Definitions
+I1	   5099 	!
+I1	   5100 	! Always include complete definition of parameters for
+I1	   5101 	! better error detection.
+I1	   5102 	!
+I1	   5103 	EXTERNAL SUB ASSG_BATCH(LONG, STRING, STRING, STRING, STRING, &
+I1	   5104 		STRING, STRING, STRING, STRING, LONG)
+I1	   5105 	EXTERNAL SUB ASSG_CHANNEL(LONG, LONG)
+I1	   5106 	EXTERNAL SUB ASSG_FREECHANNEL(LONG)
+I1	   5107 	EXTERNAL SUB ASSG_UNMAKEBATCH(STRING, STRING, STRING)
+I1	   5108 	EXTERNAL SUB DSPL_SPLITCURSOR(STRING, LONG, LONG)
+I1	   5109 	EXTERNAL SUB ENTR_3BADKEY(SCOPE_STRUCT, LONG)
+I1	   5110 	EXTERNAL SUB ENTR_3MESSAGE(SCOPE_STRUCT, STRING, LONG)
+I1	   5111 	EXTERNAL SUB ENTR_3MESSAGENEWWINDOW(SCOPE_STRUCT, STRING, LONG)
+I1	   5112 	EXTERNAL SUB HELP_34MESSAGE(SCOPE_STRUCT, STRING, &
+I1	   5113 		STRING, STRING, STRING, STRING)
+I1	   5114 	EXTERNAL SUB FIND_FILE(STRING, STRING DIM(), LONG, STRING, STRING)
+I1	   5115 	EXTERNAL SUB HELP_MENUHELPKEY(STRING, STRING, STRING, STRING, &
+I1	   5116 		STRING, STRING, STRING, LONG)
+I1	   5117 	EXTERNAL SUB HELP_SPELL(STRING, STRING)
+I1	   5118 	EXTERNAL SUB LIBR_FORMATTEXT(STRING, LONG, LONG, STRING DIM ())
+I1	   5119 	EXTERNAL SUB MENU_3INTERRUPT(SCOPE_STRUCT)
+I1	   5120 	EXTERNAL SUB NOTE_PAD(STRING, STRING, STRING, LONG, STRING, LONG)
+I1	   5121 	EXTERNAL SUB READ_CODELIST(STRING, STRING, STRING DIM (), LONG)
+I1	   5122 	EXTERNAL SUB READ_CURPROTECTION(STRING, LONG)
+I1	   5123 	EXTERNAL SUB READ_DEVICE(STRING, STRING, LONG)
+I1	   5124 	EXTERNAL SUB READ_INITIALIZE()
+I1	   5125 	EXTERNAL SUB READ_PROTECTION(STRING, STRING, LONG)
+I1	   5126 	EXTERNAL SUB READ_QUEFORM(STRING, STRING DIM(,), LONG)
+I1	   5127 	EXTERNAL SUB SUBR_3EXITPROGRAM(SCOPE_STRUCT, STRING, STRING)
+I1	   5128 	EXTERNAL SUB SUBR_3SPAWN(SCOPE_STRUCT, STRING)
+I1	   5129 	EXTERNAL SUB SUBR_SUBMIT(STRING, LONG)
+I1	   5130 	EXTERNAL SUB WRIT_CURPROTECTION(STRING, LONG)
+I1	   5131 	EXTERNAL SUB WRIT_STRING(STRING, STRING)
+I1	   5132 
+I1	   5133 	%CROSS
+	   5134 	MAP (SCOPE) SCOPE_STRUCT SCOPE
+	   5135 
+	   5136 	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+I1	   5137 	!*******************************************************************
+I1	   5138 	! This include file is used to DECLARE information necessary for
+I1	   5139 	! maintainence programs using some varient of MAIN_WINDOW.
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 8
+V3.6a Calico                    CK_MAIN_CONTROLACC              17-MAY-2000 11:27:25  [CMC030.][CMCFUN.INCLUDE]MAIN_WINDOW.COM;5
+
+I1	   5140 	!*******************************************************************
+I1	   5141 
+I1	   5142 	%NOCROSS
+I1	   5143 
+I1	   5144 	DECLARE LONG CONSTANT OPT_INIT		= 37%	! Init window
+I1	   5145 	DECLARE LONG CONSTANT OPT_OPTLIST	= 38%	! Modify options
+I1	   5146 	DECLARE LONG CONSTANT OPT_BACKGROUND	= 1%	! Paint background
+I1	   5147 	DECLARE LONG CONSTANT OPT_ENTRY		= 2%	! Enter/display/etc.
+I1	   5148 	DECLARE LONG CONSTANT OPT_TESTENTRY	= 3%	! Test input
+I1	   5149 	DECLARE LONG CONSTANT OPT_LOG		= 4%	! Log (obsolete)
+I1	   5150 	DECLARE LONG CONSTANT OPT_SETOLD	= 5%	! Set old value
+I1	   5151 	DECLARE LONG CONSTANT OPT_RESETOLD	= 6%	! Restore old value
+I1	   5152 	DECLARE LONG CONSTANT OPT_SETDEFAULT	= 7%	! Set default value
+I1	   5153 	DECLARE LONG CONSTANT OPT_RESETDEFAULT	= 8%	! Restore default value
+I1	   5154 	DECLARE LONG CONSTANT OPT_VIEW		= 9%	! View record
+I1	   5155 	DECLARE LONG CONSTANT OPT_FIND		= 11%	! Find record
+I1	   5156 	DECLARE LONG CONSTANT OPT_DISPLAY	= 12%	! Display additional info
+I1	   5157 	DECLARE LONG CONSTANT OPT_TESTOPT	= 15%	! Verify completing option
+I1	   5158 	DECLARE LONG CONSTANT OPT_AFTEROPT	= 16%	! Routine to do after option
+I1	   5159 	DECLARE LONG CONSTANT OPT_WINDOW	= 90%	! "Window" option
+I1	   5160 	DECLARE LONG CONSTANT OPT_MOREMENU	= 91%	! Additional menu options
+I1	   5161 	DECLARE LONG CONSTANT OPT_ARRAY		= 17%	! Journal array maint
+I1	   5162 	DECLARE LONG CONSTANT OPT_EXIT		= 18%	! Do before THE exit
+I1	   5163 	DECLARE LONG CONSTANT OPT_SUBWIND	= 19%	! Subwindow 
+I1	   5164 
+I1	   5165 	!****************************************************************
+I1	   5166 	! Here are the options for OPT_ARRAY
+I1	   5167 	!****************************************************************
+I1	   5168 
+I1	   5169 	DECLARE LONG CONSTANT OPT_ARRAY_LOAD	= 1%	! Load data into array
+I1	   5170 	DECLARE LONG CONSTANT OPT_ARRAY_REMOVE	= 2%	! Remove item from array
+I1	   5171 	DECLARE LONG CONSTANT OPT_ARRAY_SET	= 3%	! Set array item to current
+I1	   5172 	DECLARE LONG CONSTANT OPT_ARRAY_GETLOCK	= 4%	! Get/Lock element
+I1	   5173 	DECLARE LONG CONSTANT OPT_ARRAY_GET	= 5%	! Get element w/o lock
+I1	   5174 	DECLARE LONG CONSTANT OPT_ARRAY_SETKEY	= 6%	! Change key to match header
+I1	   5175 	DECLARE LONG CONSTANT OPT_ARRAY_PRINT	= 7%	! Display additional info
+I1	   5176 
+I1	   5177 	%CROSS
+	   5178 	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	   5179 
+I1	   5180 	!=======================================================================
+I1	   5181 	! 1000-1099	GL * General Ledger System
+I1	   5182 	! This include file is used to DECLARE window numbers for GL system
+I1	   5183 	!=======================================================================
+I1	   5184 
+I1	   5185 	DECLARE LONG CONSTANT GL_MAIN_BUDGET.ID			= 1010%
+I1	   5186 	DECLARE LONG CONSTANT GL_MAIN_CHART.ID			= 1000%
+I1	   5187  !	DECLARE LONG CONSTANT GL_MAIN_CHARTEX.ID		= 1002%
+I1	   5188 	DECLARE LONG CONSTANT GL_MAIN_35CHART.ID 		= 1005%
+I1	   5189 	DECLARE LONG CONSTANT GL_MAIN_CHARTHIS.ID		= 1015%
+I1	   5190 	DECLARE LONG CONSTANT GL_MAIN_CONTROL.ID		= 1017%
+I1	   5191 	DECLARE LONG CONSTANT GL_MAIN_GJ_LINE.ID		= 1020%
+I1	   5192 	DECLARE LONG CONSTANT GL_MAIN_GLMNT.ID			= 1025%
+I1	   5193 	DECLARE LONG CONSTANT GL_MAIN_LAYOUT.ID			= 1030%
+I1	   5194 	DECLARE LONG CONSTANT GL_MAIN_MASK.ID			= 1035%
+I1	   5195 	DECLARE LONG CONSTANT GL_MAIN_OBJECT.ID			= 1040%
+I1	   5196 	DECLARE LONG CONSTANT GL_MAIN_VENCOL.ID			= 1045%
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 9
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:33  [CMC030.][CMCFUN.INCLUDE]GL_WINDOW.INC;15
+
+I1	   5197 	DECLARE LONG CONSTANT GL_MAIN_CATEGORY.ID		= 1050%
+I1	   5198 	DECLARE LONG CONSTANT GL_MAIN_TRICONTROL.ID		= 1055%
+I1	   5199 	DECLARE LONG CONSTANT GL_MAIN_TRIJOUR.ID		= 1060%
+I1	   5200 	DECLARE LONG CONSTANT GL_MAIN_USERLIST.ID		= 1065%
+I1	   5201 	DECLARE LONG CONSTANT GL_MAIN_USERDEF.ID		= 1070%
+I1	   5202 	DECLARE LONG CONSTANT GL_MAIN_USERHEAD.ID		= 1074%
+I1	   5203 	DECLARE LONG CONSTANT GL_MAIN_USERJOUR.ID		= 1075%
+I1	   5204 
+	   5205 	!
+	   5206 	! CDD inclusions and MAPs
+	   5207 	!
+	   5208 	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+	   5209 
+I1	   5210 	!
+I1	   5211 	! File Layout for: CDD.CDD_WINDOW on 11-Mar-99
+I1	   5212 	!
+I1	   5213 	! Window Data
+I1	   5214 	!
+I1	   5215 
+I1	   5216 	RECORD CDD_WINDOW_CDD
+I1	   5217 		! Element =
+I1	   5218 		!   Description = Window identification number
+I1	   5219 		LONG IDENT
+I1	   5220 		! Element =
+I1	   5221 		!   Description = Title for top of window
+I1	   5222 		STRING DESCR = 40
+I1	   5223 		! Element =
+I1	   5224 		!   Description = Name to be used by help function
+I1	   5225 		STRING NHELP = 40
+I1	   5226 		! Element =
+I1	   5227 		!   Description = Channel that file is open on
+I1	   5228 		LONG CHAN
+I1	   5229 		! Element =
+I1	   5230 		!   Description = Width of the window
+I1	   5231 		LONG HSIZE
+I1	   5232 		! Element =
+I1	   5233 		!   Description = height of the window
+I1	   5234 		LONG VSIZE
+I1	   5235 		! Element =
+I1	   5236 		!   Description = Horozontal position of the window
+I1	   5237 		LONG HPOS
+I1	   5238 		! Element =
+I1	   5239 		!   Description = Vertical position of the window
+I1	   5240 		LONG VPOS
+I1	   5241 		! Element =
+I1	   5242 		!   Description = Number of fields in window
+I1	   5243 		LONG NITEMS
+I1	   5244 		! Element =
+I1	   5245 		!   Description = Number of keys
+I1	   5246 		WORD NKEYS
+I1	   5247 		! Element =
+I1	   5248 		!   Description = Key names
+I1	   5249 		STRING KNAME(7) = 16
+I1	   5250 		! Element =
+I1	   5251 		!   Description = Fields in keys (8 Keys, 8 fields per key
+I1	   5252 		WORD KFIELD(7, 8)
+I1	   5253 		! Element =
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 10
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:31  [CMC030.][CDD.OPEN]CDD_WINDOW.HB;4
+
+I1	   5254 		!   Description = View width
+I1	   5255 		LONG HVIEW
+I1	   5256 		! Element =
+I1	   5257 		!   Description = View height
+I1	   5258 		LONG VVIEW
+I1	   5259 		! Element =
+I1	   5260 		!   Description = For those routines that need to store it
+I1	   5261 		LONG WNUMBER
+I1	   5262 		! Element =
+I1	   5263 		!   Description = For a relative file, the record number t
+I1	   5264 		LONG RELREC
+I1	   5265 		! Element =
+I1	   5266 		!   Description = For a journal, number of physical lines
+I1	   5267 		LONG LINREC
+I1	   5268 		! Element =
+I1	   5269 		!   Description = For a journal, top line available on scr
+I1	   5270 		LONG TOPLIN
+I1	   5271 		! Element =
+I1	   5272 		!   Description = For a journal, bottom line on screen ava
+I1	   5273 		LONG BOTLIN
+I1	   5274 		! Element =
+I1	   5275 		!   Description = For a journal, Currently selected record
+I1	   5276 		LONG CURREC
+I1	   5277 		! Element =
+I1	   5278 		!   Description = For a journal, Line on screen for curren
+I1	   5279 		LONG CURLIN
+I1	   5280 		! Element =
+I1	   5281 		!   Description = For a journal, record on the top of the
+I1	   5282 		LONG TOPREC
+I1	   5283 		! Element =
+I1	   5284 		!   Description = For a journal, the maximum number of rec
+I1	   5285 		LONG MAXREC
+I1	   5286 		! Element =
+I1	   5287 		!   Description = For a journal, the total number of recor
+I1	   5288 		LONG TOTREC
+I1	   5289 		! Element =
+I1	   5290 		!   Description = Place to store the window number for a p
+I1	   5291 		LONG LWINDOW
+I1	   5292 		! Element =
+I1	   5293 		!   Description = Width of the page window
+I1	   5294 		LONG LWIDTH
+I1	   5295 		! Element =
+I1	   5296 		!   Description = Height of the page window
+I1	   5297 		LONG LHEIGHT
+I1	   5298 		! Element =
+I1	   5299 		!   Description = Vertical position of the page window
+I1	   5300 		LONG LVPOS
+I1	   5301 		! Element =
+I1	   5302 		!   Description = Horozontal position of the page window
+I1	   5303 		LONG LHPOS
+I1	   5304 		! Element =
+I1	   5305 		!   Description = Last page to be usable
+I1	   5306 		LONG LLAST
+I1	   5307 		! Element =
+I1	   5308 		!   Description = Last field on each page
+I1	   5309 		LONG LPAGE(7)
+I1	   5310 		! Element =
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 11
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:17:54  [CMC030.][CDD.OPEN]CDD_WINDOW.HB;4
+
+I1	   5311 		!   Description = Current page selected
+I1	   5312 		LONG LCURR
+I1	   5313 		! Element =
+I1	   5314 		!   Description = View horozontal position
+I1	   5315 		LONG VHPOS
+I1	   5316 		! Element =
+I1	   5317 		!   Description = View vertical position
+I1	   5318 		LONG VVPOS
+I1	   5319 		! Element =
+I1	   5320 		!   Description = Fill section
+I1	   5321 		STRING MENU = 28
+I1	   5322 		! Element =
+I1	   5323 		!   Description = Hard/soft flags for items
+I1	   5324 		WORD HFLAG(64)
+I1	   5325 		! Element =
+I1	   5326 		!   Description = Flag word
+I1	   5327 		LONG FLAGS
+I1	   5328 		! Element =
+I1	   5329 		!   Description = Titles for screen pages
+I1	   5330 		STRING LTITLE(7) = 16
+I1	   5331 	END RECORD
+	   5332 	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+I1	   5333 	!
+I1	   5334 	! File Layout for: GL.GL_CHART
+I1	   5335 	!
+I1	   5336 	! Chart of Accounts
+I1	   5337 	!
+I1	   5338 
+I1	   5339 	RECORD GL_CHART_CDD
+I1	   5340 		! Element = ACCOUNT
+I1	   5341 		!   Description = General Ledger Account Number
+I1	   5342 		STRING ACCT = 18
+I1	   5343 		! Element =
+I1	   5344 		!   Description = Description
+I1	   5345 		STRING DESCR = 40
+I1	   5346 		! Element =
+I1	   5347 		!   Description = Account type
+I1	   5348 		STRING ACCTYPE = 1
+I1	   5349 		! Element =
+I1	   5350 		!   Description = Cash flow
+I1	   5351 		STRING FLOW = 4
+I1	   5352 		! Element =
+I1	   5353 		!   Description = Work capitol
+I1	   5354 		STRING WORK = 4
+I1	   5355 		! Element =
+I1	   5356 		!   Description = Financial type
+I1	   5357 		STRING FINTYPE = 10
+I1	   5358 		! Element =
+I1	   5359 		!   Description = Summary flag 1 - Detail 2 - By date 3 -
+I1	   5360 		STRING SUMMARY = 1
+I1	   5361 		! Element =
+I1	   5362 		!   Description = Period dollar totals
+I1	   5363 		GFLOAT DOLLAR(20)
+I1	   5364 		! Element =
+I1	   5365 		!   Description = Period unit totals
+I1	   5366 		GFLOAT UNIT(20)
+I1	   5367 		! Element =
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 12
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:17:54  LANDA$DKA200:[CMC030.][GL.OPEN]GL_CHART.HB;7
+
+I1	   5368 		!   Description = Period hour totals
+I1	   5369 		GFLOAT HOUR(20)
+I1	   5370 		! Element =
+I1	   5371 		!   Description = Current period
+I1	   5372 		WORD CPERIOD
+I1	   5373 		! Element =
+I1	   5374 		!   Description = Running dollars
+I1	   5375 		GFLOAT RUNDOL
+I1	   5376 		! Element =
+I1	   5377 		!   Description = Running units
+I1	   5378 		GFLOAT RUNUNIT
+I1	   5379 		! Element =
+I1	   5380 		!   Description = Running hours
+I1	   5381 		GFLOAT RUNHOUR
+I1	   5382 		! Element =
+I1	   5383 		!   Description = Current dollars
+I1	   5384 		GFLOAT CURDOL
+I1	   5385 		! Element =
+I1	   5386 		!   Description = Current units
+I1	   5387 		GFLOAT CURUNIT
+I1	   5388 		! Element =
+I1	   5389 		!   Description = Current hours
+I1	   5390 		GFLOAT CURHOUR
+I1	   5391 		! Element =
+I1	   5392 		!   Description = Last batch updated
+I1	   5393 		STRING BATCH = 6
+I1	   5394 	END RECORD
+	   5395 	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+	   5396 
+	   5397 	%INCLUDE "SOURCE:[CK.OPEN]CK_CONTROLACC.HB"
+I1	   5398 	!
+I1	   5399 	! File Layout for: CK.CK_CONTROLACC
+I1	   5400 	!
+I1	   5401 	! Check Account Control File
+I1	   5402 	!
+I1	   5403 
+I1	   5404 	RECORD CK_CONTROLACC_CDD
+I1	   5405 		! Element = ACCOUNT
+I1	   5406 		!   Description = General Ledger Account Number
+I1	   5407 		STRING ACCOUNT = 18
+I1	   5408 		! Element =
+I1	   5409 		!   Description = Bank Account
+I1	   5410 		STRING BANK_ACCT = 6
+I1	   5411 		! Element =
+I1	   5412 		!   Description = Start Check Number
+I1	   5413 		STRING STARTCK = 6
+I1	   5414 		! Element =
+I1	   5415 		!   Description = End Check Number
+I1	   5416 		STRING ENDCK = 6
+I1	   5417 		! Element =
+I1	   5418 		!   Description = Bank Number
+I1	   5419 		STRING BANK_NUM = 20
+I1	   5420 	END RECORD
+	   5421 	MAP (CK_CONTROLACC)	CK_CONTROLACC_CDD	CK_CONTROLACC
+	   5422 	MAP (CK_CONTROLACC_OLD)	CK_CONTROLACC_CDD	CK_CONTROLACC_OLD, CK_CONTROLACC2
+	   5423 
+	   5424 	!
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 13
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:19:49  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5425 	! Common areas
+	   5426 	!
+	   5427 	! These areas store information that is re-used between
+	   5428 	! calls to these functions.
+	   5429 	!
+	   5430 	COM (CH_CK_CONTROLACC) &
+	   5431 		CK_CONTROLACC.CH%, &
+	   5432 		CK_CONTROLACC.READONLY%
+	   5433 
+	   5434 	!
+	   5435 	! External functions
+	   5436 	!
+	   5437 	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+	   5438 	EXTERNAL LONG    FUNCTION FUNC_TESTENTRY
+	   5439 
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 14
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5440 	%PAGE
+	   5441 
+	   5442 	ON ERROR GOTO 29000
+	   5443 
+	   5444 	SELECT MOPTION
+	   5445 	!********************************************************************
+	   5446 	! Initialization
+	   5447 	!
+	   5448 	! This option is used to initialize the window structure,
+	   5449 	! set up the default values for add, and open all files
+	   5450 	! necessary that have not already been opened.
+	   5451 	!********************************************************************
+	   5452 	CASE OPT_INIT
+	   5453 
+	   5454 		!******************************************************************
+	   5455 		! Set up information
+	   5456 		!******************************************************************
+	   5457 
+	   5458 		!
+	   5459 		! Define window
+	   5460 		!
+	   5461 		SMG_WINDOW::DESCR = "Bank Account Control File"
+	   5462 		SMG_WINDOW::NHELP = "CK_MAIN_CONTROLACC"
+	   5463 		SMG_WINDOW::HSIZE = 78%
+	   5464 		SMG_WINDOW::VSIZE = 18%
+	   5465 		SMG_WINDOW::HPOS  = 2%
+	   5466 		SMG_WINDOW::VPOS  = 2%
+	   5467 		SMG_WINDOW::FLAGS = 0%
+	   5468 		SMG_WINDOW::NITEMS= 5%
+	   5469 
+	   5470 		SMG_WINDOW::NKEYS = 1%
+	   5471 		SMG_WINDOW::KNAME(0%) = "Account"
+	   5472 		SMG_WINDOW::KFIELD(0%, 0%) = 1%
+	   5473 		SMG_WINDOW::KFIELD(0%, 1%) = 1%
+	   5474 
+	   5475 		SMG_WINDOW::HVIEW = 78%
+	   5476 		SMG_WINDOW::VVIEW = 18%
+	   5477 
+	   5478 		CALL READ_DEFAULTS(SMG_WINDOW) &
+	   5479 			IF INSTR(1%, " QV", MVALUE) <= 1%
+	   5480 
+	   5481 700		!
+	   5482 		! Declare channels
+	   5483 		!
+	   5484 		IF CK_CONTROLACC.CH% > 0%
+	   5485 		THEN
+	   5486 			!
+	   5487 			! Already open, set flag to read-only if
+	   5488 			! was that way from last time.
+	   5489 			!
+	   5490 			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+	   5491 				IF CK_CONTROLACC.READONLY%
+	   5492 			GOTO 790
+	   5493 		END IF
+	   5494 
+	   5495 		! Open main file (existing) for modification
+	   5496 		!
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 15
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5497 750		%INCLUDE "SOURCE:[CK.OPEN]CK_CONTROLACC.CRE"
+I1	   5498 	!======================================================================
+I1	   5499 	! CK_CONTROLACC file (create, open read/write)
+I1	   5500 	!======================================================================
+I1	   5501 
+I1	   5502 	CALL ASSG_CHANNEL(CK_CONTROLACC.CH%, STAT%)
+I1	   5503 	CALL READ_DEVICE('CK_CONTROLACC',CK_CONTROLACC.DEV$, STAT%)
+I1	   5504 	CALL READ_PROTECTION('CK_CONTROLACC',CK_CONTROLACC.PRO$,STAT%)
+I1	   5505 	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+I1	   5506 	CALL WRIT_CURPROTECTION(CK_CONTROLACC.PRO$, STAT%)
+I1	   5507 
+I1	   5508 	CK_CONTROLACC.NAME$ = CK_CONTROLACC.DEV$+"CK_CONTROLACC.CTR"
+I1	   5509 
+I1	   5510 	OPEN CK_CONTROLACC.NAME$ AS FILE CK_CONTROLACC.CH%, &
+I1	   5511 		ORGANIZATION INDEXED FIXED, &
+I1	   5512 		MAP CK_CONTROLACC, &
+I1	   5513 		PRIMARY KEY &
+I1	   5514 			CK_CONTROLACC::ACCOUNT &
+I1	   5515 			DUPLICATES , &
+I1	   5516 		ACCESS MODIFY, ALLOW MODIFY
+I1	   5517 
+I1	   5518 	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+I1	   5519 
+	   5520 		CK_CONTROLACC.READONLY% = 0%
+	   5521 		GOTO 790
+	   5522 
+	   5523 760		!
+	   5524 		! If unable to open for modify, try to open
+	   5525 		! with read access only.
+	   5526 		!
+	   5527 		%INCLUDE "SOURCE:[CK.OPEN]CK_CONTROLACC.OPN"
+I1	   5528 	!======================================================================
+I1	   5529 	! CK_CONTROLACC file (open read only)
+I1	   5530 	!======================================================================
+I1	   5531 
+I1	   5532 	CALL ASSG_CHANNEL(CK_CONTROLACC.CH%, STAT%)
+I1	   5533 	CALL READ_DEVICE('CK_CONTROLACC',CK_CONTROLACC.DEV$, STAT%)
+I1	   5534 
+I1	   5535 	CK_CONTROLACC.NAME$ = CK_CONTROLACC.DEV$+"CK_CONTROLACC.CTR"
+I1	   5536 
+I1	   5537 	OPEN CK_CONTROLACC.NAME$ FOR INPUT AS FILE CK_CONTROLACC.CH%, &
+I1	   5538 		ORGANIZATION INDEXED FIXED, &
+I1	   5539 		MAP CK_CONTROLACC, &
+I1	   5540 		PRIMARY KEY &
+I1	   5541 			CK_CONTROLACC::ACCOUNT &
+I1	   5542 			DUPLICATES , &
+I1	   5543 		ACCESS READ, ALLOW MODIFY
+I1	   5544 
+	   5545 		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+	   5546 		CK_CONTROLACC.READONLY% = -1%
+	   5547 
+	   5548 		GOTO 790
+	   5549 
+	   5550 770		!
+	   5551 		! File not able to open, so reset channel
+	   5552 		!
+	   5553 		CALL ASSG_FREECHANNEL(CK_CONTROLACC.CH%)
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 16
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5554 
+	   5555 		EXIT FUNCTION
+	   5556 
+	   5557 790		SMG_WINDOW::CHAN  = CK_CONTROLACC.CH%
+	   5558 		RESET #CK_CONTROLACC.CH%
+	   5559 		GET #CK_CONTROLACC.CH%, REGARDLESS
+	   5560 
+	   5561 
+	   5562 	!**********************************************************************
+	   5563 	! Display the background
+	   5564 	!
+	   5565 	! This option is used to display the background information on the
+	   5566 	! screen.  It must first clear any junk on the screen, and then
+	   5567 	! write the background onto it.
+	   5568 	!**********************************************************************
+	   5569 20100	CASE OPT_BACKGROUND
+	   5570 
+	   5571 		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+	   5572 
+	   5573 		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+	   5574 
+	   5575 		DATA	05,10, "(01) GL Account #", &
+	   5576 			06,10, "(02) Bank Code", &
+	   5577 			07,10, "(03) Start Check #", &
+	   5578 			08,10, "(04) End Check #", &
+	   5579 			09,10, "(05) Bank Account #", &
+	   5580 			0, 0, ""
+	   5581 
+	   5582 		RESTORE
+	   5583 
+	   5584 		READ XPOS%, YPOS%, XSTR$
+	   5585 		I%=0%
+	   5586 		WHILE (XPOS% <> 0)
+	   5587 			I% = I% + 1%
+	   5588 			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+	   5589 				XSTR$, XPOS%, YPOS%) &
+	   5590 				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+	   5591 		READ XPOS%, YPOS%, XSTR$
+	   5592 		NEXT
+	   5593 
+	   5594 		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+	   5595 
+	   5596 	!**********************************************************************
+	   5597 	! Enter/Display/Default
+	   5598 	!
+	   5599 	! This option is used to enter the data from the user, display data,
+	   5600 	! set defaults, and return the data back according to MFLAG.
+	   5601 	!**********************************************************************
+	   5602 20200	CASE OPT_ENTRY
+	   5603 		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+	   5604 		TEMP$ = "View starting at" IF TEMP$ = "View"
+	   5605 
+	   5606 		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+	   5607  E0Loop:
+	   5608 		SCOPE::SCOPE_EXIT = 0%
+	   5609 
+	   5610 		SELECT MLOOP
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 17
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5611 
+	   5612 		CASE 1%
+	   5613 
+	   5614 	!++
+	   5615 	! Abstract:FLD001
+	   5616 	!	^*(01) GL Account _#\*
+	   5617 	!	.b
+	   5618 	!	.lm +5
+	   5619 	!	The ^*GL Account _#\* field provides the means to enter
+	   5620 	!	the number of a "cash account" which is defined in the
+	   5621 	!	General Ledger Chart of Accounts.
+	   5622 	!	.b
+	   5623 	!	Pressing ^*<List Choices>\*, while the cursor is located
+	   5624 	!	at this field, will cause a list of valid GL Account _#'s
+	   5625 	!	to be displayed.
+	   5626 	!	.lm -5
+	   5627 	!
+	   5628 	! Index:
+	   5629 	!	.x GL Account #>Bank Account Control File
+	   5630 	!	.x Bank Account Control File>GL Account #
+	   5631 	!
+	   5632 	!--
+	   5633 
+	   5634 			CK_CONTROLACC::ACCOUNT = ENTR_3STRING(SCOPE, &
+	   5635 				SMG_WINDOW::WNUMBER, "05;30", TEMP$, &
+	   5636 				CK_CONTROLACC::ACCOUNT, MFLAG, "'E",MVALUE)
+	   5637 
+	   5638 
+	   5639 			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+	   5640 			THEN
+	   5641 				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX") = 1%)
+	   5642 				THEN
+	   5643 					CK_CONTROLACC::ACCOUNT = &
+	   5644 						GL_CHART::ACCT
+	   5645 				END IF
+	   5646 				GOTO E0Loop
+	   5647 			END IF
+	   5648 
+	   5649 			IF MAIN_WINDOW(GL_MAIN_CHART.ID, &
+	   5650 				"Q0" + CK_CONTROLACC::ACCOUNT) <> 1%
+	   5651 			THEN
+	   5652 				GL_CHART::DESCR = "??????????????????????????"
+	   5653 			END IF
+	   5654 
+	   5655 			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+	   5656 				LEFT(GL_CHART::DESCR, 28%), &
+	   5657 				5%, 50%, , SMG$M_BOLD)
+	   5658 
+	   5659 		CASE 2%
+	   5660 
+	   5661 	!++
+	   5662 	! Abstract:FLD002
+	   5663 	!	^*(02) Bank Code\*
+	   5664 	!	.b
+	   5665 	!	.lm +5
+	   5666 	!	The ^*Bank Code\* field provides the means to enter a user
+	   5667 	!	defined code which represents a bank account.
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 18
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5668 	!	.b
+	   5669 	!	The field will accommodate six (06) alphanumeric characters.
+	   5670 	!	.lm -5
+	   5671 	!
+	   5672 	! Index:
+	   5673 	!	.x Bank Code>Bank Account Control File
+	   5674 	!	.x Bank Account Control File>Bank Code
+	   5675 	!
+	   5676 	!--
+	   5677 
+	   5678 			CK_CONTROLACC::BANK_ACCT = ENTR_3STRING(SCOPE, &
+	   5679 				SMG_WINDOW::WNUMBER, "06;30", TEMP$, &
+	   5680 				CK_CONTROLACC::BANK_ACCT, MFLAG, "'E",MVALUE)
+	   5681 
+	   5682 		CASE 3%
+	   5683 
+	   5684 	!++
+	   5685 	! Abstract:FLD003
+	   5686 	!	^*(03) Start Check _#\*
+	   5687 	!	.b
+	   5688 	!	.lm +5
+	   5689 	!	The ^*Start Check _#\* field is provided to enter the number
+	   5690 	!	of the first check in the series of checks to be used for a
+	   5691 	!	related bank account.
+	   5692 	!	.b
+	   5693 	!	The field will accommodate six (6) alphanumeric characters.
+	   5694 	!	.lm -5
+	   5695 	!
+	   5696 	! Index:
+	   5697 	!	.x Start Check _#>Bank Account Control File
+	   5698 	!	.x Bank Account Control File>Start Check _#
+	   5699 	!
+	   5700 	!--
+	   5701 
+	   5702 			CK_CONTROLACC::STARTCK = ENTR_3STRING(SCOPE, &
+	   5703 				SMG_WINDOW::WNUMBER, "07;30", TEMP$, &
+	   5704 				CK_CONTROLACC::STARTCK, MFLAG OR 2%, "'E", &
+	   5705 				MVALUE)
+	   5706 
+	   5707 		CASE 4%
+	   5708 
+	   5709 	!++
+	   5710 	! Abstract:FLD004
+	   5711 	!	^*(04) End Check _#\*
+	   5712 	!	.b
+	   5713 	!	.lm +5
+	   5714 	!	The ^*End Check _#\* field provides the means to enter
+	   5715 	!	the last check number in the series of checks to be used
+	   5716 	!	for a related bank account.
+	   5717 	!	.b
+	   5718 	!	The field will accommodate an entry of six (6) alphanumeric
+	   5719 	!	characters.
+	   5720 	!	.lm -5
+	   5721 	!
+	   5722 	! Index:
+	   5723 	!	.x End Check _#>Bank Account Control File
+	   5724 	!	.x Bank Account Control File>End Check _#
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 19
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5725 	!
+	   5726 	!--
+	   5727 
+	   5728 			CK_CONTROLACC::ENDCK = ENTR_3STRING(SCOPE, &
+	   5729 				SMG_WINDOW::WNUMBER, "08;30", TEMP$, &
+	   5730 				CK_CONTROLACC::ENDCK, MFLAG OR 2%, "'E", &
+	   5731 				MVALUE)
+	   5732 		CASE 5%
+	   5733 
+	   5734 	!++
+	   5735 	! Abstract:FLD005
+	   5736 	!	^*(05) Bank Account _#\*
+	   5737 	!	.b
+	   5738 	!	.lm +5
+	   5739 	!	The ^*Bank Account _#\* field provides the means to enter the
+	   5740 	!	bank account number assigned by the bank for a checking
+	   5741 	!	account.
+	   5742 	!	.b
+	   5743 	!	The field will accommodate twenty (20) alphanumeric
+	   5744 	!	characters.
+	   5745 	!	.lm -5
+	   5746 	!
+	   5747 	! Index:
+	   5748 	!	.x Bank Account _#>Bank Account Control File
+	   5749 	!	.x Bank Account Control File>Bank Account _#
+	   5750 	!
+	   5751 	!--
+	   5752 
+	   5753 			CK_CONTROLACC::BANK_NUM = ENTR_3STRING(SCOPE, &
+	   5754 				SMG_WINDOW::WNUMBER, "09;30", TEMP$, &
+	   5755 				CK_CONTROLACC::BANK_NUM, MFLAG, "'E", &
+	   5756 				MVALUE)
+	   5757 
+	   5758 		END SELECT
+	   5759 
+	   5760 		SCOPE::PRG_ITEM = TEMP1$
+	   5761 
+	   5762 	!
+	   5763 	! Test values
+	   5764 	!
+	   5765 20300	CASE OPT_TESTENTRY
+	   5766 		CK_MAIN_CONTROLACC = 0%
+	   5767 
+	   5768 		SELECT MLOOP
+	   5769 
+	   5770 		CASE 1%
+	   5771 			IF CK_CONTROLACC::ACCOUNT = ""
+	   5772 			THEN
+	   5773 				CK_MAIN_CONTROLACC = 1%
+	   5774 				GOTO TLoop
+	   5775 			ELSE
+	   5776 				IF (MVALUE = "ADD")
+	   5777 				THEN
+	   5778 					GET #SMG_WINDOW::CHAN, &
+	   5779 						KEY#0% EQ CK_CONTROLACC::ACCOUNT + "", &
+	   5780 						REGARDLESS
+	   5781 
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 20
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5782 					CK_MAIN_CONTROLACC = 2%
+	   5783 					CALL ENTR_3MESSAGE(SCOPE, "Record Already Exists", 0%)
+	   5784 					GOTO TLoop
+	   5785 				END IF
+	   5786 			END IF
+	   5787 
+	   5788 			!
+	   5789 			! Is the input defined?
+	   5790 			!
+	   5791 			CK_MAIN_CONTROLACC = FUNC_TESTENTRY( SMG_WINDOW, &
+	   5792 				CK_CONTROLACC::ACCOUNT, &
+	   5793 				GL_CHART::DESCR, &
+	   5794 				"CK", MLOOP, "PRG", &
+	   5795 				"Account", GL_MAIN_CHART.ID)
+	   5796 
+	   5797  Tloop:
+	   5798 		END SELECT
+	   5799 
+	   5800 	!
+	   5801 	! Set CK_CONTROLACC_OLD value
+	   5802 	!
+	   5803 20500	CASE OPT_SETOLD
+	   5804 		CK_CONTROLACC_OLD = CK_CONTROLACC
+	   5805 
+	   5806 	!
+	   5807 	! Restore CK_CONTROLACC_OLD value
+	   5808 	!
+	   5809 	CASE OPT_RESETOLD
+	   5810 		CK_CONTROLACC = CK_CONTROLACC_OLD
+	   5811 
+	   5812 	!
+	   5813 	! Set default value
+	   5814 	!
+	   5815 	CASE OPT_SETDEFAULT
+	   5816 		CK_CONTROLACC2 = CK_CONTROLACC
+	   5817 
+	   5818 	!
+	   5819 	! Restore default value
+	   5820 	!
+	   5821 	CASE OPT_RESETDEFAULT
+	   5822 		CK_CONTROLACC = CK_CONTROLACC2
+	   5823 
+	   5824 	!
+	   5825 	! View header
+	   5826 	!
+	   5827 	CASE OPT_VIEW
+	   5828 		SELECT MLOOP
+	   5829 
+	   5830 		!
+	   5831 		! Title (One line only)
+	   5832 		!
+	   5833 		CASE 1%
+	   5834 		MVALUE = "  Account             BankCode     StartCheck  Endcheck"+ &
+	   5835 			"  BankNumber"
+	   5836 		!
+	   5837 		! Positions of lines
+	   5838 		!
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 21
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5839 		CASE 2%
+	   5840 			MVALUE = "021,035,047,057"
+	   5841 
+	   5842 		!
+	   5843 		! Convert current record into text
+	   5844 		!
+	   5845 		CASE 3%
+	   5846 			MVALUE = CK_CONTROLACC::ACCOUNT + "  " + &
+	   5847 				CK_CONTROLACC::BANK_ACCT + "       " + &
+	   5848 				CK_CONTROLACC::STARTCK + "      " + &
+	   5849 				CK_CONTROLACC::ENDCK + "    " + &
+	   5850 				CK_CONTROLACC::BANK_NUM
+	   5851 		END SELECT
+	   5852 
+	   5853 	!
+	   5854 	! Find
+	   5855 	!
+	   5856 	CASE OPT_FIND
+	   5857 		SELECT MLOOP
+	   5858 		CASE 0%
+	   5859 			FIND #SMG_WINDOW::CHAN, &
+	   5860 				KEY#0% GE CK_CONTROLACC::ACCOUNT + "", &
+	   5861 				REGARDLESS
+	   5862 		END SELECT
+	   5863 
+	   5864 	END SELECT
+	   5865 
+	   5866 27000	EXIT FUNCTION
+	   5867 
+	   5868 29000	!
+	   5869 	! Trap errors
+	   5870 	!
+	   5871 	SELECT ERL
+	   5872 	!
+	   5873 	! Unable to open Read/Write
+	   5874 	!
+	   5875 	CASE 750%
+	   5876 		RESUME 760 IF ERR = 10%
+	   5877 		CK_MAIN_CONTROLACC = ERR
+	   5878 		RESUME 770
+	   5879 
+	   5880 	!
+	   5881 	! Unable to open Read/Only
+	   5882 	!
+	   5883 	CASE 760%
+	   5884 		CK_MAIN_CONTROLACC = ERR
+	   5885 		RESUME 770
+	   5886 
+	   5887 	!
+	   5888 	! Unable to reset
+	   5889 	!
+	   5890 	CASE 790%
+	   5891 		RESUME 32767
+	   5892 
+	   5893 	!
+	   5894 	! Record does not already exist
+	   5895 	!
+
+CK_MAIN_CONTROLACC              Account Control Maintenance     30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 22
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+	   5896 	CASE 20300%
+	   5897 		RESUME 32767 IF ERR = 155%
+	   5898 
+	   5899 	END SELECT
+	   5900 
+	   5901 	ON ERROR GO BACK
+	   5902 
+	   5903 32767	END FUNCTION
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 23
+V3.6a Calico                    CK_MAIN_CONTROLACC              26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+
+User Identifier Cross Reference
+
+Symbol                                    Datatype   Name Type
+
+        +--------------------------------------------------+
+        !    #  Defining reference                         !
+        !    @  Destructive reference                      !
+        !    P  Parameter reference                        !
+        !    R  Redefining reference                       !
+        +--------------------------------------------------+
+
+
+ASSG_BATCH                                           Ext. SUB                               
+           5103 #         
+
+ASSG_CHANNEL                                         Ext. SUB                               
+           5105 #          5502            5532           
+
+ASSG_FREECHANNEL                                     Ext. SUB                               
+           5106 #          5553           
+
+ASSG_MAKEBATCH                            STRING     Ext. FUNCTION                          
+           4981 #         
+
+ASSG_UNMAKEBATCH                                     Ext. SUB                               
+           5107 #         
+
+CDD_WINDOW_CDD                            RECORD     RECORD                                 
+              5            5216 #         
+
+CDD_WINDOW_CDD :: BOTLIN                  LONG       Rec Field                              
+           5273 #         
+
+CDD_WINDOW_CDD :: CHAN                    LONG       Rec Field                              
+           5228 #         
+
+CDD_WINDOW_CDD :: CURLIN                  LONG       Rec Field                              
+           5279 #         
+
+CDD_WINDOW_CDD :: CURREC                  LONG       Rec Field                              
+           5276 #         
+
+CDD_WINDOW_CDD :: DESCR                   STR=40     Rec Field                              
+           5222 #         
+
+CDD_WINDOW_CDD :: FLAGS                   LONG       Rec Field                              
+           5327 #         
+
+CDD_WINDOW_CDD :: HFLAG()                 WORD       Rec Field                              
+           5324 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 24
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+CDD_WINDOW_CDD :: HPOS                    LONG       Rec Field                              
+           5237 #         
+
+CDD_WINDOW_CDD :: HSIZE                   LONG       Rec Field                              
+           5231 #         
+
+CDD_WINDOW_CDD :: HVIEW                   LONG       Rec Field                              
+           5255 #         
+
+CDD_WINDOW_CDD :: IDENT                   LONG       Rec Field                              
+           5219 #         
+
+CDD_WINDOW_CDD :: KFIELD(,)               WORD       Rec Field                              
+           5252 #         
+
+CDD_WINDOW_CDD :: KNAME()                 STR=16     Rec Field                              
+           5249 #         
+
+CDD_WINDOW_CDD :: LCURR                   LONG       Rec Field                              
+           5312 #         
+
+CDD_WINDOW_CDD :: LHEIGHT                 LONG       Rec Field                              
+           5297 #         
+
+CDD_WINDOW_CDD :: LHPOS                   LONG       Rec Field                              
+           5303 #         
+
+CDD_WINDOW_CDD :: LINREC                  LONG       Rec Field                              
+           5267 #         
+
+CDD_WINDOW_CDD :: LLAST                   LONG       Rec Field                              
+           5306 #         
+
+CDD_WINDOW_CDD :: LPAGE()                 LONG       Rec Field                              
+           5309 #         
+
+CDD_WINDOW_CDD :: LTITLE()                STR=16     Rec Field                              
+           5330 #         
+
+CDD_WINDOW_CDD :: LVPOS                   LONG       Rec Field                              
+           5300 #         
+
+CDD_WINDOW_CDD :: LWIDTH                  LONG       Rec Field                              
+           5294 #         
+
+CDD_WINDOW_CDD :: LWINDOW                 LONG       Rec Field                              
+           5291 #         
+
+CDD_WINDOW_CDD :: MAXREC                  LONG       Rec Field                              
+           5285 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 25
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+CDD_WINDOW_CDD :: MENU                    STR=28     Rec Field                              
+           5321 #         
+
+CDD_WINDOW_CDD :: NHELP                   STR=40     Rec Field                              
+           5225 #         
+
+CDD_WINDOW_CDD :: NITEMS                  LONG       Rec Field                              
+           5243 #         
+
+CDD_WINDOW_CDD :: NKEYS                   WORD       Rec Field                              
+           5246 #         
+
+CDD_WINDOW_CDD :: RELREC                  LONG       Rec Field                              
+           5264 #         
+
+CDD_WINDOW_CDD :: TOPLIN                  LONG       Rec Field                              
+           5270 #         
+
+CDD_WINDOW_CDD :: TOPREC                  LONG       Rec Field                              
+           5282 #         
+
+CDD_WINDOW_CDD :: TOTREC                  LONG       Rec Field                              
+           5288 #         
+
+CDD_WINDOW_CDD :: VHPOS                   LONG       Rec Field                              
+           5315 #         
+
+CDD_WINDOW_CDD :: VPOS                    LONG       Rec Field                              
+           5240 #         
+
+CDD_WINDOW_CDD :: VSIZE                   LONG       Rec Field                              
+           5234 #         
+
+CDD_WINDOW_CDD :: VVIEW                   LONG       Rec Field                              
+           5258 #         
+
+CDD_WINDOW_CDD :: VVPOS                   LONG       Rec Field                              
+           5318 #         
+
+CDD_WINDOW_CDD :: WNUMBER                 LONG       Rec Field                              
+           5261 #         
+
+CK_CONTROLACC                             RECORD     MAP             CK_CONTROLACC + 0
+           5421 #          5804            5810 @          5816            5822 @         
+
+CK_CONTROLACC :: ACCOUNT                  STR=18     Rec Field                              
+           5634 @          5636 P          5643 @          5650            5771            5779            5792 P         
+           5846            5860           
+
+CK_CONTROLACC :: BANK_ACCT                STR=6      Rec Field                              
+           5678 @          5680 P          5847           
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 26
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+CK_CONTROLACC :: BANK_NUM                 STR=20     Rec Field                              
+           5753 @          5755 P          5850           
+
+CK_CONTROLACC :: ENDCK                    STR=6      Rec Field                              
+           5728 @          5730 P          5849           
+
+CK_CONTROLACC :: STARTCK                  STR=6      Rec Field                              
+           5702 @          5704 P          5848           
+
+CK_CONTROLACC.CH%                         LONG       COM             CH_CK_CONTROLACC + 0
+           5431 #          5484            5502 P          5510            5532 P          5537            5553 P         
+           5557            5558            5559           
+
+CK_CONTROLACC.DEV$                        STRING                                            
+           5503 P          5508            5533 P          5535           
+
+CK_CONTROLACC.NAME$                       STRING                                            
+           5508 @          5510            5535 @          5537           
+
+CK_CONTROLACC.PRO$                        STRING                                            
+           5504 P          5506 P         
+
+CK_CONTROLACC.READONLY%                   LONG       COM             CH_CK_CONTROLACC + 4
+           5432 #          5491            5520 @          5546 @         
+
+CK_CONTROLACC2                            RECORD     MAP             CK_CONTROLACC_OLD + 56
+           5422 #          5816 @          5822           
+
+CK_CONTROLACC_CDD                         RECORD     RECORD                                 
+           5404 #          5421            5422           
+
+CK_CONTROLACC_CDD :: ACCOUNT              STR=18     Rec Field                              
+           5407 #         
+
+CK_CONTROLACC_CDD :: BANK_ACCT            STR=6      Rec Field                              
+           5410 #         
+
+CK_CONTROLACC_CDD :: BANK_NUM             STR=20     Rec Field                              
+           5419 #         
+
+CK_CONTROLACC_CDD :: ENDCK                STR=6      Rec Field                              
+           5416 #         
+
+CK_CONTROLACC_CDD :: STARTCK              STR=6      Rec Field                              
+           5413 #         
+
+CK_CONTROLACC_OLD                         RECORD     MAP             CK_CONTROLACC_OLD + 0
+           5422 #          5804 @          5810           
+
+CK_MAIN_CONTROLACC                        LONG       Ext. FUNCTION                          
+              5 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 27
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+CK_MAIN_CONTROLACC                        LONG                                              
+              6 #          5766 @          5773 @          5782 @          5791 @          5877 @          5884 @         
+
+CMC$_LEFT                                 LONG       CONSTANT                               
+           5783 P         
+
+CMC$_NORMAL                               LONG       CONSTANT                               
+           5657 P         
+
+COMP_ARRAY                                LONG       Ext. FUNCTION                          
+           4982 #         
+
+COMP_STRING                               LONG       Ext. FUNCTION                          
+           4983 #         
+
+CONV_STRING                               STRING     Ext. FUNCTION                          
+           4984 #         
+
+COPY_COPYFILE                             LONG       Ext. FUNCTION                          
+           4986 #         
+
+COPY_COPYRECORDS                          LONG       Ext. FUNCTION                          
+           4985 #         
+
+DATE_3SELECT                              STRING     Ext. FUNCTION                          
+           4987 #         
+
+DATE_DAYCODE                              LONG       Ext. FUNCTION                          
+           4988 #         
+
+DATE_DAYOFWEEK                            LONG       Ext. FUNCTION                          
+           4989 #         
+
+DATE_DUEDATE                              STRING     Ext. FUNCTION                          
+           4990 #         
+
+DATE_INVDCODE                             STRING     Ext. FUNCTION                          
+           4991 #         
+
+DATE_INVMCODE                             STRING     Ext. FUNCTION                          
+           4992 #         
+
+DATE_MONCODE                              LONG       Ext. FUNCTION                          
+           4993 #         
+
+DATE_STOREDATE                            STRING     Ext. FUNCTION                          
+           4994 #         
+
+DATE_TODAY                                STRING     Ext. FUNCTION                          
+           4995 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 28
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+DSPL_SPLITCURSOR                                     Ext. SUB                               
+           5108 #         
+
+ENTR_3BADKEY                                         Ext. SUB                               
+           5109 #         
+
+ENTR_3CHOICE                              LONG       Ext. FUNCTION                          
+           4996 #         
+
+ENTR_3DATE                                STRING     Ext. FUNCTION                          
+           4999 #         
+
+ENTR_3ENTER                               LONG       Ext. FUNCTION                          
+           5001 #         
+
+ENTR_3MESSAGE                                        Ext. SUB                               
+           5110 #          5783           
+
+ENTR_3MESSAGENEWWINDOW                               Ext. SUB                               
+           5111 #         
+
+ENTR_3NUMBER                              GFLOAT     Ext. FUNCTION                          
+           5003 #         
+
+ENTR_3OPTION                              STRING     Ext. FUNCTION                          
+           5007 #         
+
+ENTR_3PHONE                               STRING     Ext. FUNCTION                          
+           5009 #         
+
+ENTR_3PRODUCT                             STRING     Ext. FUNCTION                          
+           5011 #         
+
+ENTR_3SSN                                 STRING     Ext. FUNCTION                          
+           5013 #         
+
+ENTR_3STRING                              STRING     Ext. FUNCTION                          
+           5015 #          5636            5680            5705            5731            5756           
+
+ENTR_3STRINGLIST                          STRING     Ext. FUNCTION                          
+           5017 #         
+
+ENTR_3TIME                                STRING     Ext. FUNCTION                          
+           5020 #         
+
+ENTR_3TIMEKEEPER                          GFLOAT     Ext. FUNCTION                          
+           5005 #         
+
+ENTR_3YESNO                               STRING     Ext. FUNCTION                          
+           5022 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 29
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+ENTR_4ENTRY                               LONG       Ext. FUNCTION                          
+           5024 #         
+
+ENTR_4SPECIALKEYS                         LONG       Ext. FUNCTION                          
+           5026 #         
+
+ENTR_BIT                                  STRING     Ext. FUNCTION                          
+           5028 #         
+
+ENTR_DATUM                                STRING     Ext. FUNCTION                          
+           5030 #         
+
+ENTR_MACRO                                LONG       Ext. FUNCTION                          
+           5032 #         
+
+ENTR_NOTE                                 STRING     Ext. FUNCTION                          
+           5033 #         
+
+ENTR_PERIOD                               STRING     Ext. FUNCTION                          
+           5035 #         
+
+FIND_FILE                                            Ext. SUB                               
+           5114 #         
+
+FIND_FILEEXISTS                           LONG       Ext. FUNCTION                          
+           5037 #         
+
+FUNC_BANNERCODE                           LONG       Ext. FUNCTION                          
+           5038 #         
+
+FUNC_BITSTRING                            STRING     Ext. FUNCTION                          
+           5039 #         
+
+FUNC_BITSWITCH                            STRING     Ext. FUNCTION                          
+           5040 #         
+
+FUNC_INCREMENT                            LONG       Ext. FUNCTION                          
+           5041 #         
+
+FUNC_MCLCOMMAND                           LONG       Ext. FUNCTION                          
+           5042 #         
+
+FUNC_MODULUS                              LONG       Ext. FUNCTION                          
+           5044 #         
+
+FUNC_NUMBERADD                            LONG       Ext. FUNCTION                          
+           5045 #         
+
+FUNC_REFORMAT                             STRING     Ext. FUNCTION                          
+           5046 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 30
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+FUNC_ROUND                                GFLOAT     Ext. FUNCTION                          
+           5047 #         
+
+FUNC_ROUNDPAYROLL                         GFLOAT     Ext. FUNCTION                          
+           5048 #         
+
+FUNC_TESTENTRY                            LONG       Ext. FUNCTION                          
+           5438 #          5795           
+
+GL_CHART                                  RECORD     MAP             GL_CHART + 0
+           5395 #         
+
+GL_CHART :: ACCT                          STR=18     Rec Field                              
+           5644           
+
+GL_CHART :: DESCR                         STR=40     Rec Field                              
+           5652 @          5656            5793 P         
+
+GL_CHART_CDD                              RECORD     RECORD                                 
+           5339 #          5395           
+
+GL_CHART_CDD :: ACCT                      STR=18     Rec Field                              
+           5342 #         
+
+GL_CHART_CDD :: ACCTYPE                   STR=1      Rec Field                              
+           5348 #         
+
+GL_CHART_CDD :: BATCH                     STR=6      Rec Field                              
+           5393 #         
+
+GL_CHART_CDD :: CPERIOD                   WORD       Rec Field                              
+           5372 #         
+
+GL_CHART_CDD :: CURDOL                    GFLOAT     Rec Field                              
+           5384 #         
+
+GL_CHART_CDD :: CURHOUR                   GFLOAT     Rec Field                              
+           5390 #         
+
+GL_CHART_CDD :: CURUNIT                   GFLOAT     Rec Field                              
+           5387 #         
+
+GL_CHART_CDD :: DESCR                     STR=40     Rec Field                              
+           5345 #         
+
+GL_CHART_CDD :: DOLLAR()                  GFLOAT     Rec Field                              
+           5363 #         
+
+GL_CHART_CDD :: FINTYPE                   STR=10     Rec Field                              
+           5357 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 31
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+GL_CHART_CDD :: FLOW                      STR=4      Rec Field                              
+           5351 #         
+
+GL_CHART_CDD :: HOUR()                    GFLOAT     Rec Field                              
+           5369 #         
+
+GL_CHART_CDD :: RUNDOL                    GFLOAT     Rec Field                              
+           5375 #         
+
+GL_CHART_CDD :: RUNHOUR                   GFLOAT     Rec Field                              
+           5381 #         
+
+GL_CHART_CDD :: RUNUNIT                   GFLOAT     Rec Field                              
+           5378 #         
+
+GL_CHART_CDD :: SUMMARY                   STR=1      Rec Field                              
+           5360 #         
+
+GL_CHART_CDD :: UNIT()                    GFLOAT     Rec Field                              
+           5366 #         
+
+GL_CHART_CDD :: WORK                      STR=4      Rec Field                              
+           5354 #         
+
+GL_MAIN_35CHART.ID                        LONG       CONSTANT                               
+           5188 #         
+
+GL_MAIN_BUDGET.ID                         LONG       CONSTANT                               
+           5185 #         
+
+GL_MAIN_CATEGORY.ID                       LONG       CONSTANT                               
+           5197 #         
+
+GL_MAIN_CHART.ID                          LONG       CONSTANT                               
+           5186 #          5641 P          5649 P          5795 P         
+
+GL_MAIN_CHARTHIS.ID                       LONG       CONSTANT                               
+           5189 #         
+
+GL_MAIN_CONTROL.ID                        LONG       CONSTANT                               
+           5190 #         
+
+GL_MAIN_GJ_LINE.ID                        LONG       CONSTANT                               
+           5191 #         
+
+GL_MAIN_GLMNT.ID                          LONG       CONSTANT                               
+           5192 #         
+
+GL_MAIN_LAYOUT.ID                         LONG       CONSTANT                               
+           5193 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 32
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+GL_MAIN_MASK.ID                           LONG       CONSTANT                               
+           5194 #         
+
+GL_MAIN_OBJECT.ID                         LONG       CONSTANT                               
+           5195 #         
+
+GL_MAIN_TRICONTROL.ID                     LONG       CONSTANT                               
+           5198 #         
+
+GL_MAIN_TRIJOUR.ID                        LONG       CONSTANT                               
+           5199 #         
+
+GL_MAIN_USERDEF.ID                        LONG       CONSTANT                               
+           5201 #         
+
+GL_MAIN_USERHEAD.ID                       LONG       CONSTANT                               
+           5202 #         
+
+GL_MAIN_USERJOUR.ID                       LONG       CONSTANT                               
+           5203 #         
+
+GL_MAIN_USERLIST.ID                       LONG       CONSTANT                               
+           5200 #         
+
+GL_MAIN_VENCOL.ID                         LONG       CONSTANT                               
+           5196 #         
+
+HELP_34MESSAGE                                       Ext. SUB                               
+           5112 #         
+
+HELP_MENUHELPKEY                                     Ext. SUB                               
+           5115 #         
+
+HELP_SPELL                                           Ext. SUB                               
+           5117 #         
+
+I%                                        LONG                                              
+           5585 @          5587 @          5590           
+
+LIBR_3INSERT                              LONG       Ext. FUNCTION                          
+           5049 #         
+
+LIBR_CONNECT                              LONG       Ext. FUNCTION                          
+           5050 #         
+
+LIBR_DELETE                               LONG       Ext. FUNCTION                          
+           5051 #         
+
+LIBR_DIGSR                                LONG       Ext. FUNCTION                          
+           5052 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 33
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+LIBR_EDIT                                 LONG       Ext. FUNCTION                          
+           5053 #         
+
+LIBR_EXTRACT                              LONG       Ext. FUNCTION                          
+           5054 #         
+
+LIBR_EXTRACTFILE                          LONG       Ext. FUNCTION                          
+           5055 #         
+
+LIBR_EXTRACTVAR                           LONG       Ext. FUNCTION                          
+           5056 #         
+
+LIBR_FORMATTEXT                                      Ext. SUB                               
+           5118 #         
+
+LIBR_INSERTTEXT                           LONG       Ext. FUNCTION                          
+           5057 #         
+
+LIBR_INSERTVAR                            LONG       Ext. FUNCTION                          
+           5058 #         
+
+LIBR_MAINT                                LONG       Ext. FUNCTION                          
+           5059 #         
+
+LIBR_MAINTNODSR                           LONG       Ext. FUNCTION                          
+           5060 #         
+
+LIBR_NODIGSR                              LONG       Ext. FUNCTION                          
+           5061 #         
+
+LIBR_SELECT                               STRING     Ext. FUNCTION                          
+           5062 #         
+
+MAIN_FAKEHEADER                           LONG       Ext. FUNCTION                          
+           5063 #         
+
+MAIN_JOURNAL                              LONG       Ext. FUNCTION                          
+           5064 #         
+
+MAIN_WINDOW                               LONG       Ext. FUNCTION                          
+           5065 #          5437 #          5641            5650           
+
+MENU_3INTERRUPT                                      Ext. SUB                               
+           5119 #         
+
+MFLAG                                     LONG       Parm.                                  
+              6 #          5636 P          5680 P          5704            5730            5755 P         
+
+MLOOP                                     LONG       Parm.                                  
+              6 #          5606            5610            5768            5794 P          5828            5857           
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 34
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+MOPTION                                   LONG       Parm.                                  
+              6 #          5444           
+
+MVALUE                                    STRING     Parm.                                  
+              6 #          5479            5636 P          5680 P          5705 P          5731 P          5756 P         
+           5776            5834 @          5840 @          5846 @         
+
+NOTE_PAD                                             Ext. SUB                               
+           5120 #         
+
+OLD_PROT$                                 STRING                                            
+           5505 P          5518 P         
+
+OPT_BACKGROUND                            LONG       CONSTANT                               
+           5569           
+
+OPT_CLOSEFILE                             LONG       CONSTANT                               
+           5657 P         
+
+OPT_ENTRY                                 LONG       CONSTANT                               
+           5602           
+
+OPT_FIND                                  LONG       CONSTANT                               
+           5856           
+
+OPT_INIT                                  LONG       CONSTANT                               
+           5452           
+
+OPT_RESETDEFAULT                          LONG       CONSTANT                               
+           5821           
+
+OPT_RESETOLD                              LONG       CONSTANT                               
+           5809           
+
+OPT_SETDEFAULT                            LONG       CONSTANT                               
+           5815           
+
+OPT_SETOLD                                LONG       CONSTANT                               
+           5803           
+
+OPT_TESTENTRY                             LONG       CONSTANT                               
+           5765           
+
+OPT_VIEW                                  LONG       CONSTANT                               
+           5827           
+
+OUTP_CODE39                               STRING     Ext. FUNCTION                          
+           5094 #         
+
+OUTP_CREATESTR                            STRING     Ext. FUNCTION                          
+           5066 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 35
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+OUTP_TO2020                               LONG       CONSTANT                               
+            211 #         
+
+OUTP_TODEVICE                             LONG       CONSTANT                               
+            206 #         
+
+OUTP_TODISPLAY                            LONG       CONSTANT                               
+            204 #         
+
+OUTP_TODOCUMENT                           LONG       CONSTANT                               
+            210 #         
+
+OUTP_TOFILE                               LONG       CONSTANT                               
+            207 #         
+
+OUTP_TOLOCAL                              LONG       CONSTANT                               
+            208 #         
+
+OUTP_TOPL                                 LONG       CONSTANT                               
+            212 #         
+
+OUTP_TOSPOOL                              LONG       CONSTANT                               
+            205 #         
+
+OUTP_TOWP                                 LONG       CONSTANT                               
+            209 #         
+
+PRNT_CHECKPROTECT                         STRING     Ext. FUNCTION                          
+           5067 #         
+
+PRNT_DATE                                 STRING     Ext. FUNCTION                          
+           5068 #         
+
+PRNT_DATUM                                STRING     Ext. FUNCTION                          
+           5069 #         
+
+PRNT_FANCYDATE                            STRING     Ext. FUNCTION                          
+           5070 #         
+
+PRNT_MONTHYYYY                            STRING     Ext. FUNCTION                          
+           5071 #         
+
+PRNT_NUMBERITH                            STRING     Ext. FUNCTION                          
+           5072 #         
+
+PRNT_NUMBERTEXT                           STRING     Ext. FUNCTION                          
+           5073 #         
+
+PRNT_PHONE                                STRING     Ext. FUNCTION                          
+           5074 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 36
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+PRNT_SSN                                  STRING     Ext. FUNCTION                          
+           5075 #         
+
+PRNT_TIME                                 STRING     Ext. FUNCTION                          
+           5076 #         
+
+READ_BIT                                  LONG       Ext. FUNCTION                          
+           5077 #         
+
+READ_CODELIST                                        Ext. SUB                               
+           5121 #         
+
+READ_CURPROTECTION                                   Ext. SUB                               
+           5122 #          5505           
+
+READ_DEFAULT                              STRING     Ext. FUNCTION                          
+           5078 #         
+
+READ_DEFAULTS                                        Ext. SUB                               
+           5478           
+
+READ_DEVICE                                          Ext. SUB                               
+           5123 #          5503            5533           
+
+READ_INITIALIZE                                      Ext. SUB                               
+           5124 #         
+
+READ_OWNERPID                             LONG       Ext. FUNCTION                          
+           5079 #         
+
+READ_PERIOD                               LONG       Ext. FUNCTION                          
+           5080 #         
+
+READ_PROTECTION                                      Ext. SUB                               
+           5125 #          5504           
+
+READ_QUEFORM                                         Ext. SUB                               
+           5126 #         
+
+READ_SET                                  STRING     Ext. FUNCTION                          
+           5082 #         
+
+READ_SYSDETACH                            LONG       Ext. FUNCTION                          
+           5083 #         
+
+READ_SYSJOB                               STRING     Ext. FUNCTION                          
+           5084 #         
+
+READ_SYSLOG                               STRING     Ext. FUNCTION                          
+           5085 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 37
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+READ_SYSPID                               STRING     Ext. FUNCTION                          
+           5086 #         
+
+READ_SYSPN                                STRING     Ext. FUNCTION                          
+           5087 #         
+
+READ_USERNAME                             STRING     Ext. FUNCTION                          
+           5088 #         
+
+SCOPE                                     RECORD     MAP             SCOPE + 0
+           5134 #          5634 P          5678 P          5702 P          5728 P          5753 P          5783 P         
+
+SCOPE :: PRG_ITEM                         STR=16     Rec Field                              
+           5603            5606 @          5760 @         
+
+SCOPE :: SCOPE_EXIT                       LONG       Rec Field                              
+           5608 @          5639           
+
+SCOPE_STRUCT                              RECORD     RECORD                                 
+           4987            4996            4999            5001            5003            5005            5007           
+           5009            5011            5013            5015            5017            5020            5022           
+           5024            5026            5032            5042            5109            5110            5111           
+           5112            5119            5127            5128            5134           
+
+SMG$BEGIN_DISPLAY_UPDATE                  LONG       Ext. FUNCTION                          
+           5571           
+
+SMG$END_DISPLAY_UPDATE                    LONG       Ext. FUNCTION                          
+           5594           
+
+SMG$ERASE_DISPLAY                         LONG       Ext. FUNCTION                          
+           5573           
+
+SMG$K_TRM_F14                             LONG       CONSTANT                               
+           5639           
+
+SMG$K_TRM_TWO                             LONG       CONSTANT                               
+           5657 P         
+
+SMG$M_BOLD                                LONG       CONSTANT                               
+           5657           
+
+SMG$PUT_CHARS                             LONG       Ext. FUNCTION                          
+           5589            5657           
+
+SMG_STATUS%                               LONG                                              
+           5571 @          5573 @          5588 @          5594 @          5655 @         
+
+SMG_WINDOW                                RECORD     Parm.                                  
+              5 #          5478 P          5791 P         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 38
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+SMG_WINDOW :: CHAN                        LONG       Rec Field                              
+           5557 @          5778            5859           
+
+SMG_WINDOW :: DESCR                       STR=40     Rec Field                              
+           5461 @         
+
+SMG_WINDOW :: FLAGS                       LONG       Rec Field                              
+           5467 @          5490 @          5545 @         
+
+SMG_WINDOW :: HFLAG()                     WORD       Rec Field                              
+           5590           
+
+SMG_WINDOW :: HPOS                        LONG       Rec Field                              
+           5465 @         
+
+SMG_WINDOW :: HSIZE                       LONG       Rec Field                              
+           5463 @         
+
+SMG_WINDOW :: HVIEW                       LONG       Rec Field                              
+           5475 @         
+
+SMG_WINDOW :: KFIELD(,)                   WORD       Rec Field                              
+           5472 @          5473 @         
+
+SMG_WINDOW :: KNAME()                     STR=16     Rec Field                              
+           5471 @         
+
+SMG_WINDOW :: NHELP                       STR=40     Rec Field                              
+           5462 @         
+
+SMG_WINDOW :: NITEMS                      LONG       Rec Field                              
+           5468 @         
+
+SMG_WINDOW :: NKEYS                       WORD       Rec Field                              
+           5470 @         
+
+SMG_WINDOW :: VPOS                        LONG       Rec Field                              
+           5466 @         
+
+SMG_WINDOW :: VSIZE                       LONG       Rec Field                              
+           5464 @         
+
+SMG_WINDOW :: VVIEW                       LONG       Rec Field                              
+           5476 @         
+
+SMG_WINDOW :: WNUMBER                     LONG       Rec Field                              
+           5571 P          5573 P          5588 P          5594 P          5635 P          5655 P          5679 P         
+           5703 P          5729 P          5754 P         
+
+STAT%                                     LONG                                              
+           5502 P          5503 P          5504 P          5505 P          5506 P          5518 P          5532 P         
+           5533 P         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 39
+V3.6a Calico                    User Identifier (continued)     26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+SUBR_3EXITPROGRAM                                    Ext. SUB                               
+           5127 #         
+
+SUBR_3SPAWN                                          Ext. SUB                               
+           5128 #         
+
+SUBR_SUBMIT                                          Ext. SUB                               
+           5129 #         
+
+TEMP$                                     STRING                                            
+           5603 @          5604 @          5635 P          5679 P          5703 P          5729 P          5754 P         
+
+TEMP1$                                    STRING                                            
+           5603 @          5760           
+
+TIME_ADD                                  STRING     Ext. FUNCTION                          
+           5089 #         
+
+TIME_CODE                                 LONG       Ext. FUNCTION                          
+           5090 #         
+
+TIME_INVCODE                              STRING     Ext. FUNCTION                          
+           5091 #         
+
+TIME_NOW                                  STRING     Ext. FUNCTION                          
+           5092 #         
+
+TIME_STORETIME                            STRING     Ext. FUNCTION                          
+           5093 #         
+
+WRIT_CURPROTECTION                                   Ext. SUB                               
+           5130 #          5506            5518           
+
+WRIT_STRING                                          Ext. SUB                               
+           5131 #         
+
+XPOS%                                     LONG                                              
+           5584 @          5586            5589 P          5591 @         
+
+XSTR$                                     STRING                                            
+           5584 @          5589 P          5591 @         
+
+YPOS%                                     LONG                                              
+           5584 @          5589 P          5591 @         
+
+ZIPC_BARCODE                              STRING     Ext. FUNCTION                          
+           5095 #         
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 40
+V3.6a Calico                    Common                          26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+Common Cross Reference
+
+Symbol                                    References
+
+CH_CK_CONTROLACC                                     COMMON                                 
+           5430 #         
+
+CK_CONTROLACC.CH%                         LONG       COM             CH_CK_CONTROLACC + 0
+           5431 #          5484            5502 P          5510            5532 P          5537            5553 P         
+           5557            5558            5559           
+
+CK_CONTROLACC.READONLY%                   LONG       COM             CH_CK_CONTROLACC + 4
+           5432 #          5491            5520 @          5546 @         
+
+
+
+
+
+
+
+
+
+
+
+Map Cross Reference
+
+Symbol                                    References
+
+CK_CONTROLACC                                        MAP                                    
+           5421 #         
+
+CK_CONTROLACC                             RECORD     MAP             CK_CONTROLACC + 0
+           5421 #          5804            5810 @          5816            5822 @         
+
+CK_CONTROLACC :: ACCOUNT                  STR=18     Rec Field                              
+           5634 @          5636 P          5643 @          5650            5771            5779            5792 P         
+           5846            5860           
+
+CK_CONTROLACC :: BANK_ACCT                STR=6      Rec Field                              
+           5678 @          5680 P          5847           
+
+CK_CONTROLACC :: BANK_NUM                 STR=20     Rec Field                              
+           5753 @          5755 P          5850           
+
+CK_CONTROLACC :: ENDCK                    STR=6      Rec Field                              
+           5728 @          5730 P          5849           
+
+CK_CONTROLACC :: STARTCK                  STR=6      Rec Field                              
+           5702 @          5704 P          5848           
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 41
+V3.6a Calico                    Map (continued)                 26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+CK_CONTROLACC_OLD                                    MAP                                    
+           5422 #         
+
+CK_CONTROLACC_OLD                         RECORD     MAP             CK_CONTROLACC_OLD + 0
+           5422 #          5804 @          5810           
+
+CK_CONTROLACC2                            RECORD     MAP             CK_CONTROLACC_OLD + 56
+           5422 #          5816 @          5822           
+
+GL_CHART                                             MAP                                    
+           5395 #         
+
+GL_CHART                                  RECORD     MAP             GL_CHART + 0
+           5395 #         
+
+GL_CHART :: ACCT                          STR=18     Rec Field                              
+           5644           
+
+GL_CHART :: DESCR                         STR=40     Rec Field                              
+           5652 @          5656            5793 P         
+
+SCOPE                                                MAP                                    
+           5134 #         
+
+SCOPE                                     RECORD     MAP             SCOPE + 0
+           5134 #          5634 P          5678 P          5702 P          5728 P          5753 P          5783 P         
+
+SCOPE :: PRG_ITEM                         STR=16     Rec Field                              
+           5603            5606 @          5760 @         
+
+SCOPE :: SCOPE_EXIT                       LONG       Rec Field                              
+           5608 @          5639           
+
+
+CK_MAIN_CONTROLACC              Cross Reference                 30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 42
+V3.6a Calico                    Label                           26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+Label Cross Reference
+
+Symbol                                    References
+
+E0LOOP                                   
+           5607 #          5646           
+
+TLOOP                                    
+           5774            5784            5797 #         
+
+
+
+
+
+
+
+
+
+
+
+Line Cross Reference
+
+Symbol                                    References
+
+760                                      
+           5876           
+
+770                                      
+           5878            5885           
+
+790                                      
+           5492            5521            5548           
+
+29000                                    
+           5442           
+
+32767                                    
+           5891            5897           
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 43
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+
+
+
+Allocation information for RECORD CK_CONTROLACC_CDD
+
+
+Name                               Offset    Size      Type
+
+0  CK_CONTROLACC_CDD               0         56        Record
+1  ACCOUNT                         0         18        Static string
+1  BANK_ACCT                       18        6         Static string
+1  STARTCK                         24        6         Static string
+1  ENDCK                           30        6         Static string
+1  BANK_NUM                        36        20        Static string
+
+
+
+Allocation information for RECORD GL_CHART_CDD
+
+
+Name                               Offset    Size      Type
+
+0  GL_CHART_CDD                    0         638       Record
+1  ACCT                            0         18        Static string
+1  DESCR                           18        40        Static string
+1  ACCTYPE                         58        1         Static string
+1  FLOW                            59        4         Static string
+1  WORK                            63        4         Static string
+1  FINTYPE                         67        10        Static string
+1  SUMMARY                         77        1         Static string
+1  DOLLAR                          78        168       Gfloat
+   Dimensions : ( 0 TO 20 )
+1  UNIT                            246       168       Gfloat
+   Dimensions : ( 0 TO 20 )
+1  HOUR                            414       168       Gfloat
+   Dimensions : ( 0 TO 20 )
+1  CPERIOD                         582       2         Word
+1  RUNDOL                          584       8         Gfloat
+1  RUNUNIT                         592       8         Gfloat
+1  RUNHOUR                         600       8         Gfloat
+1  CURDOL                          608       8         Gfloat
+1  CURUNIT                         616       8         Gfloat
+1  CURHOUR                         624       8         Gfloat
+1  BATCH                           632       6         Static string
+
+
+
+Allocation information for RECORD SCOPE_STRUCT
+
+
+Name                               Offset    Size      Type
+
+0  SCOPE_STRUCT                    0         160       Record
+1  SCOPE_EXIT                      0         4         Long
+1  SCOPE_TIMEOUT                   4         4         Long
+1  SMG_KBID                        8         4         Long
+1  SMG_PBID                        12        4         Long
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 44
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+1  SMG_OPTION                      16        4         Long
+1  SMG_MESSAGE                     20        4         Long
+1  MACROFLAG                       24        4         Long
+1  PRG_COMPANY                     28        64        Static string
+1  PRG_IDENT                       92        4         Static string
+1  PRG_PROGRAM                     96        40        Static string
+1  PRG_ITEM                        136       16        Static string
+1  SCREEN_WIDTH                    152       4         Long
+1  IMENU_LEVELS                    156       4         Long
+
+
+
+Allocation information for RECORD SMG$R_ATTRIBUTE_INFO_BLOCK
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_ATTRIBUTE_INFO_BLOCK      0         36        Record
+1  SMG$L_DEV_CHAR                  0         4         Long
+1  SMG$L_DEV_DEPEND                4         4         Long
+1  SMG$L_DEV_DEPEND2               8         4         Long
+1  SMG$B_DEV_CLASS                 12        1         Byte
+1  SMG$R_DEV_OVERLAY               13        1         Group
+   case 1.
+2  SMG$B_PBD_TYPE                  13        1         Byte
+   case 2.
+2  SMG$B_RECALL_NUM                13        1         Byte
+1  SMG$B_DEV_TYPE                  14        1         Byte
+1  SMG$R_ROW_OVERLAY               15        1         Group
+   case 1.
+2  SMG$B_NUM_ROWS                  15        1         Byte
+   case 2.
+2  SMG$B_TYPEAHD_CHAR              15        1         Byte
+1  SMG$W_NUM_COLUMNS               16        2         Word
+1  SMG$R_COUNT_OVERLAY             18        2         Group
+   case 1.
+2  SMG$W_TYPEAHD_CNT               18        2         Word
+   case 2.
+2  SMG$R_COUNT_STRUCT              18        2         Group
+3  SMG$B_PBD_COLOR                 18        1         Byte
+3  SMG$B_DEV_PARITY                19        1         Byte
+1  SMG$W_DEV_SPEED                 20        2         Word
+1  SMG$W_DEV_FILL                  22        2         Word
+1  SMG$W_PHYS_CURSOR_ROW           24        2         Word
+1  SMG$W_PHYS_CURSOR_COL           26        2         Word
+1  SMG$L_DISPLAY_ID                28        4         Long
+1  SMG$L_DEV_DEPEND3               32        4         Long
+
+
+
+Allocation information for RECORD SMG$R_SUBPROCESS_INFO_TABLE
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_SUBPROCESS_INFO_TABLE     0         12        Record
+1  SMG$L_DISP_ID                   0         4         Long
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 45
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+1  SMG$L_USR_ARG                   4         4         Long
+1  SMG$L_STATUS                    8         4         Long
+
+
+
+Allocation information for RECORD SMG$R_OUT_OF_BAND_TABLE
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_OUT_OF_BAND_TABLE         0         12        Record
+1  SMG$L_PBD_ID                    0         4         Long
+1  SMG$L_USER_ARG                  4         4         Long
+1  SMG$R_CHAR_OVERLAY              8         4         Group
+   case 1.
+2  SMG$B_CHAR                      8         1         Byte
+   case 2.
+2  SMG$L_CHAR                      8         4         Long
+
+
+
+Allocation information for RECORD SMGDEF
+
+
+Name                               Offset    Size      Type
+
+0  SMGDEF                          0         36        Record
+   case 1.
+1  SMG$R_BAND_INFORMATION_TABLE    0         12        Group
+2  SMG$L_PASTEBOARD_ID             0         4         Long
+2  SMG$L_ARG                       4         4         Long
+2  SMG$R_CHARACTER_OVERLAY         8         4         Group
+   case 1.1.
+3  SMG$B_CHARACTER                 8         1         Byte
+   case 1.2.
+3  SMG$L_CHARACTER                 8         4         Long
+   case 2.
+1  SMG$R_PASTEBOARD_INFO_BLOCK     0         36        Group
+2  SMG$L_DEVCHAR                   0         4         Long
+2  SMG$L_DEVDEPEND                 4         4         Long
+2  SMG$L_DEVDEPEND2                8         4         Long
+2  SMG$B_DEVCLASS                  12        1         Byte
+2  SMG$B_SMG_DEVTYPE               13        1         Byte
+2  SMG$B_PHY_DEVTYPE               14        1         Byte
+2  SMG$B_ROWS                      15        1         Byte
+2  SMG$W_WIDTH                     16        2         Word
+2  SMG$B_COLOR                     18        1         Byte
+2  SMG$B_PARITY                    19        1         Byte
+2  SMG$W_SPEED                     20        2         Word
+2  SMG$W_FILL                      22        2         Word
+2  SMG$W_CURSOR_ROW                24        2         Word
+2  SMG$W_CURSOR_COL                26        2         Word
+2  SMG$L_CURSOR_DID                28        4         Long
+2  SMG$L_DEVDEPEND3                32        4         Long
+   case 3.
+1  SMG$R_KEYBOARD_INFO_BLOCK       0         36        Group
+2  SMG$L_FILL1                     0         4         Long
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 46
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+2  SMG$L_FILL2                     4         4         Long
+2  SMG$L_FILL3                     8         4         Long
+2  SMG$B_FILL4                     12        1         Byte
+2  SMG$B_RECALL_SIZE               13        1         Byte
+2  SMG$B_FILL5                     14        1         Byte
+2  SMG$B_TYPEAHEAD_CHAR            15        1         Byte
+2  SMG$W_FILL6                     16        2         Word
+2  SMG$W_TYPEAHEAD_COUNT           18        2         Word
+2  SMG$L_FILL7                     20        4         Long
+2  SMG$L_FILL8                     24        4         Long
+2  SMG$L_FILL9                     28        4         Long
+2  SMG$L_FILL10                    32        4         Long
+
+
+
+Allocation information for RECORD SCROLL_DIRS
+
+
+Name                               Offset    Size      Type
+
+0  SCROLL_DIRS                     0         4         Record
+1  UP_BITS                         0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_MENU_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_MENU_FLAGS                0         4         Record
+1  REMOVE_ITEM_BITS                0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_PASTING_INFO_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_PASTING_INFO_FLAGS        0         4         Record
+1  DISPLAY_PASTED_BITS             0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_KEYPAD_MODES
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_KEYPAD_MODES              0         4         Record
+1  KEYPAD_APPLICATION_BITS         0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_PUT_LINE_FLAGS
+
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 47
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+Name                               Offset    Size      Type
+
+0  SMG$R_PUT_LINE_FLAGS            0         4         Record
+1  WRAP_CHAR_BITS                  0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_SNAPSHOT_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_SNAPSHOT_FLAGS            0         4         Record
+1  FORM_FEED_BITS                  0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_MOVE_TEXT_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_MOVE_TEXT_FLAGS           0         4         Record
+1  TEXT_SAVE_BITS                  0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_PUT_CHARS_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_PUT_CHARS_FLAGS           0         4         Record
+1  ERASE_LINE_BITS                 0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_GET_DISPLAY_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_GET_DISPLAY_FLAGS         0         4         Record
+1  VIEWPORT_BITS                   0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_SET_CURSOR_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_SET_CURSOR_FLAGS          0         4         Record
+1  CURSOR_OFF_BITS                 0         4         Long
+
+
+
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 48
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+Allocation information for RECORD SMG$R_READ_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_READ_FLAGS                0         4         Record
+1  FUNC_KEYS_BITS                  0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_CREATE_PBD_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_CREATE_PBD_FLAGS          0         4         Record
+1  KEEP_CONTENTS_BITS              0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_DELETE_PBD_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_DELETE_PBD_FLAGS          0         4         Record
+1  ERASE_PBD_BITS                  0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_SUBPROCESS_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_SUBPROCESS_FLAGS          0         4         Record
+1  DATA_FOLLOWS_BITS               0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_CREATE_SUBPROCESS_FLAGS
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_CREATE_SUBPROCESS_FLAGS   0         4         Record
+1  TRUSTED_BITS                    0         4         Long
+
+
+
+Allocation information for RECORD DISPLAY_ATTRIBUTES
+
+
+Name                               Offset    Size      Type
+
+0  DISPLAY_ATTRIBUTES              0         4         Record
+1  BORDER_BITS                     0         4         Long
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 49
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+
+
+
+Allocation information for RECORD SMGDEF_BITS
+
+
+Name                               Offset    Size      Type
+
+0  SMGDEF_BITS                     0         4         Record
+1  BOLD_BITS                       0         4         Long
+
+
+
+Allocation information for RECORD SMG$R_KEY_DEF_ATTR
+
+
+Name                               Offset    Size      Type
+
+0  SMG$R_KEY_DEF_ATTR              0         4         Record
+1  KEY_NOECHO_BITS                 0         4         Long
+
+
+
+Allocation information for RECORD SMGMODE_BITS
+
+
+Name                               Offset    Size      Type
+
+0  SMGMODE_BITS                    0         4         Record
+1  BUF_ENABLED_BITS                0         4         Long
+
+
+
+Allocation information for RECORD BASIC$H_FLOATING_COMPLEX_AXP
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$H_FLOATING_COMPLEX_AXP    0         32        Record
+1  REAL_PART                       0         16        Record
+2  fill                            0         16        Long
+1  IMAGINARY_PART                  16        16        Record
+2  fill                            16        16        Long
+
+
+
+Allocation information for RECORD BASIC$HFLOAT_AXP
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$HFLOAT_AXP                0         16        Record
+1  fill                            0         16        Long
+
+
+
+Allocation information for RECORD BASIC$G_FLOATING_COMPLEX
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 50
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$G_FLOATING_COMPLEX        0         16        Record
+1  REAL_PART                       0         8         Gfloat
+1  IMAGINARY_PART                  8         8         Gfloat
+
+
+
+Allocation information for RECORD BASIC$D_FLOATING_COMPLEX
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$D_FLOATING_COMPLEX        0         16        Record
+1  REAL_PART                       0         8         Double
+1  IMAGINARY_PART                  8         8         Double
+
+
+
+Allocation information for RECORD BASIC$F_FLOATING_COMPLEX
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$F_FLOATING_COMPLEX        0         8         Record
+1  REAL_PART                       0         4         Single
+1  IMAGINARY_PART                  4         4         Single
+
+
+
+Allocation information for RECORD BASIC$OCTAWORD
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$OCTAWORD                  0         16        Record
+1  fill                            0         16        Long
+
+
+
+Allocation information for RECORD BASIC$QUADWORD
+
+
+Name                               Offset    Size      Type
+
+0  BASIC$QUADWORD                  0         8         Record
+1  fill                            0         8         Long
+
+
+
+Allocation information for RECORD CDD_WINDOW_CDD
+
+
+Name                               Offset    Size      Type
+
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 51
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+0  CDD_WINDOW_CDD                  0         788       Record
+1  IDENT                           0         4         Long
+1  DESCR                           4         40        Static string
+1  NHELP                           44        40        Static string
+1  CHAN                            84        4         Long
+1  HSIZE                           88        4         Long
+1  VSIZE                           92        4         Long
+1  HPOS                            96        4         Long
+1  VPOS                            100       4         Long
+1  NITEMS                          104       4         Long
+1  NKEYS                           108       2         Word
+1  KNAME                           110       128       Static string
+   Dimensions : ( 0 TO 7 )
+1  KFIELD                          238       144       Word
+   Dimensions : ( 0 TO 7, 0 TO 8 )
+1  HVIEW                           382       4         Long
+1  VVIEW                           386       4         Long
+1  WNUMBER                         390       4         Long
+1  RELREC                          394       4         Long
+1  LINREC                          398       4         Long
+1  TOPLIN                          402       4         Long
+1  BOTLIN                          406       4         Long
+1  CURREC                          410       4         Long
+1  CURLIN                          414       4         Long
+1  TOPREC                          418       4         Long
+1  MAXREC                          422       4         Long
+1  TOTREC                          426       4         Long
+1  LWINDOW                         430       4         Long
+1  LWIDTH                          434       4         Long
+1  LHEIGHT                         438       4         Long
+1  LVPOS                           442       4         Long
+1  LHPOS                           446       4         Long
+1  LLAST                           450       4         Long
+1  LPAGE                           454       32        Long
+   Dimensions : ( 0 TO 7 )
+1  LCURR                           486       4         Long
+1  VHPOS                           490       4         Long
+1  VVPOS                           494       4         Long
+1  MENU                            498       28        Static string
+1  HFLAG                           526       130       Word
+   Dimensions : ( 0 TO 64 )
+1  FLAGS                           656       4         Long
+1  LTITLE                          660       128       Static string
+   Dimensions : ( 0 TO 7 )
+
+
+
+Allocation information for COMMON CH_CK_CONTROLACC
+
+
+Name                               Offset    Size      Type
+
+CK_CONTROLACC.CH%                  0         4         Long
+CK_CONTROLACC.READONLY%            4         4         Long
+
+CK_MAIN_CONTROLACC              Source Listing                  30-AUG-2000 13:41:40  DEC BASIC V1.3-000                Page 52
+V3.6a Calico                    Allocation Map                  26-DEC-1999 16:18:01  [CMC030.][CK.SOURCE]CK_MAIN_CONTROLACC.BAS;6
+
+
+
+
+Allocation information for MAP CK_CONTROLACC_OLD
+
+
+Name                               Offset    Size      Type
+
+CK_CONTROLACC_OLD                  0         56        CK_CONTROLACC_CDD
+CK_CONTROLACC2                     56        56        CK_CONTROLACC_CDD
+
+
+
+Allocation information for MAP CK_CONTROLACC
+
+
+Name                               Offset    Size      Type
+
+CK_CONTROLACC                      0         56        CK_CONTROLACC_CDD
+
+
+
+Allocation information for MAP GL_CHART
+
+
+Name                               Offset    Size      Type
+
+GL_CHART                           0         638       GL_CHART_CDD
+
+
+
+Allocation information for MAP SCOPE
+
+
+Name                               Offset    Size      Type
+
+SCOPE                              0         160       SCOPE_STRUCT
+
+
+
+Named constants
+
+
+Name                               Type           Value
+

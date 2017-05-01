@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Accounts Payable Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Accounts Payable System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Accounts Payable Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__CONTROL.CTR\*
+	!	.p
+	!	Accounts Payable Control File.
+	!
+	! Index:
+	!	.x Accounts Payable Control File
+	!	.x AP_CONTROL
+	!--

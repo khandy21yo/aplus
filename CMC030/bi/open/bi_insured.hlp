@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Insured File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__INSURED.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Insured File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__INSURED.MAS\*
+	!	.p
+	!	Insured File.
+	!	carrier needed when using the patient's insurance.
+	!
+	! Index:
+	!	.x Insured File
+	!	.x BI_INSURED
+	!
+	!--

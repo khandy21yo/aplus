@@ -1,0 +1,78 @@
+1	%TITLE "Aging Function (Month) to String"
+	%SBTTL "DATE_INVMCODE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING DATE_INVMCODE(DATUM%)
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	Assumes 8 character date, YYYYMM(DD).
+	!	This function is used to reverse the DATE_MONCODE
+	!	calculation, which is used to calculate the number
+	!	of months between two months.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	DATUM%
+	!		The passed date in the amount of months.
+	!
+	!
+	!	Returned value
+	!		The function changes DATUM% into a date in the form
+	!		of YYYYMMDD.
+	!
+	! Example:
+	!
+	!	DATE_INVMCODE(19760314)
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:DATE_INVMCODE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP DATE_INVMCODE
+	!	$ DELETE DATE_INVMCODE.OBJ;*
+	!
+	! Author:
+	!
+	!	06/23/86 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%PAGE
+
+	DATE_INVMCODE	= FORMAT$(FIX(DATUM% / 12.0), "<0>###") + &
+		FORMAT$(DATUM% - FIX(DATUM% / 12.0) * 12.0 + 1.0, "<0>#") + '00'
+
+	END FUNCTION

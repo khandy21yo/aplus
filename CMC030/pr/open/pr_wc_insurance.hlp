@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Workman Comp Insurance Rate is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__WC__INSURANCE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Workman Comp Insurance Rate
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__WC__INSURANCE.TBL\*
+	!	.p
+	!	Workman Comp Insurance Rate.
+	!
+	! Index:
+	!	.x Workman Comp Insurance Rate
+	!	.x PR_WC_INSURANCE
+	!--

@@ -1,0 +1,20 @@
+	!======================================================================
+	! AD_CEILINGONE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_CEILINGONE.CH%, STAT%)
+	CALL READ_DEVICE('AD_CEILINGONE',AD_CEILINGONE.DEV$, STAT%)
+
+	AD_CEILINGONE.NAME$ = AD_CEILINGONE.DEV$+"AD_CEILINGONE.TBL"
+
+	OPEN AD_CEILINGONE.NAME$ FOR INPUT AS FILE AD_CEILINGONE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_CEILINGONE, &
+		PRIMARY KEY &
+		( &
+			AD_CEILINGONE::OPTTABLE, &
+			AD_CEILINGONE::EFFDATE, &
+			AD_CEILINGONE::DEP_YEAR &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

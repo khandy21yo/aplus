@@ -1,0 +1,661 @@
+1	%TITLE "Unit Transaction"
+	%SBTTL "RM_MAIN_TRANSACTION"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_MAIN_TRANSACTION(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Unit Transaction\* program maintains the Restaurant Transaction file.
+	!
+	! Index:
+	!	.x Unit Transaction
+	!	.x Transaction>Unit
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_MAIN_TRANSACTION/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_MAIN_TRANSACTION
+	!	$ DELETE RM_MAIN_TRANSACTION.OBJ;*
+	!
+	! Author:
+	!
+	!	03/03/88 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	05/17/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	05/07/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	06/12/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:RM_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.HB"
+	MAP (RM_TRANSACTION)	RM_TRANSACTION_CDD	RM_TRANSACTION
+	MAP (RM_TRANSACTION_OLD) RM_TRANSACTION_CDD	RM_TRANSACTION_OLD, &
+							RM_TRANSACTION2
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP (UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP (UTL_TRANSTYPE)	UTL_TRANSTYPE_CDD	UTL_TRANSTYPE
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_RM_TRANSACTION) &
+		RM_TRANSACTION.CH%, &
+		RM_TRANSACTION.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL	LONG    FUNCTION &
+		MAIN_WINDOW, &
+		PD_MAIN_PRODUCT, &
+		UTL_MAIN_TRANSTYPE, &
+		UTL_MAIN_LOCATION, &
+		FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!*************************************************************
+		! Set up information
+		!*************************************************************
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Restaurant transactions"
+		SMG_WINDOW::NHELP = "RM_MAIN_TRANSACTION"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::FLAGS = 0%
+		SMG_WINDOW::NITEMS= 8%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%)	= "Product_number"
+			SMG_WINDOW::KFIELD(0%, 0%)	= 3%
+			SMG_WINDOW::KFIELD(0%, 1%)	= 1%
+			SMG_WINDOW::KFIELD(0%, 2%)	= 2%
+			SMG_WINDOW::KFIELD(0%, 3%)	= 3%
+		SMG_WINDOW::KNAME(1%)	= "Location_number"
+			SMG_WINDOW::KFIELD(1%, 0%)	= 4%
+			SMG_WINDOW::KFIELD(1%, 1%)	= 2%
+			SMG_WINDOW::KFIELD(1%, 2%)	= 1%
+			SMG_WINDOW::KFIELD(1%, 3%)	= 4%
+			SMG_WINDOW::KFIELD(1%, 4%)	= 3%
+
+		SMG_WINDOW::HVIEW	= 78%
+		SMG_WINDOW::VVIEW	= 18%
+
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+20700		!
+		! Declare channels
+		!
+		IF RM_TRANSACTION.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF RM_TRANSACTION.READONLY%
+			GOTO 20790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+20750		%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.CRE"
+		RM_TRANSACTION.READONLY% = 0%
+		GOTO 20790
+
+20760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		RM_TRANSACTION.READONLY% = -1%
+
+		GOTO 20790
+
+20770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(RM_TRANSACTION.CH%)
+
+		EXIT FUNCTION
+
+20790		SMG_WINDOW::CHAN  = RM_TRANSACTION.CH%
+		RESET #RM_TRANSACTION.CH%
+		GET #RM_TRANSACTION.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+21100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+
+		DATA	05,08, "(01) Product #", &
+			06,08, "(02) Location #", &
+			07,08, "(03) Trans Date", &
+			08,08, "(04) Trans Type", &
+			09,08, "(05) Quantity", &
+			10,08, "(06) Price", &
+			11,08, "(07) STD Cost", &
+			12,08, "(08) Station Man", &
+			14,08, "     Post Date", &
+			15,08, "     Post Time", &
+			16,08, "     Post Batch", &
+			0, 0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+21200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+ ReEnter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+			RM_TRANSACTION::PRODUCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;26",TEMP$, RM_TRANSACTION::PRODUCT, &
+				MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(PD_MAIN_PRODUCT.ID, "VX")=1%
+				THEN
+					RM_TRANSACTION::PRODUCT = &
+						PD_PRODUCT::PRODUCT_NUM
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 2%
+
+			RM_TRANSACTION::LOCATION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;26",	TEMP$, RM_TRANSACTION::LOCATION, &
+				MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_LOCATION.ID, "V0")=1%
+				THEN
+					RM_TRANSACTION::LOCATION = &
+						UTL_LOCATION::LOCATION
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 3%
+
+			RM_TRANSACTION::TRANSDATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, "07;26", TEMP$, &
+				RM_TRANSACTION::TRANSDATE, MFLAG, "'E", &
+				MVALUE)
+
+		CASE 4%
+
+			RM_TRANSACTION::TRANSTYPE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"08;26", TEMP$, RM_TRANSACTION::TRANSTYPE, &
+				MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0")=1%
+				THEN
+					RM_TRANSACTION::TRANSTYPE = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 5%
+
+			RM_TRANSACTION::QUANTITY = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"9;26",TEMP$, RM_TRANSACTION::QUANTITY, MFLAG, &
+				"#,###,###.###", MVALUE)
+
+		CASE 6%
+
+			RM_TRANSACTION::PRICE = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;26",TEMP$, RM_TRANSACTION::PRICE, MFLAG, &
+				"#,###,###.###", MVALUE)
+
+		CASE 7%
+
+			RM_TRANSACTION::COST = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;26",TEMP$, RM_TRANSACTION::COST, MFLAG, &
+				"#,###,###.###", MVALUE)
+
+		CASE 8%
+
+			RM_TRANSACTION::STATIONMAN = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "12;26", TEMP$, &
+				RM_TRANSACTION::STATIONMAN, MFLAG, "'E", &
+				MVALUE)
+
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+21850	CASE OPT_TESTENTRY
+		RM_MAIN_TRANSACTION = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			!
+			! Is the input defined?
+			!
+			RM_MAIN_TRANSACTION = FUNC_TESTENTRY(SMG_WINDOW, &
+				RM_TRANSACTION::PRODUCT, &
+				PD_PRODUCT::DESCRIPTION, &
+				"RM", MLOOP, "PRG", &
+				"Product", PD_MAIN_PRODUCT.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(PD_PRODUCT::DESCRIPTION, 37%), &
+					5%,41%, ,SMG$M_BOLD)
+
+		CASE 2%
+			!
+			! Is the input defined?
+			!
+			RM_MAIN_TRANSACTION = FUNC_TESTENTRY(SMG_WINDOW, &
+				RM_TRANSACTION::LOCATION, &
+				UTL_LOCATION::LOCNAME, &
+				"RM", MLOOP, "PRG", &
+				"Location", UTL_MAIN_LOCATION.ID)
+
+		CASE 4%
+			!
+			! Is the input defined?
+			!
+			RM_MAIN_TRANSACTION = FUNC_TESTENTRY(SMG_WINDOW, &
+				RM_TRANSACTION::TRANSTYPE, &
+				UTL_TRANSTYPE::DESCRIPTION, &
+				"RM", MLOOP, "PRG", &
+				"Transaction type", UTL_MAIN_TRANSTYPE.ID)
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			PRODUCTNAME$ = STRING$(40%,63%)
+			PRODUCTNAME$ = PD_PRODUCT::DESCRIPTION &
+				IF MAIN_WINDOW(PD_MAIN_PRODUCT.ID, &
+				"Q0" + RM_TRANSACTION::PRODUCT) = 1%
+			!
+			! Display name (ALSO IN TESTENTRY)
+			!
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(PRODUCTNAME$,37%),	5%,41%, ,SMG$M_BOLD)
+		END IF
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			PRNT_DATE(RM_TRANSACTION::POSTDATE,8%),14%,26%, , &
+			SMG$M_BOLD)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			PRNT_TIME(RM_TRANSACTION::POSTTIME,1%),15%,26%, , &
+			SMG$M_BOLD)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			RM_TRANSACTION::BATCH,16%,26%, ,SMG$M_BOLD)
+
+	!
+	! Set RM_TRANSACTION_OLD value
+	!
+21900	CASE OPT_SETOLD
+		RM_TRANSACTION_OLD = RM_TRANSACTION
+
+	!
+	! Restore RM_TRANSACTION_OLD value
+	!
+	CASE OPT_RESETOLD
+		RM_TRANSACTION = RM_TRANSACTION_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		RM_TRANSACTION2 = RM_TRANSACTION
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		RM_TRANSACTION = RM_TRANSACTION2
+
+		RM_TRANSACTION::POSTDATE = DATE_TODAY
+		RM_TRANSACTION::POSTTIME = TIME_NOW
+		RM_TRANSACTION::BATCH    = "??????"
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+	MVALUE ="  Product#       Loc  TranDate TranType    Quantity StationMan"
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "017,022,031,040,052"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = RM_TRANSACTION::PRODUCT + " " + &
+				RM_TRANSACTION::LOCATION + " " + &
+				RM_TRANSACTION::TRANSDATE + " " + &
+				RM_TRANSACTION::TRANSTYPE + "       " + &
+				FORMAT$(RM_TRANSACTION::QUANTITY, &
+					"#######.###") + " "+ &
+				RM_TRANSACTION::STATIONMAN
+
+			END SELECT
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #SMG_WINDOW::CHAN, &
+				KEY#0% GE RM_TRANSACTION::PRODUCT + &
+				RM_TRANSACTION::LOCATION + &
+				RM_TRANSACTION::TRANSDATE, &
+				REGARDLESS
+		CASE 1%
+			FIND #SMG_WINDOW::CHAN, &
+				KEY#2% GE RM_TRANSACTION::LOCATION + &
+					RM_TRANSACTION::PRODUCT + &
+					RM_TRANSACTION::TRANSTYPE + &
+					RM_TRANSACTION::TRANSDATE, &
+				REGARDLESS
+		END SELECT
+
+	END SELECT
+
+
+27000	EXIT FUNCTION
+
+
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 20750%
+		RESUME 20760 IF ERR = 10%
+		RM_MAIN_TRANSACTION = ERR
+		RESUME 20770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 20760%
+		RM_MAIN_TRANSACTION = ERR
+		RESUME 20770
+
+	!
+	! Unable to reset
+	!
+	CASE 20790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 21850%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+
+32767	END FUNCTION
+	!+-+-+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Product Number\*
+	!	.p
+	!	The ^*Product Number\* field provides the means to enter an assigned number
+	!	which identifies a specific product.
+	!	.p
+	!	The field accommodates up to fourteen (14) alphanumeric characters.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at this field causes
+	!	a list of valid product numbers to be displayed.
+	!
+	! Index:
+	!	.x Product Number
+	!	.x Number>Product
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Location Number\*
+	!	.p
+	!	The ^*Location Number\* code is provided to enter the location where the
+	!	transaction took place.
+	!
+	! Index:
+	!	.x Location Number
+	!	.x Number>Location
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Transaction Date\*
+	!	.p
+	!	The ^*Transaction Date\* field provides the means to enter the date the
+	!	transaction took place. The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x Transaction Date
+	!	.x Date>Transaction
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Transaction Type\*
+	!	.p
+	!	The ^*Transaction Type\* field contains the code established in the transaction
+	!	type file which indicates the type
+	!	of transaction.  By pressing the ^*<List Choices>\* key, a list of valid
+	!	types is displayed.
+	!
+	! Index:
+	!	.x Transaction Type
+	!	.x Type>Transaction
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Quantity\*
+	!	.p
+	!	The ^*Quantity\* field refers to the number of products sold, exchanged,
+	!	received, etc. in relation to the transaction type.
+	!
+	! Index:
+	!	.x Quantity
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Price\*
+	!	.p
+	!	The ^*Price\* field contains the amount charged for the product when it
+	!	is sold to the customers.
+	!
+	! Index:
+	!	.x Price
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD008
+	!	^*(08) Stationman\*
+	!	.p
+	!	The ^*Stationman\* field provides for entry of the code or name which will
+	!	identify the stationman respontible for this particular journal entry.
+	!
+	! Index:
+	!	.x Stationman
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD007
+	!	^*(07) Standard Cost\*
+	!	.p
+	!	The ^*Standard Cost\* field contains the standard cost charged to the company
+	!	at the time of purchase.
+	!
+	! Index:
+	!	.x Standard Cost
+	!	.x Cost>Standard
+	!
+	!--

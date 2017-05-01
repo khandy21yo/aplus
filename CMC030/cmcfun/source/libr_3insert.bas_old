@@ -1,0 +1,300 @@
+1	%TITLE "Insert a Text File into a Library"
+	%SBTTL "LIBR_3INSERT"
+	%IDENT "V3.3"
+
+	FUNCTION LONG LIBR_3INSERT(LIB_NAME$, FILE_NAME$, KEY_NAME$)
+
+	!
+	!		COPYRIGHT (C) 1987 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will insert text into a library,
+	!	and append a key to that text.
+	!
+	!	WARNING: This version should only be used when there is
+	!	no chance of connected items.
+	!
+	! Parameter:
+	!
+	!	LIB_NAME$
+	!		Passed name of library to insert text into.
+	!
+	!	FILE_NAME$
+	!		Passed name of file containing text to insert
+	!		into the library.
+	!
+	!	KEY_NAME$
+	!		Passed name of key to append to text.
+	!
+	!	Returns a status code.
+	!
+	! Example:
+	!
+	!	ST% = LIBR_3INSERT("HELP_GL", "SOURCE.FILE", "ADDRESS")
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:LIBR_3INSERT/LINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP LIBR_3INSERT
+	!	$ DELETE LIBR_3INSERT.OBJ;*
+	!
+	! Author:
+	!
+	!	01/07/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	07/19/88 - Kevin Handy
+	!		Removed defaulting to REF:
+	!
+	!	01/03/89 - Kevin Handy
+	!		Changed LIBR_EDIT return to LIBR_3INSERT so that
+	!		the status will really be returned.
+	!
+	!	12/2/89 - Kevin Handy
+	!		Modified to get into sharable library.
+	!		This version doesn't copy over connected keys,
+	!		because DEC didn't give me any of the necessary
+	!		options with LBR$SEARCH.
+	!
+	!	04/29/92 - Kevin Handy
+	!		Modified to lose whitespace at end of lines,
+	!		so that they do not end up in source code.
+	!
+	!	07/27/93 - Kevin Handy
+	!		Removed commented out debug lines.
+	!
+	!	07/27/93 - Kevin Handy
+	!		Changed LBR$C_CREATE to LIB$C_CREATE. (Both
+	!		are 0, but correct one is defined in LIBRARY.COM)
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TEST.RFA
+	!		Variable used to test the data.
+	!
+	!	NULL.RFA
+	!		Variable used to enter the text information.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION LIB$GET_LUN
+	EXTERNAL LONG FUNCTION LIB$FREE_LUN
+
+	DECLARE RFA TEST.RFA, NULL.RFA
+
+	RECORD C_ARRAY_STRUCT
+		VARIANT
+		CASE
+			LONG C_ARRAY_L(19%)
+		CASE
+			STRING C_ARRAY_S = 88%
+		END VARIANT
+	END RECORD
+
+	DECLARE C_ARRAY_STRUCT C_ARRAY
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+	LIBR_3INSERT = 1%
+
+100	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(L.INDEX%, LBR$C_UPDATE)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_3INSERT = ST%
+		EXIT FUNCTION
+	END IF
+
+200	!
+	! Open the library function
+	!
+	ST% = LBR$OPEN(L.INDEX%, LIB_NAME$, , ".TLB", ,C_ARRAY::C_ARRAY_S)
+
+	IF (ST% = '98962'L)
+	THEN
+		GOSUB CreateLibrary
+		GOTO 100
+	END IF
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_EXTRACT = ST%
+		EXIT FUNCTION
+	END IF
+
+300	!
+	! Open the source file
+	!
+	ST% = LIB$GET_LUN(INPUT.CH%)
+
+	OPEN FILE_NAME$ FOR INPUT AS FILE INPUT.CH%
+
+	!
+	! Delete key if it already exists
+	!
+	ST% = LBR$LOOKUP_KEY(L.INDEX%, KEY_NAME$, TEST.RFA)
+
+	IF (ST% AND 1%)
+	THEN
+		!
+		! Delete the primary key
+		!
+		ST% = LBR$DELETE_KEY(L.INDEX%, KEY_NAME$) &
+
+		!
+		! Delete the data
+		!
+		ST% = LBR$DELETE_DATA(L.INDEX%, TEST.RFA)
+	END IF
+
+	!
+	! Load in text information
+	!
+	TEST.RFA = NULL.RFA
+
+	LINE.FLAG% = 0%
+
+310	LINPUT #INPUT.CH%, X$
+
+	!
+	! Lose junk whitespace at end of string
+	!
+	X$ = EDIT$(X$, 128%)
+
+	LINE.FLAG% = -1%
+
+	ST% = LBR$PUT_RECORD(L.INDEX%, X$, TEST.RFA)
+
+	GOTO 310
+
+350	IF LINE.FLAG% = 0%
+	THEN
+		LIBR_3INSERT = 2%
+		GOTO 900
+	END IF
+
+	!
+	! Mark end of text
+	!
+	ST% = LBR$PUT_END(L.INDEX%)
+
+	!
+	! Insert main key pointing to text
+	!
+	LIBR_3INSERT = LBR$INSERT_KEY(L.INDEX%, KEY_NAME$, TEST.RFA)
+
+900	!
+	! Close all files
+	!
+	JUNK% = LBR$CLOSE(L.INDEX%)
+	CLOSE INPUT.CH%
+	JUNK% = LIB$FREE_LUN(INPUT.CH%)
+
+	EXIT FUNCTION
+
+	%PAGE
+
+1000	!*******************************************************************
+	! Create a library file
+	!*******************************************************************
+ CreateLibrary:
+
+	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(LC.INDEX%, LIB$C_CREATE, LBR$C_TYP_TXT)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_3INSERT = ST%
+		EXIT FUNCTION
+	END IF
+
+	!
+	! Open the library file
+	!
+	C_ARRAY::C_ARRAY_L( 0%) = LBR$C_TYP_TXT		! Library type
+	C_ARRAY::C_ARRAY_L( 1%) = 39%			! Key length
+	C_ARRAY::C_ARRAY_L( 2%) = 11%			! Initial allocation
+	C_ARRAY::C_ARRAY_L( 3%) = 1%			! Number of keys
+	C_ARRAY::C_ARRAY_L( 4%) = 0%			! Additional chars in header
+	C_ARRAY::C_ARRAY_L( 5%) = 200%			! Preallocated indexes
+	C_ARRAY::C_ARRAY_L( 6%) = 0%			! History records
+	C_ARRAY::C_ARRAY_L( 7%) = 3%			! Format of library
+	C_ARRAY::C_ARRAY_L( 8%) = 0%			! Index casing
+
+	ST% = LBR$OPEN(LC.INDEX%, LIB_NAME$, C_ARRAY::C_ARRAY_S BY REF, DEF_DIR$ + ".TLB")
+
+	!
+	! Close it and return
+	!
+	ST% = LBR$CLOSE(LC.INDEX%)
+	RETURN
+
+	%PAGE
+
+19000	!
+	! Trap errors
+	!
+	FILENAME$ = ""
+	SELECT ERL
+
+		!
+		! Text file not found
+		!
+		CASE 300%
+			LIBR_3INSERT = 0%
+			RESUME 900
+		!
+		! End of text
+		!
+		CASE 310%
+
+			RESUME 350 IF ERR = 11%
+	END SELECT
+
+	ON ERROR GOTO 0
+
+	END FUNCTION

@@ -1,0 +1,1334 @@
+1	%TITLE "TV_SPEC_EXTEND_LOG - Extend log for more day(s)"
+	%SBTTL "TV Traffic system"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program is used to create the log for a
+	!	given date range.
+	!
+	! Index:
+	!
+	!	Extend Logs
+	!	Logs
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_SPEC_EXTEND_LOG
+	!	$ LINK/EXE=TV_EXE: TV_SPEC_EXTEND_LOG, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_SPEC_EXTEND_LOG.OBJ;*
+	!
+	! Author:
+	!
+	!	11/27/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	08/08/88 - Kevin Handy
+	!		Added sequence number field to spots file.
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to use READ_INITIALIZE.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	!
+	! Maps
+	!
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_PROGRAM"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_PROGRAM.HB"
+	MAP (TV_PROGRAM)	TV_PROGRAM_CDD		TV_PROGRAM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_BREAK"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK.HB"
+	MAP (TV_BREAK)		TV_BREAK_CDD		TV_BREAK
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_PROGRAM"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_PROGRAM.HB"
+	MAP (TV_LOG_PROGRAM)	TV_LOG_PROGRAM_CDD	TV_LOG_PROGRAM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_BREAK"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.HB"
+	MAP (TV_LOG_BREAK)	TV_LOG_BREAK_CDD	TV_LOG_BREAK
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOGSPOTS"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP (TV_LOGSPOTS)	TV_LOGSPOTS_CDD		TV_LOGSPOTS
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_BREAK_TYPE"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.HB"
+	MAP (TV_BREAK_TYPE)	TV_BREAK_TYPE_CDD	TV_BREAK_TYPE
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_FILL"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_FILL.HB"
+	MAP (TV_FILL)		TV_FILL_CDD		TV_FILL
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_CONFLICT"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.HB"
+	MAP (TV_COMMER_CONFLICT) TV_COMMER_CONFLICT_CDD TV_COMMER_CONFLICT
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSTOM"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)		AR_CUSTOM_CDD		AR_CUSTOM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_CLASS"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_CLASS.HB"
+	MAP (TV_LOG_CLASS)	TV_LOG_CLASS_CDD	TV_LOG_CLASS
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	!
+	! Declare constants
+	!
+	DECLARE INTEGER CONSTANT MAX_PROGRAMS = 100%
+
+	!
+	! Define variables
+	!
+	DIM SCHED_DAY$(7%)
+	DECLARE TV_PROGRAM_CDD TV_PROGRAM_ARRAY(MAX_PROGRAMS)
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilization.  Init error trapping, terminal, Set up for help,
+	! allocate channels.
+	!*******************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	! Init terminal
+	!
+	CALL READ_INITIALIZE
+
+	!
+	! Init help
+	!
+	SCOPE::PRG_IDENT = "PROG"
+	SCOPE::PRG_PROGRAM = "TV_SPEC_EXTEND_LOG"
+	SCOPE::PRG_ITEM = "HELP"
+
+	!
+	! Init day of week array
+	!
+	SCHED_DAY$(1%) = "Monday"
+	SCHED_DAY$(2%) = "Tuesday"
+	SCHED_DAY$(3%) = "Wednesday"
+	SCHED_DAY$(4%) = "Thursday"
+	SCHED_DAY$(5%) = "Friday"
+	SCHED_DAY$(6%) = "Saturday"
+	SCHED_DAY$(7%) = "Sunday"
+
+	CHECK_FLAG$(0%) = "No conflict"
+	CHECK_FLAG$(1%) = "Program doesn't run on this date"
+	CHECK_FLAG$(2%) = "Program has been canceled"
+	CHECK_FLAG$(3%) = "A program with a higher priority exists"
+	CHECK_FLAG$(4%) = "???"
+
+	!*******************************************************************
+	! Create windows to play in
+	!*******************************************************************
+
+	SMG_STATUS% = SMG$BEGIN_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	!
+	! Create IO window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(4%, 78%, IO_INPUT%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_INPUT%, "Extend Logs")
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "From date", 2%, 1%)
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "To date", 3%, 1%)
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_INPUT%, SCOPE::SMG_PBID, 2%, 2%)
+
+	!
+	! Create entertainment window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(9%, 78%, IO_MESSAGE%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_MESSAGE%, "Messages")
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_MESSAGE%, SCOPE::SMG_PBID, 7%, 2%)
+	SMG_STATUS% = SMG$SET_CURSOR_ABS(IO_MESSAGE%, 1%, 1%)
+
+	!
+	! Create entry window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(3%, 78%, IO_ENTRY%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_ENTRY%, "Entry")
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_ENTRY%, SCOPE::SMG_PBID, 17%, 2%)
+	SMG_STATUS% = SMG$SET_CURSOR_ABS(IO_ENTRY%, 1%, 1%)
+
+	SMG_STATUS% = SMG$END_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	%PAGE
+
+	!*******************************************************************
+	! Open up files that can be opened up and left open
+	!*******************************************************************
+
+1010	%INCLUDE "SOURCE:[TV.OPEN]TV_PROGRAM.OPN"
+
+1020	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK.OPN"
+
+1030	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.OPN"
+
+1040	%INCLUDE "SOURCE:[TV.OPEN]TV_FILL.MOD"
+
+	%PAGE
+
+1200	!*******************************************************************
+	! Get from date
+	!*******************************************************************
+
+	TEMPITEM$ = SCOPE::PRG_ITEM + ""
+	SCOPE::PRG_ITEM = "DATE"
+
+	FROM_DATE$ = ENTR_3DATE(SCOPE, IO_INPUT%, "2;13", &
+		"Extend from date", DATE_TODAY, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1200
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DOWN, SMG$K_TRM_DO
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1200
+	END SELECT
+
+1400	!*******************************************************************
+	! Get to date
+	!*******************************************************************
+
+	TO_DATE$ = ENTR_3DATE(SCOPE, IO_INPUT%, "3;13", &
+		"Extend to date", FROM_DATE$, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1200
+
+		CASE SMG$K_TRM_DOWN
+			GOTO 1400
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DO
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1400
+	END SELECT
+
+	SCOPE::PRG_ITEM = TEMPITEM$
+
+	%PAGE
+
+1600	!*******************************************************************
+	! Loop from FROM_DATE to TO_DATE
+	!*******************************************************************
+
+	FROM_DATE% = DATE_DAYCODE(FROM_DATE$)
+	TO_DATE%   = DATE_DAYCODE(TO_DATE$)
+
+	!
+	! Make sure that a range exists
+	!
+	IF FROM_DATE% > TO_DATE%
+	THEN
+		SCOPE::PRG_ITEM = "BADDATE"
+		CALL ENTR_3MESSAGE(SCOPE, "ERROR: From date > to date!", 0%)
+		GOTO ExitProgram
+	END IF
+
+	!
+	! If it is more than a week, make real sure that is what they
+	! want to do.
+	!
+	IF (TO_DATE% - FROM_DATE%) > 6%
+	THEN
+		SCOPE::PRG_ITEM = "BIGRANGE"
+		CONFIRM$ = ENTR_3YESNO(SCOPE, IO_INPUT%, "", &
+			"Confirm large range (" + &
+			NUM1$(TO_DATE% - FROM_DATE% + 1%) + " Days)", &
+			"N", 0%, "'E", "")
+		GOTO ExitProgram UNLESS CONFIRM$ = "Y"
+	END IF
+
+	!
+	! If they make it to here, then the range must be OK.
+	! Loop through all days in that range and extend the
+	! logs.
+	!
+	FOR DAY_LOOP% = FROM_DATE% TO TO_DATE%
+
+		!
+		! Figure out all sorts of useful things about the
+		! given date.
+		!
+		SCHED_DATE$ = DATE_INVDCODE(DAY_LOOP%)
+		SCHED_DAY%  = DATE_DAYOFWEEK(DAY_LOOP%)
+
+		!
+		! Extend the schedule for that date
+		!
+		GOSUB ExtendOneDate
+
+	NEXT DAY_LOOP%
+
+	CALL ENTR_3MESSAGE(SCOPE, "Finished!", 0%)
+
+	GOTO ExitProgram
+
+	%PAGE
+
+4000	!*******************************************************************
+	! Extend the schedule for one date.
+	!*******************************************************************
+
+ ExtendOneDate:
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		"Starting " + PRNT_DATE(SCHED_DATE$, 8%) + " (" + &
+		SCHED_DAY$(SCHED_DAY%) + ")")
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+
+4100	!
+	! Attempt to open log-program
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_PROGRAM.CRE"
+
+4110	!
+	! Attempt to open log-break
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.CRE"
+
+4115	!
+	! Open up a spots file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.CRE"
+
+4120	!
+	! If there is ANYTHING in the LOG_PROGRAM file, assume it has
+	! already been extended.
+	!
+	RESET #TV_LOG_PROGRAM.CH%
+	GET #TV_LOG_PROGRAM.CH%, REGARDLESS
+
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		"Warning! " + PRNT_DATE(SCHED_DATE$, 8%) + &
+		" appears to already be extended!")
+
+	CALL ENTR_3MESSAGE(SCOPE, "Warning! " + PRNT_DATE(SCHED_DATE$, 8%) + &
+		" appears to already be extended!", 1%)
+
+	TEST$ = ENTR_3YESNO(SCOPE, SCOPE::SMG_MESSAGE, "", &
+		"Do you wish to re-do the extend of this log", "N", 0%, "", "")
+
+	GOTO 4900 IF TEST$ <> "Y"
+
+	CLOSE #TV_LOG_PROGRAM.CH%
+	CLOSE #TV_LOG_BREAK.CH%
+
+4140	KILL TV_LOG_PROGRAM.DEV$ + "TV_LOG_PROGRAM" + SCHED_DATE$ + ".LED"
+
+4150	KILL TV_LOG_BREAK.DEV$ + "TV_LOG_BREAK_" + SCHED_DATE$ + ".LED"
+
+4160	KILL TV_LOGSPOTS.DEV$ + "TV_LOGSPOTS_" + SCHED_DATE$ + ".LED"
+
+	GOTO 4100
+
+4200	!
+	! This date has not been extended, so lets start doing it.
+	!
+	RESET #TV_PROGRAM.CH%
+	TOTAL_PROGRAMS% = 0%
+
+4210	GET #TV_PROGRAM.CH%, REGARDLESS
+
+	GOSUB 5000		! See if it conflicts with something else
+
+ !	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+ !		TV_PROGRAM::PRGNUM + " " + &
+ !		NUM1$(CHECK_FLAG%) + " " + &
+ !		CHECK_FLAG$(CHECK_FLAG%))
+
+	GOTO 4210 IF CHECK_FLAG%
+
+	GOSUB 5200		! Remove anything it preempts, and add it in
+
+	GOTO 4210
+
+4300	!
+	! When we are done looking at all programs in the program
+	! file, we then need to add the records into the log.
+	!
+	GOSUB 6000
+
+4900	!
+	! Finish up this date and then leave
+	!
+	CLOSE #TV_LOG_PROGRAM.CH%, TV_LOG_BREAK.CH%
+
+	RETURN
+
+	%PAGE
+
+5000	!*******************************************************************
+	! Check for a conflict
+	!
+	! Returns a status in CHECK_FLAG%
+	!
+	!	0 - No conflict
+	!	1 - Program doesn't run on this date
+	!	2 - Program has been canceled
+	!	3 - A program with a higher priority exists
+	!
+	!*******************************************************************
+
+	CHECK_FLAG% = 0%
+
+	!
+	! Convert useful items to integers so that they are easier
+	! to work with.
+	!
+	START_TIME% = TIME_CODE(TV_PROGRAM::START_TIME(SCHED_DAY% - 1%))
+	PROG_LENGTH% = TIME_CODE(TV_PROGRAM::LENGTH)
+
+	!
+	! It won't work if it doesn't start on this date
+	!
+	IF (START_TIME% = 0%)
+	THEN
+		CHECK_FLAG% = 1%
+		GOTO 5090
+	END IF
+
+	!
+	! It won't work if the termination date has passed, or
+	! the program hasn't started yet.
+	!
+	IF ((TV_PROGRAM::TO_DATE < SCHED_DATE$) AND &
+		(TV_PROGRAM::TO_DATE > "00000000")) OR &
+		(TV_PROGRAM::FROM_DATE > SCHED_DATE$)
+	THEN
+		CHECK_FLAG% = 2%
+		GOTO 5090
+	END IF
+
+	!
+	! A Cutaway can always fit in the log
+	!
+	IF (TRM$(TV_PROGRAM::CUTAWAY) <> "")
+	THEN
+		GOTO 5090
+	END IF
+
+	!
+	! Loop through all programs that we have currently, and
+	! see if there are any fatal conflicts.
+	!
+	FOR LOOP% = 1% TO TOTAL_PROGRAMS%
+
+		!
+		! Ignore cutaways for now.  They don't conflict with
+		! anything (at this point).
+		!
+		GOTO 5080 UNLESS TV_PROGRAM_ARRAY(LOOP%)::CUTAWAY = ""
+
+		!
+		! Do the conversion on the times for the program
+		! specified by the loop variable.
+		!
+		TEMP_TIME% = TIME_CODE(TV_PROGRAM_ARRAY(LOOP%)::START_TIME(SCHED_DAY% - 1%))
+		TEMP_LENGTH% = TIME_CODE(TV_PROGRAM_ARRAY(LOOP%)::LENGTH)
+
+		!
+		! See if the times conflict, in any way
+		!
+		! Possible conflicts are:
+		!
+		!		t.............t
+		!	1...........1			Overlap from front
+		!	          1.......2		Overlap in middle
+		!			2.........2	Overlap on end
+		!	3.........................3	Complete overlap
+		!
+		IF ((TEMP_TIME% >= START_TIME%) AND		! 1 &
+			(TEMP_TIME% <= START_TIME% + PROG_LENGTH% - 1%)) OR &
+			((TEMP_TIME% <= START_TIME%) AND		! 2 &
+			(TEMP_TIME% + TEMP_LENGTH% - 1% >= START_TIME%)) OR &
+			((START_TIME% <= TEMP_TIME%) AND		! 3 &
+			(START_TIME% + PROG_LENGTH% - 1% > TEMP_TIME%))
+		THEN
+			!
+			! Now, we need to decide who has priority.
+			!
+
+			!
+			! If origional program has null end date, then
+			! it does NOT have priority.  Allow other program
+			! to schedule here.
+			!
+			IF VAL%(TV_PROGRAM_ARRAY(LOOP%)::TO_DATE) = 0%
+			THEN
+				GOTO 5080
+			END IF
+
+			!
+			! A program that ends first has the highest
+			! priority.  If they end on the same date,
+			! then the one with the higher program number
+			! will get priority.
+			!
+			IF (VAL%(TV_PROGRAM::TO_DATE) <> 0%) AND &
+				(TV_PROGRAM::TO_DATE > TV_PROGRAM_ARRAY(LOOP%)::TO_DATE)
+			THEN
+				CHECK_FLAG% = 3%
+				GOTO 5090
+			END IF
+
+		END IF
+
+		!
+		! If it falls through all of the above tests, then it
+		! can go there for all that this one previously
+		! scheduled program cares, however, some other program
+		! may not want it there.
+		!
+
+5080	NEXT LOOP%
+
+	!
+	! If we fall all the way through, then it is probibly ok
+	! to schedule this program here (tenitively).  Fall through
+	! with the current value of CHECK_FLAG%.
+	!
+5090	RETURN
+
+	%PAGE
+
+5200	!*******************************************************************
+	! Remove all programs that conflict with this one.  It has been
+	! tenitavely scheduled using the tests in 5000, and will remain
+	! scheduled until some other program removes it.
+	!*******************************************************************
+
+	!
+	! Ignore this stuff if this is a cutaway.  We always can
+	! schedule a cutaway over something else, but later on we
+	! will have to make sure that the cutaway should be scheduled.
+	!
+	IF (TRM$(TV_PROGRAM::CUTAWAY) <> "")
+	THEN
+		GOTO 5290
+	END IF
+
+
+	!
+	! Convert useful items to integers so that they are easier
+	! to work with.
+	!
+	START_TIME% = TIME_CODE(TV_PROGRAM::START_TIME(SCHED_DAY% - 1%))
+	PROG_LENGTH% = TIME_CODE(TV_PROGRAM::LENGTH)
+
+	!
+	! Loop through all programs known at the moment, and remove
+	! all that are conflicting with the current program.
+	!
+	LOOP% = 1%
+
+	WHILE (LOOP% <= TOTAL_PROGRAMS%)
+
+		!
+		! Ignore cutaways for now.  The don't conflict with
+		! anything at this point.
+		!
+		IF (TRM$(TV_PROGRAM_ARRAY(LOOP%)::CUTAWAY) <> "")
+		THEN
+			LOOP% = LOOP% + 1%
+			GOTO 5280
+		END IF
+
+		!
+		! Do the conversion on the times for the program
+		! specified by the loop variable.
+		!
+		TEMP_TIME% = TIME_CODE(TV_PROGRAM_ARRAY(LOOP%)::START_TIME(SCHED_DAY% - 1%))
+		TEMP_LENGTH% = TIME_CODE(TV_PROGRAM_ARRAY(LOOP%)::LENGTH)
+
+		!
+		! See if the times conflict, in any way
+		!
+		! Possible conflicts are:
+		!
+		!		t.............t
+		!	1...........1			Overlap from front
+		!	          1.......2		Overlap in middle
+		!			2.........2	Overlap on end
+		!	3.........................3	Complete overlap
+		!
+		IF ((TEMP_TIME% >= START_TIME%) AND		! 1 &
+			(TEMP_TIME% <= START_TIME% + PROG_LENGTH% - 1%)) OR &
+			((TEMP_TIME% <= START_TIME%) AND		! 2 &
+			(TEMP_TIME% + TEMP_LENGTH% - 1% >= START_TIME%)) OR &
+			((START_TIME% <= TEMP_TIME%) AND		! 3 &
+			(START_TIME% + PROG_LENGTH% - 1% > TEMP_TIME%))
+		THEN
+			!
+			! Tell them it is superceded
+			!
+ !			SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+ !				TV_PROGRAM_ARRAY(LOOP%)::PRGNUM + &
+ !				" Superceded")
+			!
+			! Remove this program from array
+			!
+			FOR LOOP1% = LOOP% TO TOTAL_PROGRAMS% - 1%
+				TV_PROGRAM_ARRAY(LOOP1%) = &
+					TV_PROGRAM_ARRAY(LOOP1% + 1%)
+			NEXT LOOP1%
+
+			TOTAL_PROGRAMS% = TOTAL_PROGRAMS% - 1%
+
+		ELSE
+			!
+			! Initilize for next loop if not removing program
+			!
+			LOOP% = LOOP% + 1%
+
+		END IF
+
+5280	NEXT
+
+	!
+	! When we get to here, we need to add in the given program
+	! in to the array.
+	!
+5290	TOTAL_PROGRAMS% = TOTAL_PROGRAMS% + 1%
+	TV_PROGRAM_ARRAY(TOTAL_PROGRAMS%) = TV_PROGRAM
+
+	RETURN
+
+	%PAGE
+
+6000	!*******************************************************************
+	! Load in all the programs that we have scheduled, Dropping all
+	! breaks that are covered by cutaways.
+	!*******************************************************************
+
+	!
+	! Let's look at all of the cutaways we have scheduled for,
+	! and see if the main program exists.  If it doesn't, then
+	! we need to flag the cutaway as not to be scheduled by
+	! setting its program number to blanks.
+	!
+	FOR LOOP% = 1% TO TOTAL_PROGRAMS%
+
+		!
+		! Is this a cutaway?
+		!
+		IF (TRM$(TV_PROGRAM_ARRAY(LOOP%)::CUTAWAY) <> "")
+		THEN
+
+			!
+			! Look for matching program
+			!
+			FOR LOOP1% = 1% TO TOTAL_PROGRAMS%
+				GOTO 6010 IF (TV_PROGRAM_ARRAY(LOOP%)::CUTAWAY = &
+					TV_PROGRAM_ARRAY(LOOP1%)::PRGNUM)
+			NEXT LOOP1%
+
+			!
+			! If we get to here, then it is not to be run
+			!
+			TV_PROGRAM_ARRAY(LOOP%)::PRGNUM = ""
+		END IF
+
+6010	NEXT LOOP%
+
+
+	!
+	! Now, starty loading in stuff
+	!
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		"Installing programs/breaks")
+
+	FOR LOOP% = 1% TO TOTAL_PROGRAMS%
+
+		!
+		! Skip if this is a cutaway that will not run
+		!
+		GOTO 6100 IF TV_PROGRAM_ARRAY(LOOP%)::PRGNUM = ""
+
+		!
+		! Make it easier to type/read this business
+		!
+		TV_PROGRAM = TV_PROGRAM_ARRAY(LOOP%)
+
+		!
+		! Create a log record for this program
+		!
+		TV_LOG_PROGRAM::PRGNUM		= TV_PROGRAM::PRGNUM
+		TV_LOG_PROGRAM::DATE		= SCHED_DATE$
+		TV_LOG_PROGRAM::START_TIME	= TV_PROGRAM::START_TIME(SCHED_DAY% - 1%)
+		TV_LOG_PROGRAM::RUN_TIME	= TV_PROGRAM::START_TIME(SCHED_DAY% - 1%)
+		TV_LOG_PROGRAM::TITLE		= TV_PROGRAM::TITLE
+		TV_LOG_PROGRAM::SOURCE		= TV_PROGRAM::SOURCE
+		TV_LOG_PROGRAM::PTYPE		= TV_PROGRAM::PTYPE
+		TV_LOG_PROGRAM::LENGTH		= TV_PROGRAM::LENGTH
+		TV_LOG_PROGRAM::COMMENT		= TV_PROGRAM::COMMENT
+		TV_LOG_PROGRAM::RUN		= "1"
+		TV_LOG_PROGRAM::CUTAWAY		= TV_PROGRAM::CUTAWAY
+
+		PUT #TV_LOG_PROGRAM.CH%
+
+		SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+			"Program: " + TV_LOG_PROGRAM::PRGNUM + " " + &
+			PRNT_TIME(TV_LOG_PROGRAM::START_TIME, 0%) + " " + &
+			TV_LOG_PROGRAM::TITLE)
+
+6020		!
+		! Now, we need to put the break information into the
+		! log.
+		!
+		GET #TV_BREAK.CH%, KEY #0 GE TV_PROGRAM::PRGNUM
+
+6030		!
+		! Skip out when done with program
+		!
+		GOTO 6100 IF TV_BREAK::PRGNUM <> TV_PROGRAM::PRGNUM
+
+		!
+		! Calculate actual run time for break
+		!
+		GOSUB GetRunTime IF TV_BREAK::RUN_TIME = ""
+
+		RUN_TIME$ = TIME_INVCODE( &
+			TIME_CODE(TV_BREAK::RUN_TIME) + &
+			TIME_CODE(TV_LOG_PROGRAM::START_TIME))
+
+		!
+		! Check to see if this break is covered by a cutaway
+		!
+		FOR LOOP1% = 1% TO TOTAL_PROGRAMS
+
+			IF (TRM$(TV_PROGRAM_ARRAY(LOOP1%)::CUTAWAY) <> "") AND &
+				(LOOP% <> LOOP1%) AND &
+				(TRM$(TV_PROGRAM_ARRAY(LOOP1%)::PRGNUM) <> "")
+			THEN
+				GOTO 6040 &
+					IF (RUN_TIME$ >= TV_PROGRAM_ARRAY(LOOP1%)::START_TIME(SCHED_DAY%)) AND &
+						(RUN_TIME$ < TIME_INVCODE( &
+						TIME_CODE(TV_PROGRAM_ARRAY(LOOP1%)::START_TIME(SCHED_DAY%)) + &
+						TIME_CODE(TV_PROGRAM_ARRAY(LOOP1%)::LENGTH) - 1%))
+			END IF
+
+		NEXT LOOP1%
+
+		!
+		! Copy over break information.  Fix the break to a
+		! specific time instead of being a relative time.
+		!
+		TV_LOG_BREAK::PRGNUM	= TV_BREAK::PRGNUM
+		TV_LOG_BREAK::DATE	= SCHED_DATE$
+		TV_LOG_BREAK::SCH_TIME	= RUN_TIME$
+		TV_LOG_BREAK::RUN_TIME	= RUN_TIME$
+		TV_LOG_BREAK::DESCR	= TV_BREAK::DESCR
+		TV_LOG_BREAK::BRKTYPE	= TV_BREAK::BRKTYPE
+		TV_LOG_BREAK::LENGTH	= TV_BREAK::LENGTH
+		TV_LOG_BREAK::COMMENT	= TV_BREAK::COMMENT
+		TV_LOG_BREAK::MAXCOM	= TV_BREAK::MAXCOM
+		TV_LOG_BREAK::PRIORITY	= TV_BREAK::PRIORITY
+		TV_LOG_BREAK::MATCH	= TV_BREAK::MATCH
+		TV_LOG_BREAK::RUN	= "1"
+
+		PUT #TV_LOG_BREAK.CH%
+
+		SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+			"Break: " + TV_LOG_BREAK::PRGNUM + " " + &
+			PRNT_TIME(TV_LOG_BREAK::SCH_TIME, 0%) + " " + &
+			TV_LOG_BREAK::DESCR + " " + &
+			PRNT_TIME(TV_LOG_BREAK::LENGTH, 0%))
+
+		!
+		! Handle any special stuff for this break
+		!
+		GOSUB FillBreak
+
+6040		GET #TV_BREAK.CH%
+		GOTO 6030
+
+6100	NEXT LOOP%
+
+	RETURN
+
+	%PAGE
+
+6200	!*******************************************************************
+	! Handle adding spots/fill into breaks
+	!*******************************************************************
+ FillBreak:
+
+	!
+	! See about getting break type
+	!
+	GET #TV_BREAK_TYPE.CH%, KEY #0 EQ TV_LOG_BREAK::BRKTYPE, REGARDLESS
+
+	SELECT TV_BREAK_TYPE::BFLAG
+
+		!
+		! In-tape break
+		!
+		CASE "2"
+			GOSUB InTapeBreak
+
+		!
+		! Avails with a station ID
+		!
+		CASE "3"
+			GOSUB StationIDBreak
+
+	END SELECT
+
+6290	RETURN
+
+	%PAGE
+
+	!*******************************************************************
+	! Load in commercials that are on the tape
+	!*******************************************************************
+
+ InTapeBreak:
+
+	TEMPITEM$ = SCOPE::PRG_ITEM + ""
+	SCOPE::PRG_ITEM = "INTAPE"
+	TEMP_COUNT% = 0%
+
+6300	CALL ENTR_3MESSAGE(SCOPE, "Need in-tape commercials for this break!", 1%)
+
+	!
+	! Paint in entry screen
+	!
+	V% = SMG$ERASE_DISPLAY(IO_ENTRY%)
+
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Time:", 1%, 1%)
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Length:", 1%, 17%)
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Descr:", 1%, 34%)
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Agency:", 2%, 1%)
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Class:", 2%, 34%)
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Conf:", 3%, 1%)
+
+	!
+	! Initialize common information
+	!
+	TV_LOGSPOTS::CUSNUM	= ""
+	TV_LOGSPOTS::FRMNUM	= ""
+	TV_LOGSPOTS::SKEDNUM	= ""
+	TV_LOGSPOTS::SCH_DATE	= SCHED_DATE$
+	TV_LOGSPOTS::SEQNUM	= "00"
+	TV_LOGSPOTS::SCH_TIME	= TV_LOG_BREAK::SCH_TIME
+	TV_LOGSPOTS::RATE	= 0.0
+	TV_LOGSPOTS::SCH_TYPE	= "2"
+	TV_LOGSPOTS::SPOTS_FLAG	= "R"
+	TV_LOGSPOTS::SPOTS_CODE	= "IT"
+	TV_LOGSPOTS::FROM_TIME_SLOT = ""
+	TV_LOGSPOTS::TO_TIME_SLOT = ""
+	TV_LOGSPOTS::INVNUM	= ""
+	TV_LOGSPOTS::INVDAT	= ""
+	TV_LOGSPOTS::POSTDATE	= ""
+	TV_LOGSPOTS::RUN_TIME	= ""
+	TV_LOGSPOTS::CLASS	= ""
+	TV_LOGSPOTS::CARTNUM	= ""
+	TV_LOGSPOTS::CUTNUM	= ""
+
+6305	!
+	! Init for one loop
+	!
+	LOOPX% = 1%
+
+	TV_LOGSPOTS::LENGTH	= ""
+	TV_LOGSPOTS::AGENCY_NUM	= ""
+	TV_LOGSPOTS::RUN_TIME	= TV_LOG_BREAK::SCH_TIME
+	TV_LOGSPOTS::CLASS	= ""
+	TV_LOGSPOTS::CONFLICT	= ""
+	TV_LOGSPOTS::DESCR	= ""
+
+6310	!
+	! Loop through, asking for all information about this in-tape
+	!
+	SCOPE::PRG_ITEM = "INT" + FORMAT$(LOOPX%, "<0>##")
+
+	SELECT LOOPX%
+
+	CASE 1%
+		TV_LOGSPOTS::RUN_TIME = ENTR_3TIME(SCOPE, IO_ENTRY%, "1;7", &
+			"In-tape", TV_LOGSPOTS::RUN_TIME, 0%, "'E", "")
+
+	CASE 2%
+		TV_LOGSPOTS::LENGTH = ENTR_3TIME(SCOPE, IO_ENTRY%, "1;25", &
+			"In-tape", TV_LOGSPOTS::LENGTH, 0%, "'E", "")
+
+	CASE 3%
+		TV_LOGSPOTS::DESCR = ENTR_3STRING(SCOPE, IO_ENTRY%, "1;41", &
+			"In-tape", TV_LOGSPOTS::DESCR, 0%, "'E", "")
+
+	CASE 4%
+		TV_LOGSPOTS::AGENCY_NUM = ENTR_3STRING(SCOPE, IO_ENTRY%, "2;9", &
+			"In-tape", TV_LOGSPOTS::AGENCY_NUM, 0%, "'E", "")
+
+		IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+		THEN
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+			THEN
+				TV_LOGSPOTS::AGENCY_NUM = AR_CUSTOM::CUSNUM
+			END IF
+			GOTO 6310
+		END IF
+
+	CASE 5%
+		TV_LOGSPOTS::CLASS = ENTR_3STRING(SCOPE, IO_ENTRY%, "2;41", &
+			"In-tape", TV_LOGSPOTS::CLASS, 0%, "'E", "")
+
+		IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+		THEN
+			IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID, "VX") = 1%
+			THEN
+				TV_LOGSPOTS::CLASS = TV_LOG_CLASS::CLASS
+			END IF
+			GOTO 6310
+		END IF
+	CASE 6%
+		TV_LOGSPOTS::CONFLICT = ENTR_3STRING(SCOPE, IO_ENTRY%, "3;7", &
+			"In-tape", TV_LOGSPOTS::CONFLICT, 0%, "'E", "")
+
+		IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+		THEN
+			IF MAIN_WINDOW(TV_MAIN_COMCON.ID, "VX") = 1%
+			THEN
+				TV_LOGSPOTS::CONFLICT = TV_COMMER_CONFLICT::CODE
+			END IF
+			GOTO 6310
+		END IF
+
+	END SELECT
+
+	SELECT SCOPE::SCOPE_EXIT
+		!
+		! Exit keys
+		!
+		CASE SMG$K_TRM_F8, SMG$K_TRM_F10
+			GOTO 6390
+
+		!
+		! Normal keys
+		!
+		CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+			LOOPX% = LOOPX% + 1%
+
+		!
+		! Up-arrow
+		!
+		CASE SMG$K_TRM_UP
+			LOOPX% = LOOPX% - 1% IF LOOPX% > 1%
+
+		!
+		! Down-arrow
+		!
+		CASE SMG$K_TRM_DOWN
+			LOOPX% = LOOPX% + 1% IF LOOPX% < 6%
+
+		!
+		! All others
+		!
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 6310
+
+	END SELECT
+
+	GOTO 6310 IF LOOPX% <= 6%
+
+	!
+	! Set up sequence number
+	!
+	TEMP_COUNT% = TEMP_COUNT% + 1%
+	TV_LOGSPOTS::SEQNUM = FORMAT$(TEMP_COUNT%, "<0>#")
+
+	!
+	! Write out this record, try for another
+	!
+	PUT #TV_LOGSPOTS.CH%
+
+	GOTO 6305
+
+6390	SCOPE::PRG_ITEM = TEMPITEM$
+
+	RETURN
+
+	%PAGE
+
+	!*******************************************************************
+	! Enter a station ID into this break
+	!*******************************************************************
+
+ StationIDBreak:
+	CALL ENTR_3MESSAGE(SCOPE, "Need station ID for this break", 1%)
+
+	TEMPITEM$ = SCOPE::PRG_ITEM + ""
+	SCOPE::PRG_ITEM = "IDBREAK"
+
+
+6400	!
+	! If we have avails for this break, then we need to ask the
+	! user to fill up the time somehow.
+	!
+	V% = SMG$ERASE_DISPLAY(IO_ENTRY%)
+
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		PRNT_TIME(TV_LOG_BREAK::LENGTH, 0%) + " avails in break", 1%, 1%)
+
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Add fill no. to break:", 2%, 1%)
+
+	FILLNUM$ = SPACE$(10%)
+
+	!
+	! Ask for fill number
+	!
+6405	FILLNUM$ = ENTR_3STRING(SCOPE, IO_ENTRY%, "2;24", "Fill to add", &
+		FILLNUM$, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		!
+		! Exit keys
+		!
+		CASE SMG$K_TRM_F8, SMG$K_TRM_F10
+			GOTO 6490
+
+		!
+		! List choices
+		!
+		CASE SMG$K_TRM_F14
+			IF MAIN_WINDOW(TV_MAIN_FILL.ID, "VX") = 1%
+			THEN
+				FILLNUM$ = TV_FILL::FILNUM
+			END IF
+			GOTO 6405
+
+		!
+		! Normal keys
+		!
+		CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+		!
+		! All others
+		!
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 6400
+
+	END SELECT
+
+	!
+	! Give up on break if no fill requested
+	!
+	GOTO 6400 IF FILLNUM$ = ""
+
+6410	!
+	! Search for the fill to see if it really exists
+	!
+	FILLNUM$ = LEFT(FILLNUM$ + SPACE$(10%), 10%)
+	GET #TV_FILL.CH%, KEY#0 EQ FILLNUM$
+
+	IF TIME_CODE(TV_FILL::LENGTH) > TIME_CODE(TV_LOG_BREAK::LENGTH)
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "The break is too short for this one!", 0%)
+		GOTO 6400
+	END IF
+
+6420	!
+	! Create a record and slop it into the spots file
+	!
+	TV_FILL::CURRENT_CUT = TV_FILL::CURRENT_CUT + 1%
+	TV_FILL::CURRENT_CUT = 1% &
+		IF TV_FILL::CURRENT_CUT > TV_FILL::CUTS
+
+	TV_LOGSPOTS::CUSNUM	= ""
+	TV_LOGSPOTS::FRMNUM	= ""
+	TV_LOGSPOTS::SKEDNUM	= ""
+	TV_LOGSPOTS::SCH_DATE	= SCHED_DATE$
+	TV_LOGSPOTS::SEQNUM	= "01"
+	TV_LOGSPOTS::SCH_TIME	= TV_LOG_BREAK::SCH_TIME
+	TV_LOGSPOTS::RATE	= 0.0
+	TV_LOGSPOTS::SCH_TYPE	= "1"
+	TV_LOGSPOTS::SPOTS_FLAG	= "S"
+	TV_LOGSPOTS::SPOTS_CODE	= "FI"
+	TV_LOGSPOTS::LENGTH	= TV_FILL::LENGTH
+	TV_LOGSPOTS::AGENCY_NUM	= ""
+	TV_LOGSPOTS::CARTNUM	= TV_FILL::FILNUM
+	TV_LOGSPOTS::CUTNUM	= FORMAT$(TV_FILL::CURRENT_CUT, "<0>#")
+	TV_LOGSPOTS::FROM_TIME_SLOT= ""
+	TV_LOGSPOTS::TO_TIME_SLOT	= ""
+	TV_LOGSPOTS::INVNUM	= ""
+	TV_LOGSPOTS::INVDAT	= ""
+	TV_LOGSPOTS::POSTDATE	= ""
+	TV_LOGSPOTS::RUN_TIME	= ""
+	TV_LOGSPOTS::CLASS	= TV_FILL::FCLASS
+	TV_LOGSPOTS::CONFLICT	= ""
+	TV_LOGSPOTS::DESCR	= TV_FILL::DESCR
+
+	PUT #TV_LOGSPOTS.CH%
+
+	V% = SMG$PUT_LINE(IO_MESSAGE%, &
+		" Fill " + &
+		TV_LOGSPOTS::CARTNUM + " " + &
+		TV_LOGSPOTS::CUTNUM + " " + &
+		TV_FILL::DESCR)
+
+6450	UPDATE #TV_FILL.CH%
+
+6490	SCOPE::PRG_ITEM = TEMPITEM$
+	RETURN
+
+	%PAGE
+
+	!*******************************************************************
+	! Get run time of a break if it has none listed
+	!*******************************************************************
+
+ GetRunTime:
+	CALL ENTR_3MESSAGE(SCOPE, "Need run-time for break", 1%)
+
+	TEMPITEM$ = SCOPE::PRG_ITEM + ""
+	SCOPE::PRG_ITEM = "RUNTIME"
+
+6500	V% = SMG$ERASE_DISPLAY(IO_ENTRY%)
+
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Program: " + TV_LOG_PROGRAM::PRGNUM + &
+		"  Descr: " + TV_LOG_PROGRAM::COMMENT + &
+		"  Start time " + PRNT_TIME(TV_LOG_PROGRAM::RUN_TIME, 0%), 1%, 1%)
+	V% = SMG$PUT_CHARS(IO_ENTRY%, &
+		"Break time: " + PRNT_TIME(TV_BREAK::RUN_TIME, 0%) + &
+		"  Descr: " + TV_BREAK::DESCR, 2%, 1%)
+
+	TV_BREAK::RUN_TIME = ENTR_3TIME(SCOPE, IO_ENTRY%, "2;13", &
+		"Enter relative time for break", &
+		TV_BREAK::RUN_TIME, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		!
+		! Exit keys
+		!
+		CASE SMG$K_TRM_F8, SMG$K_TRM_F10
+			GOTO 6590
+
+		!
+		! Normal keys
+		!
+		CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+		!
+		! All others
+		!
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 6500
+
+	END SELECT
+
+6590	SCOPE::PRG_ITEM = TEMPITEM$
+	RETURN
+
+	%PAGE
+
+	!*******************************************************************
+	! Exit the program
+	!*******************************************************************
+
+ ExitProgram:
+
+	CLOSE TV_PROGRAM.CH%, TV_BREAK.CH%, &
+		TV_LOG_PROGRAM.CH%, TV_LOG_BREAK.CH%
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+
+		!
+		! Error when nothing appears in the log_program file
+		! (which is they way it should be if it is to be
+		! extended).
+		!
+		CASE 4120%
+			RESUME 4200
+
+		!
+		! Error deleting files
+		!
+		CASE 4140%
+			CALL ENTR_3MESSAGE(SCOPE, "Unable to delete file!", 0%)
+			RESUME 4900
+
+		CASE 4150%
+			RESUME 4160
+
+		CASE 4160%
+			RESUME 4100
+
+		!
+		! Handle end of program file
+		!
+		CASE 4200%, 4210%
+			RESUME 4300
+
+		!
+		! Handle running out of breaks
+		!
+		CASE 6020%, 6040%
+			RESUME 6100
+
+		!
+		!
+		CASE 6200%
+			RESUME 6290
+
+		!
+		!
+		CASE 6410%
+			CALL ENTR_3MESSAGE(SCOPE, "Undefined fill", 1%)
+			RESUME 6400
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(ERR))
+
+	GOTO ExitProgram
+
+	END
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION TV_MAIN_CUSTOM
+	EXTERNAL LONG FUNCTION TV_MAIN_COMCON
+	EXTERNAL LONG FUNCTION TV_MAIN_LOG_CLASS
+	EXTERNAL LONG FUNCTION TV_MAIN_FILL
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+		CASE TV_MAIN_CUSTOM.ID
+			MAINT_GROUP = TV_MAIN_CUSTOM(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE TV_MAIN_COMCON.ID
+			MAINT_GROUP = TV_MAIN_COMCON(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE TV_MAIN_LOG_CLASS.ID
+			MAINT_GROUP = TV_MAIN_LOG_CLASS(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE TV_MAIN_FILL.ID
+			MAINT_GROUP = TV_MAIN_FILL(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION
+

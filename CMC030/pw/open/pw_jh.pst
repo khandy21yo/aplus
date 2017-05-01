@@ -1,0 +1,22 @@
+	!======================================================================
+	! PW_JH file (create, modify, allow read)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PW_JH.CH%, STAT%)
+	CALL READ_DEVICE('PW_JH',PW_JH.DEV$, STAT%)
+	CALL READ_PROTECTION('PW_JH',PW_JH.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PW_JH.PRO$, STAT%)
+
+	PW_JH.NAME$ = PW_JH.DEV$+"PW_JH_"+BATCH_NO$+".JRL"
+
+	OPEN PW_JH.NAME$ AS FILE PW_JH.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PW_JH, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			PW_JH::ORDNUM, &
+		ACCESS MODIFY, ALLOW READ
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

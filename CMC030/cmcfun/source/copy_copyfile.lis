@@ -1,0 +1,167 @@
+                                copy_copyfile                   29-OCT-1999 14:18:57  DEC C V6.0-001                    Page 1
+                                                                29-OCT-1999 14:12:40  [CMC030.][CMCFUN.SOURCE]COPY_COPYFILE.C;5
+
+	      1 /* %TITLE "Copy file function"
+	      2  */
+	      3 #pragma module copy_copyfile "V3.6 Calico"
+	      4 
+	      5 /*
+	      6  * ++
+	      7  *
+	      8  * Abstract:HELP
+	      9  *	.b
+	     10  *	.lm +5
+	     11  *	This function copies one file into a ^*new\* file
+	     12  *	using a block-by-block copy.
+	     13  *	This function will probibly end up replacing COPY_COPYRECORDS
+	     14  *	eventually.
+	     15  *
+	     16  * Index:
+	     17  *
+	     18  * Parameters:
+	     19  *
+	     20  *	SOURCE_FILE$
+	     21  *		The source file to read from.
+	     22  *
+	     23  *	DEST_FILE$
+	     24  *		The destination file to be created.
+	     25  *
+	     26  *	Returned value
+	     27  *		A status of 1 if returned when sucussful, and
+	     28  *		a VMS status code otherwise.
+	     29  *
+	     30  * Compile:
+	     31  *
+	     32  *	$ CC/G_FLOAT FUNC_SOURCE:COPY_COPYFILE
+	     33  *	$ LIB FUNC_LIB:CMCFUN/REP COPY_COPYFILE
+	     34  *	$ DELETE COPY_COPYFILE.OBJ;*
+	     35  *
+	     36  * AUTHOR:
+	     37  *
+	     38  *	01/01/00 - Unknown,possibly Carl Lydoc
+	     39  *
+	     40  * MODIFICATION HISTORY:
+	     41  *
+	     42  *	10/16/99 - Kevin Handy
+	     43  *		Stole from internet, changed name from notlib_copy to
+	     44  *		copy_copyfile to be compatible with existing functions,
+	     45  *		and added several external definitions so that it
+	     46  *		wouldn't generate copmpile-time errors. Also some
+	     47  *		format changes.
+	     48  * --
+	     49  */
+	     50 #include <descrip.h>
+	   1022 #include <rms.h>
+	   8593 
+	   8594 extern long SYS$CLOSE();
+	   8595 extern long SYS$CONNECT();
+	   8596 extern long SYS$CREATE();
+	   8597 extern long SYS$OPEN();
+	   8598 extern long SYS$READ();
+
+                                copy_copyfile                   29-OCT-1999 14:18:57  DEC C V6.0-001                    Page 2
+                                                                29-OCT-1999 14:12:40  [CMC030.][CMCFUN.SOURCE]COPY_COPYFILE.C;5
+
+	   8599 extern long SYS$WRITE();
+	   8600 
+	   8601 long copy_copyfile(struct dsc$descriptor *inp_file, struct dsc$descriptor *out_file)
+      1	   8602 {
+      1	   8603 	struct FAB inp_fab, out_fab;
+      1	   8604 	struct RAB inp_rab, out_rab;
+      1	   8605 	char buffer[32256];
+      1	   8606 	long stat;
+      1	   8607 
+      1	   8608 	inp_fab = cc$rms_fab;
+      1	   8609 	inp_fab.fab$b_fac = FAB$M_BIO | FAB$M_GET;
+      1	   8610 	inp_fab.fab$l_fna = inp_file->dsc$a_pointer;
+      1	   8611 	inp_fab.fab$b_fns = inp_file->dsc$w_length;
+      1	   8612 	inp_fab.fab$l_fop = FAB$M_SQO;
+      1	   8613 	inp_fab.fab$b_shr = FAB$M_SHRPUT | FAB$M_UPI;
+      1	   8614 	if (((stat = SYS$OPEN(&inp_fab)) & 7) != 1)
+      1	   8615 		return stat;
+      1	   8616 	inp_rab = cc$rms_rab;
+      1	   8617 	inp_rab.rab$l_fab = &inp_fab;
+      1	   8618 	inp_rab.rab$l_rop = RAB$M_BIO;
+      1	   8619 	if (((stat = SYS$CONNECT(&inp_rab)) & 7) != 1)
+      2	   8620 	{
+      2	   8621 		SYS$CLOSE(&inp_fab);
+      2	   8622 		return stat;
+      1	   8623 	}
+      1	   8624 	out_fab = inp_fab;
+      1	   8625 	out_fab.fab$b_fac = FAB$M_BIO | FAB$M_PUT;
+      1	   8626 	out_fab.fab$l_fna = out_file->dsc$a_pointer;
+      1	   8627 	out_fab.fab$b_fns = out_file->dsc$w_length;
+      1	   8628 	out_fab.fab$w_ifi = 0;
+      1	   8629 	out_fab.fab$b_shr = FAB$M_SHRPUT | FAB$M_UPI;
+      1	   8630 	if (((stat = SYS$CREATE(&out_fab)) & 7) != 1)
+      2	   8631 	{
+      2	   8632 		SYS$CLOSE(&inp_fab);
+      2	   8633 		return stat;
+      1	   8634 	}
+      1	   8635 	out_rab = inp_rab;
+      1	   8636 	out_rab.rab$l_fab = &out_fab;
+      1	   8637 	out_rab.rab$w_isi = 0;
+      1	   8638 	if (((stat = SYS$CONNECT(&out_rab)) & 7) != 1)
+      2	   8639 	{
+      2	   8640 		SYS$CLOSE(&inp_fab);
+      2	   8641 		SYS$CLOSE(&out_fab);
+      2	   8642 		return stat;
+      1	   8643 	}
+      1	   8644 	inp_rab.rab$l_ubf = buffer;
+      1	   8645 	inp_rab.rab$w_usz = 32256;
+      1	   8646 	out_rab.rab$l_rbf = buffer;
+      1	   8647 	while(1)
+      2	   8648 	{
+      2	   8649 		if ((((stat = SYS$READ(&inp_rab)) & 7) != 1) && stat != RMS$_EOF)
+      3	   8650 		{
+      3	   8651 			SYS$CLOSE(&inp_fab);
+      3	   8652 			SYS$CLOSE(&out_fab);
+      3	   8653 			return stat;
+      2	   8654 		}
+      2	   8655 		else if(stat == RMS$_EOF)
+
+                                copy_copyfile                   29-OCT-1999 14:18:57  DEC C V6.0-001                    Page 3
+                                                                29-OCT-1999 14:12:40  [CMC030.][CMCFUN.SOURCE]COPY_COPYFILE.C;5
+
+      3	   8656 		{
+      3	   8657 			SYS$CLOSE(&inp_fab);
+      3	   8658 			SYS$CLOSE(&out_fab);
+      3	   8659 			return RMS$_NORMAL;
+      2	   8660 		}
+      2	   8661 		else
+      3	   8662 		{
+      3	   8663 			out_rab.rab$w_rsz = inp_rab.rab$w_rsz;
+      3	   8664 			if (((stat = SYS$WRITE(&out_rab)) & 7) != 1)
+      4	   8665 			{
+      4	   8666 				SYS$CLOSE(&inp_fab);
+      4	   8667 				SYS$CLOSE(&out_fab);
+      4	   8668 				return stat;
+      3	   8669 			}
+      2	   8670 		}
+      1	   8671 	}
+      1	   8672 
+      1	   8673 	/*
+      1	   8674 	 * ? Shouldn't reach here ?
+      1	   8675 	 */
+      1	   8676 	return stat;
+      1	   8677 }
+
+
+Command Line
+------- ----
+
+CC/G_FLOAT FUNC_SOURCE:COPY_COPYFILE/LIST
+
+Hardware: /ARCHITECTURE=GENERIC /OPTIMIZE=TUNE=GENERIC
+
+These macros are in effect at the start of the compilation.
+----- ------ --- -- ------ -- --- ----- -- --- ------------
+
+ __G_FLOAT=1  __DECC=1  vms=1  VMS=1  __32BITS=1  __PRAGMA_ENVIRONMENT=1 
+ __vms_version="V7.2    "  CC$gfloat=1  __X_FLOAT=1  vms_version="V7.2    " 
+ __DATE__="Oct 29 1999"  __DECC_MODE_RELAXED=1  __DECC_VER=60090001  __VMS=1 
+ __ALPHA=1  VMS_VERSION="V7.2    "  __IEEE_FLOAT=0  __VMS_VERSION="V7.2    " 
+ __TIME__="14:19:00"  __Alpha_AXP=1  __VMS_VER=70200022 
+ __BIASED_FLT_ROUNDS=2  __INITIAL_POINTER_SIZE=0  __STDC__=1 
+ __LANGUAGE_C__=1  __vms=1  __alpha=1  __D_FLOAT=0 
+

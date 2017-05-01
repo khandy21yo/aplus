@@ -1,0 +1,36 @@
+	!======================================================================
+	! MO_REGHEADER file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_REGHEADER.CH%, STAT%)
+	CALL READ_DEVICE('MO_REGHEADER',MO_REGHEADER.DEV$, STAT%)
+
+	MO_REGHEADER.NAME$ = MO_REGHEADER.DEV$+"MO_REGHEADER.HIS"
+
+	OPEN MO_REGHEADER.NAME$ FOR INPUT AS FILE MO_REGHEADER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_REGHEADER, &
+		PRIMARY KEY &
+			MO_REGHEADER::ORDNUM, &
+		ALTERNATE KEY &
+		( &
+			MO_REGHEADER::ORDTYPE, &
+			MO_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGHEADER::ORDCAT, &
+			MO_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGHEADER::CUSNUM, &
+			MO_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGHEADER::BATCH, &
+			MO_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

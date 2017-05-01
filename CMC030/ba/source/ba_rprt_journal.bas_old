@@ -1,0 +1,522 @@
+1	%TITLE "Billing Agency Journal Printer"
+	%SBTTL "BA_RPRT_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BA001
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Print Agency Journal\* option provides a means to print
+	!	a report which will contain the following information:
+	!	.b
+	!	.lm +10
+	!	.list 0,"*"
+	!	.le
+	!	Billing _#
+	!	.le
+	!	Agency _#
+	!	.le
+	!	Agency Name
+	!	.le
+	!	Invoice _#
+	!	.le
+	!	Account Receivable Account _#
+	!	.le
+	!	Transaction Date
+	!	.le
+	!	Revenue Account _#
+	!	.le
+	!	Client _#
+	!	.le
+	!	Client Name
+	!	.le
+	!	Method
+	!	.le
+	!	Days
+	!	.le
+	!	Hours
+	!	.le
+	!	Units
+	!	.le
+	!	Wages
+	!	.le
+	!	Rate
+	!	.le
+	!	Fee
+	!	.els
+	!	.lm -10
+	!
+	! Index:
+	!	.x Print>Agency Journal
+	!	.x Agency Journal>Print
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Author:
+	!
+	!	05/11/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_RPRT_JOURNAL/LINE
+	!	$ LINK/EXE=BA_EXE: BA_RPRT_JOURNAL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BA_RPRT_JOURNAL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	08/10/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/10/91 - Craig Tanner
+	!		Modified to use GL_OUTP_ACCTSUM to do Debit/Credit page.
+	!
+	!	11/18/91 - Kevin Handy
+	!		Fixed bug in summarizing by accounts, so that it
+	!		uses BA_JOURNALH::ACCT in one of the summaries
+	!		instead of BA_JOURNALL::ACCT in both.
+	!
+	!	03/16/92 - Dan Perkins
+	!		Allow processing different batches.
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of
+	!		changes in that function.
+	!
+	!	03/18/92 - Kevin Handy
+	!		Added field to GL_OUTP_ACCTSUM for units.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/30/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/29/97 - Kevin Handy
+	!		Lose unecessary external definitions
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.HB"
+	MAP	(AR_CONTROL)	AR_CONTROL_CDD	AR_CONTROL
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP	(AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALH.HB"
+	MAP	(BA_JOURNALH)	BA_JOURNALH_CDD	BA_JOURNALH
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALL.HB"
+	MAP	(BA_JOURNALL)	BA_JOURNALL_CDD	BA_JOURNALL
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_EMP_MASTER.HB"
+	MAP	(PR_EMP_MASTER)	PR_EMP_MASTER_CDD PR_EMP_MASTER
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!
+	!	^*(01) From Bill Number\*
+	!	.p
+	!	The ^*From Bill Number\* field provides the means to begin the
+	!	report with a selected bill number.
+	!	.p
+	!	A blank setting will cause the report to begin with the
+	!	first bill number in the file.
+	!
+	! Index:
+	! Datatype:TEXT
+	! Size:10
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!
+	!	^*(02) To Bill Number\*
+	!	.p
+	!	The ^*To Bill Number\* field provides a means to enter a
+	!	selected bill number with which the report will end.
+	!	.p
+	!	A blank setting will cause the report to end with the last
+	!	bill number in the file.
+	!
+	! Index:
+	! Datatype:TEXT
+	! Size:10
+	!--
+
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^* (03) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* field provides the means to enter a
+	!	particular batch to be printed.
+	!	.p
+	!	Only one batch at a time may be printed.
+	!	.p
+	!	An entry is required in this field.
+	!
+	! Index:
+	!	.x Batch Number>Purchase Order Journal
+	!	.x Purchase Order Journal>Batch Number
+	!
+	! Datatype:TEXT
+	! Size:2
+	!--
+
+300	!
+	! Open customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+310	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+	GET #AR_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+320	!
+	! Open journal header file
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALH.OPN"
+
+330	!
+	! Open journal header file
+	!
+	%INCLUDE "SOURCE:[BA.OPEN]BA_JOURNALL.OPN"
+
+340	!
+	! Open payroll master file
+	!
+	%INCLUDE "SOURCE:[PR.OPEN]PR_EMP_MASTER.OPN"
+
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "Billing Agency Journal"
+	TITLE$(2%) = "BATCH No. " + BATCH_NO$
+	TITLE$(3%) = "BA System"
+	TITLE$(4%) = ""
+
+	!
+	! Headings
+	!
+	TITLE$(5%) = "Billing #  Agency #   Agency Name              " + &
+		"      Invoice  AR Account #       Tran Date"
+
+	TITLE$(6%) = "            Client #   Client Name          " + &
+		"Method     Days   Hours        Units     Wages        " + &
+		"Rate       Fee  Revenue Account #"
+
+	TITLE$(7%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BA_JOURNALH.CH%, KEY #0%
+	ELSE
+		FIND #BA_JOURNALH.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BA_JOURNALH.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (BA_JOURNALH::BILLNUM > TO.ITEM$) AND &
+		TO.ITEM$ <> ""
+
+17030	!
+	! Get agency name
+	!
+	AR_35CUSTOM::CUSNAM = STRING$(LEN(AR_35CUSTOM::CUSNAM), 63%)
+
+	GET #AR_35CUSTOM.CH%, KEY #0% EQ BA_JOURNALH::CUSNUM, REGARDLESS
+
+17040	!
+	! output journal header line
+	!
+	TEXT$ = BA_JOURNALH::BILLNUM           + " " + &
+		BA_JOURNALH::CUSNUM            + " " + &
+		LEFT(AR_35CUSTOM::CUSNAM, 30%) + " " + &
+		BA_JOURNALH::INVNUM            + " " + &
+		BA_JOURNALH::ACCT              + " " + &
+		PRNT_DATE(BA_JOURNALH::TRADAT, 8%)
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17100	!*******************************************************************
+	! Handle line items for an invoice
+	!*******************************************************************
+ LineItems:
+	TOTAL_FEE = 0.0
+	LINE_COUNT% = 0%
+
+	FIND #BA_JOURNALL.CH%, KEY #0% GE BA_JOURNALH::BILLNUM, REGARDLESS
+
+17110	GET #BA_JOURNALL.CH%, REGARDLESS
+
+	GOTO 17190 IF BA_JOURNALH::BILLNUM <> BA_JOURNALL::BILLNUM
+
+17130	!
+	! Get client name
+	!
+	PR_EMP_MASTER::EMPNAME = STRING$(LEN(PR_EMP_MASTER::EMPNAME), 63%)
+
+	GET #PR_EMP_MASTER.CH%, KEY #0% EQ BA_JOURNALL::EMPNUM, REGARDLESS
+
+17140	!
+	! Print line file
+	!
+	TEXT$ = SPACE$(12%) + &
+		BA_JOURNALL::EMPNUM               + " "      + &
+		LEFT(PR_EMP_MASTER::EMPNAME, 20%) + "   "    + &
+		BA_JOURNALL::METHOD               + "     "  + &
+		FORMAT$(BA_JOURNALL::DAYS, "####.## ")       + &
+		FORMAT$(BA_JOURNALL::HOURS, "####.## ")      + &
+		FORMAT$(BA_JOURNALL::UNITS, "#######.#### ") + &
+		FORMAT$(BA_JOURNALL::WAGES, "######.## ")    + &
+		FORMAT$(BA_JOURNALL::RATE, "######.#### ")   + &
+		FORMAT$(BA_JOURNALL::FEE, "######.## ")      + &
+		BA_JOURNALL::ACCT
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BA_JOURNALL::ACCT, &
+		0.0, -BA_JOURNALL::FEE, 0.0, TITLE$(), &
+		UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Add fee and line counter
+	!
+	TOTAL_FEE = TOTAL_FEE + BA_JOURNALL::FEE
+	GRAND_TOTAL_FEE = GRAND_TOTAL_FEE + BA_JOURNALL::FEE
+
+	LINE_COUNT% = LINE_COUNT% + 1%
+
+	GOTO 17110
+
+17190	!
+	! End out of line items
+	!
+	IF LINE_COUNT% > 1%
+	THEN
+		TEXT$ = SPACE$(98%) + "Total" + &
+			FORMAT$(TOTAL_FEE, "######.## ")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BA_JOURNALH::ACCT, &
+		0.0, TOTAL_FEE, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+
+	!
+	! Print one additional line
+	!
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	TEXT$ = SPACE$(92%) + "Grand Total" + &
+			FORMAT$(GRAND_TOTAL_FEE, "######.## ")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	!
+	! Print out the Debit/Credit information
+	!
+	V% = GL_OUTP_ACCTSUM(OPT_SUMMARY, "", 0.0, 0.0, 0.0, &
+		TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 300%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 310%
+		FILENAME$ = "AR_CONTROL"
+
+	CASE 320%, 17000%
+		FILENAME$ = "BA_JOURNALH"
+
+	CASE 330%
+		FILENAME$ = "BA_JOURNALL"
+
+	CASE 340%
+		FILENAME$ = "PR_EMP_MASTER"
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "BA_JOURNALH"
+
+	CASE 17030%	! Unable to find customer #
+		RESUME 17040 IF ERR = 155%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 17100%, 17110%
+		RESUME 17190
+
+	CASE 17130%	! Unable to find employee #
+		RESUME 17140 IF ERR = 155%
+		FILENAME$ = "PR_EMP_MASTER"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

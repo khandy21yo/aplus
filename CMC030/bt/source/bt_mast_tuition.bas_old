@@ -1,0 +1,157 @@
+1	%TITLE "Employee Billing Maintenance"
+	%SBTTL "BT_MAST_TUITION"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain Tuition Billing Table\* routine is provided to enter
+	!	and maintain the Billing Table.
+	!
+	! Index:
+	!	.x Employee Billing Maintenance
+	!	.x Maintenance>Employee Billing
+	!
+	! Option:
+	!
+	!	BT_MAIN_TUITION$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_MAST_TUITION/LINE
+	!	$ LINK/EXEC:BT_EXE BT_MAST_TUITION,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BT_MAST_TUITION.OBJ;*
+	!
+	! Author:
+	!
+	!	05/25/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	02/26/92 - Kevin Handy
+	!		Modified to use AR_MAIN_CUSTOM after someone
+	!		unnamed (Frank) deleted BT_MAIN_CUSTOM so that
+	!		this program couldn't compile.
+	!
+	!	02/26/92 - Kevin Handy
+	!		Modified to use "xx_WINDOW.INC" definitions
+	!		instead of hard-coded numbers, since Frank didn't
+	!		change this source when he changed all of the
+	!		others.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	04/20/95 - Kevin Handy
+	!		Modified to use AR_MAIN_35CUSTOM instead of
+	!		AR_MAIN_CUSTOM.
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+1000	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(7010%, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:BT_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION GL_MAIN_CHART
+	EXTERNAL LONG FUNCTION BT_MAIN_TUITION
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE GL_MAIN_CHART.ID
+
+		MAINT_GROUP = GL_MAIN_CHART(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE AR_MAIN_35CUSTOM.ID
+
+		MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BT_MAIN_TUITION.ID
+
+		MAINT_GROUP = BT_MAIN_TUITION(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

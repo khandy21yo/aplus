@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Check Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*CK__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controlling file in the ^*Ck/Dep Reconciliation System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Check Control File
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*CK__CONTROL.CTR\*
+	!	.p
+	!	Check Control File.
+	!
+	! Index:
+	!	.x Check Control File
+	!	.x CK_CONTROL
+	!--

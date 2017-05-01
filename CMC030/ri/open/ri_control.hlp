@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Recipe Ingredients Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*RI__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Recipe Ingredients System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Recipe Ingredients Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*RI__CONTROL.CTR\*
+	!	.p
+	!	Recipe Ingredients Control File.
+	!
+	! Index:
+	!	.x Recipe Ingredients Control File
+	!	.x RI_CONTROL
+	!--

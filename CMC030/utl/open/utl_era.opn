@@ -1,0 +1,16 @@
+	!======================================================================
+	! UTL_ERA file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_ERA.CH%, STAT%)
+	CALL READ_DEVICE('UTL_ERA',UTL_ERA.DEV$, STAT%)
+
+	UTL_ERA.NAME$ = UTL_ERA.DEV$+"UTL_ERA.TBL"
+
+	OPEN UTL_ERA.NAME$ FOR INPUT AS FILE UTL_ERA.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_ERA, &
+		PRIMARY KEY &
+			UTL_ERA::ERA, &
+		ACCESS READ, ALLOW MODIFY
+

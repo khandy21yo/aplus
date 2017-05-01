@@ -1,0 +1,1074 @@
+1	%TITLE "Sales Journal Header Maintenance"
+	%SBTTL "PW_MAIN_PWH"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG PW_MAIN_PWH(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 2000 BY
+	!
+	! Software Solutions, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions, Inc.
+	!
+	! Software Solutions, Inc. assumes no responsibility for the use
+	! or reliability of its software on equipment which is not
+	! supported by Software Solutions, Inc.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Maintain Sales Journal\* option
+	!	maintains regular sales and service charge journals.
+	!	.lm -5
+	!
+	! Index:
+	!	.x PW Journal>Erase
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS PW_SOURCE:PW_MAIN_PWH/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP PW_MAIN_PWH
+	!	$ DELETE PW_MAIN_PWH.OBJ;*
+	!
+	! Author:
+	!
+	!	01/07/2000 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PW_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.HB"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE "SOURCE:[PW.OPEN]PW_JH.HB"
+	MAP (PW_JH)		PW_JH_CDD		PW_JH
+	MAP (PW_JH_OLD)	PW_JH_CDD		PW_JH_OLD, PW_JH2
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TERMS.HB"
+	MAP (UTL_TERMS)		UTL_TERMS_CDD		UTL_TERMS
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_CARRIER.HB"
+	MAP (UTL_CARRIER)	UTL_CARRIER_CDD		UTL_CARRIER
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_PW_JH) &
+		PW_JH.CH%, &
+		PW_JH.READONLY%
+
+	COM (TT_PW_PW) &
+		BATCH_NO$ = 2%
+
+	COM (CH_UTL_TERMS) &
+		UTL_TERMS.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION FUNC_TESTENTRY
+	EXTERNAL LONG    FUNCTION PW_OUTP_PW
+
+	!
+	! Declare some variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Sales Journal "+ BATCH_NO$ + &
+					" Maintenance"
+		SMG_WINDOW::NHELP = "PW_MAIN_PWH"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 11%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Order"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF PW_JH.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF PW_JH.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		WHEN ERROR IN
+			%INCLUDE "SOURCE:[PW.OPEN]PW_JH.CRE"
+		USE
+			CONTINUE 760 IF ERR = 10%
+			PW_MAIN_PWH = ERR
+			CONTINUE 770
+		END WHEN
+
+		PW_JH.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[PW.OPEN]PW_JH.OPN"
+		USE
+			PW_MAIN_PWH = ERR
+			CONTINUE 770
+		END WHEN
+
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		PW_JH.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(PW_JH.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = PW_JH.CH%
+		WHEN ERROR IN
+			RESET #PW_JH.CH%
+			GET #PW_JH.CH%, REGARDLESS
+		USE
+			CONTINUE 795
+		END WHEN
+
+795		IF UTL_TERMS.CH% = 0%
+		THEN
+			WHEN ERROR IN
+				%INCLUDE "SOURCE:[UTL.OPEN]UTL_TERMS.MOD"
+			USE
+				CONTINUE 30000
+			END WHEN
+		END IF
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Payable Line_items invforM invform_direcT"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT SCOPE::PRG_ITEM
+
+		CASE "Payable"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(PW_JH.CH%)
+
+			PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL1.ID, "")
+
+		CASE "Line_items"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(PW_JH.CH%)
+
+			PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL2.ID, "")
+
+		CASE "invforM"
+	!++
+	! Abstract:INVFORM
+	!--
+			V% = PW_OUTP_PW(PW_JH::ORDNUM, BATCH_NO$, 0%)
+
+		CASE "invform_direcT"
+	!++
+	! Abstract:INVFORM_DIRECT
+	!--
+			V% = PW_OUTP_PW(PW_JH::ORDNUM, BATCH_NO$, 1%)
+
+		END SELECT
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	02,02, '(01)*Order #', &
+			03,02, '(02) Invoice #', &
+			03,41, '(03) Inv Date', &
+			04,02, '(04) Sold to', &
+			08,02, '(05) Ship to', &
+			12,02, '(06) Cust Po', &
+			13,02, '(07) Sold by', &
+			14,02, '(08) Carrier', &
+			06,41, '(09) Ship Date', &
+			07,41, '(10) Terms', &
+			09,41, '(11) FOB', &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I% = 0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_CONTROL::CTITLE, 10%), 2%, 6%)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		TEMP1% = SCOPE::SCOPE_EXIT
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	.ts 55
+	!	^*(01) Invoice	8 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Invoice\* field maintains the invoice number or
+	!	reference for a particular document.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Invoice Number
+	!	.x Invoice>Number in Sales Journal
+	!
+	!--
+
+			PW_JH::ORDNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;16", TEMP$, &
+				PW_JH::ORDNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) Customer\*
+	!	.b
+	!	.lm +5
+	!	The ^*Customer\* field maintains the customer code which
+	!	will identify a particular customer.  This number should have previously
+	!	been entered in the Customer Master Name and Address screen.
+	!	.b
+	!	If the code entered is valid, the customers name and
+	!	address information will appear.
+	!	.b
+	!	Pressing ^*List Choices\* will cause a list of valid customer codes
+	!	to be displayed.
+	!	.b
+	!	By pressing the ^*F17\* key, the system will display the screen where
+	!	additional customer codes may be entered.  After the screen has been
+	!	completed the system will automatically return to the
+	!	Sales Journal maintenance routine.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Customer Number
+	!	.x Customer>Customer Number in Sales Journal
+	!
+	!--
+			PW_JH::INVNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;16", TEMP$, &
+				PW_JH::INVNUM, MFLAG, &
+				"'E", MVALUE)
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	.ts 55
+	!	^*(03) Description	26 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Description\* field maintains the
+	!	description in reference to the transaction represented by an
+	!	invoice.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Description
+	!	.x Description>Sales Journal
+	!
+	!--
+			PW_JH::INVDAT = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;64", TEMP$, &
+				PW_JH::INVDAT, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	.ts 55
+	!	^*(04) Transaction Date	MMDDYYYY or MMDDYY\*
+	!	.b
+	!	.lm +5
+	!	The ^*Transaction Date\* field maintains the
+	!	date for a particular transaction.
+	!	.b
+	!	This field requires an entry and will not default to the
+	!	current date.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Transaction Date>Sales Journal
+	!	.x Sales Journal>Transaction Date
+	!
+	!--
+			PW_JH::SOLDTO = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;16", TEMP$, &
+				PW_JH::SOLDTO, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX  ") = 1%)
+				THEN
+					PW_JH::SOLDTO = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO E0Loop
+			END IF
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F17)
+			THEN
+				ST% = MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, &
+					"M0" + PW_JH::SOLDTO)
+				GOTO E0loop
+			END IF
+
+		CASE 5%
+	!++
+	! Abstract:FLD005
+	!	.ts 55
+	!	^*(05) Accounts Receivable/Cash	20 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Accounts Receivable/Cash\* field maintains the appropriate
+	!	"Accounts Receivable" or "Cash" account number established in the General Ledger
+	!	Chart of Accounts.  The selection is dependent upon whether a sale is
+	!	a charge sale or a cash sale to be recorded as a transaction in
+	!	a customer's file.
+	!	.b
+	!	Pressing ^*List Choices\* will cause a list of General Ledger Chart
+	!	of Account numbers to be displayed.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Accounts Receivable Account>Sales Journal
+	!	.x Cash Account>Sales Journal
+	!	.x Sales Journal>Accounts Receivable Account
+	!	.x Sales Journal>Cash Account
+	!
+	!--
+			PW_JH::SHIPTO = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;16", TEMP$, &
+				PW_JH::SHIPTO, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX  ") = 1%)
+				THEN
+					PW_JH::SHIPTO = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO E0Loop
+			END IF
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F17)
+			THEN
+				ST% = MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, &
+					"M0" + PW_JH::SHIPTO)
+				GOTO E0loop
+			END IF
+
+		CASE 6%
+	!++
+	! Abstract:FLD006
+	!	.ts 55
+	!	^*(06) Accounts Receivable Type	1,2,3,4,8\*
+	!	.b
+	!	.lm +5
+	!	The ^*Accounts Receivable Type\* field defines the type of
+	!	transaction represented by a record.
+	!	.b
+	!	Valid values are:
+	!	.table 3,25
+	!	.te
+	!	^*01\* - Sale on Account
+	!	.te
+	!	^*02\* - Cash Sale
+	!	.te
+	!	^*03\* - Debit Memo
+	!	.te
+	!	^*04\* - Service Charge
+	!	.te
+	!	^*08\* - Credit Memo
+	!	.end table
+	!	Pressing ^*List Choices\* will cause a list of valid types to be displayed.
+	!	.b
+	!	^*Note:\* When adding a record, the next three fields
+	!	(Receipt, Check, and Deposit) will be bypassed
+	!	unless the value in field (06) is 02 (Cash) or 08
+	!	(Credit memo).
+	!	.lm -5
+	!
+	! Index:
+	!	.x Account Receivable>Transaction Type
+	!	.x Sales Journal>Account Receivable Transaction Type
+	!	.x Transaction Type>Sales>Sale on Account
+	!	.x Sale on Account>Transaction Type
+	!	.x Transaction Type>Sales>Cash Sale
+	!	.x Cash Sale>Transaction Type
+	!	.x Transaction Type>Debit Memo
+	!	.x Debit Memo>Transaction Type
+	!	.x Transaction Type>Service Charge
+	!	.x Service Charge>Transaction Type
+	!	.x Transaction Type>Credit Memo
+	!	.x Credit Memo>Transaction Type
+	!
+	!--
+			PW_JH::CUSPO = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;16", TEMP$, &
+				PW_JH::CUSPO, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+	!++
+	! Abstract:FLD007
+	!	.ts 55
+	!	^*(07) Receipt _#	8 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Receipt _#\* field maintains the number of a
+	!	receipt if issued for a cash sale. When cash sales are accounted for
+	!	using cash register closing totals, a receipt number would not
+	!	necessarily be applicable. This field may be bypassed.
+	!	.b
+	!	^*Note:\* During an add function, this field is bypassed unless the
+	!	transaction type is either a Cash Sale (02) or a Credit Memo (08).
+	!	.lm -5
+	!
+	! Index:
+	!	.x Receipt #>Sales Journal
+	!	.x Sales Journal>Receipt #
+	!
+	!--
+			PW_JH::SOLDBY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"13;16", TEMP$, &
+				PW_JH::SOLDBY, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+	!++
+	! Abstract:FLD008
+	!	.ts 55
+	!	^*(08) Check _#	6 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Check _#\* field maintains the number of a check
+	!	issued by a customer in the event of a cash sale.  If a check was
+	!	not received for the sale, or if the record represents a summary of
+	!	cash sales such as a register total, this field would appropriately
+	!	be left blank.
+	!	.b
+	!	During an Add function, this field is bypassed unless the
+	!	transaction type represents either a Cash Sale or a Credit Memo.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Check #>Sales Journal
+	!	.x Sales Journal>Check #
+	!
+	!--
+			PW_JH::CARNAM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"14;16", TEMP$, &
+				PW_JH::CARNAM, MFLAG, "'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+
+			CASE SMG$K_TRM_F14
+
+				IF MAIN_WINDOW(UT_MAIN_CARRIER.ID, "VX") = 1%
+				THEN
+					PW_JH::CARNAM = &
+						UTL_CARRIER::CODE
+				END IF
+				GOTO E0Loop
+
+			CASE SMG$K_TRM_F17
+
+				V% = MAIN_WINDOW(UT_MAIN_CARRIER.ID, "M")
+				PW_JH::CARNAM = UTL_CARRIER::CODE
+				GOTO E0Loop
+
+			END SELECT
+
+		CASE 9%
+	!++
+	! Abstract:FLD009
+	!	.ts 55
+	!	^*(09) Deposit _#	6 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Deposit _#\* field maintains the number
+	!	of the bank deposit in which a cash receipt is included. If CMC's
+	!	Check Reconciliation System is used, the deposit _# field ^&must\& contain
+	!	a valid deposit number. The use of this field is optional.
+	!	If the Check Reconciliation system is used, it is important that
+	!	deposit numbers assigned be outside the parameters established for
+	!	check numbers.
+	!	.b
+	!	^*Note:\* During an Add function, this field is bypassed unless the
+	!	transaction type is either a Cash Sale or a Credit Memo.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Deposit #>Sales Journal
+	!	.x Sales Journal>Deposit #
+	!
+	!--
+			PW_JH::SHPDAT = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;64", TEMP$, &
+				PW_JH::SHPDAT, MFLAG, "'E", MVALUE)
+
+		CASE 10%
+	!++
+	! Abstract:FLD010
+	!	.x Sales Journal>Amount
+	!	^*(10) Amount\*
+	!	.b
+	!	.lm +5
+	!	The ^*Amount\* field in the Sales Journal maintains the
+	!	total invoice amount, including any freight, sales taxes, etc.
+	!	.b
+	!	^*Note:\* Sales tax will be a separate line item in the distribution.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Amount>Sales Journal
+	!
+	!--
+			PW_JH::TERMS = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;64", TEMP$, &
+				PW_JH::TERMS, MFLAG, "'E", MVALUE)
+
+
+			SELECT SCOPE::SCOPE_EXIT
+
+			CASE SMG$K_TRM_F14
+
+				IF MAIN_WINDOW(UT_MAIN_TERMS.ID, "VX") = 1%
+				THEN
+					PW_JH::TERMS = UTL_TERMS::CODE
+				END IF
+				GOTO E0Loop
+
+			END SELECT
+
+
+		CASE 11%
+	!++
+	! Abstract:FLD011
+	!	.ts 55
+	!	^*(11) Due Date	MMDDYYYY or MMDDYY\*
+	!
+	! Index:
+	!	.x Due Date>Sales Journal
+	!	.x Sales Journal>Due Date
+	!
+	!--
+			PW_JH::FOBFLG = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"9;64", TEMP$, &
+				PW_JH::FOBFLG, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		PW_MAIN_PWH = 0%
+
+		SELECT MLOOP
+
+		CASE 4%
+			!
+			! Is the input defined?
+			!
+			PW_MAIN_PWH, ST% = FUNC_TESTENTRY(SMG_WINDOW, &
+				PW_JH::SOLDTO, AR_35CUSTOM::CUSNAM, &
+				"PW", MLOOP, "CUST", &
+				"Customer number", AR_MAIN_35CUSTOM.ID)
+
+			IF ST% <> 0%
+			THEN
+				AR_35CUSTOM::ADD1 = &
+					STRING$(LEN(AR_35CUSTOM::ADD1), ASCII("?"))
+
+				AR_35CUSTOM::ADD2 = &
+					STRING$(LEN(AR_35CUSTOM::ADD2), ASCII("?"))
+
+				AR_35CUSTOM::ADD3 = &
+					STRING$(LEN(AR_35CUSTOM::ADD3), ASCII("?"))
+
+				AR_35CUSTOM::CITY = &
+					STRING$(LEN(AR_35CUSTOM::CITY), ASCII("?"))
+
+				AR_35CUSTOM::STATE = &
+					STRING$(LEN(AR_35CUSTOM::STATE), ASCII("?"))
+
+				AR_35CUSTOM::ZIP = &
+					STRING$(LEN(AR_35CUSTOM::ZIP), ASCII("?"))
+
+				AR_35CUSTOM::SSTATUS = "A"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				5%, 7%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				6%, 7%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + SPACE$(30%), 30%), &
+				7%, 7%, , SMG$M_BOLD)
+
+			IF (AR_35CUSTOM::SSTATUS = "I")
+			THEN
+				CALL ENTR_3MESSAGE(SCOPE, &
+					"** This customer is marked inactive! **", &
+					0%)
+			END IF
+
+		CASE 5%
+			!
+			! Is the input defined?
+			!
+			PW_MAIN_PWH, ST% = FUNC_TESTENTRY(SMG_WINDOW, &
+				PW_JH::SHIPTO, AR_35CUSTOM::CUSNAM, &
+				"PW", MLOOP, "CUST", &
+				"Customer number", AR_MAIN_35CUSTOM.ID)
+
+			IF ST% <> 0%
+			THEN
+				AR_35CUSTOM::ADD1 = &
+					STRING$(LEN(AR_35CUSTOM::ADD1), ASCII("?"))
+
+				AR_35CUSTOM::ADD2 = &
+					STRING$(LEN(AR_35CUSTOM::ADD2), ASCII("?"))
+
+				AR_35CUSTOM::ADD3 = &
+					STRING$(LEN(AR_35CUSTOM::ADD3), ASCII("?"))
+
+				AR_35CUSTOM::CITY = &
+					STRING$(LEN(AR_35CUSTOM::CITY), ASCII("?"))
+
+				AR_35CUSTOM::STATE = &
+					STRING$(LEN(AR_35CUSTOM::STATE), ASCII("?"))
+
+				AR_35CUSTOM::ZIP = &
+					STRING$(LEN(AR_35CUSTOM::ZIP), ASCII("?"))
+
+				AR_35CUSTOM::SSTATUS = "A"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				9%, 7%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				10%, 7%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + SPACE$(30%), 30%), &
+				11%, 7%, , SMG$M_BOLD)
+
+			IF (AR_35CUSTOM::SSTATUS = "I")
+			THEN
+				CALL ENTR_3MESSAGE(SCOPE, &
+					"** This customer is marked inactive! **", &
+					0%)
+			END IF
+
+		CASE 8%
+			!
+			! Display the descriptions for carrier
+			!
+			IF PW_JH::CARNAM <> ""
+			THEN
+				PW_MAIN_PWH = &
+					FUNC_TESTENTRY(SMG_WINDOW, &
+					PW_JH::CARNAM, &
+					UTL_CARRIER::DESCR, &
+					"OE", MLOOP, "PROG", &
+					"Carrier", UT_MAIN_CARRIER.ID)
+			ELSE
+				UTL_CARRIER::DESCR = ""
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(UTL_CARRIER::DESCR, 30%), 15%, 7%, , &
+				SMG$M_BOLD)
+
+		CASE 10%
+			!
+			! Display the descriptions for terms
+			!
+			IF PW_JH::TERMS <> ""
+			THEN
+				PS_MAIN_TICKETJOUR = &
+					FUNC_TESTENTRY(SMG_WINDOW, &
+					PW_JH::TERMS, &
+					UTL_TERMS::DESCR, &
+					"OE", MLOOP, "PROG", &
+					"Terms", UT_MAIN_TERMS.ID)
+			ELSE
+				UTL_TERMS::DESCR = ""
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(UTL_TERMS::DESCR, 30%), 8%, 46%, , &
+				SMG$M_BOLD)
+
+		END SELECT
+
+	!
+	! Display additional information
+	!
+	CASE OPT_DISPLAY
+
+		PW_MAIN_PWH = 0%
+
+		!
+		! Is the input defined?
+		!
+		IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, &
+			"Q0" + PW_JH::SOLDTO) <> 1%
+		THEN
+			AR_35CUSTOM::CUSNAM = "????????????????????"
+			AR_35CUSTOM::ADD1 = "????????????????????"
+			AR_35CUSTOM::ADD2 = "????????????????????"
+			AR_35CUSTOM::ADD3 = "????????????????????"
+			AR_35CUSTOM::CITY = "????????????????????"
+			AR_35CUSTOM::STATE = "??"
+			AR_35CUSTOM::ZIP = "????????????????????"
+		END IF
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+			5%, 7%, , SMG$M_BOLD)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_35CUSTOM::ADD1, 30%), &
+			6%, 7%, , SMG$M_BOLD)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+				AR_35CUSTOM::STATE + " " + &
+				AR_35CUSTOM::ZIP + SPACE$(30%), 30%), &
+			7%, 7%, , SMG$M_BOLD)
+
+		!
+		! Is the input defined?
+		!
+		IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, &
+			"Q0" + PW_JH::SHIPTO) <> 1%
+		THEN
+			AR_35CUSTOM::CUSNAM = "????????????????????"
+			AR_35CUSTOM::ADD1 = "????????????????????"
+			AR_35CUSTOM::ADD2 = "????????????????????"
+			AR_35CUSTOM::ADD3 = "????????????????????"
+			AR_35CUSTOM::CITY = "????????????????????"
+			AR_35CUSTOM::STATE = "??"
+			AR_35CUSTOM::ZIP = "????????????????????"
+		END IF
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+			9%, 7%, , SMG$M_BOLD)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_35CUSTOM::ADD1, 30%), &
+			10%, 7%, , SMG$M_BOLD)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+				AR_35CUSTOM::STATE + " " + &
+				AR_35CUSTOM::ZIP + SPACE$(30%), 30%), &
+			11%, 7%, , SMG$M_BOLD)
+
+		UTL_CARRIER::DESCR = &
+			STRING$(LEN(UTL_CARRIER::DESCR), ASCII("?")) &
+			IF MAIN_WINDOW(UT_MAIN_CARRIER.ID, &
+			"Q0" + PW_JH::CARNAM) <> 1%
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(UTL_CARRIER::DESCR, 30%), 15%, 7%, , &
+			SMG$M_BOLD)
+
+
+		UTL_TERMS::DESCR = &
+			STRING$(LEN(UTL_TERMS::DESCR), ASCII("?")) &
+			IF MAIN_WINDOW(UT_MAIN_TERMS.ID, &
+			"Q0" + PW_JH::TERMS) <> 1%
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(UTL_TERMS::DESCR, 30%), 8%, 46%, , &
+			SMG$M_BOLD)
+
+	!
+	! Set PW_JH_OLD value
+	!
+20500	CASE OPT_SETOLD
+		PW_JH_OLD = PW_JH
+
+	!
+	! Restore PW_JH_OLD value
+	!
+	CASE OPT_RESETOLD
+		PW_JH = PW_JH_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		PW_JH2 = PW_JH
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		PW_JH = PW_JH2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = " Invoice   Cust#"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "011"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = PW_JH::ORDNUM + " " + &
+				PW_JH::INVNUM
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #PW_JH.CH%, &
+				KEY#0% GE PW_JH::ORDNUM + "", &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL1.ID, "A")
+			PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL2.ID, "")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF PW_JH_OLD::ORDNUM <> PW_JH::ORDNUM
+			THEN
+				TEMP$ = PW_JH::ORDNUM + ""
+				PW_JH = PW_JH_OLD
+				PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL1.ID, &
+					"C" + TEMP$)
+				PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL2.ID, &
+					"C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL1.ID, "E")
+			PW_MAIN_PWH = MAIN_JOURNAL(PW_MAIN_PWL2.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+
+	ON ERROR GO BACK
+
+29900	!
+	! Handle no header for Line function here
+	!
+	CALL ENTR_3MESSAGE(SCOPE, &
+		"Sorry, but there is no current header item", 0%)
+	GOTO 30000
+
+30000	END FUNCTION

@@ -1,0 +1,128 @@
+1	%TITLE "TV_FIND_PRIORITY - Calculate a priority for a spot"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_FIND_PRIORITY( &
+		TV_COMMER_CDD TV_COMMER, &
+		TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED_INSTR)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This function is used to calculate a priority for
+	!	the scheduler based on a order record.
+	!
+	!	The priority is calculated by using the priority
+	!	entered in the spot, the length of the spot, the
+	!	price of the spot, and a random factor just to
+	!	keep it interesting.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!	TV_COMMER
+	!		A record defining the order.
+	!
+	!	TV_COMMER_SKED_INSTR
+	!		A record defining the order.
+	!
+	! Output:
+	!
+	!	Returns
+	!		A priority.
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_FIND_PRIORITY/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_FIND_PRIORITY
+	!	$ DELETE TV_FIND_PRIORITY.OBJ;*
+	!
+	! Author:
+	!
+	!	12/03/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.HB"
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.HB"
+	MAP (TV_CONTROL) TV_CONTROL_CDD TV_CONTROL
+
+	!
+	! Functions
+	!
+	EXTERNAL LONG FUNCTION TIME_CODE
+
+	%PAGE
+
+	!
+	! Generate the priority
+	!
+	RANDOMIZE
+	TPRIOR% = &
+		TV_COMMER::PRIORITY * TV_CONTROL::WEIGHT_PRIORITY + &
+		TIME_CODE(TV_COMMER_SKED_INSTR::LENGTH) * TV_CONTROL::WEIGHT_LENGTH + &
+		TV_COMMER_SKED_INSTR::RATE_PER_SPOT * TV_CONTROL::WEIGHT_COST + &
+		RND * TV_CONTROL::WEIGHT_RANDOM
+
+	!
+	! Increase the priority of a instruction if it fits in only one
+	! break (from time and to time are the same).  This segment assumes
+	! that priorities are assigned in multiples of 10 for the
+	! major groups, and it increases the priority halfway up to the
+	! next priority.
+	!
+	TPRIOR% = TPRIOR% + TV_CONTROL::WEIGHT_PRIORITY * 5% &
+		IF (TV_COMMER_SKED_INSTR::START_TIME = &
+			TV_COMMER_SKED_INSTR::END_TIME)
+
+	TV_FIND_PRIORITY = TPRIOR%
+
+	END FUNCTION

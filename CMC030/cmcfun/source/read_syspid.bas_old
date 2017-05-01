@@ -1,0 +1,92 @@
+1	%TITLE "Return the System ID Number."
+	%SBTTL "READ_SYSPID"
+	%IDENT "V3.3"
+
+	FUNCTION STRING READ_SYSPID
+
+	!
+	! COPYRIGHT (C) 1986 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function returns the system ID number.
+	!
+	! Index:
+	! Parameters:
+	!
+	!	This function returns the system ID number as a string.
+	!
+	! Example:
+	!
+	!	ID$ = READ_SYSPID
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:READ_SYSPID/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP READ_SYSPID
+	!	$ DELETE READ_SYSPID.OBJ;*
+	!
+	! Author:
+	!
+	!	09/22/86 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	SYS_STAT
+	!		Variable used to get the system information.
+	!
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	EXTERNAL LONG FUNCTION LIB$GETSYI
+	EXTERNAL LONG CONSTANT SYI$_SID, SS$_NORMAL
+
+	DECLARE LONG SYS_STAT
+
+	!
+	! Get the system info and check for errors
+	!
+	SYS_STAT = LIB$GETSYI (	SYI$_SID BY REF, , SNUM$ BY DESC )
+
+	IF SYS_STAT <> SS$_NORMAL
+	THEN
+		READ_SYSPID = ""
+	ELSE
+		READ_SYSPID = SNUM$
+	END IF
+
+	END FUNCTION

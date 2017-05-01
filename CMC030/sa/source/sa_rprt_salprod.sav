@@ -1,0 +1,748 @@
+1	%TITLE "Sales Account Product "
+	%SBTTL "SA_RPRT_SALPROD"
+	%IDENT "V3.5"
+
+	!
+	! COPYRIGHT (C) 1991 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a committment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:SA0017
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Sales Account Product\* Report contains
+	!	the following information:
+	!	.b
+	!	.lm +10
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Product Description
+	!	.le
+	!	Product Type
+	!	.le
+	!	Product Category
+	!	.le
+	!	(Period-to-date and Year-to-date)
+	!	.le
+	!	Quantity Sold
+	!	.le
+	!	Cost of Sale
+	!	.le
+	!	Sales Total
+	!	.le
+	!	Percent of all product sales
+	!	.le
+	!	Gross Margin (dollars)
+	!	.le
+	!	Percent of all Gross Margin dollars
+	!	.le
+	!	Margin Percentage
+	!	.els
+	!	.lm -10
+	!
+	! Index:
+	!	.x Report>Product Sales
+	!	.x Product Sales>Report
+	!
+	! Environment:
+	!	VAX/VMS BASIC+2 4.4
+	!
+	! Compile:
+	!
+	!	$ BAS SA_SOURCE:SA_RPRT_SALPROD/LINE
+	!	$ LINK/EXE=SA_EXE: SA_RPRT_SALPROD, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE SA_RPRT_SALPROD.OBJ;*
+	!
+	! Author:
+	!
+	!	01/18/91 - Val James Allen
+	!
+	! Modification History:
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include scope.com
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	!
+	! Include cdd
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE %FROM %CDD "CDD$TOP.IC.IC_TRANSACTION"
+	MAP (IC_TRANSACTION)	IC_TRANSACTION_CDD	IC_TRANSACTION
+
+	%INCLUDE %FROM %CDD "CDD$TOP.PD.PD_PRODUCT"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	!
+	! Declare external functions
+	!
+	EXTERNAL REAL    FUNCTION FUNC_ROUND
+	EXTERNAL INTEGER FUNCTION COMP_STRING
+	EXTERNAL LONG    FUNCTION IC_READ_HISTORY
+
+	%PAGE
+
+	TEMPCAT$ = "????"
+	TEMPTYPE$ = "??"
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	YYYYPP$		= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Period\*
+	!	.p
+	!	The ^*Period\* field provides the means for the user to enter the
+	!	period of the report which he/she wishes to print.
+	!
+	! Index:
+	!	.x Period
+	!
+	!--
+
+	SORTBY$		= EDIT$(UTL_REPORTX::OPTDEF(1%), -1%)
+
+	!++
+	! Abstract:FLD02
+	!
+	!	^*(02) Sort by (P,C,T,D,S)\*
+	!	.p
+	!	The setting in the ^*Sort by\* field will determine the order
+	!	in which the report will print.
+	!	.p
+	!	Valid settings are:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	P - Product Number
+	!	.le
+	!	C - Product Category
+	!	.le
+	!	T - Product Type
+	!	.le
+	!	D - Product Description
+	!	.le
+	!	S - Secondary Code
+	!	.els
+	!	.lm -10
+	!	.p
+	!	A setting is required in this field.  No other settings are
+	!	valid.
+	!
+	! Index:
+	!	.x Sort by
+	!
+	! Datatype:TEXT
+	! Size:1
+	! Valid Input: P,C,T,D,S
+	! Required: YES
+	!--
+
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03)From Item\*
+	!	.p
+	!	The ^*From Item\* field provides the means for the user to enter the
+	!	item with which he/she wishes to begin the report.
+	!	.p
+	!	A blank field will cause the report to begin with the first
+	!	item in the file.
+	!
+	! Index:
+	!
+	!--
+
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(3%), 132%)
+
+	!++
+	! Abstract:FLD04
+	!	^*(04) To Item\*
+	!	.p
+	!	The ^*To Item\* field provides the means for the user to specify the item
+	!	with which he/she wishes to end the report.
+	!	.p
+	!	A blank field will cause the report to end with the last
+	!	item in the file.
+	!
+	! Index:
+	!
+	!--
+
+	WLDCRD$		= EDIT$(UTL_REPORTX::OPTDEF(4%), -1%)
+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field provides the means to select
+	!	designated programs to be printed by entering a "wildcard"
+	!	for Wildcarding Technique.
+	!
+	! Index:
+	!
+	!--
+
+320	!
+	! Open Product Description file
+	!
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+330	!
+	! Open Inventory Transaction file
+	!
+	%INCLUDE "SOURCE:[IC.OPEN]IC_TRANSACTION.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	! Select which method to sort by
+	!
+	SELECT SORTBY$
+		CASE 'T'
+			K_NUM%		= 1%
+			TITLE$(1%) =	" SALES ANALYSIS BY PRODUCT TYPE"
+
+		CASE 'C'
+			K_NUM%		= 2%
+			TITLE$(1%) =	" SALES ANALYSIS BY PRODUCT CATEGORY"
+
+		CASE 'P'
+			K_NUM%		= 0%
+			TITLE$(1%) =	" SALES ANALYSIS BY PRODUCT NUMBER"
+
+		CASE 'D'
+			K_NUM%		= 3%
+			TITLE$(1%) =	" SALES ANALYSIS BY PRODUCT DESCRIPTION"
+
+		CASE 'S'
+			K_NUM%		= 4%
+			TITLE$(1%) =	" SALES ANALYSIS BY SECONDARY PRODUCT CODE"
+
+	END SELECT
+
+	TITLE$(2%) =	"Sales Analysis System"
+	TITLE$(3%) =	""
+
+	!
+	! Heading
+	!
+	!	      1234567890123456789012345678901234567890
+	TITLE$(4%) = "ProductNumber  Description              "            + &
+		"      Type Categ         QtySold  CostofSale   SaleTotal" + &
+                " Sale%  GrossMargn Gross% Margin%"
+
+	TITLE$(5%) = "."
+	%PAGE
+
+	%PAGE
+
+17000	!***************************************************************
+	! OUTPUT REPORT
+	!***************************************************************
+	!
+	! If from ITEM blank then reset file
+	! else try to find the first record
+	!
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #PD_PRODUCT.CH%, KEY#K_NUM%
+	ELSE
+		FIND #PD_PRODUCT.CH%, KEY#K_NUM% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+	LOOP% = LOOP% + 1%
+
+ GetNextRec:
+17020	!
+	! Main loop
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get record from Product Description file
+	!
+	GET #PD_PRODUCT.CH%, REGARDLESS
+
+	!
+	! Check current record if should be printed
+	!
+	SELECT SORTBY$
+		CASE 'C'
+			GOTO ExitTotal IF (PD_PRODUCT::CATEGORY > TO.ITEM$) AND &
+					TO.ITEM$ <> ""
+
+			GOTO GetNextRec IF COMP_STRING(EDIT$(PD_PRODUCT::CATEGORY,-1%), WLDCRD$) = 0% &
+				AND WLDCRD$ <> ""
+
+		CASE 'T'
+			GOTO ExitTotal IF (PD_PRODUCT::PROD_TYPE> TO.ITEM$) AND &
+				TO.ITEM$ <> ""
+
+			GOTO GetNextRec IF COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE,-1%), WLDCRD$) = 0% &
+				AND WLDCRD$ <> ""
+
+		CASE 'P'
+			GOTO ExitTotal IF (PD_PRODUCT::PRODUCT_NUM > TO.ITEM$) AND &
+				TO.ITEM$ <> ""
+
+			GOTO GetNextRec IF COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM,-1%), WLDCRD$) = 0% &
+				AND WLDCRD$ <> ""
+
+		CASE 'D'
+			GOTO ExitTotal IF (PD_PRODUCT::DESCRIPTION > TO.ITEM$) AND &
+					TO.ITEM$ <> ""
+
+			GOTO GetNextRec IF COMP_STRING(EDIT$(PD_PRODUCT::DESCRIPTION,-1%), WLDCRD$) = 0% &
+				AND WLDCRD$ <> ""
+
+		CASE 'S'
+			GOTO ExitTotal IF (PD_PRODUCT::SECONDARY_CODE > TO.ITEM$) AND &
+					TO.ITEM$ <> ""
+
+			GOTO GetNextRec IF COMP_STRING(EDIT$(PD_PRODUCT::SECONDARY_CODE,-1%), WLDCRD$) = 0% &
+				AND WLDCRD$ <> ""
+
+	END SELECT
+
+	COSTTOTAL = 0.0
+	SALETOTAL = 0.0
+	QTYTOTAL  = 0.0
+
+17050	FIND #IC_TRANSACTION.CH%, KEY#0 EQ PD_PRODUCT::PRODUCT_NUM, REGARDLESS
+
+ GetTrans:
+17060	GET #IC_TRANSACTION.CH%, REGARDLESS
+
+	GOTO ReadHistory IF IC_TRANSACTION::PRODUCT <> PD_PRODUCT::PRODUCT_NUM
+
+	IF IC_TRANSACTION::TYPE_A = "SA"
+	THEN
+		SIG% = SGN(IC_TRANSACTION::QUANTITY_A)
+		COSTTOTAL = COSTTOTAL - FUNC_ROUND(SIG% * IC_TRANSACTION::COST, 2%)
+		SALETOTAL = SALETOTAL - FUNC_ROUND(SIG% * IC_TRANSACTION::PRICE, 2%)
+		QTYTOTAL  = QTYTOTAL  + (-IC_TRANSACTION::QUANTITY_A)
+	END IF
+
+	IF IC_TRANSACTION::TYPE_B = "SA"
+	THEN
+		SIG% = SGN(IC_TRANSACTION::QUANTITY_B)
+		COSTTOTAL = COSTTOTAL + FUNC_ROUND(SIG% * IC_TRANSACTION::COST, 2%)
+		SALETOTAL = SALETOTAL + FUNC_ROUND(SIG% * IC_TRANSACTION::PRICE, 2%)
+		QTYTOTAL  = QTYTOTAL  + (-IC_TRANSACTION::QUANTITY_B)
+	END IF
+
+	GOTO GetTrans
+
+ ReadHistory:
+	!
+	! Lookup sales history here by using Read_History routine
+	!
+	V% = IC_READ_HISTORY(PD_PRODUCT::PRODUCT_NUM, "", YYYYPP$, &
+			TOTHQ, TOTHS, TOTHC)
+
+	TOTHQ = -TOTHQ
+	TOTHS = -TOTHS
+	TOTHC = -TOTHC
+
+	!
+	! Check if loop 1 and if so just add up for overall totals
+	!
+	IF LOOP% = 1%
+	THEN
+		PCOST = PCOST + COSTTOTAL
+		PSALE = PSALE + SALETOTAL
+		YCOST = YCOST + (COSTTOTAL + TOTHC)
+		YSALE = YSALE + (SALETOTAL + TOTHS)
+		GOTO GetNextRec
+	END IF
+
+	IF (SALETOTAL = 0.0) AND (COSTTOTAL = 0.0) AND (QTYTOTAL = 0.0) AND (TOTHQ = 0.0) AND (TOTHS = 0.0) AND (TOTHC = 0.0)
+	THEN
+		GOTO GetNextRec
+	END IF
+
+	SELECT SORTBY$
+
+		CASE "C"
+			GOSUB SubTotals IF (PD_PRODUCT::CATEGORY <> TEMPCAT$) AND (FIRSTLINE =-1%)
+			TEMPCAT$ = PD_PRODUCT::CATEGORY
+
+		CASE "T"
+			GOSUB SubTotals IF (PD_PRODUCT::PROD_TYPE <> TEMPTYPE$) AND (FIRSTLINE = -1%)
+			TEMPTYPE$ = PD_PRODUCT::PROD_TYPE
+	END SELECT
+
+	GROSS = SALETOTAL - COSTTOTAL
+
+	IF SALETOTAL = 0.0
+	THEN
+		MARGINS = 0.0
+	ELSE
+		MARGINS = FUNC_ROUND(100 * (GROSS/SALETOTAL), 2%)
+	END IF
+
+	!
+	! Print out one line
+	!
+	FIRSTP		= 0.0
+	SECOUNDP	= 0.0
+	FIRSTP = FUNC_ROUND(100 * (SALETOTAL/PSALE), 2%) IF PSALE <> 0.0
+	SECOUNDP = FUNC_ROUND(100 * (GROSS/PGROSS), 2%) IF PGROSS <> 0.0
+
+	TEXT$ = PD_PRODUCT::PRODUCT_NUM             + " "   + &
+		LEFT$(PD_PRODUCT::DESCRIPTION, 30%) + " "   + &
+		PD_PRODUCT::PROD_TYPE               + "   " + &
+		PD_PRODUCT::CATEGORY                + "  "  + &
+		"PTD:"                              + " "   + &
+		FORMAT$(QTYTOTAL, "#######.##")     + " "   + &
+		FORMAT$(COSTTOTAL, "########.##")   + " "   + &
+		FORMAT$(SALETOTAL, "########.##")   + " "   + &
+		FORMAT$(FIRSTP, "###.#")            + " "   + &
+		FORMAT$(GROSS, "########.##")       + "  "  + &
+		FORMAT$(SECOUNDP, "###.#")          + "  "  + &
+		FORMAT$(MARGINS, "####.#")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GROSSY = (SALETOTAL + TOTHS) - (COSTTOTAL + TOTHC)
+
+	!
+	! Check for margins
+	!
+	IF SALETOTAL + TOTHS = 0.0
+	THEN
+		MARGINS1 = 0.0
+	ELSE
+		MARGINS1 = FUNC_ROUND(100 * (GROSSY/(SALETOTAL + TOTHS)), 2%)
+	END IF
+
+	!
+	! Print out one line
+	!
+	FIRSTP		= 0.0
+	SECOUNDP	= 0.0
+	FIRSTP = FUNC_ROUND(100 * ((SALETOTAL + TOTHS)/YSALE), 2%) IF YSALE <> 0.0
+	SECOUNDP = FUNC_ROUND(100 * (GROSSY/YGROSS), 2%) IF YGROSS <> 0.0
+
+	TEXT$ = PD_PRODUCT::PRODUCT_NUM + SPACE$(43%)     + &
+		"YTD:"                                    + " "  + &
+		FORMAT$(QTYTOTAL + TOTHQ, "#######.##")   + " "  + &
+		FORMAT$(COSTTOTAL + TOTHC, "########.##") + " "  + &
+		FORMAT$(SALETOTAL + TOTHS, "########.##") + " "  + &
+		FORMAT$(FIRSTP, "###.#")                  + " "  + &
+		FORMAT$(GROSSY, "########.##")            + "  " + &
+		FORMAT$(SECOUNDP,"###.#")                 + "  " + &
+		FORMAT$(MARGINS1, "####.#")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FIRSTLINE = -1%
+
+	SUBTOTAL1 = SUBTOTAL1 + COSTTOTAL
+	SUBTOTAL2 = SUBTOTAL2 + SALETOTAL
+	SUBTOTAL3 = SUBTOTAL3 + QTYTOTAL
+
+	YTDSUB1 = YTDSUB1 + COSTTOTAL + TOTHC
+	YTDSUB2 = YTDSUB2 + SALETOTAL + TOTHS
+	YTDSUB3 = YTDSUB3 + QTYTOTAL  + TOTHQ
+
+	SUBCUST% = SUBCUST% + 1
+	CUSTTOTAL% = CUSTTOTAL% + 1
+
+	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ SubTotals:
+	!
+	! Print out the subtotals
+	!
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+	MARGIN1 = SUBTOTAL2 - SUBTOTAL1
+
+	IF SUBTOTAL2 = 0.0
+	THEN
+		MARGIN2 = 0.0
+	ELSE
+		MARGIN2 = FUNC_ROUND(100 * (MARGIN1/SUBTOTAL2), 2%)
+	END IF
+
+	FIRSTP		= 0.0
+	SECOUNDP	= 0.0
+	FIRSTP = FUNC_ROUND(100 * (SUBTOTAL2/PSALE), 2%) IF PSALE <> 0.0
+	SECOUNDP = FUNC_ROUND(100 * (MARGIN1/PGROSS), 2%) IF PGROSS <> 0.0
+
+	IF SORTBY$ = "T"
+	THEN
+		TEXT$ = "            SubTotals for " + FORMAT$(SUBCUST%,"###") + " products  Type: " + TEMPTYPE$ + &
+			"         PTD:" + &
+			FORMAT$(SUBTOTAL3, "########.##") + " "  + &
+			FORMAT$(SUBTOTAL1, "########.##") + " "  + &
+			FORMAT$(SUBTOTAL2, "########.##") + " "  + &
+			FORMAT$(FIRSTP, "###.#")          + " "  + &
+			FORMAT$(MARGIN1, "########.##")   + "  " + &
+			FORMAT$(SECOUNDP, "###.#")        + "  " + &
+			FORMAT$(MARGIN2, "####.#")
+	ELSE
+		TEXT$ = "            SubTotals for " + FORMAT$(SUBCUST%,"###") + " products   Category: " + TEMPCAT$ + &
+			"  PTD:" + &
+			FORMAT$(SUBTOTAL3, "########.##") + " "  + &
+			FORMAT$(SUBTOTAL1, "########.##") + " "  + &
+			FORMAT$(SUBTOTAL2, "########.##") + " "  + &
+			FORMAT$(FIRSTP, "###.#")         + " "   + &
+			FORMAT$(MARGIN1, "########.##")   + "  " + &
+			FORMAT$(SECOUNDP, "###.#")       + "  "  + &
+			FORMAT$(MARGIN2, "####.#")
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	MARGIN1 = YTDSUB2 - YTDSUB1
+
+	IF YTDSUB2 = 0.0
+	THEN
+		MARGIN2 = 0.0
+	ELSE
+		MARGIN2 = FUNC_ROUND(100 * (MARGIN1/YTDSUB2), 2%)
+	END IF
+
+	FIRSTP		= 0.0
+	SECOUNDP	= 0.0
+	FIRSTP = FUNC_ROUND(100 * (YTDSUB2/YSALE), 2%) IF YSALE <> 0.0
+	SECOUNDP = FUNC_ROUND(100 * (MARGIN1/YGROSS), 2%) IF YGROSS <> 0.0
+
+	IF SORTBY$ = "T"
+	THEN
+		TEXT$ = "            SubTotals for " + FORMAT$(SUBCUST%,"###") + " products  Type: " + TEMPTYPE$ + &
+			"         YTD:" + &
+			FORMAT$(YTDSUB3, "########.##") + " "  + &
+			FORMAT$(YTDSUB1, "########.##") + " "  + &
+			FORMAT$(YTDSUB2, "########.##") + " "  + &
+			FORMAT$(FIRSTP, "###.#")        + " "  + &
+			FORMAT$(MARGIN1, "########.##") + "  " + &
+			FORMAT$(SECOUNDP, "###.#")      + "  " + &
+			FORMAT$(MARGIN2, "####.#")
+	ELSE
+		TEXT$ = "            SubTotals for " + FORMAT$(SUBCUST%,"###") + " products   Category: " + TEMPCAT$ + &
+			"  YTD:" + &
+			FORMAT$(YTDSUB3, "########.##") + " "  + &
+			FORMAT$(YTDSUB1, "########.##") + " "  + &
+			FORMAT$(YTDSUB2, "########.##") + " "  + &
+			FORMAT$(FIRSTP, "###.#")        + " "  + &
+			FORMAT$(MARGIN1, "########.##") + "  " + &
+			FORMAT$(SECOUNDP, "###.#")      + "  " + &
+			FORMAT$(MARGIN2, "####.#")
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Reset the variables
+	!
+	SUBCUST% = 0%
+	SUBTOTAL1 = 0.0
+	SUBTOTAL2 = 0.0
+	SUBTOTAL3 = 0.0
+
+	YTDSUB1 = 0.0
+	YTDSUB2 = 0.0
+	YTDSUB3 = 0.0
+
+	RETURN
+
+ ExitTotal:
+	!
+	! Handle end of the report
+	!
+	IF LOOP% = 1%
+	THEN
+		PGROSS = PSALE - PCOST
+		YGROSS = YSALE - YCOST
+		GOTO 17000
+	END IF
+
+	IF FIRSTLINE = -1%
+	THEN
+		GOSUB SubTotals IF (SORTBY$ = "C") OR (SORTBY$ = "T")
+		!
+		! Print out one line
+		!
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+
+		IF PSALE = 0.0
+		THEN
+			TOTMARGIN2 = 0.0
+		ELSE
+			TOTMARGIN2 = FUNC_ROUND(100 *(PGROSS/PSALE), 2%)
+		END IF
+
+		TEXT$ = "            Totals for " + FORMAT$(CUSTTOTAL%,"###") + " products                      PTD:            " + &
+			FORMAT$(PCOST, "########.##")  + " "   + &
+			FORMAT$(PSALE, "########.##")  + " "   + &
+			FORMAT$(100.0, "###.#")        + " "   + &
+			FORMAT$(PGROSS, "########.##") + "  "  + &
+			FORMAT$(100.0, "###.#")        + "  "  + &
+			FORMAT$(TOTMARGIN2, "####.#")
+
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+		!
+		! Print out one line
+		!
+		IF YSALE = 0.0
+		THEN
+			YTDMARGIN2 = 0.0
+		ELSE
+			YTDMARGIN2 = FUNC_ROUND(100 * (YGROSS/YSALE), 2%)
+		END IF
+
+		TEXT$ = "            Totals for " + FORMAT$(CUSTTOTAL%,"###") + " products                      YTD:            " + &
+			FORMAT$(YCOST, "########.##")  + " "   + &
+			FORMAT$(YSALE, "########.##")  + " "   + &
+			FORMAT$(100.0, "###.#")        + " "   + &
+			FORMAT$(YGROSS, "########.##") + "  "  + &
+			FORMAT$(100.0, "###.#")        + "  "  + &
+			FORMAT$(YTDMARGIN2, "####.#")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+	END IF
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!***************************************************************
+	! Help Message for an error
+	!***************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	!
+	! Exit from the program after showing error message
+	!
+	GOTO ExitProgram
+
+	%Page
+
+19000	!***************************************************************
+	! ERROR TRAPPING
+	!***************************************************************
+
+	SELECT ERR
+		CASE 154%
+			!
+			! Wait for 5 seconds if record is lock
+			!
+			SLEEP 5%
+			RESUME
+	END SELECT
+
+	SELECT ERL
+
+		CASE 320%
+			!
+			! Exit if can't open Product file
+			!
+			FILENAME$ = "PD_PRODUCT"
+
+		CASE 330%
+			!
+			! Exit if can't open Transaction file
+			!
+			FILENAME$ = "IC_TRANSACTION"
+
+		CASE 17000%
+			!
+			! Exit if can't find the beginning record
+			!
+			FILENAME$ = "PD_PRODUCT"
+
+		CASE 17020%
+			!
+			! Trap end of the Product file
+			!
+			RESUME ExitTotal IF ERR = 11%
+			FILENAME$ = "PD_PRODUCT"
+
+		CASE 17050%
+			!
+			! Can't IC_TRANSACTION record
+			!
+			RESUME GetNextRec IF ERR = 155%
+			FILENAME$ = "IC_TRANSACTION"
+
+		CASE 17060%
+			!
+			! Trap end of the IC_TRANSACTION file
+			!
+			RESUME ReadHistory IF ERR = 11%
+			FILENAME$ = "IC_TRANSACTION"
+	END SELECT
+
+	!
+	! Resume to display untrapped error
+	!
+	RESUME HelpError
+
+32767	END

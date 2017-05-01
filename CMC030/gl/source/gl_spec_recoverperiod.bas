@@ -1,0 +1,126 @@
+1	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+
+	MAP (GL_YYYY_PP) GL_YYYY_PP_CDD GL_YYYY_PP
+
+100	!======================================================================
+	! GL_YYYY_PP file (open read only)
+	!======================================================================
+
+	YYYY_PP$ = "1996_12"
+	GL_YYYY_PP.CH_OLD% = 10%
+
+	GL_YYYY_PP.NAME$ = "GL_" + YYYY_PP$ + ".LED"
+
+	OPEN GL_YYYY_PP.NAME$ FOR INPUT AS FILE GL_YYYY_PP.CH_OLD%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_YYYY_PP, &
+		PRIMARY KEY &
+		( &
+			GL_YYYY_PP::ACCT, &
+			GL_YYYY_PP::TRANDAT &
+		)	DUPLICATES, &
+		ALTERNATE KEY &
+		( &
+			GL_YYYY_PP::SUBACC, &
+			GL_YYYY_PP::OPERATION, &
+			GL_YYYY_PP::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			GL_YYYY_PP::XREFNO, &
+			GL_YYYY_PP::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			GL_YYYY_PP::CKNO, &
+			GL_YYYY_PP::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			GL_YYYY_PP::BTHNUM &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+
+
+
+
+110	!======================================================================
+	! GL_YYYY_PP file (open read only)
+	!======================================================================
+
+	GL_YYYY_PP.CH% = 11%
+	GL_YYYY_PP.DEV$ = ""
+
+	YYYY_PP$ = "1996_12NEW"
+
+	GL_YYYY_PP.NAME$ = "GL_" + YYYY_PP$ + ".LED"
+
+	OPEN GL_YYYY_PP.NAME$ FOR OUTPUT AS FILE GL_YYYY_PP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_YYYY_PP, &
+		PRIMARY KEY &
+		( &
+			GL_YYYY_PP::ACCT, &
+			GL_YYYY_PP::TRANDAT &
+		)	DUPLICATES, &
+		ALTERNATE KEY &
+		( &
+			GL_YYYY_PP::SUBACC, &
+			GL_YYYY_PP::OPERATION, &
+			GL_YYYY_PP::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			GL_YYYY_PP::XREFNO, &
+			GL_YYYY_PP::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			GL_YYYY_PP::CKNO, &
+			GL_YYYY_PP::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			GL_YYYY_PP::BTHNUM &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+
+
+	ON ERROR GOTO 19000
+
+	STARTAT$ = ""
+	LINPUT "Start at"; STARTAT$
+	LAST_BATCH$ = ""
+
+1000	FIND #GL_YYYY_PP.CH_OLD%, KEY #4% GE STARTAT$
+
+1010	GET #GL_YYYY_PP.CH_OLD%, REGARDLESS
+
+1020	PUT #GL_YYYY_PP.CH%
+	PRINT "0";
+	PRINT IF CCPOS(0%) >= 50%
+	LAST_BATCH$ = GL_YYYY_PP::BTHNUM
+
+	GOTO 1010
+
+2000	!
+	PRINT "LAST BATCH: "; LAST_BATCH$
+	PRINT "LAST ERROR"; ERR; " AT";ERL
+
+5000	CLOSE 10%, 11%
+	GOTO 32767
+
+19000	SELECT ERL
+
+	CASE 1010%
+		RESUME 2000
+		PRINT "Done on 0"
+		RESUME 5000
+
+	CASE 1020%
+		RESUME 1010 IF ERR = 134%
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+32767	END

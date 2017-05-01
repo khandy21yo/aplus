@@ -1,0 +1,17 @@
+	!------------------------------------------------------------------
+	! Open help file
+	!------------------------------------------------------------------
+
+	OLD_PROT$ = READ_CURPROTECTION
+	CALL WRIT_CURPROTECTION(USR_HELP.PRO$)
+
+	OPEN UTL_HELP.DEV$ + "USR_HELP.IDX" AS FILE #USR_HELP.CH, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_HELP_M, &
+		PRIMARY KEY (UTL_HELP::IDENT, UTL_HELP::PROGRAM, &
+			UTL_HELP::ITEM), &
+		ACCESS MODIFY, &
+		ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,17 @@
+	!======================================================================
+	! TV_COMMER_CHARGE file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TV_COMMER_CHARGE.CH%, STAT%)
+	CALL READ_DEVICE('TV_COMMER_CHARGE',TV_COMMER_CHARGE.DEV$, STAT%)
+
+	TV_COMMER_CHARGE.NAME$ = TV_COMMER_CHARGE.DEV$+"TV_COMMER_CHARGE.LED"
+
+	OPEN TV_COMMER_CHARGE.NAME$ FOR INPUT AS FILE TV_COMMER_CHARGE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TV_COMMER_CHARGE, &
+		PRIMARY KEY &
+			TV_COMMER_CHARGE::FRMNUM &
+			DUPLICATES , &
+		ACCESS MODIFY, ALLOW MODIFY
+

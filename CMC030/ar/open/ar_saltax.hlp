@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Sales Tax Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__SALTAX.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Receivable System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Sales Tax Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__SALTAX.TBL\*
+	!
+	! Index:
+	!	.x Sales Tax Table
+	!	.x AR_SALTAX
+	!
+	!--

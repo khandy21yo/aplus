@@ -1,0 +1,24 @@
+	!======================================================================
+	! PR_TAX_PKG file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_TAX_PKG.CH%, STAT%)
+	CALL READ_DEVICE('PR_TAX_PKG',PR_TAX_PKG.DEV$, STAT%)
+	CALL READ_PROTECTION('PR_TAX_PKG',PR_TAX_PKG.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PR_TAX_PKG.PRO$, STAT%)
+
+	PR_TAX_PKG.NAME$ = PR_TAX_PKG.DEV$+"PR_TAX_PKG.TBL"
+
+	OPEN PR_TAX_PKG.NAME$ AS FILE PR_TAX_PKG.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_TAX_PKG, &
+		PRIMARY KEY &
+		( &
+			PR_TAX_PKG::TAX_PKG, &
+			PR_TAX_PKG::STTYPE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

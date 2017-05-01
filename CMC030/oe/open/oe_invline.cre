@@ -1,0 +1,30 @@
+	!======================================================================
+	! OE_INVLINE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_INVLINE.CH%, STAT%)
+	CALL READ_DEVICE('OE_INVLINE',OE_INVLINE.DEV$, STAT%)
+	CALL READ_PROTECTION('OE_INVLINE',OE_INVLINE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(OE_INVLINE.PRO$, STAT%)
+
+	OE_INVLINE.NAME$ = OE_INVLINE.DEV$+"OE_INVLINE_"+BATCH_NO$+".JRL"
+
+	OPEN OE_INVLINE.NAME$ AS FILE OE_INVLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_INVLINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			OE_INVLINE::ORDNUM, &
+			OE_INVLINE::LIN &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			OE_INVLINE::LIN, &
+			OE_INVLINE::ORDNUM &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

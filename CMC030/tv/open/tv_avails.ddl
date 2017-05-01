@@ -1,0 +1,9 @@
+DEFINE RECORD CDD$TOP.TV.TV_AVAILS
+
+        DESCRIPTION IS /*TV Avails Code Description Table*/.
+
+        TV_AVAILS_CDD STRUCTURE.
+
+        END TV_AVAILS_CDD STRUCTURE.
+
+END TV_AVAILS.

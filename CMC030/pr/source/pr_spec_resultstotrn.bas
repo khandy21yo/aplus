@@ -1,0 +1,380 @@
+1	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_EMP_MASTER.HB"
+	MAP (PR_EMP_MASTER) PR_EMP_MASTER_CDD PR_EMP_MASTER
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_TRN_PAY.HB"
+	MAP (PR_TRN_PAY) PR_TRN_PAY_CDD PR_TRN_PAY
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_TRN_DED.HB"
+	MAP (PR_TRN_DED) PR_TRN_DED_CDD PR_TRN_DED
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_TRN_CHECK.HB"
+	MAP (PR_TRN_CHECK) PR_TRN_CHECK_CDD PR_TRN_CHECK
+
+	EXTERNAL LONG    FUNCTION DATE_DAYCODE
+	EXTERNAL STRING  FUNCTION DATE_INVDCODE
+	EXTERNAL REAL    FUNCTION FUNC_ROUND
+
+	DIM Y$(20%)
+	DIM CH$(100%)
+
+	START_DATE% = DATE_DAYCODE("19671231")
+
+100 !	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.CRE"
+	!======================================================================
+	! PR_EMP_MASTER file (open read only)
+	!======================================================================
+
+	PR_EMP_MASTER.CH% = 2%
+	PR_EMP_MASTER.DEV$ = ""
+
+	PR_EMP_MASTER.NAME$ = PR_EMP_MASTER.DEV$+"PR_EMP_MASTER.MAS"
+
+	OPEN PR_EMP_MASTER.NAME$ FOR INPUT AS FILE PR_EMP_MASTER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_EMP_MASTER, &
+		buffer 8, &
+		PRIMARY KEY &
+			PR_EMP_MASTER::EMPNUM, &
+		ALTERNATE KEY &
+			PR_EMP_MASTER::EMPNAME &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			PR_EMP_MASTER::SORT &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			PR_EMP_MASTER::SSN &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			PR_EMP_MASTER::LOCATION, &
+			PR_EMP_MASTER::DEPT, &
+			PR_EMP_MASTER::WORK_CENTER, &
+			PR_EMP_MASTER::SORT &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW NONE
+
+
+110	LINPUT "File to read (093.DAT)"; FINAME$
+	FINAME$ = "093.DAT" IF FINAME$ = ""
+
+	OPEN FINAME$ FOR INPUT AS FILE 1%
+
+	ON ERROR GOTO 19000
+
+200	LINPUT #1%, Y$(I%) FOR I% = 1% TO 20%
+
+	IF Y$(20%) <> "<END>"
+	THEN
+		PRINT ":::"; Y$(1%)
+		PRINT "   "; Y$(2%)
+		PRINT "   "; Y$(3%)
+		STOP
+	END IF
+
+	PRINT "+++"; Y$(1%)
+
+300	!
+	! Find out new employee number
+	!
+	THIS_EMPNUM$ = "9999999999"
+	PR_EMP_MASTER::SORT = Y$(2%) + Y$(3%)
+	GET #PR_EMP_MASTER.CH%, KEY #2% EQ PR_EMP_MASTER::SORT
+	THIS_EMPNUM$ = PR_EMP_MASTER::EMPNUM
+
+310	!
+	! Calculate payroll date, and open correct folders
+	!
+	THIS_FOLDER$ = DATE_INVDCODE(START_DATE% + VAL%(Y$(17%)))
+	PAY_DATE$ = THIS_FOLDER$
+
+	GOTO 400 IF THIS_FOLDER$ = BATCH_NO$
+
+	PRINT "O--"; THIS_FOLDER$
+	BATCH_NO$ = THIS_FOLDER$
+
+	FOR I% = 1% TO CHTOTAL%
+		IF CH$(I%) = BATCH_NO$
+		THEN
+			PR_TRN_CHECK.CH% = 0% + I%*3%
+			PR_TRN_DED.CH% = 1% + I%*3%
+			PR_TRN_PAY.CH% = 2% + I%*3%
+			GOTO 400
+		END IF
+	NEXT I%
+
+	CHTOTAL%, I% = CHTOTAL% + 1%
+	CH$(CHTOTAL%) = BATCH_NO$
+	PR_TRN_CHECK.CH% = 0% + I%*3%
+	PR_TRN_DED.CH% = 1% + I%*3%
+	PR_TRN_PAY.CH% = 2% + I%*3%
+
+	!======================================================================
+	! PR_TRN_CHECK file (create, open read/write)
+	!======================================================================
+
+	PR_TRN_CHECK.DEV$ = ""
+
+	PR_TRN_CHECK.NAME$ = PR_TRN_CHECK.DEV$+"PR_TRN_CHECK_"+BATCH_NO$+".JRL"
+
+	OPEN PR_TRN_CHECK.NAME$ AS FILE PR_TRN_CHECK.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_TRN_CHECK, &
+		buffer 4, &
+		PRIMARY KEY &
+		( &
+			PR_TRN_CHECK::EMPNUM, &
+			PR_TRN_CHECK::PR_END_DATE &
+		), &
+		ALTERNATE KEY &
+		( &
+			PR_TRN_CHECK::CHECK, &
+			PR_TRN_CHECK::EMPNUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+
+	!======================================================================
+	! PR_TRN_DED file (create, open read/write)
+	!======================================================================
+
+	PR_TRN_DED.DEV$ = ""
+
+	PR_TRN_DED.NAME$ = PR_TRN_DED.DEV$+"PR_TRN_DED_"+BATCH_NO$+".JRL"
+
+	OPEN PR_TRN_DED.NAME$ AS FILE PR_TRN_DED.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_TRN_DED, &
+		buffer 4, &
+		PRIMARY KEY &
+		( &
+			PR_TRN_DED::EMPNUM, &
+			PR_TRN_DED::PR_END_DATE, &
+			PR_TRN_DED::DTYPE, &
+			PR_TRN_DED::CODE &
+		)	DUPLICATES, &
+		ACCESS MODIFY, ALLOW NONE
+
+	!======================================================================
+	! PR_TRN_PAY file (create, open read/write)
+	!======================================================================
+
+	PR_TRN_PAY.DEV$ = ""
+
+	PR_TRN_PAY.NAME$ = PR_TRN_PAY.DEV$+"PR_TRN_PAY_"+BATCH_NO$+".JRL"
+
+	OPEN PR_TRN_PAY.NAME$ AS FILE PR_TRN_PAY.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_TRN_PAY, &
+		buffer 4, &
+		PRIMARY KEY &
+		( &
+			PR_TRN_PAY::EMPNUM, &
+			PR_TRN_PAY::PR_END_DATE &
+		)	DUPLICATES, &
+		ALTERNATE KEY &
+		( &
+			PR_TRN_PAY::SUBACC, &
+			PR_TRN_PAY::OPER, &
+			PR_TRN_PAY::ACCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			PR_TRN_PAY::LOCATION, &
+			PR_TRN_PAY::DEPT, &
+			PR_TRN_PAY::WORK_CENTER, &
+			PR_TRN_PAY::EMPNUM, &
+			PR_TRN_PAY::PR_END_DATE &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+
+400	!
+	! Add check records
+	!
+ ! PRINT "TEST -"; ch$(i%), pr_trn_check.ch%, pr_trn_ded.ch%, pr_trn_pay.ch%
+	PR_TRN_CHECK::EMPNUM	= THIS_EMPNUM$
+	PR_TRN_CHECK::PR_END_DATE = PAY_DATE$
+	PR_TRN_CHECK::CHECK	= Y$(12%)
+	PR_TRN_CHECK::CHECK_DATE= THIS_FOLDER$
+	PR_TRN_CHECK::PAYFREQ	= 26%
+	PR_TRN_CHECK::UPDATE_FLAG = 0.0
+	PR_TRN_CHECK::BATCH	= ""
+
+	PUT #PR_TRN_CHECK.CH%
+
+410	!
+	! Create pay record
+	!
+	TOTAL = VAL(Y$(5%))/100.0
+
+	PR_TRN_PAY::EMPNUM	= THIS_EMPNUM$
+	PR_TRN_PAY::PR_END_DATE	= PAY_DATE$
+	PR_TRN_PAY::EMP_SKILL	= ""
+	PR_TRN_PAY::EMP_GRADE	= ""
+	PR_TRN_PAY::ACCT	= PR_EMP_MASTER::ACCT
+	PR_TRN_PAY::SUBACC	= ""
+	PR_TRN_PAY::OPER	= ""
+	PR_TRN_PAY::LOCATION	= Y$(2%)
+	PR_TRN_PAY::DEPT	= MID(Y$(1%),5%,3%)
+	PR_TRN_PAY::WORK_CENTER	= ""
+	PR_TRN_PAY::UNION	= ""
+	PR_TRN_PAY::PTYPE	= "P"
+	PR_TRN_PAY::RTYPE	= "S"
+	PR_TRN_PAY::CODE	= "RT"
+	PR_TRN_PAY::PIECE_RATE	= 0.0
+	PR_TRN_PAY::REG_HR	= VAL(Y$(13%))/100.0
+	PR_TRN_PAY::OVT_HR	= (VAL(Y$(14%))+VAL(Y$(15%)))/100.0
+	IF PR_TRN_PAY::REG_HR + PR_TRN_PAY::OVT_HR = 0.0
+	THEN
+		PR_TRN_PAY::HOUR_RATE	= 0.0
+	ELSE
+		PR_TRN_PAY::HOUR_RATE = FUNC_ROUND(TOTAL / &
+			(PR_TRN_PAY::REG_HR + PR_TRN_PAY::OVT_HR * 1.5), 3%)
+	END IF
+	PR_TRN_PAY::PIECE	= 0.0
+	PR_TRN_PAY::FACTOR	= 150%
+	PR_TRN_PAY::GROSS	= FUNC_ROUND((PR_TRN_PAY::REG_HR+PR_TRN_PAY::OVT_HR*1.5) * &
+		PR_TRN_PAY::HOUR_RATE, 2%)
+	PR_TRN_PAY::TAX_PKG	= PR_EMP_MASTER::TAX_PKG
+	PR_TRN_PAY::BATCH_ENTRY	= ""
+	PR_TRN_PAY::UPDATE_FLAG	= 0%
+	PR_TRN_PAY::SEQNUM	= ""
+	PR_TRN_PAY::BATCH	= ""
+	PR_TRN_PAY::WORKDATE	= ""
+
+	PUT #PR_TRN_PAY.CH%
+
+	TOTAL = FUNC_ROUND(TOTAL - PR_TRN_PAY::GROSS, 2%)
+	IF TOTAL <> 0.0
+	THEN
+		PR_TRN_PAY::PTYPE = "O"
+		PR_TRN_PAY::RTYPE = ""
+		PR_TRN_PAY::CODE = "RT"
+		PR_TRN_PAY::PIECE_RATE = 0.0
+		PR_TRN_PAY::HOUR_RATE = 0.0
+		PR_TRN_PAY::REG_HR = 0.0
+		PR_TRN_PAY::OVT_HR = 0.0
+		PR_TRN_PAY::PIECE = 0.0
+		PR_TRN_PAY::FACTOR = 0.0
+		PR_TRN_PAY::GROSS = TOTAL
+
+		PUT #PR_TRN_PAY.CH%
+
+		PRINT "*"
+	END IF
+
+420	!
+	! Deduction Records
+	!
+	PR_TRN_DED::EMPNUM	= THIS_EMPNUM$
+	PR_TRN_DED::PR_END_DATE	= PAY_DATE$
+	PR_TRN_DED::SSTATUS	= ""
+	PR_TRN_DED::EXEMPT	= 0%
+	PR_TRN_DED::UPDATE_FLAG	= 0%
+	PR_TRN_DED::BATCH	= ""
+	PR_TRN_DED::TAXABLE	= 0.0
+	PR_TRN_DED::REPORTABLE	= 0.0
+
+	! Federal
+421	AMOUNT = VAL(Y$(6%))/100.0
+	IF AMOUNT <> 0.0
+	THEN
+		PR_TRN_DED::DTYPE	= "C"
+		PR_TRN_DED::CODE	= "FW"
+		PR_TRN_DED::TAX_CODE	= ""
+		PR_TRN_DED::AMOUNT	= AMOUNT
+
+		PUT #PR_TRN_DED.CH%
+	END IF
+
+	! FICA
+422	AMOUNT = VAL(Y$(7%))/100.0
+	IF AMOUNT <> 0.0
+	THEN
+		PR_TRN_DED::DTYPE	= "C"
+		PR_TRN_DED::CODE	= "FI"
+		PR_TRN_DED::TAX_CODE	= ""
+		PR_TRN_DED::AMOUNT	= AMOUNT
+
+		PUT #PR_TRN_DED.CH%
+	END IF
+
+	! SUI
+423	AMOUNT = VAL(Y$(8%))/100.0
+	IF AMOUNT <> 0.0
+	THEN
+		PR_TRN_DED::DTYPE	= "C"
+		PR_TRN_DED::CODE	= "SI"
+		PR_TRN_DED::TAX_CODE	= PR_EMP_MASTER::TAX_PKG
+		PR_TRN_DED::AMOUNT	= AMOUNT
+
+		PUT #PR_TRN_DED.CH%
+	END IF
+
+	! State
+424	AMOUNT = VAL(Y$(9%))/100.0
+	IF AMOUNT <> 0.0
+	THEN
+		PR_TRN_DED::DTYPE	= "C"
+		PR_TRN_DED::CODE	= "SW"
+		PR_TRN_DED::TAX_CODE	= PR_EMP_MASTER::TAX_PKG
+		PR_TRN_DED::AMOUNT	= AMOUNT
+
+		PUT #PR_TRN_DED.CH%
+	END IF
+
+	! City
+425	AMOUNT = VAL(Y$(10%))/100.0
+	IF AMOUNT <> 0.0
+	THEN
+		PR_TRN_DED::DTYPE	= "C"
+		PR_TRN_DED::CODE	= "CW"
+		PR_TRN_DED::TAX_CODE	= PR_EMP_MASTER::TAX_PKG
+		PR_TRN_DED::AMOUNT	= AMOUNT
+
+		PUT #PR_TRN_DED.CH%
+	END IF
+
+	!
+	! Manual Deductions
+	!
+	D$ = Y$(18%)
+	A$ = Y$(19%)
+430	I% = INSTR(1%, D$, CHR$(253%))
+
+	IF I%
+	THEN
+		D1$ = LEFT(D$, I% - 1%)
+		D$ = RIGHT(D$, I% + 1%)
+
+		I% = INSTR(1%, A$, CHR$(253%))
+		AMOUNT = VAL(LEFT(A$, I% - 1%))/100.0
+		A$ = RIGHT(A$, I% + 1%)
+
+		PR_TRN_DED::DTYPE	= "D"
+		PR_TRN_DED::CODE	= D1$
+		PR_TRN_DED::TAX_CODE	= ""
+		PR_TRN_DED::AMOUNT	= AMOUNT
+
+		PUT #PR_TRN_DED.CH%
+
+		GOTO 430
+	END IF
+
+	GOTO 200
+
+19000	SELECT ERL
+		CASE 300%
+			PRINT "!!Undefined customer!"; Y$(2%); Y$(3%)
+			RESUME 310
+
+		CASE 400%
+			PRINT "   Adjust Pay Date"
+			PAY_DATE$ = DATE_INVDCODE( &
+				DATE_DAYCODE(PAY_DATE$) + 1%)
+			RESUME 400 IF ERR=134%
+	END SELECT
+
+	ON ERROR GOTO 0
+
+	END

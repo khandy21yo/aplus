@@ -1,0 +1,17 @@
+	!------------------------------------------------------------------
+	! Open up general ledger budget file for year
+	!------------------------------------------------------------------
+
+	OLD_PROT$ = READ_CURPROTECTION
+	CALL WRIT_CURPROTECTION(GL_BUDGET.PRO$)
+
+	OPEN GL_BUDGET.DEV$ + "GL_BUD_" + GL_BUDGET.YEAR$ + ".MAS" &
+		AS FILE GL_BUDGET.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_BUDGET, &
+		PRIMARY KEY GL_BUDGET::ACCT, &
+		ACCESS MODIFY, &
+		ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

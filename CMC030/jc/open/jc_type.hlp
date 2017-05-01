@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Job Type Description file is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*JC__TYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Job Costing System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Job Type Description file
+	!--
+	!++
+	! Abstract:FILE
+	!	^*JC__TYPE.TBL\*
+	!	.p
+	!	Job Type Description file.
+	!
+	! Index:
+	!	.x Job Type Description file
+	!	.x JC_TYPE
+	!--

@@ -1,0 +1,147 @@
+1	%TITLE "Return the File Name of the Current Image"
+	%SBTTL "READ_SYSPN"
+	%IDENT "V3.3"
+
+	FUNCTION STRING READ_SYSPN
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function returns the name of the current image.
+	!
+	! Index:
+	! Parameters:
+	!
+	!	This function returns the file name of the current image.
+	!
+	! Example:
+	!
+	!	IMAGE$ = READ_SYSPN
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:READ_SYSPN/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP READ_SYSPN
+	!	$ DELETE READ_SYSPN.OBJ;*
+	!
+	! Author:
+	!
+	!	09/18/86 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!	07/03/89 - Kevin Handy
+	!		Modified so that map's were not needed, and
+	!		the function can reside in the sharable library.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	SYS_STAT
+	!		Integer used to get the sys call.
+	!
+	!	FSCN$_NAME
+	!		Variable used to strip off parts of the name.
+	!
+	!	IO_BUF(6%)
+	!		Array used to strip off all but program name.
+	!
+	!	NAME.BUFFER$
+	!		String used to parse file name.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	EXTERNAL LONG FUNCTION LIB$GETJPI
+	EXTERNAL LONG FUNCTION SYS$FILESCAN
+	EXTERNAL LONG CONSTANT JPI$_IMAGNAME, SS$_NORMAL
+
+	DECLARE LONG SYS_STAT
+	DECLARE LONG CONSTANT FSCN$_NAME = 6
+
+	RECORD IOBUF_RECORD
+		VARIANT
+		CASE
+			LONG IO_BUF(6%)
+		CASE
+			WORD IO_BUF_W(12%)
+		END VARIANT
+	END RECORD
+
+	DECLARE IOBUF_RECORD IOBUF
+
+	RECORD NAME_RECORD
+		STRING NAME_BUFFER = 50%
+	END RECORD
+
+	DECLARE NAME_RECORD NAME_BUFFER
+
+	!
+	! Get the sys call and convert to integer
+	!
+	SYS_STAT	= LIB$GETJPI		&
+	(					&
+		JPI$_IMAGNAME BY REF,,,,	&
+		IN_VAL$       BY DESC		&
+	)
+
+	IF (SYS_STAT <> SS$_NORMAL)
+	THEN
+		READ_SYSPN = ""
+	ELSE
+		!
+		! File name to parse
+		!
+		NAME_BUFFER::NAME_BUFFER = IN_VAL$
+
+		!
+		! Strip off all but the program name
+		!
+		IOBUF::IO_BUF_W(1%)	= FSCN$_NAME
+		IOBUF::IO_BUF_W(0%)	= 0%
+		IOBUF::IO_BUF(1%)	= 0%
+		IOBUF::IO_BUF(2%)	= 0%
+		IOBUF::IO_BUF(3%)	= 0%
+		SYS_STATUS	= SYS$FILESCAN( &
+			NAME_BUFFER::NAME_BUFFER BY DESC, &
+			IOBUF::IO_BUF() BY REF, SYS1_STATUS)
+		TEMP_LONG	= IOBUF::IO_BUF(1%)
+		TEMP1_LONG	= LOC(NAME_BUFFER::NAME_BUFFER)
+		TEMP_LONG	= TEMP_LONG - TEMP1_LONG + '1'L
+
+		!
+		! Return the program name
+		!
+		READ_SYSPN = MID(NAME_BUFFER::NAME_BUFFER, &
+			TEMP_LONG, IOBUF::IO_BUF_W(0%))
+	END IF
+
+	END FUNCTION

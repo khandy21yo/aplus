@@ -1,0 +1,512 @@
+	!++
+	! Error:5
+	!	^*The Payroll Forms is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__FORM.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under UTILITY run process again.
+	!
+	! Index:
+	!	.x Payroll Forms
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__FORM.MAS\*
+	!	.p
+	!	Payroll Forms.
+	!
+	! Index:
+	!	.x Payroll Forms
+	!	.x PR_FORM
+	!--
+	!++
+	! Abstract:PRLABL
+	!	^*Employee Labels\*
+	!	.LIST ELEMENT
+	!	^*PR__EMP__MASTER::EMPNUM\* - Employee number
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNAME\* - Employee name
+	!	.le
+	!	^*PR__EMP__MASTER::ADD1\* - Street address
+	!	.le
+	!	^*PR__EMP__MASTER::ADD2\* - Post office box
+	!	.le
+	!	^*PR__EMP__MASTER::CITY\* - City
+	!	.le
+	!	^*PR__EMP__MASTER::STATE\* - FIPS postal abbreviation
+	!	.le
+	!	^*PR__EMP__MASTER::ZIP\* - Zip code
+	!	.le
+	!	^*PR__EMP__MASTER::COUNTRY\* - Country
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE1\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE2\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE3\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER::PHONE\* - Telephone number
+	!	.le
+	!	^*PR__EMP__MASTER::SSN\* - Social security number
+	!	.le
+	!	^*PR__EMP__MASTER::SORT\* - Alpha sort key
+	!	.le
+	!	^*PR__EMP__MASTER::SUBACC\* - Default sub account number for costing
+	!	.le
+	!	^*PR__EMP__MASTER::ACCT\* - Default account number
+	!	.le
+	!	^*PR__EMP__MASTER::TRADE\* - Default trade
+	!	.le
+	!	^*PR__EMP__MASTER::OPER\* - Operation
+	!	.le
+	!	^*PR__EMP__MASTER::UNION\* - Default union code
+	!	.le
+	!	^*PR__EMP__MASTER::LOCATION\* - Location
+	!	.le
+	!	^*PR__EMP__MASTER::DEPT\* - Default department
+	!	.le
+	!	^*PR__EMP__MASTER::WORK__CENTER\* - Work center
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__SKILL\* - Employee skill
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__GRADE\* - Employee grade
+	!	.le
+	!	^*PR__EMP__MASTER::DISABLED\* - Disabled (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::PAYFREQ\* - Number of pay periods in a year
+	!	.le
+	!	^*PR__EMP__MASTER::SUI__SW\* - State unemployment code
+	!	.le
+	!	^*PR__EMP__MASTER::TAX__PKG\* - Tax package
+	!	.le
+	!	^*PR__EMP__MASTER::W2__1099\* - W2 = N, 1099 = Y
+	!	.le
+	!	^*PR__EMP__MASTER::BIRTH\* - Employee birthday
+	!	.le
+	!	^*PR__EMP__MASTER::HIREDAY\* - Employee hire date
+	!	.le
+	!	^*PR__EMP__MASTER::TERMDAY\* - Employee termination date
+	!	.le
+	!	^*PR__EMP__MASTER::SEX\* - M = Male, F = Female
+	!	.le
+	!	^*PR__EMP__MASTER::RACE\* - B=Black,H=Hisp,O=Orien,I=Indian,W=White
+	!	.le
+	!	^*PR__EMP__MASTER::USCIT\* - US Citizen (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::WRKPERMIT\* - Work permit number
+	!	.le
+	!	^*PR__EMP__MASTER::HOMCNTRY\* - Home country
+	!	.le
+	!	^*PR__EMP__MASTER::ACTIVE__FLAG\* - Active (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::RATE__TYPE\* - Default rate type
+	!	.le
+	!	^*PR__EMP__MASTER::RATE__CDE\* - Default rate code
+	!	.le
+	!	^*PR__EMP__MASTER::WC\* - Workmen comp code
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Department Profile
+	!	.lm 10
+	!	.b
+	!	.list 0, "o"
+	!	.le
+	!	^*UTL__DEPARTMENT::LOCATION\* - Location number
+	!	.le
+	!	^*UTL__DEPARTMENT::DEPT__NUM\* - Department number
+	!	.le
+	!	^*UTL__DEPARTMENT::DESCRIPTION\* - Department name
+	!	.le
+	!	^*UTL__DEPARTMENT::DEPGROUP\* - Department group number
+	!	.le
+	!	^*UTL__DEPARTMENT::PHONE\* - Phone number
+	!	.le
+	!	^*UTL__DEPARTMENT::SUPERVISOR\* - Department supervisor
+	!	.le
+	!	^*REPDATE\* -
+	!	.end list
+	!	.lm -10
+	!
+	! Index:
+	!
+	!--
+	!++
+	! Abstract:PRCHK
+	!	^*Print Payroll Check Using a Form\*
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNUM\* - Employee number
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNAME\* - Employee name
+	!	.le
+	!	^*PR__EMP__MASTER::ADD1\* - Street address
+	!	.le
+	!	^*PR__EMP__MASTER::ADD2\* - Post office box
+	!	.le
+	!	^*PR__EMP__MASTER::CITY\* - City
+	!	.le
+	!	^*PR__EMP__MASTER::STATE\* - FIPS postal abbreviation
+	!	.le
+	!	^*PR__EMP__MASTER::ZIP\* - Zip code
+	!	.le
+	!	^*PR__EMP__MASTER::COUNTRY\* - Country
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE1\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE2\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE3\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER::PHONE\* - Telephone number
+	!	.le
+	!	^*PR__EMP__MASTER::SSN\* - Social security number
+	!	.le
+	!	^*PR__EMP__MASTER::SORT\* - Alpha sort key
+	!	.le
+	!	^*PR__EMP__MASTER::SUBACC\* - Default sub account number for costing
+	!	.le
+	!	^*PR__EMP__MASTER::ACCT\* - Default account number
+	!	.le
+	!	^*PR__EMP__MASTER::TRADE\* - Default trade
+	!	.le
+	!	^*PR__EMP__MASTER::OPER\* - Operation
+	!	.le
+	!	^*PR__EMP__MASTER::UNION\* - Default union code
+	!	.le
+	!	^*PR__EMP__MASTER::LOCATION\* - Location
+	!	.le
+	!	^*PR__EMP__MASTER::DEPT\* - Default department
+	!	.le
+	!	^*PR__EMP__MASTER::WORK__CENTER\* - Work center
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__SKILL\* - Employee skill
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__GRADE\* - Employee grade
+	!	.le
+	!	^*PR__EMP__MASTER::DISABLED\* - Disabled (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::PAYFREQ\* - Number of pay periods in a year
+	!	.le
+	!	^*PR__EMP__MASTER::SUI__SW\* - State unemployment code
+	!	.le
+	!	^*PR__EMP__MASTER::TAX__PKG\* - Tax package
+	!	.le
+	!	^*PR__EMP__MASTER::W2__1099\* - W2 = N, 1099 = Y
+	!	.le
+	!	^*PR__EMP__MASTER::BIRTH\* - Employee birthday
+	!	.le
+	!	^*PR__EMP__MASTER::HIREDAY\* - Employee hire date
+	!	.le
+	!	^*PR__EMP__MASTER::TERMDAY\* - Employee termination date
+	!	.le
+	!	^*PR__EMP__MASTER::SEX\* - M = Male, F = Female
+	!	.le
+	!	^*PR__EMP__MASTER::RACE\* - B=Black,H=Hisp,O=Orien,I=Indian,W=White
+	!	.le
+	!	^*PR__EMP__MASTER::USCIT\* - US Citizen (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::WRKPERMIT\* - Work permit number
+	!	.le
+	!	^*PR__EMP__MASTER::HOMCNTRY\* - Home country
+	!	.le
+	!	^*PR__EMP__MASTER::ACTIVE__FLAG\* - Active (Y/N)
+	!	.le
+	!	^*NET__CHECK\* -
+	!	.le
+	!	^*CHECK__NUMBER\* -
+	!	.le
+	!	^*CHECK__DATE\* -
+	!	.le
+	!	^*RTYPE\* -
+	!	.le
+	!	^*CODE\* -
+	!	.le
+	!	^*HOUR__RATE\* -
+	!	.le
+	!	^*PIECE__RATE\* -
+	!	.le
+	!	^*FACTOR\* -
+	!	.le
+	!	^*STDEFF\* -
+	!	.end list
+	!	.lm -10
+	!
+	! Index:
+	!
+	!--
+	!++
+	! Abstract:PRSUTA
+	!	^*Print Payroll Transmittal Using a Form\*
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Employee Master File
+	!	.lm 10
+	!	.b
+	!	.list 0, "o"
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNUM\* - Employee number
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNAME\* - Employee name
+	!	.le
+	!	^*PR__EMP__MASTER::ADD1\* - Street address
+	!	.le
+	!	^*PR__EMP__MASTER::ADD2\* - Post office box
+	!	.le
+	!	^*PR__EMP__MASTER::CITY\* - City
+	!	.le
+	!	^*PR__EMP__MASTER::STATE\* - FIPS postal abbreviation
+	!	.le
+	!	^*PR__EMP__MASTER::ZIP\* - Zip code
+	!	.le
+	!	^*PR__EMP__MASTER::COUNTRY\* - Country
+	!	.le
+	!	^*PR__EMP__MASTER::PHONE\* - Telephone number
+	!	.le
+	!	^*PR__EMP__MASTER::SSN\* - Social security number
+	!	.le
+	!	^*PR__EMP__MASTER::SSN__1\* -
+	!	.le
+	!	^*PR__EMP__MASTER::SSN__2\* -
+	!	.le
+	!	^*PR__EMP__MASTER::SSN__3\* -
+	!	.le
+	!	^*PR__EMP__MASTER::SORT\* - Alpha sort key
+	!	.le
+	!	^*PR__EMP__MASTER::SUBACC\* - Default sub account number for costing
+	!	.le
+	!	^*PR__EMP__MASTER::ACCT\* - Default account number
+	!	.le
+	!	^*PR__EMP__MASTER::TRADE\* - Default trade
+	!	.le
+	!	^*PR__EMP__MASTER::OPER\* - Operation
+	!	.le
+	!	^*PR__EMP__MASTER::UNION\* - Default union code
+	!	.le
+	!	^*PR__EMP__MASTER::LOCATION\* - Location
+	!	.le
+	!	^*PR__EMP__MASTER::DEPT\* - Default department
+	!	.le
+	!	^*PR__EMP__MASTER::WORK__CENTER\* - Work center
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__SKILL\* - Employee skill
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__GRADE\* - Employee grade
+	!	.le
+	!	^*PR__EMP__MASTER::DISABLED\* - Disabled (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::PAYFREQ\* - Number of pay periods in a year
+	!	.le
+	!	^*PR__EMP__MASTER::SUI__SW\* - State unemployment code
+	!	.le
+	!	^*PR__EMP__MASTER::TAX__PKG\* - Tax package
+	!	.le
+	!	^*PR__EMP__MASTER::W2__1099\* - W2 = N, 1099 = Y
+	!	.le
+	!	^*PR__EMP__MASTER::BIRTH\* - Employee birthday
+	!	.le
+	!	^*PR__EMP__MASTER::HIREDAY\* - Employee hire date
+	!	.le
+	!	^*PR__EMP__MASTER::TERMDAY\* - Employee termination date
+	!	.le
+	!	^*PR__EMP__MASTER::SEX\* - M = Male, F = Female
+	!	.le
+	!	^*PR__EMP__MASTER::RACE\* - B=Black,H=Hisp,O=Orien,I=Indian,W=White
+	!	.le
+	!	^*PR__EMP__MASTER::USCIT\* - US Citizen (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::WRKPERMIT\* - Work permit number
+	!	.le
+	!	^*PR__EMP__MASTER::HOMCNTRY\* - Home country
+	!	.le
+	!	^*PR__EMP__MASTER::ACTIVE__FLAG\* - Active (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::RATE__TYPE\* - Default rate type
+	!	.le
+	!	^*PR__EMP__MASTER::RATE__CDE\* - Default rate code
+	!	.le
+	!	^*PR__EMP__MASTER::WC\* - Workmen comp code
+	!	.le
+	!	^*PR__EMP__MASTER::REHIRE__FLAG\* - Rehire this person flag (Y/N)
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Payroll Tax Profile - Federal
+	!	.lm 10
+	!	.b
+	!	.list 0, "o"
+	!	.le
+	!	^*PR__TAX__PROFILE__F::REPNO\* -
+	!	.le
+	!	^*PR__TAX__PROFILE__F::MIN__WAGE\* - Minimum wage
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Payroll Tax Profile - State
+	!	.lm 10
+	!	.b
+	!	.list 0, "o"
+	!	.le
+	!	^*PR__TAX__PROFILE__S::REPNO\* -
+	!	.le
+	!	^*STATE__ID__NUMBER\* -
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Location Profile
+	!	.lm 10
+	!	.b
+	!	.list 0, "o"
+	!	.le
+	!	^*UTL__LOCATION::LOCNAME\* - Location name
+	!	.le
+	!	^*UTL__LOCATION::ADDRESS1\* - Address (street)
+	!	.le
+	!	^*UTL__LOCATION::ADDRESS2\* - Address (P.O.Box)
+	!	.le
+	!	^*UTL__LOCATION::CITY\* - City
+	!	.le
+	!	^*UTL__LOCATION::STATE\* - State
+	!	.le
+	!	^*UTL__LOCATION::ZIP\* - Zip code
+	!	.le
+	!	^*PAGE\* -
+	!	.le
+	!	^*QTR__WAGES\* -
+	!	.le
+	!	^*TOTAL\* -
+	!	.le
+	!	^*TOTAL__PAGE\* -
+	!	.le
+	!	^*MAGNETIC__MEDIA\* -
+	!	.le
+	!	^*QTR\* -
+	!	.le
+	!	^*YEAR\* -
+	!	.le
+	!	^*YEAR__ALL\* -
+	!	.end list
+	!	.lm -10
+	!
+	! Index:
+	!
+	!--
+	!++
+	! Abstract:PRTRAN
+	!	^*Print Payroll Transmittal Using a Form\*
+	!	.els
+	!	.lm -10
+	!	.p
+	!	Employee Master File
+	!	.lm 10
+	!	.b
+	!	.list 0, "o"
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNUM\* - Employee number
+	!	.le
+	!	^*PR__EMP__MASTER::EMPNAME\* - Employee name
+	!	.le
+	!	^*PR__EMP__MASTER::ADD1\* - Street address
+	!	.le
+	!	^*PR__EMP__MASTER::ADD2\* - Post office box
+	!	.le
+	!	^*PR__EMP__MASTER::CITY\* - City
+	!	.le
+	!	^*PR__EMP__MASTER::STATE\* - FIPS postal abbreviation
+	!	.le
+	!	^*PR__EMP__MASTER::ZIP\* - Zip code
+	!	.le
+	!	^*PR__EMP__MASTER::COUNTRY\* - Country
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE1\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE2\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER.ADDLINE3\* - Substitute employee address
+	!	.le
+	!	^*PR__EMP__MASTER::PHONE\* - Telephone number
+	!	.le
+	!	^*PR__EMP__MASTER::SSN\* - Social security number
+	!	.le
+	!	^*PR__EMP__MASTER::SORT\* - Alpha sort key
+	!	.le
+	!	^*PR__EMP__MASTER::SUBACC\* - Default sub account number for costing
+	!	.le
+	!	^*PR__EMP__MASTER::ACCT\* - Default account number
+	!	.le
+	!	^*PR__EMP__MASTER::TRADE\* - Default trade
+	!	.le
+	!	^*PR__EMP__MASTER::OPER\* - Operation
+	!	.le
+	!	^*PR__EMP__MASTER::UNION\* - Default union code
+	!	.le
+	!	^*PR__EMP__MASTER::LOCATION\* - Location
+	!	.le
+	!	^*PR__EMP__MASTER::DEPT\* - Default department
+	!	.le
+	!	^*PR__EMP__MASTER::WORK__CENTER\* - Work center
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__SKILL\* - Employee skill
+	!	.le
+	!	^*PR__EMP__MASTER::EMP__GRADE\* - Employee grade
+	!	.le
+	!	^*PR__EMP__MASTER::DISABLED\* - Disabled (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::PAYFREQ\* - Number of pay periods in a year
+	!	.le
+	!	^*PR__EMP__MASTER::SUI__SW\* - State unemployment code
+	!	.le
+	!	^*PR__EMP__MASTER::TAX__PKG\* - Tax package
+	!	.le
+	!	^*PR__EMP__MASTER::W2__1099\* - W2 = N, 1099 = Y
+	!	.le
+	!	^*PR__EMP__MASTER::BIRTH\* - Employee birthday
+	!	.le
+	!	^*PR__EMP__MASTER::HIREDAY\* - Employee hire date
+	!	.le
+	!	^*PR__EMP__MASTER::TERMDAY\* - Employee termination date
+	!	.le
+	!	^*PR__EMP__MASTER::SEX\* - M = Male, F = Female
+	!	.le
+	!	^*PR__EMP__MASTER::RACE\* - B=Black,H=Hisp,O=Orien,I=Indian,W=White
+	!	.le
+	!	^*PR__EMP__MASTER::USCIT\* - US Citizen (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::WRKPERMIT\* - Work permit number
+	!	.le
+	!	^*PR__EMP__MASTER::HOMCNTRY\* - Home country
+	!	.le
+	!	^*PR__EMP__MASTER::ACTIVE__FLAG\* - Active (Y/N)
+	!	.le
+	!	^*PR__EMP__MASTER::RATE__TYPE\* - Default rate type
+	!	.le
+	!	^*PR__EMP__MASTER::RATE__CDE\* - Default rate code
+	!	.le
+	!	^*PR__EMP__MASTER::WC\* - Workmen comp code
+	!	.le
+	!	^*RATE__TYPE\* -
+	!	.le
+	!	^*RATE__CDE\* -
+	!	.le
+	!	^*HOUR__RATE\* -
+	!	.le
+	!	^*PIECE__RATE\* -
+	!	.le
+	!	^*FACTOR\* -
+	!	.le
+	!	^*STDEFF\* -
+	!	.le
+	!	^*PR__END__DATE\* -
+	!	.le
+	!	^*PAGE\* -
+	!	.els
+	!	.lm -10
+	!
+	! Index:
+	!
+	!--

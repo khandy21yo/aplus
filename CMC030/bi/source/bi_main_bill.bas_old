@@ -1,0 +1,608 @@
+1	%TITLE "Billing Insurance Bill Header Maintenance"
+	%SBTTL "BI_MAIN_BILL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_BILL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Journal Entry\* option provides the means to enter
+	!	billing data to be billed to a specific insurance carrier.
+	!	The screen also contains a function in the COMMAND Menu,
+	!	Service, where medical service information may be entered.
+	!
+	! Index:
+	!	.x Journal Entry
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_BILL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_MAIN_BILL
+	!	$ DELETE BI_MAIN_BILL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/03/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	07/15/91 - Removed error trapping for 5000, which doesn't exist.
+	!
+	!	03/16/92 - Dan Perkins
+	!		Allow for processing batches.
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_PATIENT.HB"
+	MAP	(BI_PATIENT)	BI_PATIENT_CDD	BI_PATIENT
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.HB"
+	MAP	(BI_INSURED)	BI_INSURED_CDD	BI_INSURED
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLH.HB"
+	MAP	(BI_BILLH)	BI_BILLH_CDD	BI_BILLH
+	MAP	(BI_BILLH_OLD)	BI_BILLH_CDD	BI_BILLH_OLD, BI_BILLH2
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BI_BILLH) &
+		BATCH_NO$ = 2%, &
+		BI_BILLH.CH%, &
+		BI_BILLH.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Billing Insurance Journal"
+		SMG_WINDOW::NHELP = "BI_MAIN_BILL"
+		SMG_WINDOW::HSIZE = 77%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 5%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Patient"
+			SMG_WINDOW::KFIELD(0%, 0%) = 2%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BI_BILLH.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BI_BILLH.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BI.OPEN]BI_BILLH.CRE"
+		BI_BILLH.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_BILLH.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BI_BILLH.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BI_BILLH.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BI_BILLH.CH%
+		RESET #BI_BILLH.CH%
+		GET #BI_BILLH.CH%, REGARDLESS
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+	!******************************************************************
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	2, 5, "(01) Patient", &
+			3, 5, "(02) Insured", &
+			4, 5, "(03) Stationman", &
+			6, 5, "(04) Invoice Date", &
+			7, 5, "(05) Invoice #", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!******************************************************************
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Reenter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Patient\*
+	!	.p
+	!	  The ^*Patient\* field provides the means to enter the code which
+	!	will identify a particular patient.
+	!	.p
+	!	The field will accommodate ten (10) alphanumeric characters.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at
+	!	this field will display a list of valid patient codes.
+	!
+	! Index:
+	!	.x Patient
+	!
+	!--
+
+			BI_BILLH::PATIENT= ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;30", TEMP$, &
+				BI_BILLH::PATIENT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(BI_MAIN_INSURED.ID, "V0  ") = 1%)
+				THEN
+					BI_BILLH::PATIENT = &
+						BI_INSURED::INSURED
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Insured\*
+	!	.p
+	!	The ^*Insured\* field contains the code for
+	!	a particular insured person.
+	!	.p
+	!	The field will accommodate ten (10) alphanumeric characters.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located
+	!	at this field will display a list of valid insured codes.
+	!
+	! Index:
+	!	.x Insured
+	!
+	!--
+
+			BI_BILLH::INSURED = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;30", TEMP$, &
+				BI_BILLH::INSURED, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(BI_MAIN_INSURED.ID, "V0  ") = 1%)
+				THEN
+					BI_BILLH::INSURED = &
+						BI_INSURED::INSURED
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Stationman\*
+	!	.p
+	!	The ^*Stationman\* field refers to the code
+	!	representing the person responsible for entering a particular
+	!	record.
+	!	.p
+	!	The field will accept ten (10) alphanumeric characters.
+	!
+	! Index:
+	!	.x Stationman
+	!
+	!--
+
+			BI_BILLH::STATIONMAN = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"04;30", TEMP$, &
+				BI_BILLH::STATIONMAN, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Invoice Date\*
+	!	.p
+	!	The ^*Invoice Date\* field is provided to enter the date
+	!	which will be printed on the invoice.
+	!	.p
+	!	The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x Invoice Date
+	!	.x Date>Invoice
+	!
+	!--
+
+			BI_BILLH::INVDATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"06;30", TEMP$, &
+				BI_BILLH::INVDATE, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Invoice _#\*
+	!	.p
+	!	The ^*Invoice _#\* field provides the means to enter the
+	!	invoice _# which will appear on the invoice which
+	!	will be printed.
+	!
+	! Index:
+	!	.x Invoice Number
+	!	.x Number>Invoice
+	!
+	!--
+
+			BI_BILLH::INVNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"07;30", TEMP$, &
+				BI_BILLH::INVNUM, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BI_MAIN_BILL = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			!
+			! Is the input defined?
+			!
+			BI_MAIN_BILL = FUNC_TESTENTRY(SMG_WINDOW, &
+					BI_BILLH::PATIENT, &
+					BI_INSURED::INSNAME, &
+					"BI", MLOOP, "INSURED", &
+					"Patient Number", BI_MAIN_INSURED.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				BI_INSURED::INSNAME, &
+				2%, 47%, , SMG$M_BOLD)
+
+		CASE 2%
+			!
+			! Is the input defined?
+			!
+			BI_MAIN_BILL = FUNC_TESTENTRY(SMG_WINDOW, &
+				BI_BILLH::INSURED, &
+				BI_INSURED::INSNAME, &
+				"BI", MLOOP, "INSURED", &
+				"Insured Number", BI_MAIN_INSURED.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				BI_INSURED::INSNAME, &
+				3%, 47%, , SMG$M_BOLD)
+
+			IF (MVALUE = "ADD")
+			THEN
+				GET #BI_BILLH.CH%, &
+					KEY#0% EQ BI_BILLH::PATIENT + &
+					BI_BILLH::INSURED, &
+					REGARDLESS
+
+				BI_MAIN_BILL = 2%
+				CALL ENTR_3MESSAGE(SCOPE, &
+					"Record Already Exists", 1%)
+			END IF
+
+		END SELECT
+
+	!
+	! Display additional information
+	!
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(BI_MAIN_INSURED.ID, "Q0" + &
+				BI_BILLH::PATIENT) <> 1%
+			THEN
+				BI_INSURED::INSNAME = &
+					STRING$(LEN(BI_INSURED::INSNAME), &
+					ASCII("?"))
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				BI_INSURED::INSNAME, &
+				2%, 47%, , SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(BI_MAIN_INSURED.ID, "Q0" + &
+				BI_BILLH::INSURED) <> 1%
+			THEN
+				BI_INSURED::INSNAME = &
+					STRING$(LEN(BI_INSURED::INSNAME), &
+					ASCII("?"))
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				BI_INSURED::INSNAME, &
+				3%, 47%, , SMG$M_BOLD)
+		END IF
+
+	!
+	! Set BI_BILLH_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BI_BILLH_OLD = BI_BILLH
+
+	!
+	! Restore BI_BILLH_OLD value
+	!
+	CASE OPT_RESETOLD
+		BI_BILLH = BI_BILLH_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BI_BILLH2 = BI_BILLH
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BI_BILLH = BI_BILLH2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Patient#      InsCarrier InvNum"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "016,027"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = BI_BILLH::PATIENT+ " " + &
+				BI_BILLH::INSURED+" "+ &
+				BI_BILLH::INVNUM
+
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BI_BILLH.CH%, &
+				KEY#0% GE BI_BILLH::PATIENT + &
+				BI_BILLH::INSURED, &
+				REGARDLESS
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BI_MAIN_BILL = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BI_MAIN_BILL = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+29900	!
+	! Handle no header for Line function here
+	!
+	CALL ENTR_3MESSAGE(SCOPE, &
+		"Sorry, but there is no current header item", 0%)
+	GOTO 32767
+
+32767	END FUNCTION
+	!+-+-+
+	! More menu option hidden in MAST.
+	!++
+	! Abstract:SERVICE
+	!	^*Service\*
+	!	.p
+	!	The ^*Service\* option in the COMMAND menu provides the means to enter the
+	!	service completed, the date completed, the amount, and the diagnosis for
+	!	the specified client.
+	!
+	! Index:
+	!	.x Service
+	!
+	!--

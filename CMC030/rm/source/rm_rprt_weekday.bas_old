@@ -1,0 +1,558 @@
+1	%TITLE "Sales or Labor on Selected Day"
+	%SBTTL "RM_RPRT_WEEKDAY"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM004
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Weekday Scan\* program prints out Restaurant Report Sales or Labor
+	!	on a selected weekday. This report contains the following fields:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	Location
+	!	.le
+	!	Time
+	!	.le
+	!	Weekly Date
+	!	.le
+	!	Average
+	!	.els
+	!
+	! Index:
+	!	.x Weekday Scan Report
+	!	.x Report>Weekday Scan
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_WEEKDAY/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_WEEKDAY, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_WEEKDAY.OBJ;*
+	!
+	! Author:
+	!
+	!	10/06/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.HB"
+	MAP	(RM_HISTORY)	RM_HISTORY_CDD		RM_HISTORY
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	DIM INTEGER POSITION(95%,15%,1%), REAL COL.TOTAL(15%,1%)
+
+	!
+ Init:	! Initilize report
+	!
+	PRINT.WIDTH% = 132%
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, PRINT.WIDTH%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	CATEGORY$ = EDIT$(UTL_REPORTX::OPTDEF(4%), 132%)
+	TO.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+
+300	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.OPN"
+
+310	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+	DAY.WEEK$(1%) = "M O N D A Y           "
+	DAY.WEEK$(2%) = "T U E S D A Y         "
+	DAY.WEEK$(3%) = "W E D N E S D A Y     "
+	DAY.WEEK$(4%) = "T H U R S D A Y       "
+	DAY.WEEK$(5%) = "F R I D A Y           "
+	DAY.WEEK$(6%) = "S A T U R D A Y       "
+	DAY.WEEK$(7%) = "S U N D A Y           "
+
+	TO_DATE% = DATE_DAYCODE(TO.DATE$)
+	FROM_DATE% = TO_DATE% - 105%
+
+	HEADER.LINE2$ = DAY.WEEK$(DATE_DAYOFWEEK(FROM_DATE%))
+
+	HEADER.LINE3$ = "TIME  "
+	FOR I%=0% TO 15%
+		HEADER.LINE3$ = HEADER.LINE3$+ &
+			"   "+RIGHT(DATE_INVDCODE(TO_DATE%-7%*I%),5%)
+	NEXT I%
+	HEADER.LINE3$ = HEADER.LINE3$ + SPACE$(11%) + "AVE"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "ONE  DAY  SCAN  HALF  HOUR"
+
+	SELECT CATEGORY$
+
+	CASE "01"
+		TITLE$(1%) = TITLE$(1%)+"  PROJECTED  SALES"
+	CASE "02"
+		TITLE$(1%) = TITLE$(1%)+"  ACTUAL  SALES"
+	CASE "03"
+		TITLE$(1%) = TITLE$(1%)+"  PROJECTED  LABOR"
+	CASE "04"
+		TITLE$(1%) = TITLE$(1%)+"  ACTUAL  LABOR"
+	END SELECT
+
+	TITLE$(2%) = HEADER.LINE2$
+	TITLE$(3%) = "Restaurant Management System"
+	TITLE$(4%) = ""
+
+	TITLE$(6%) = HEADER.LINE3$
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #RM_HISTORY.CH%
+	ELSE
+		FIND #RM_HISTORY.CH%, KEY#0% GE CATEGORY$+FROM.ITEM$,REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #RM_HISTORY.CH%, REGARDLESS
+
+	TEST_STORE$ = RM_HISTORY::LOCATION
+
+	GOTO 17350 IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(RM_HISTORY::LOCATION,-1%), WLDCRD$) = 0%
+
+	GOTO ExitTotal IF (RM_HISTORY::LOCATION > TO.ITEM$) AND &
+		TO.ITEM$ <> ""
+
+	!
+	! Set variables to zero
+	!
+	GOSUB 18000
+
+17030	UTL_LOCATION::LOCNAME = STRING$(40%,63%)
+	GET #UTL_LOCATION.CH%, KEY#0% EQ RM_HISTORY::LOCATION,REGARDLESS
+
+17040	TITLE$(5%) = LEFT("==== "+RM_HISTORY::LOCATION+" "+ &
+		EDIT$(UTL_LOCATION::LOCNAME,128%)+" "+ &
+		STRING$(PRINT.WIDTH%,ASCII("=")),PRINT.WIDTH%)
+
+
+	!
+	! Create array to print
+	!
+	FOR COLUMN% = 0% TO 15%
+
+		!
+		! Pick up a record
+		!
+		GOSUB 18100
+
+		DIFFTIM$ = TIME_ADD(RM_HISTORY::TIME_TO,"-", &
+				PRNT_TIME(RM_HISTORY::TIME_FROM,1%))
+		HOURS%   = VAL%(LEFT(DIFFTIM$,2%))
+		MINUT%   = VAL%(MID(DIFFTIM$,4%,2%))
+		HALF.HOURS% = 2% * HOURS% + SGN(MINUT%) + &
+			INT(MINUT%/31%)
+		HALF.HOURS% = 48% IF HOURS%=0%
+
+		DIFFTIM$ = TIME_ADD(RM_HISTORY::TIME_FROM,"-","00:00:00")
+		HOURS%   = VAL%(LEFT(DIFFTIM$,2%))
+		MINUT%   = VAL%(MID(DIFFTIM$,4%,2%))
+		FROM.HOURS% = 2% * HOURS% + SGN(MINUT%) + &
+			INT(MINUT%/31%)
+
+		I%=0%
+
+		FOR LINE% =FROM.HOURS% TO FROM.HOURS%+HALF.HOURS%-1%
+			POSITION(LINE%,15%-COLUMN%,0%) = &
+				RM_HISTORY::AMOUNT_QTY(I%)
+			POSITION(LINE%,15%-COLUMN%,1%) = 1%
+			I%=I%+1%
+		NEXT LINE%
+
+		LINE.TOP% = FROM.HOURS% &
+			IF LINE.TOP%>FROM.HOURS%
+		LINE.BOT% = LINE% &
+			IF LINE.BOT%<LINE%
+
+	NEXT COLUMN%
+
+17300	!
+	! Print array POSITION
+	!
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 999%)
+
+	FOR LINE%=LINE.TOP% TO LINE.BOT%
+
+		LINE.TOTAL = 0.
+		TEXT$ = LEFT(TIME_ADD("00:00:00","+",FORMAT$(30%*(LINE%+1%), &
+			":####:")),5%)+" "
+		FOR COLUMN%=0% TO 15%
+
+			IF POSITION(LINE%,COLUMN%,1%)=1%
+			THEN
+				COL.TOTAL(COLUMN%,1%) = 1.
+
+				IF CATEGORY$="03" OR CATEGORY$="04"
+				THEN
+					TEXT$ = TEXT$ + &
+					FORMAT$(0.01*POSITION(LINE%,COLUMN%,0%), &
+					" ###.##")
+					LINE.TOTAL = LINE.TOTAL + &
+						0.01*POSITION(LINE%,COLUMN%,0%)
+					COL.TOTAL(COLUMN%,0%) = &
+						COL.TOTAL(COLUMN%,0%) + &
+						0.01*POSITION(LINE%,COLUMN%,0%)
+				ELSE
+					TEXT$ = TEXT$ + &
+					FORMAT$(POSITION(LINE%,COLUMN%,0%), &
+					" ######")
+					LINE.TOTAL = LINE.TOTAL + &
+						POSITION(LINE%,COLUMN%,0%)
+					COL.TOTAL(COLUMN%,0%) = &
+						COL.TOTAL(COLUMN%,0%) + &
+						POSITION(LINE%,COLUMN%,0%)
+				END IF
+
+			ELSE
+				TEXT$ = TEXT$ + "       "
+			END IF
+
+		NEXT COLUMN%
+		AVE = 0.
+		AVE = AVE + POSITION(LINE%,J%,1%) &
+			FOR J%=0% TO 15%
+		IF AVE <> 0.
+		THEN
+			TEXT$ = TEXT$ +	FORMAT$(LINE.TOTAL/AVE,"       ####.##")
+		END IF
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -50%)
+
+	NEXT LINE%
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -50%)
+
+	AVE,TOTAL = 0.
+
+	TEXT$ = "TOTAL "
+
+	FOR COLUMN%=0% TO 14% STEP 2%
+
+		IF CATEGORY$="03" OR CATEGORY$="04"
+		THEN
+			TEXT$ = &
+				TEXT$ + FORMAT$(COL.TOTAL(COLUMN%,0%), &
+				"<%>###.##       ")
+		ELSE
+			TEXT$ = &
+				TEXT$ + FORMAT$(COL.TOTAL(COLUMN%,0%), &
+				"<%>######       ")
+		END IF
+
+		TOTAL = TOTAL + COL.TOTAL(COLUMN%,0%)
+	NEXT COLUMN%
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -50%)
+
+	TEXT$ = "TOTAL "
+
+	FOR COLUMN%=1% TO 15% STEP 2%
+
+		IF CATEGORY$="03" OR CATEGORY$="04"
+		THEN
+			TEXT$ = &
+				TEXT$ + FORMAT$(COL.TOTAL(COLUMN%,0%), &
+				"       <%>###.##")
+		ELSE
+			TEXT$ = &
+				TEXT$ + FORMAT$(COL.TOTAL(COLUMN%,0%), &
+				"       <%>######")
+		END IF
+
+		TOTAL = TOTAL +COL.TOTAL(COLUMN%,0%)
+
+	NEXT COLUMN%
+
+	AVE = AVE + COL.TOTAL(J%,1%) FOR J%=0% TO 15%
+	TEXT$ = TEXT$ + FORMAT$(TOTAL/AVE,"      <%>####.##") IF AVE<>0.
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -50%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17350	!
+	! Try for next record
+	!
+	GET #RM_HISTORY.CH%, &
+		KEY#0% GE CATEGORY$ + TEST_STORE$ + "99999999", &
+		REGARDLESS
+
+	GOTO ExitTotal IF RM_HISTORY::CATEGORY <> CATEGORY$
+
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+18000	!
+	! Set initial values
+	!
+	LINE.TOP% = 96%
+	LINE.BOT% = -1%
+
+	FOR J% = 0% TO 14%
+		FOR K% = 0% TO 1%
+			COL.TOTAL(J%,K%)   = 0.
+			POSITION(I%,J%,K%) = 0% FOR I%=0% TO 95%
+		NEXT K%
+	NEXT J%
+
+	RETURN
+
+18100	!
+	! Get Next Date
+	!
+	TEST_DATE$ = DATE_INVDCODE(FROM_DATE% + 7% * COLUMN%)
+
+	FIND #RM_HISTORY.CH%, KEY#0% EQ CATEGORY$+TEST_STORE$+TEST_DATE$, &
+		REGARDLESS
+
+	GET #RM_HISTORY.CH%, REGARDLESS
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 310%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 17030%	! End of file
+		RESUME 17040 IF ERR = 155%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 18100%	! Can't find next date
+		IF ERR = 155%
+		THEN
+			IF COLUMN%>15%
+			THEN
+				RESUME 17300
+			!
+			! Try next
+			!
+			ELSE
+				COLUMN% = COLUMN% + 1%
+				RESUME
+			END IF
+		END IF
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 17350%	! Can't find next store
+		RESUME ExitTotal
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Location\*
+	!	.p
+	!	A ^*From Location\* value entered in this field causes the printing of the
+	!	report to begin with the selected location.
+	!	.p
+	!	A blank field causes the report to start with the first location record in
+	!	the file.
+	!
+	! Index:
+	!	.x From Location
+	!	.x Location>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Location\*
+	!	.p
+	!	A ^*To Location\* value entered in this field causes the printing of the report
+	!	to end with the selected location.
+	!	.p
+	!	A blank field causes the report to end with the last location record in the
+	!	file.
+	!
+	! Index:
+	!	.x To Location
+	!	.x Location>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* setting enables the user to print a report including selected
+	!	Locations only using the Wildcarding technique.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Item\*
+	!	.p
+	!	The ^*Item\* field provides the means to enter the item or items which will
+	!	be printed on the report.  Wildcarding techniques may be used to indicate the
+	!	designated items.
+	!
+	! Index:
+	!	.x Item
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD06
+	!	^*(06) To Date\*
+	!	.p
+	!	The ^*To Date\* entered in this field causes the report to end with the selected
+	!	date.
+	!	.p
+	!	A blank field causes the report to print to the end of the file.
+	!	.p
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x To Date
+	!
+	!--

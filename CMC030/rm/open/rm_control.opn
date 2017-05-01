@@ -1,0 +1,14 @@
+	!======================================================================
+	! RM_CONTROL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(RM_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('RM_CONTROL',RM_CONTROL.DEV$, STAT%)
+
+	RM_CONTROL.NAME$ = RM_CONTROL.DEV$+"RM_CONTROL.CTR"
+
+	OPEN RM_CONTROL.NAME$ FOR INPUT AS FILE RM_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP RM_CONTROL, &
+		ACCESS READ, ALLOW MODIFY
+

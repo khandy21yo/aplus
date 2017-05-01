@@ -1,0 +1,34 @@
+1	! Product type change program
+	!
+	!	Converts product type FG to PP
+	!
+	! History
+	!
+	!	10/08/2001 - Kevin Handy
+	!		Original version
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT) PD_PRODUCT_CDD PD_PRODUCT
+
+100	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.MOD"
+
+200	RESET #PD_PRODUCT.CH%
+
+300	GET #PD_PRODUCT.CH%
+
+	IF PD_PRODUCT::PROD_TYPE = "FG"
+	THEN
+		PD_PRODUCT::PROD_TYPE = "PP"
+		UPDATE #PD_PRODUCT.CH%
+		PRINT "*";
+	ELSE
+		PRINT ".";
+	END IF
+
+	PRINT IF CCPOS(0%) >= 50%
+
+	GOTO 300
+
+32767	END

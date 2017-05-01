@@ -1,0 +1,20 @@
+	!======================================================================
+	! AR_CUSBAL file (create, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CUSBAL.CH_NEW%, STAT%)
+	CALL READ_DEVICE('AR_CUSBAL',AR_CUSBAL.DEV$, STAT%)
+
+	AR_CUSBAL.NAME_NEW$ = AR_CUSBAL.DEV$+"AR_CUSBAL.MAS_NEW"
+
+	OPEN AR_CUSBAL.NAME_NEW$ FOR OUTPUT AS FILE AR_CUSBAL.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CUSBAL, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			AR_CUSBAL::CUSNUM, &
+			AR_CUSBAL::ACCT &
+		)	, &
+		ACCESS MODIFY, ALLOW NONE
+

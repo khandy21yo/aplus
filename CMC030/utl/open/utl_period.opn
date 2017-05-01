@@ -1,0 +1,30 @@
+	!======================================================================
+	! UTL_PERIOD file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_PERIOD.CH%, STAT%)
+	CALL READ_DEVICE('UTL_PERIOD',UTL_PERIOD.DEV$, STAT%)
+
+	UTL_PERIOD.NAME$ = UTL_PERIOD.DEV$+"UTL_PERIOD.CTR"
+
+	OPEN UTL_PERIOD.NAME$ FOR INPUT AS FILE UTL_PERIOD.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_PERIOD, &
+		PRIMARY KEY &
+		( &
+			UTL_PERIOD::ERA, &
+			UTL_PERIOD::YEAR, &
+			UTL_PERIOD::CYCLE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			UTL_PERIOD::YEAR, &
+			UTL_PERIOD::CYCLE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			UTL_PERIOD::ERA, &
+			UTL_PERIOD::AGE &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

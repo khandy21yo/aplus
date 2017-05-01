@@ -1,0 +1,22 @@
+	!======================================================================
+	! PR_OVERHEAD_DEF file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_OVERHEAD_DEF.CH%, STAT%)
+	CALL READ_DEVICE('PR_OVERHEAD_DEF',PR_OVERHEAD_DEF.DEV$, STAT%)
+
+	PR_OVERHEAD_DEF.NAME$ = PR_OVERHEAD_DEF.DEV$+"PR_OVERHEAD_DEF.TBL"
+
+	OPEN PR_OVERHEAD_DEF.NAME$ FOR INPUT AS FILE PR_OVERHEAD_DEF.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_OVERHEAD_DEF, &
+		PRIMARY KEY &
+			PR_OVERHEAD_DEF::OVH_KEY &
+			DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			PR_OVERHEAD_DEF::SUBJ_ACCT, &
+			PR_OVERHEAD_DEF::OPER &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

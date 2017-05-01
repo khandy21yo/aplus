@@ -1,0 +1,37 @@
+	!======================================================================
+	! OS_REGHEADER file (create _new, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OS_REGHEADER.CH_NEW%, STAT%)
+	CALL READ_DEVICE('OS_REGHEADER',OS_REGHEADER.DEV$, STAT%)
+
+	OS_REGHEADER.NAME_NEW$ = OS_REGHEADER.DEV$+"OS_REGHEADER.HIS_NEW"
+
+	OPEN OS_REGHEADER.NAME_NEW$ FOR OUTPUT AS FILE OS_REGHEADER.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OS_REGHEADER, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			OS_REGHEADER::ORDNUM, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::ORDTYPE, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::ORDCAT, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::CUSNUM, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::BATCH, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

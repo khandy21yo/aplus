@@ -1,0 +1,704 @@
+1	%TITLE "Update a New Std Cost"
+	%SBTTL "RI_SPEC_COSTUPDATE"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Update Standard Cost\* provides the means to
+	!	complete the following two step procedure:
+	!	.lm +5
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Calculate the new standard cost for the product based
+	!	on the product structure and standard cost of selected
+	!	ingredients (by type) on the lowest level.
+	!	.b
+	!	.le
+	!	Compare the new standard cost with the current cost. If
+	!	the costs are not equal, a new record will automatically
+	!	be added into the Price _& Cost file.
+	!	.els
+	!
+	! Index:
+	!	.x Standard>Update Cost
+	!	.x Update Cost>Standard
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RI_SOURCE:RI_SPEC_COSTUPDATE/LINE
+	!	$ LINK/EXE=RI_EXE: RI_SPEC_COSTUPDATE, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RI_SPEC_COSTUPDATE.OBJ;*
+	!
+	! Author:
+	!
+	!	10/16/87 - Frank Starman
+	!
+	! Modification History:
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!		Changed SMG_ADD to SMG_ADD%.
+	!
+	!	10/28/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	06/02/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map file
+	!
+	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.HB"
+	MAP	(PC_COST)	PC_COST_CDD	PC_COST
+
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.HB"
+	MAP	(RI_RELATION)	RI_RELATION_CDD	RI_RELATION
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)	PD_PRODUCT_CDD	PD_PRODUCT
+
+	COM (CH_PC_COST) PC_COST.CH%
+
+	RECORD INGREDIENT_RECORD
+		STRING NUMBER   = 14%, &
+		REAL   QUANTITY
+	END RECORD
+
+	!
+	! External functions
+	!
+	EXTERNAL REAL   FUNCTION PC_READ_COST
+
+	DIM INGREDIENT_RECORD	INGREDIENT(5000%)
+	DIM RFA			RFA_LEVEL(200%)
+	DIM REAL		QTY_LEVEL(200%)
+	DIM STRING		TEST_PRODUCT(200%)
+
+	!
+	! Array for listing
+	!
+	DECLARE INTEGER CONSTANT MAX.ITEM = 4%
+
+	!
+	! Declare constants
+	!
+	DECLARE LONG XLONG, YLONG
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+300	!
+	! Open relation file
+	!
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.OPN"
+
+320	!
+	! Open price file
+	!
+	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.MOD"
+
+330	!
+	! Open product file
+	!
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+500	!******************************************************************
+	! Declare defaults for screen
+	!******************************************************************
+
+	PRODUCT.ITEM$ = "*" + SPACE$(19%)
+	TYPE.ITEM$ = "*" + SPACE$(19%)
+
+	STORE.ITEM$ = "????"
+	DATE.ITEM$ = DATE_TODAY
+
+900	!
+	! Create a display window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		18%, &
+		78%, &
+		SMG_ADD%, &
+		SMG$M_BORDER &
+	)
+
+	!
+	! Label the display
+	!
+	SMG_STATUS% = SMG$LABEL_BORDER(SMG_ADD%, &
+		"Add Cost into Product Standard Cost File" )
+
+	GOSUB Repaint
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_ADD%, &
+		SCOPE::SMG_PBID, &
+		2%, &
+		2% &
+	)
+
+	%PAGE
+
+1000	!******************************************************************
+	! Main option menu
+	!******************************************************************
+
+	GOSUB Repaint
+
+1100	!
+	! Enter options
+	!
+	SCOPE::PRG_ITEM = ""
+	OPTLIST$ = "Change Blank Go Help eXit"
+	OPT$ = ENTR_3OPTION(SCOPE, "COMMAND", OPTLIST$, OPT%, 0%)
+
+	SELECT SCOPE::SCOPE_EXIT
+	!
+	! Control c
+	!
+	CASE 3%
+		GOTO 1000
+
+	!
+	! Exit key
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO ExitProgram
+
+	END SELECT
+
+	SELECT OPT$
+
+	CASE "C"
+ Changer:
+		!*****************************************************
+		! Change information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to change", 0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO 1100 IF LOOP% = 0%
+		GOTO Changer IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		LOOP1% = LOOP%
+
+ Changer1:	FLAG% = 0%
+		GOSUB DataEntry
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Uparrow
+		!
+		CASE SMG$K_TRM_UP
+			LOOP% = LOOP% - 1% IF LOOP% > 1%
+			GOTO Changer1
+
+		!
+		! SMG$K_TRM_DOWN
+		!
+		CASE SMG$K_TRM_DOWN
+			LOOP% = LOOP% + 1% IF LOOP% < MAX.ITEM
+			GOTO Changer1
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO Changer
+
+	CASE "B"
+ BlankR:	!*****************************************************
+		! Blank information on the screen
+		!*****************************************************
+
+		LOOP% = ENTR_3NUMBER(SCOPE, SCOPE::SMG_OPTION, "", &
+			"Item to Blank", 0.0, 4%, "##", "")
+
+		SELECT SCOPE::SCOPE_EXIT
+		!
+		! Control c
+		!
+		CASE 3%
+			GOTO 1000
+
+		!
+		! Exit key
+		!
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO 1100
+
+		END SELECT
+
+		GOTO 1100 IF LOOP% = 0%
+		GOTO Blankr IF LOOP% < 1% OR LOOP% > MAX.ITEM
+
+		SELECT LOOP%
+
+		CASE 1%
+			LSET DATE.ITEM$ = DATE_TODAY
+
+		CASE 2%
+			LSET PRODUCT.ITEM$ = "*"
+
+		CASE 3%
+			LSET STORE.ITEM$ = "????"
+
+		CASE 4%
+			LSET TYPE.ITEM$ = "*"
+
+		END SELECT
+
+		FLAG% = 1%
+		GOSUB DataEntry
+
+		GOTO Blankr
+
+	CASE "G"
+		IF STORE.ITEM$ = "????"
+		THEN
+			CALL ENTR_3MESSAGE(SCOPE, "Undefined Location.",0%)
+			GOTO 1000
+		END IF
+		GOSUB Add
+		GOTO ExitProgram
+
+	!
+	! Help
+	!
+	! This option calls out a help message describing the
+	! program.
+	!
+	CASE "H"
+		CALL HELP_3MESSAGE(SCOPE, "", "PROG", SCOPE::PRG_PROGRAM, &
+			"HELP")
+		GOTO 1000
+
+	CASE "X"
+		GOTO ExitProgram
+
+	END SELECT
+
+	GOTO 1100
+
+	%PAGE
+
+ ExitProgram:
+	!******************************************************************
+	! Exit the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+ Repaint:
+	!******************************************************************
+	! Repaint the screen
+	!******************************************************************
+
+	DATA	6,20, "(01) Date", &
+		8,20, "(02) Product# ", &
+		9,20, "(03) Location# ", &
+		10,20, "(04) Ingredient Type", &
+		0, 0, ""
+
+	RESTORE
+	READ XLONG, YLONG, ATEXT$
+
+	WHILE XLONG
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_ADD%, ATEXT$, XLONG, YLONG)
+		READ XLONG, YLONG, ATEXT$
+	NEXT
+
+	FLAG% = 1%
+	GOSUB DataEntry FOR LOOP% = 1% TO MAX.ITEM
+
+	RETURN
+
+	%PAGE
+
+ DataEntry:
+	!******************************************************************
+	! Enter/Diaplay items
+	!******************************************************************
+
+	TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+	SCOPE::PRG_ITEM = "FLD" + FORMAT$(LOOP%, "<0>##")
+
+	SELECT LOOP%
+
+	CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Date\*
+	!	.p
+	!	The ^*Date\* field is provided to confirm the date of
+	!	this transaction. The system will automatically default
+	!	to the current date. The date may be changed to a desired
+	!	date by using the ^*Change\* option in the COMMAND menu.
+	!
+	! Index:
+	!	.x Date>Update Standard Cost
+	!	.x Update Standard Cost>Date
+	!
+	!--
+
+		DATE.ITEM$ = ENTR_3DATE(SCOPE, SMG_ADD%, &
+			"06;45", "Date", DATE.ITEM$, FLAG%, "'E", &
+			DEFLT$)
+
+	CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Product _#\*
+	!	.p
+	!	The ^*Product _#\* field provides the means to enter an assigned
+	!	number which identifies a specific product.
+	!	.p
+	!	The field will accommodate up to fourteen (14) alphanumeric
+	!	characters.
+	!	.p
+	!	Pressing ^*<List Choices>\*, while the cursor is located at
+	!	this field, will cause a list of valid Product _#'s to be
+	!	displayed.
+	!
+	! Index:
+	!	.x Product Number>Update Standard Cost
+	!	.x Update Standard Cost>Product Number
+	!	.x Number>Product
+	!
+	!--
+
+		PRODUCT.ITEM$ = ENTR_3STRING(SCOPE, SMG_ADD%, "8;45", &
+			"Product #", PRODUCT.ITEM$, FLAG%, "'E", DEFLT$)
+
+	CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Location\*
+	!	.p
+	!	The ^*Location\* code is provided to enter the location
+	!	where the new cost will be added and calculated.
+	!	.p
+	!	Pressing ^*<List Choices>\*, while the cursor is located
+	!	at this field, will cause a list of valid location codes
+	!	to be displayed.
+	!
+	! Index:
+	!	.x Location>Update Standard Cost
+	!	.x Update Standard Cost>Location
+	!
+	!--
+
+		STORE.ITEM$ = ENTR_3STRING(SCOPE, SMG_ADD%, "9;45", &
+			"Location #", STORE.ITEM$, FLAG%, "'E", DEFLT$)
+
+	CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Ingredient Type\*
+	!	.p
+	!	The ^*Ingredient Type\* field provides a means to enter
+	!	a code for a particular ingredient which has been
+	!	established in the Ingredient Type Table.
+	!	.p
+	!	The field will accommodate two (2) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Ingredient Type>Update Standard Cost
+	!	.x Update Standard Cost>Ingredient Type
+	!	.x Type>Ingredient
+	!
+	!--
+		TYPE.ITEM$ = ENTR_3STRING(SCOPE, SMG_ADD%, "10;45", &
+			"Ingredient  type", TYPE.ITEM$, FLAG%, "'E", DEFLT$)
+
+	END SELECT
+
+	SCOPE::PRG_ITEM = TEMP$
+
+	RETURN
+
+ Add:
+	!*****************************************************
+	! Add in the Price file
+	!*****************************************************
+
+	SCOPE::PRG_ITEM = "CONFIRM"
+	INP$ = ENTR_3YESNO(SCOPE, SMG_ADD%, &
+		"", "Confirm update  - then press <Do> ", "N", 0%, "", "")
+
+	SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_OPTION, SPACE$(80%), 1%, 1%)
+
+	IF INP$ <> "Y"
+	THEN
+		GOTO ExitProgram
+	END IF
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_ADD%, "Examine Product # ", 12%, 5%)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_ADD%, "Add               ", 14%, 5%)
+
+	CALL ENTR_3MESSAGE(SCOPE, "",1%+16%)
+
+	!
+	! Add
+	!
+	RESET #RI_RELATION.CH%
+
+2000	!
+	! Main loop starts here
+	!
+	!
+	! Get next record
+	!
+	GET #RI_RELATION.CH%, REGARDLESS
+
+	TEST_PRODUCT(1%) = RI_RELATION::PRODUCT
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_ADD%, RI_RELATION::PRODUCT, &
+		12%, 22%)
+
+	GOTO 2050 IF COMP_STRING(RI_RELATION::PRODUCT,PRODUCT.ITEM$) = 0%
+
+	ITEM_LOOP% = 0%
+	QTY_LEVEL(0%),LEVEL% = 1%
+
+ GoDownTree:
+	!
+	TEST_PRODUCT(LEVEL%) = RI_RELATION::PRODUCT
+	QTY_LEVEL(LEVEL%) = QTY_LEVEL(LEVEL%-1%) * RI_RELATION::QUANTITY
+	RFA_LEVEL(LEVEL%) = GETRFA(RI_RELATION.CH%)
+
+2020	GET #RI_RELATION.CH%, KEY#0% EQ RI_RELATION::INGREDIENT
+
+	LEVEL% = LEVEL% + 1%
+	GOTO GoDownTree
+
+ GoUpTree:
+	!
+	GOTO AddToPriceFile IF LEVEL% - 1% = 0%
+
+	LEVEL% = LEVEL% - 1%
+
+2030	GET #RI_RELATION.CH%, RFA RFA_LEVEL(LEVEL%),REGARDLESS
+
+	GET #RI_RELATION.CH%, REGARDLESS
+
+	IF RI_RELATION::PRODUCT <> TEST_PRODUCT(LEVEL%)
+	THEN
+		GOTO GoUpTree
+	ELSE
+		GOTO GoDownTree
+	END IF
+
+ AddToPriceFile:
+	FOR I%=1% TO ITEM_LOOP%
+
+		COST = PC_READ_COST(INGREDIENT(I%)::NUMBER,STORE.ITEM$, &
+			DATE.ITEM$,"" )
+
+		TOTAL_PRODUCT = TOTAL_PRODUCT + &
+			FUNC_ROUND(INGREDIENT(I%)::QUANTITY*COST,2%)
+
+	NEXT I%
+
+	COST = PC_READ_COST(TEST_PRODUCT(1%),STORE.ITEM$, &
+			DATE.ITEM$,"" )
+
+	IF TOTAL_PRODUCT <> COST
+	THEN
+		PC_COST::PRODUCT	= TEST_PRODUCT(1%)
+		PC_COST::LOCATION	= STORE.ITEM$
+		PC_COST::EFFDATE	= DATE.ITEM$
+		PC_COST::COST		= TOTAL_PRODUCT
+
+		PUT #PC_COST.CH%
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_ADD%, PC_COST::PRODUCT, &
+			14%, 22%,,SMG$M_REVERSE)
+
+	END IF
+
+	TOTAL_PRODUCT = 0.
+
+2050	!
+	! Try for next record
+	!
+	FIND #RI_RELATION.CH%, KEY#0% GE TEST_PRODUCT(1%)+"9999",REGARDLESS
+
+	GOTO 2000
+
+2100	RETURN
+
+	%PAGE
+
+18000	!
+	! Array of terminals
+	!
+	FOR I%=1% TO ITEM_LOOP%
+
+		IF RI_RELATION::INGREDIENT = INGREDIENT(I%)::NUMBER
+		THEN
+			INGREDIENT(I%)::QUANTITY = INGREDIENT(I%)::QUANTITY + &
+				FUNC_ROUND(QTY_LEVEL(LEVEL%),3%)
+			GOTO EndTerm
+		END IF
+
+	NEXT I%
+
+	PD_PRODUCT::PROD_TYPE = &
+			STRING$(LEN(PD_PRODUCT::PROD_TYPE),ASCII("?"))
+	FIND #PD_PRODUCT.CH%, KEY#0% EQ RI_RELATION::INGREDIENT,REGARDLESS
+	GET #PD_PRODUCT.CH%, REGARDLESS
+
+18010	IF COMP_STRING(PD_PRODUCT::PROD_TYPE,TYPE.ITEM$)
+	THEN
+		ITEM_LOOP% = ITEM_LOOP% + 1%
+		INGREDIENT(ITEM_LOOP%)::NUMBER = RI_RELATION::INGREDIENT
+		INGREDIENT(ITEM_LOOP%)::QUANTITY = &
+			FUNC_ROUND(QTY_LEVEL(LEVEL%),3%)
+	END IF
+
+ EndTerm:
+	GOTO 2030
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 320%
+		FILENAME$ = "PC_COST"
+
+	CASE 330%
+		RESUME 500 IF ERR = 5%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 2000%
+		RESUME 2100 IF ERR=11%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 2020	! Can't find ingredient
+		IF ERR = 155%
+		THEN
+			RESUME 18000
+		END IF
+		FILENAME$ = "RI_RELATION"
+
+	CASE 2030	! Can't find ingredient
+		IF ERR = 155% OR ERR = 11%
+		THEN
+			RESUME GoUpTree
+		END IF
+		FILENAME$ = "RI_RELATION"
+
+	CASE 2050	! Can't find next ingredient
+		RESUME 2100 IF ERR = 155%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 18000	! Can't find Product
+		RESUME 18010 IF ERR = 155%
+		FILENAME$ = "PD_PRODUCT"
+
+	END SELECT
+
+
+	RESUME HelpError
+
+32767	END

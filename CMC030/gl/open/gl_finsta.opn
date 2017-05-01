@@ -1,0 +1,16 @@
+	!======================================================================
+	! GL_FINSTA file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_FINSTA.CH%, STAT%)
+	CALL READ_DEVICE('GL_FINSTA',GL_FINSTA.DEV$, STAT%)
+
+	GL_FINSTA.NAME$ = GL_FINSTA.DEV$ + "GL_FINSTA.MAS"
+
+	OPEN GL_FINSTA.NAME$ FOR INPUT AS FILE GL_FINSTA.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_FINSTA, &
+		PRIMARY KEY &
+			GL_FINSTA::PROMPT, &
+		ACCESS READ, ALLOW MODIFY
+

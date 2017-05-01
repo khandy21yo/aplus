@@ -1,0 +1,16 @@
+	!======================================================================
+	! OE_SALESTAX file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_SALESTAX.CH%, STAT%)
+	CALL READ_DEVICE('OE_SALESTAX',OE_SALESTAX.DEV$, STAT%)
+
+	OE_SALESTAX.NAME$ = OE_SALESTAX.DEV$+"OE_SALESTAX.TBL"
+
+	OPEN OE_SALESTAX.NAME$ FOR INPUT AS FILE OE_SALESTAX.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_SALESTAX, &
+		PRIMARY KEY &
+			OE_SALESTAX::TAXCODE, &
+		ACCESS READ, ALLOW MODIFY
+

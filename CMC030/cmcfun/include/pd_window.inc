@@ -1,0 +1,15 @@
+	!=======================================================================
+	! 8000-8099	PD * Product Description System
+	! This include file is used to DECLARE window numbers for PD system
+	!=======================================================================
+
+	DECLARE LONG CONSTANT PD_MAIN_ACCOUNT.ID		= 8000%
+	DECLARE LONG CONSTANT PD_MAIN_ACCOUNTSCAN.ID		= 8005%
+	DECLARE LONG CONSTANT PD_MAIN_CATEGORY.ID		= 8010%
+	DECLARE LONG CONSTANT PD_MAIN_LABEL.ID			= 8020%
+	DECLARE string CONSTANT PD_MAIN_PACK.ID			= "8025%BAD"
+	DECLARE LONG CONSTANT PD_MAIN_PRODTYPE.ID		= 8030%
+	DECLARE LONG CONSTANT PD_MAIN_PRODUCT.ID		= 8035%
+	DECLARE LONG CONSTANT PD_MAIN_SUBSTITUTE.ID		= 8040%
+	DECLARE LONG CONSTANT PD_MAIN_PRODACCT.ID		= 8041%
+

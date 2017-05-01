@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Deduction Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TRN__DED.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Payroll System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Payroll Deduction Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TRN__DED.JRL\*
+	!	.p
+	!	Payroll Deduction Journal.
+	!
+	! Index:
+	!	.x Payroll Deduction Journal
+	!	.x PR_TRN_DED
+	!--

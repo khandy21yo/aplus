@@ -1,0 +1,17 @@
+	!======================================================================
+	! OE_CREASON file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_CREASON.CH%, STAT%)
+	CALL READ_DEVICE('OE_CREASON',OE_CREASON.DEV$, STAT%)
+
+	OE_CREASON.NAME$ = OE_CREASON.DEV$+"OE_CREASON.TBL"
+
+	OPEN OE_CREASON.NAME$ FOR INPUT AS FILE OE_CREASON.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_CREASON, &
+		PRIMARY KEY &
+			OE_CREASON::CREASON &
+			DUPLICATES , &
+		ACCESS READ, ALLOW MODIFY
+

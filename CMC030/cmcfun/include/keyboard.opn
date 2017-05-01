@@ -1,0 +1,101 @@
+	!******************************************************************
+	! Keyboard open routine
+	!******************************************************************
+
+	SCREEN.WIDTH = 80% IF SCREEN.WIDTH < 80%
+	SCREEN.WIDTH = 132% IF SCREEN.WIDTH > 80%
+
+	!
+	! Create the pasteboard
+	!
+	SMG_STATUS% = SMG$CREATE_PASTEBOARD(SMG_PBID, , , SMG_ROWS%, SMG_COLS%)
+
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	!
+	! Change width if necessary
+	!
+	IF SCREEN.WIDTH <> SMG_COLS%
+	THEN
+		SMG_STATUS% = SMG$CHANGE_PBD_CHARACTERISTICS(SMG_PBID, &
+			SCREEN.WIDTH, SMG_COLS%,,SMG_ROWS%)
+	END IF
+
+	!
+	! Create the Message display
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		2%, 		! 2 Rows &
+		132%,		! Columns &
+		SMG_MESSAGE,	! Identifier &
+		,		! No border &
+		,		! No attributes &
+				! Default character set &
+	)
+
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	!
+	! Paste the data display
+	!
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_MESSAGE,	! Message display &
+		SMG_PBID,	! Pasteboard &
+		23%,		! Row to start in &
+		1%,		! Column to start in &
+				! Don't need top-disp &
+	)
+
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	!
+	! Create the option display
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		2%, 		! 2 Rows &
+		132%,		! Columns &
+		SMG_OPTION,	! Identifier &
+		,		! No border &
+		,		! No attributes &
+				! Default character set &
+	)
+
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	!
+	! Paste the data display
+	!
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_OPTION,	! Option Display &
+		SMG_PBID,	! Pasteboard &
+		21%,		! Row to start in &
+		1%,		! Column to start in &
+				! Don't need top-disp &
+	)
+
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+
+	!
+	! Paste the data display
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_KEYBOARD( SMG_KBID )
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	!
+	! Remove the cursor
+	!
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(SMG_PBID, '1'L)
+
+	!
+	! Set broadcast trapping
+	!
+	! (READ_BROADCAST is actually a function, but...)
+	!
+	EXTERNAL LONG READ_3BROADCAST
+	SMG_STATUS% = SMG$SET_BROADCAST_TRAPPING(SMG_PBID, READ_3BROADCAST, &
+		SCOPE BY REF)

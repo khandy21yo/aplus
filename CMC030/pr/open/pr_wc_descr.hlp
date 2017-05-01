@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Workman Comp Description File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__WC__DESCR.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Workman Comp Description File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__WC__DESCR.MAS\*
+	!	.p
+	!	Workman Comp Description File.
+	!
+	! Index:
+	!	.x Workman Comp Description File
+	!	.x PR_WC_DESCR
+	!--

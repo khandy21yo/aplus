@@ -1,0 +1,95 @@
+1	%TITLE "Return the Job Number of the Current Image"
+	%SBTTL "READ_SYSJOB"
+	%IDENT "V3.3"
+
+	FUNCTION STRING READ_SYSJOB
+
+	!
+	! COPYRIGHT (C) 1986 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.lm +5
+	!	.b
+	!	This function returns the name of the current image.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	This function returns the job name of the current image.
+	!
+	! Example:
+	!
+	!	JOB$ = READ_SYSJOB
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:READ_SYSJOB/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP READ_SYSJOB
+	!	$ DELETE READ_SYSJOB.OBJ;*
+	!
+	! Author:
+	!
+	!	09/18/86 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	SYS_STAT
+	!		Integer used to convert the sys call.
+	!
+	!--
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	EXTERNAL LONG FUNCTION LIB$GETJPI
+	EXTERNAL LONG CONSTANT JPI$_PID, SS$_NORMAL
+
+	DECLARE LONG SYS_STAT
+
+	!
+	! Get the sys call and convert to integer
+	!
+	SYS_STAT	= LIB$GETJPI				&
+			(					&
+				JPI$_PID BY REF,,,,	&
+				IN_VAL$       BY DESC		&
+			)
+
+	SELECT SYS_STAT
+		CASE SS$_NORMAL
+			READ_SYSJOB = IN_VAL$
+
+		CASE ELSE
+			READ_SYSJOB = ""
+	END SELECT
+
+	END FUNCTION

@@ -1,0 +1,25 @@
+	!======================================================================
+	! PC_COST file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PC_COST.CH%, STAT%)
+	CALL READ_DEVICE('PC_COST',PC_COST.DEV$, STAT%)
+	CALL READ_PROTECTION('PC_COST',PC_COST.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PC_COST.PRO$, STAT%)
+
+	PC_COST.NAME$ = PC_COST.DEV$+"PC_COST.MAS"
+
+	OPEN PC_COST.NAME$ AS FILE PC_COST.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PC_COST, &
+		PRIMARY KEY &
+		( &
+			PC_COST::PRODUCT, &
+			PC_COST::LOCATION, &
+			PC_COST::EFFDATE &
+		)	DUPLICATES , &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,222 @@
+1	%TITLE "TV_RPRT_TVL010 - TV Traffic Program Source Table File"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program prints the Program Source Table file.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	11/16/87 - B. Craig Larsen
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_RPRT_TVL010
+	!	$ LINK/EXECUTABLE=TV_EXE:*.EXE TV_RPRT_TVL010, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_RPRT_TVL010.OBJ;*
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE		UTL_REPORTX_CDD		UTL_REPORTX
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_SOURCE"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_SOURCE.HB"
+	MAP	(TV_LOG_SOURCE)	TV_LOG_SOURCE_CDD	TV_LOG_SOURCE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 80%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Set up from user input
+	!
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+300	!
+	! Open TV_LOG_SOURCE file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_SOURCE.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "Log Source Table File List"
+	TITLE$(2%) = "TV Traffic System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "Source  Description         "
+	TITLE$(5%) = ""
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #TV_LOG_SOURCE.CH%, KEY#0%
+	ELSE
+		FIND #TV_LOG_SOURCE.CH%, KEY#0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #TV_LOG_SOURCE.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (TV_LOG_SOURCE::SOURCE > TO.ITEM$) AND TO.ITEM$ <> ""
+
+	!
+	! Print out one line
+	!
+	TEXT$ = TV_LOG_SOURCE::SOURCE + "    " + TV_LOG_SOURCE::DESCR
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", PROGRAM$, "ERROR" + NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 300%, 17000%
+		PROGRAM$ = "TV_LOG_SOURCE"
+		RESUME HelpError
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	PROGRAM$ = SCOPE::PRG_PROGRAM
+	RESUME HelpError
+
+32767	END

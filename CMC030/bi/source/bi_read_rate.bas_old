@@ -1,0 +1,251 @@
+1	%TITLE "Read CPT Rate"
+	%SBTTL "BI_READ_RATE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION REAL BI_READ_RATE(XCPT$, XDATE$, XLENGTH)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! Computer Management Center assumes no responsibility for the use
+	! or reliability of its software on equipment which is not supported
+	! by Computer Management Center.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function returns CPT rate from the rate table
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Input:
+	!
+	!	XCPT$ is a product number
+	!	XLENGTH is a time of service
+	!	XDATE$   is date
+	!
+	! Output:
+	!
+	!	rate
+	!
+	! Example:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_READ_RATE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_READ_RATE
+	!	$ DELETE BI_READ_RATE.OBJ;*
+	!
+	! Author:
+	!
+	!	11/07/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!		Add 'function.hb' incude.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/25/97 - Kevin Handy
+	!		Use 'val%' instead of 'val'
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	08/07/2000 - Kevin Handy
+	!		Use WHEN ERROR IN
+	!--
+
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	COM (READ_BI_RATE) BI_RATE.CH%
+	COM (READ_BI_RATELINE) BI_RATELINE.CH%
+	COM (READ_BI_CPT) BI_CPT.CH%
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_RATE.HB"
+	MAP	(BI_RATE)	BI_RATE_CDD	BI_RATE
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_RATELINE.HB"
+	MAP	(BI_RATELINE)	BI_RATELINE_CDD	BI_RATELINE
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPT.HB"
+	MAP	(BI_CPT)	BI_CPT_CDD	BI_CPT
+	MAP	(BI_CPT_INIT)	BI_CPT_CDD	BI_CPT_INIT
+
+	%PAGE
+
+	!
+	! Set initial value
+	!
+	BI_CPT_INIT = BI_CPT
+	RATE = 0.0
+	RATE.TABLE$ = STRING$(LEN(BI_RATE::RATETABLE), ASCII("?"))
+	XDATE$ = DATE_TODAY IF XDATE$=""
+
+1000	IF BI_RATE.CH% <= 0%
+	THEN
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[BI.OPEN]BI_RATE.OPN"
+		USE
+			CONTINUE Rate IF ERR = 5%
+			FILENAME$ = "BI_RATE"
+			CONTINUE HelpError
+		END WHEN
+	END IF
+
+1100	IF BI_RATELINE.CH% <= 0%
+	THEN
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[BI.OPEN]BI_RATELINE.OPN"
+		USE
+			CONTINUE 1200 IF ERR = 5%
+			FILENAME$ = "BI_RATELINE"
+			CONTINUE HelpError
+		END WHEN
+	END IF
+
+1200	IF BI_CPT.CH% <= 0%
+	THEN
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[BI.OPEN]BI_CPT.OPN"
+		USE
+			CONTINUE 2000 IF ERR = 5%
+			FILENAME$ = "BI_CPT"
+			CONTINUE HelpError
+		END WHEN
+	END IF
+
+2000	WHEN ERROR IN
+		FIND #BI_RATE.CH%, KEY#0% EQ XCPT$, REGARDLESS
+	USE
+		CONTINUE Rate IF ERR = 9% OR ERR = 155%
+		FILENAME$ = "BI_RATE"
+		CONTINUE HelpError
+	END WHEN
+
+ GetNextRec:
+	WHEN ERROR IN
+		GET #BI_RATE.CH%, REGARDLESS
+	USE
+		CONTINUE Rate IF ERR = 9%
+		CONTINUE SelectType IF ERR = 11%
+		FILENAME$ = "BI_RATE"
+		CONTINUE HelpError
+	END WHEN
+
+	GOTO SelectType IF BI_RATE::CPT <>  XCPT$
+	GOTO SelectType IF BI_RATE::EFFDATE > XDATE$
+
+	RATE = BI_RATE::RATE
+	RATE.TABLE$ = BI_RATE::RATETABLE
+
+	GOTO GetNextRec
+
+ SelectType:
+3000	WHEN ERROR IN
+		GET #BI_CPT.CH%, KEY#0% EQ XCPT$, REGARDLESS
+	USE
+		CONTINUE Rate IF ERR = 9% OR ERR = 155%
+		FILENAME$ = "BI_CPT"
+		CONTINUE HelpError
+	END WHEN
+
+	SELECT BI_CPT::RATEFLAG
+
+	CASE "R"
+		RATE = RATE * XLENGTH
+
+4000	CASE "T"
+		RATE = 0.0
+		WHEN ERROR IN
+			FIND #BI_RATELINE.CH%, KEY#0% EQ RATE.TABLE$, REGARDLESS
+		USE
+			CONTINUE Rate IF ERR = 9% OR ERR = 155%
+			FILENAME$ = "BI_RATELINE"
+			CONTINUE HelpError
+		END WHEN
+
+		LINE.RATE, LINE.TOTAL = 0.0
+		MINIT = 60.0 * XLENGTH
+		READ.NEXT.LINE% = -1%
+
+4010		WHILE MINIT > LINE.TOTAL
+			IF READ.NEXT.LINE%
+			THEN
+				WHEN ERROR IN
+					GET #BI_RATELINE.CH%, REGARDLESS
+				USE
+					IF ERR = 11%
+					THEN
+						READ.NEXT.LINE% = 0%
+						CONTINUE 4010
+					END IF
+					FILENAME$ = "BI_RATELINE"
+					CONTINUE HelpError
+				END WHEN
+
+				IF BI_RATELINE::RATETABLE <> RATE.TABLE$
+				THEN
+					READ.NEXT.LINE% = 0%
+				ELSE
+					LINE.RATE = BI_RATELINE::RATE
+					LINE.INTERVAL = &
+						VAL%(BI_RATELINE::INTERVAL)
+				END IF
+			ELSE
+				GOTO Rate IF LINE.TOTAL=0.
+			END IF
+
+			RATE = RATE + LINE.RATE
+			LINE.TOTAL = LINE.TOTAL + LINE.INTERVAL
+		NEXT
+
+	END SELECT
+
+ Rate:
+	BI_READ_RATE = RATE
+	BI_CPT = BI_CPT_INIT
+
+	EXIT FUNCTION
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO Rate
+
+	END FUNCTION

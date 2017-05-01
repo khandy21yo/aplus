@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Employee Status File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__EMP__STATUS.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Payroll Employee Status File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__EMP__STATUS.MAS\*
+	!	.p
+	!	Payroll Employee Status File.
+	!
+	! Index:
+	!	.x Payroll Employee Status File
+	!	.x PR_EMP_STATUS
+	!--

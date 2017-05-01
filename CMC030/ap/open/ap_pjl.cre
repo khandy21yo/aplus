@@ -1,0 +1,24 @@
+	!======================================================================
+	! AP_PJL file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_PJL.CH%, STAT%)
+	CALL READ_DEVICE('AP_PJL',AP_PJL.DEV$, STAT%)
+	CALL READ_PROTECTION('AP_PJL',AP_PJL.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(AP_PJL.PRO$, STAT%)
+
+	AP_PJL.NAME$ = AP_PJL.DEV$ + "AP_PJL_" + BATCH_NO$ + ".JRL"
+
+	OPEN AP_PJL.NAME$ AS FILE AP_PJL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_PJL, &
+		PRIMARY KEY &
+		( &
+			AP_PJL::TRANKEY, &
+			AP_PJL::SLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

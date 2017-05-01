@@ -1,0 +1,363 @@
+1	%TITLE "BA Control File Maintenance"
+	%SBTTL "BA_MAIN_CONTROL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BA_MAIN_CONTROL(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.P
+	!	The ^*Billing Agency Control\* file provides the means to define
+	!	the last billing period, the last invoice number used, and a control
+	!	number for the billing journal.
+	!
+	! Index:
+	!	.x Change>Control File
+	!	.x Control File>Change
+	!	.x Control File>Billing Agency
+	!	.x Billing Agency>Control File
+	!
+	! Option:
+	!
+	!
+	! Author:
+	!
+	!	11/28/88 - J. Shad Rydalch
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_MAIN_CONTROL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BA_MAIN_CONTROL
+	!	$ DELETE BA_MAIN_CONTROL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	06/24/97 - Kevin Handy
+	!		Lose unecessary externals
+	!		Reformat source code.
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CONTROL.HB"
+	MAP (BA_CONTROL)	BA_CONTROL_CDD	BA_CONTROL
+	MAP (FOO_BBA_BLAH)	BA_CONTROL_CDD	BA_CONTROL_OLD, BA_CONTROL2
+
+	!
+	! This common area must be mapped in both the main program and
+	! in MAINT_GROUP.
+	!
+	COM (CH_BA_CONTROL) BA_CONTROL.CH%
+
+	!
+	! Declare data types
+	!
+	DECLARE LONG XPOS, YPOS
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Billing Agency Control File Maintenance"
+		SMG_WINDOW::NHELP = "BA_MAIN_CONTROL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 4%
+		SMG_WINDOW::FLAGS = 128%	! Relative file
+
+		SMG_WINDOW::NKEYS = 0%
+
+20010		GOTO 20020 IF BA_CONTROL.CH% > 0%
+
+		CALL ASSG_CHANNEL(BA_CONTROL.CH%,STAT%)
+		IF STAT%
+		THEN
+			CALL ENTR_3MESSAGE(SCOPE, &
+				"Unable to allocate a channel",0%)
+			BA_MAIN_CONTROL = 1%
+			EXIT FUNCTION
+		END IF
+
+		CALL READ_DEFAULTS(SMG_WINDOW)
+
+		!
+		! Open main file (existing) for modification
+		!
+		%INCLUDE "SOURCE:[BA.OPEN]BA_CONTROL.CRE"
+
+		SMG_WINDOW::CHAN  = BA_CONTROL.CH%
+
+20020		GOSUB 28000
+
+	!
+	! Handle the option list
+	!
+	CASE OPT_OPTLIST
+		MVALUE = "Change Blank Help eXit"
+
+	!
+	! Display the background
+	!
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	5, 10, "(01) Last Period", &
+			7, 10, "(02) Year", &
+			9, 10, "(03) Last Invoice", &
+			11, 10, "(04) Last Bill", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS, YPOS, XSTR$
+		I%=0%
+		WHILE (XPOS <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS, YPOS) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+			READ XPOS, YPOS, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+20200	CASE OPT_ENTRY
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Reenter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Last Period\*
+	!	.P
+	!	The ^*Last Period\* field represents the last period a billing
+	!	was completed. This number must be within the range established in
+	!	the General Ledger control file for the number of periods in an
+	!	accounting cycle.  Except for possible initialization procedures,
+	!	changes to this field should not be considered.
+	!
+	! Index:
+	!	.x Last Period
+	!	.x Period>Last
+	!
+	!--
+			BA_CONTROL::LASTPERCLOSE = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;29", TEMP$, &
+				BA_CONTROL::LASTPERCLOSE * 1.0, &
+				MFLAG, "##", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) Year\*
+	!	.P
+	!	The ^*Year\* field defines the current fiscal year.
+	!	The field is 4 characters in length and must be numeric.
+	!
+	! Index:
+	!	.x Year
+	!
+	!--
+			BA_CONTROL::YEAR = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;29", TEMP$, &
+				BA_CONTROL::YEAR, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	^*(03) Last Invoice\*
+	!	.P
+	!	The ^*Last Invoice\* field defines the last invoice
+	!	number to be used in printing the invoice forms.  This number
+	!	can be from 1 to 8 characters and must be numeric.
+	!
+	! Index:
+	!	.x Last Invoice
+	!	.x Invoice>Last
+	!
+	!--
+			BA_CONTROL::INV_NUM = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;29", TEMP$, &
+				BA_CONTROL::INV_NUM, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	^*(04) Last Bill\*
+	!	.P
+	!	The ^*Last Bill\* field provides the means to establish a unique
+	!	billing number for each transaction entered in the Billing
+	!	Agency journal.  The number is ten characters long, must
+	!	be numeric, and should not be changed.
+	!
+	! Index:
+	!	.x Last Bill
+	!	.x Bill>Last
+	!
+	!--
+			BA_CONTROL::BILLNUM = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;29", TEMP$, &
+				BA_CONTROL::BILLNUM, &
+				MFLAG, "~L0'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BA_MAIN_CONTROL = 0%
+
+	!
+	! Set BA_CONTROL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BA_CONTROL_OLD = BA_CONTROL
+
+	!
+	! Restore BA_CONTROL_OLD value
+	!
+	CASE OPT_RESETOLD
+		BA_CONTROL = BA_CONTROL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BA_CONTROL2 = BA_CONTROL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BA_CONTROL = BA_CONTROL2
+
+	END SELECT
+
+27000	EXIT FUNCTION
+
+28000	!
+	! Get period record
+	!
+	GET #BA_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	GOTO 28040
+
+28030	!
+	! Load in defaults for period file
+	!
+	BA_CONTROL::LASTPERCLOSE = 0%
+	BA_CONTROL::YEAR = ""
+	BA_CONTROL::INV_NUM = "1"
+	BA_CONTROL::BILLNUM = "0000000000"
+
+	PUT #BA_CONTROL.CH%, RECORD 1%
+
+28040	RETURN
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+	!
+	! Record not found
+	!
+	CASE 28000%
+		RESUME 28030
+
+	!
+	! Record not found
+	!
+	CASE 28030%
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to add period record",0%)
+
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

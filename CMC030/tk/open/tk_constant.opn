@@ -1,0 +1,21 @@
+	!======================================================================
+	! TK_CONSTANT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_CONSTANT.CH%, STAT%)
+	CALL READ_DEVICE('TK_CONSTANT',TK_CONSTANT.DEV$, STAT%)
+
+	TK_CONSTANT.NAME$ = TK_CONSTANT.DEV$+"TK_CONSTANT.TBL"
+
+	OPEN TK_CONSTANT.NAME$ FOR INPUT AS FILE TK_CONSTANT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_CONSTANT, &
+		PRIMARY KEY &
+			TK_CONSTANT::CONSTNAME, &
+		ALTERNATE KEY &
+		( &
+			TK_CONSTANT::CLASS, &
+			TK_CONSTANT::CONSTNAME &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,20 @@
+	!======================================================================
+	! BS_RATE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BS_RATE.CH%, STAT%)
+	CALL READ_DEVICE('BS_RATE',BS_RATE.DEV$, STAT%)
+
+	BS_RATE.NAME$ = BS_RATE.DEV$+"BS_RATE.TBL"
+
+	OPEN BS_RATE.NAME$ FOR INPUT AS FILE BS_RATE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BS_RATE, &
+		PRIMARY KEY &
+		( &
+			BS_RATE::PRG, &
+			BS_RATE::RATEUOM, &
+			BS_RATE::EFFDATE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

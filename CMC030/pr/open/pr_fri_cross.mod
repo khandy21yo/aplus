@@ -1,0 +1,19 @@
+	!======================================================================
+	! PR_FRI_CROSS file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_FRI_CROSS.CH%, STAT%)
+	CALL READ_DEVICE('PR_FRI_CROSS',PR_FRI_CROSS.DEV$, STAT%)
+
+	PR_FRI_CROSS.NAME$ = PR_FRI_CROSS.DEV$+"PR_FRI_CROSS.TBL"
+
+	OPEN PR_FRI_CROSS.NAME$ FOR INPUT AS FILE PR_FRI_CROSS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_FRI_CROSS, &
+		PRIMARY KEY &
+		( &
+			PR_FRI_CROSS::SUBACC, &
+			PR_FRI_CROSS::UNN_CODE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+

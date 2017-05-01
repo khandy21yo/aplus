@@ -1,0 +1,23 @@
+	!======================================================================
+	! TK_ELEMENT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_ELEMENT.CH%, STAT%)
+	CALL READ_DEVICE('TK_ELEMENT',TK_ELEMENT.DEV$, STAT%)
+
+	TK_ELEMENT.DEV$ = "REF:" IF TK_ELEMENT.DEV$ = ""
+
+	TK_ELEMENT.NAME$ = TK_ELEMENT.DEV$+"TK_ELEMENT.TBL"
+
+	OPEN TK_ELEMENT.NAME$ FOR INPUT AS FILE TK_ELEMENT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_ELEMENT, &
+		PRIMARY KEY &
+			TK_ELEMENT::ELEMENT, &
+		ALTERNATE KEY &
+		( &
+			TK_ELEMENT::ETYPE, &
+			TK_ELEMENT::ELEMENT &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+		

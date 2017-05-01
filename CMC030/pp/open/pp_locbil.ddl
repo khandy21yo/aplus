@@ -1,0 +1,9 @@
+DEFINE RECORD CDD$TOP.PP.PP_LOCBIL
+
+        DESCRIPTION IS /*Pacific Pride Local Bill Transfer File*/.
+
+        PP_LOCBIL_CDD STRUCTURE.
+
+        END PP_LOCBIL_CDD STRUCTURE.
+
+END PP_LOCBIL.

@@ -1,0 +1,12 @@
+	!======================================================================
+	! TS_CONTROL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TS_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('TS_CONTROL',TS_CONTROL.DEV$, STAT%)
+
+	OPEN TS_CONTROL.DEV$+"TS_CONTROL.CTR" FOR INPUT AS FILE TS_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP TS_CONTROL, &
+		ACCESS READ, ALLOW MODIFY
+

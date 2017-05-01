@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Sales Journal (Lines) is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__SJL.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Accounts Receivable System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Sales Journal (Lines)
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__SJL.JRL\*
+	!	- Sales Journal (Lines).
+	!
+	! Index:
+	!	.x Sales Journal (Lines)
+	!	.x AR_SJL
+	!--

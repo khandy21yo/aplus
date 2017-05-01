@@ -1,0 +1,17 @@
+	!======================================================================
+	! BI_RATELINE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_RATELINE.CH%, STAT%)
+	CALL READ_DEVICE('BI_RATELINE',BI_RATELINE.DEV$, STAT%)
+
+	BI_RATELINE.NAME$ = BI_RATELINE.DEV$+"BI_RATELINE.TBL"
+
+	OPEN BI_RATELINE.NAME$ FOR INPUT AS FILE BI_RATELINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_RATELINE, &
+		PRIMARY KEY &
+			BI_RATELINE::RATETABLE &
+			DUPLICATES , &
+		ACCESS READ, ALLOW MODIFY
+

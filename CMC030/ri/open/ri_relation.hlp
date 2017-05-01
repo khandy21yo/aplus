@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Relation is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*RI__RELATION.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Recipe Ingredients System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Product Relation
+	!--
+	!++
+	! Abstract:FILE
+	!	^*RI__RELATION.MAS\*
+	!	.p
+	!	Product Relation.
+	!
+	! Index:
+	!	.x Product Relation
+	!	.x RI_RELATION
+	!--

@@ -1,0 +1,16 @@
+	!======================================================================
+	! BC_CUSTYP file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BC_CUSTYP.CH%, STAT%)
+	CALL READ_DEVICE('BC_CUSTYP',BC_CUSTYP.DEV$, STAT%)
+
+	BC_CUSTYP.NAME$ = BC_CUSTYP.DEV$+"BC_CUSTYP.TBL"
+
+	OPEN BC_CUSTYP.NAME$ FOR INPUT AS FILE BC_CUSTYP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BC_CUSTYP, &
+		PRIMARY KEY &
+			BC_CUSTYP::CUSTYP, &
+		ACCESS MODIFY, ALLOW MODIFY
+

@@ -1,0 +1,506 @@
+1	%TITLE "TV_MAIN_COPY - Copy File Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_COPY(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the copy file.
+	!
+	! Index:
+	!
+	!	TV
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_COPY/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_COPY
+	!	$ DELETE TV_MAIN_COPY.OBJ;*
+	!
+	! Author:
+	!
+	!	11/16/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/11/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSTOM"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)		AR_CUSTOM_CDD		AR_CUSTOM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COPY_INSTR"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_INSTR.HB"
+	MAP (TV_COPY_INSTR)	TV_COPY_INSTR_CDD	TV_COPY_INSTR
+	MAP (TV_COPY_INSTR_OLD)	TV_COPY_INSTR_CDD	TV_COPY_INSTR_OLD, TV_COPY_INSTR2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_COPY_INSTR) &
+		TV_COPY_INSTR.CH%, &
+		TV_COPY_INSTR.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION PRNT_DATE
+	EXTERNAL STRING FUNCTION PRNT_TIME
+
+	EXTERNAL LONG   FUNCTION MAIN_JOURNAL
+
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Copy File Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_COPY"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 8%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Copy"
+			SMG_WINDOW::KFIELD(0%, 0%) = 2%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_COPY_INSTR.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_COPY_INSTR.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_INSTR.CRE"
+		TV_COPY_INSTR.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_COPY_INSTR.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_COPY_INSTR.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_CHANNEL(TV_COPY_INSTR.CH%, STAT%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_COPY_INSTR.CH%
+		RESET #TV_COPY_INSTR.CH%
+		GET #TV_COPY_INSTR.CH%, REGARDLESS
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Line_items"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "Line_items"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(TV_COPY_INSTR.CH%)
+
+			TV_MAIN_COPY = MAIN_JOURNAL(TV_MAIN_COPYL.ID, "")
+
+		END SELECT
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	2,  1, "(01) Order No.", &
+			3,  1, "(02) Sequence", &
+			4,  1, "(03) From Date", &
+			5,  1, "(04) To Date", &
+			6,  1, "(05) Length", &
+			7,  1, "(06) From Time", &
+			8,  1, "(07) To Time", &
+			9,  1, "(08) Spot rotation", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+			TV_COPY_INSTR::FRMNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;20", TEMP$, &
+				TV_COPY_INSTR::FRMNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+			TV_COPY_INSTR::SEQNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;20", TEMP$, &
+				TV_COPY_INSTR::SEQNUM, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+			TV_COPY_INSTR::FROM_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;20", TEMP$, &
+				TV_COPY_INSTR::FROM_DATE, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+			TV_COPY_INSTR::TO_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;20", TEMP$, &
+				TV_COPY_INSTR::TO_DATE, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+			TV_COPY_INSTR::LENGTH = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;20", TEMP$, &
+				TV_COPY_INSTR::LENGTH, MFLAG, "H", MVALUE)
+
+		CASE 6%
+			TV_COPY_INSTR::FROM_TIME = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;20", TEMP$, &
+				TV_COPY_INSTR::FROM_TIME, MFLAG, "H", MVALUE)
+
+		CASE 7%
+			TV_COPY_INSTR::TO_TIME = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;20", TEMP$, &
+				TV_COPY_INSTR::TO_TIME, MFLAG, "H", MVALUE)
+
+		CASE 8%
+			TV_COPY_INSTR::SPOT_ROTATION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"9;20", TEMP$, &
+				TV_COPY_INSTR::SPOT_ROTATION, MFLAG, "'E", MVALUE)
+
+ !		CASE 9%
+ !			TV_COPY_INSTR::CURRENT_ROTATION = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+ !				'10;20', TEMP$, &
+ !				TV_COPY_INSTR::CURRENT_ROTATION, MFLAG, "##", MVALUE)
+ !
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		TV_MAIN_COPY = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF TV_COPY_INSTR::FRMNUM = ""
+			THEN
+				TV_MAIN_COPY = 1%
+			END IF
+
+		CASE 2%
+			IF TV_COPY_INSTR::SEQNUM = ""
+			THEN
+				TV_MAIN_COPY = 1%
+			END IF
+
+
+		END SELECT
+
+	!
+	! Set TV_COPY_INSTR_OLD value
+	!
+20500	CASE OPT_SETOLD
+		TV_COPY_INSTR_OLD = TV_COPY_INSTR
+
+	!
+	! Restore TV_COPY_INSTR_OLD value
+	!
+	CASE OPT_RESETOLD
+		TV_COPY_INSTR = TV_COPY_INSTR_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		TV_COPY_INSTR2 = TV_COPY_INSTR
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		TV_COPY_INSTR = TV_COPY_INSTR2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+			!
+			! Title (One line only)
+			!
+			CASE 1%
+				MVALUE = "  Order    Seq# From date  " + &
+					"To date    Length   From time To time"
+
+			!
+			! Positions of lines
+			!
+			CASE 2%
+				MVALUE = "011,016,027,038,047,057"
+
+			!
+			! Convert current record into text
+			!
+			CASE 3%
+
+				MVALUE = &
+					TV_COPY_INSTR::FRMNUM + "  " + &
+					TV_COPY_INSTR::SEQNUM + "  " + &
+					PRNT_DATE(TV_COPY_INSTR::FROM_DATE, 8%) + " " + &
+					PRNT_DATE(TV_COPY_INSTR::TO_DATE, 8%) + " " + &
+					PRNT_TIME(TV_COPY_INSTR::LENGTH, 0%) + " " + &
+					PRNT_TIME(TV_COPY_INSTR::FROM_TIME, 0%) + "  " + &
+					PRNT_TIME(TV_COPY_INSTR::TO_TIME, 0%)
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		FIND #TV_COPY_INSTR.CH%, &
+			KEY #0% GE TV_COPY_INSTR::FRMNUM + &
+				TV_COPY_INSTR::SEQNUM, &
+			REGARDLESS
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			TV_MAIN_COPY = MAIN_JOURNAL(TV_MAIN_COPYL.ID, "A")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF (TV_COPY_INSTR_OLD::FRMNUM <> TV_COPY_INSTR::FRMNUM) OR &
+				(TV_COPY_INSTR_OLD::SEQNUM <> TV_COPY_INSTR::SEQNUM)
+			THEN
+				TEMP$ = TV_COPY_INSTR::FRMNUM + &
+					TV_COPY_INSTR::SEQNUM
+				TV_COPY_INSTR = TV_COPY_INSTR_OLD
+				TV_MAIN_COPY = MAIN_JOURNAL(TV_MAIN_COPYL.ID, "C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			TV_MAIN_COPY = MAIN_JOURNAL(TV_MAIN_COPYL.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		TV_MAIN_COPY = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		TV_MAIN_COPY = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

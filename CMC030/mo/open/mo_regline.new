@@ -1,0 +1,45 @@
+	!======================================================================
+	! MO_REGLINE file (create _new, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_REGLINE.CH_NEW%, STAT%)
+	CALL READ_DEVICE('MO_REGLINE',MO_REGLINE.DEV$, STAT%)
+
+	MO_REGLINE.NAME_NEW$ = MO_REGLINE.DEV$+"MO_REGLINE.HIS_NEW"
+
+	OPEN MO_REGLINE.NAME_NEW$ FOR OUTPUT AS FILE MO_REGLINE.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_REGLINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			MO_REGLINE::ORDNUM, &
+			MO_REGLINE::LIN, &
+			MO_REGLINE::TRANTYPE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINE::PRODUCT, &
+			MO_REGLINE::ORDNUM, &
+			MO_REGLINE::LIN, &
+			MO_REGLINE::TRANTYPE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINE::BATCH, &
+			MO_REGLINE::ORDNUM, &
+			MO_REGLINE::LIN &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_REGLINE::MAKE, &
+			MO_REGLINE::YEAR, &
+			MO_REGLINE::MTYPE, &
+			MO_REGLINE::MSIZE, &
+			MO_REGLINE::MODELCODE, &
+			MO_REGLINE::ORDNUM, &
+			MO_REGLINE::LIN, &
+			MO_REGLINE::TRANTYPE &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

@@ -1,0 +1,22 @@
+	!======================================================================
+	! JC_CLASS file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(JC_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('JC_CLASS',JC_CLASS.DEV$, STAT%)
+	CALL READ_PROTECTION('JC_CLASS',JC_CLASS.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(JC_CLASS.PRO$, STAT%)
+
+	JC_CLASS.NAME$ = JC_CLASS.DEV$+"JC_CLASS.TBL"
+
+	OPEN JC_CLASS.NAME$ AS FILE JC_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP JC_CLASS, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			JC_CLASS::CLASS, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

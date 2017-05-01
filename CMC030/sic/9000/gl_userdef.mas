@@ -1,0 +1,33 @@
+IF  001 Premium                                 503.06              Y          N+
+IF  002 Unleaded                                501.06              Y          N+
+IF  003 MidGrade                                502.06              Y          N+
+IF  004 #2 Diesel                               504.06              Y          N+
+IF  005 #1 Diesel                               505.06              Y          N+
+IF  102 Lotto                                   507.06                         N+
+IF  103 Cigarettes                              515.06                         N+
+IF  104 Beer                                    517.06                         N+
+IF  105 Pop                                     522.06                         N+
+IF  106 Grocery                                 519.06                         N+
+IF  107 Juice                                   520.06                         N+
+IF  108 Dairy                                   514.06                         N+
+IF  109 Snacks/Candy                            516.06                         N+
+IF  110 Coffee                                  511.06                         N+
+IF  111 Fountain                                509.06                         N+
+IF  112 Fast Food                               513.06                         N+
+IF  113 Phone card/Stamps                       524.06                         N+
+IF  114 Scale                                   506.06                         N+
+IF  115 Automotive                              508.06                         N+
+IF  116 Ice/Frozen Foof                         528.06                         N+
+IF  117 Health/Beauty                           512.06                         N+
+IF  118 Magazines/News                          510.06                         N+
+IF  119 Sundry                                  518.06                         N+
+IF  120 Misc Income                             529.06                         N+
+IF  121 Showers                                 524.06                         N+
+IF  221 POS Credit Cards                        130.03            AP IFPHIL    Y-
+IF  222 Non POS                                 130.03            AP IFPHIL    Y-
+IF  223 Charges                                                   AR           Y-
+IF  224 Deposit                                 103.03                         N-
+IF  225 Lottery                                 607.06                         N-
+IF  226 Cash Paid Out                                             AP           Y-
+IF  227 ATH                                     103.02                         N-
+IF  999 Over/Short                              847.06                         N-

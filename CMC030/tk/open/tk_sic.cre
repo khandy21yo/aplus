@@ -1,0 +1,36 @@
+	!======================================================================
+	! TK_SIC file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_SIC.CH%, STAT%)
+	CALL READ_DEVICE('TK_SIC',TK_SIC.DEV$, STAT%)
+	CALL READ_PROTECTION('TK_SIC',TK_SIC.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(TK_SIC.PRO$, STAT%)
+
+	TK_SIC.NAME$ = TK_SIC.DEV$+"TK_SIC.TBL"
+
+	OPEN TK_SIC.NAME$ AS FILE TK_SIC.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_SIC, &
+		PRIMARY KEY &
+			TK_SIC::SIC, &
+		ALTERNATE KEY &
+		( &
+			TK_SIC::DIVISION, &
+			TK_SIC::SIC &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			TK_SIC::DIVISION, &
+			TK_SIC::DESCRIPTION &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			TK_SIC::BUSINESSTYPE, &
+			TK_SIC::SIC &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

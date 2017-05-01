@@ -1,0 +1,16 @@
+	!======================================================================
+	! TK_DIVISION file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_DIVISION.CH%, STAT%)
+	CALL READ_DEVICE('TK_DIVISION',TK_DIVISION.DEV$, STAT%)
+
+	TK_DIVISION.NAME$ = TK_DIVISION.DEV$+"TK_DIVISION.TBL"
+
+	OPEN TK_DIVISION.NAME$ FOR INPUT AS FILE TK_DIVISION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_DIVISION, &
+		PRIMARY KEY &
+			TK_DIVISION::DIVISION, &
+		ACCESS READ, ALLOW MODIFY
+

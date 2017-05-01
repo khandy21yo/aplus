@@ -1,0 +1,14 @@
+	!======================================================================
+	! AR_CONTACT file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CONTACT.CH%, STAT%)
+	CALL READ_DEVICE('AR_CONTACT',AR_CONTACT.DEV$, STAT%)
+
+	AR_CONTACT.NAME$ = AR_CONTACT.DEV$+"AR_CONTACT.MAS"
+
+	OPEN AR_CONTACT.NAME$ FOR INPUT AS FILE AR_CONTACT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CONTACT, &
+		
+

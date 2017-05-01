@@ -1,0 +1,16 @@
+	!======================================================================
+	! AD_OBJECT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_OBJECT.CH%, STAT%)
+	CALL READ_DEVICE('AD_OBJECT',AD_OBJECT.DEV$, STAT%)
+
+	AD_OBJECT.NAME$ = AD_OBJECT.DEV$+"AD_OBJECT.TBL"
+
+	OPEN AD_OBJECT.NAME$ FOR INPUT AS FILE AD_OBJECT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_OBJECT, &
+		PRIMARY KEY &
+			AD_OBJECT::DEP_OBJECT, &
+		ACCESS READ, ALLOW MODIFY
+

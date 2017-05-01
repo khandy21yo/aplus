@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The One Dimensional Optional Ceiling Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CEILINGONE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x One Dimensional Optional Ceiling Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CEILINGONE.TBL\*
+	!	.p
+	!	One Dimensional Optional Ceiling Table.
+	!
+	! Index:
+	!	.x One Dimensional Optional Ceiling Table
+	!	.x AD_CEILINGONE
+	!--

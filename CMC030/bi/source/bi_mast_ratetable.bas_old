@@ -1,0 +1,189 @@
+1	%TITLE "Current Procedural Terminology Time Rate Table"
+	%SBTTL "BI_MAST_RATETABLE"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Time Rate Table\* option provides the means to enter and maintain the
+	!	table number and rates per minute for the specified table.
+	!
+	! Index:
+	!	.X Current Procedural Terminology Rate>Table
+	!	.x Table>Current Procedural Terminology Rate
+	!	.x Time>Rate Table
+	!	.x Rate Table>Time
+	!	.x Rate>Table Code
+	!	.x Table>Function
+	!
+	! Option:
+	!
+	!	AD_MAIN_RATETABLE$HELP
+	!	BI_MAIN_TABLELINE$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAST_RATETABLE/LINE
+	!	$ LINK/EXE=BI_EXE: BI_MAST_RATETABLE,-
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BI_MAST_RATETABLE.OBJ;*
+	!
+	! Author:
+	!
+	!	10/27/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(BI_MAIN_RATETABLE.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_RATETABLE.HB"
+	MAP (BI_RATETABLE)	BI_RATETABLE_CDD	BI_RATETABLE
+	MAP (BI_RATETABLE2)	BI_RATETABLE_CDD	BI_RATETABLE_OLD, BI_RATETABLE2
+
+	EXTERNAL LONG FUNCTION BI_MAIN_RATETABLE
+	EXTERNAL LONG FUNCTION BI_MAIN_TABLELINE
+	EXTERNAL LONG FUNCTION MAIN_JOURNAL
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE BI_MAIN_RATETABLE.ID
+
+		MAINT_GROUP = BI_MAIN_RATETABLE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " Table"
+
+		CASE OPT_MOREMENU
+			MAINT_GROUP = MAIN_JOURNAL(BI_MAIN_TABLELINE.ID, "")
+
+		CASE OPT_AFTEROPT
+
+			SELECT MVALUE
+
+			!
+			! Need to remove under old key, and insert under
+			! (possibly) new key
+			!
+			CASE "Change", "Blank", "Initialize"
+
+			IF BI_RATETABLE_OLD::RATETABLE <> &
+				BI_RATETABLE::RATETABLE
+			THEN
+				TEMP$ = BI_RATETABLE::RATETABLE
+				BI_RATETABLE = BI_RATETABLE_OLD
+
+				MAINT_GROUP = &
+					MAIN_JOURNAL(BI_MAIN_TABLELINE.ID, "C"+TEMP$)
+
+			END IF
+
+			CASE "Erase"
+				!
+				! Erase any line items under the header
+				!
+				MAINT_GROUP = &
+					MAIN_JOURNAL(BI_MAIN_TABLELINE.ID, "E")
+
+			END SELECT
+
+		END SELECT
+
+	CASE BI_MAIN_TABLELINE.ID
+
+		MAINT_GROUP = BI_MAIN_TABLELINE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

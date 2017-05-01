@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Asset Type is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__ASSTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Asset Type
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__ASSTYPE.TBL\*
+	!	.p
+	!	Asset Type
+	!
+	! Index:
+	!	.x Asset Type
+	!	.x AD_ASSTYPE
+	!
+	!--

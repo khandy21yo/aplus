@@ -1,0 +1,14 @@
+	!======================================================================
+	! OS_CONTROL file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OS_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('OS_CONTROL',OS_CONTROL.DEV$, STAT%)
+
+	OS_CONTROL.NAME$ = OS_CONTROL.DEV$+"OS_CONTROL.CTR"
+
+	OPEN OS_CONTROL.NAME$ FOR INPUT AS FILE OS_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP OS_CONTROL, &
+		
+

@@ -1,0 +1,20 @@
+	!======================================================================
+	! PR_REG_TAXES file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_REG_TAXES.CH%, STAT%)
+	CALL READ_DEVICE('PR_REG_TAXES',PR_REG_TAXES.DEV$, STAT%)
+
+	PR_REG_TAXES.NAME$ = PR_REG_TAXES.DEV$+"PR_REG_TAXES_"+YYYY$+".LED"
+
+	OPEN PR_REG_TAXES.NAME$ FOR INPUT AS FILE PR_REG_TAXES.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_REG_TAXES, &
+		PRIMARY KEY &
+		( &
+			PR_REG_TAXES::EMPNUM, &
+			PR_REG_TAXES::TTYPE, &
+			PR_REG_TAXES::CODE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+

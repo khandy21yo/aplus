@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Object Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CONTROLOBJ.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Assets Depreciation System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Object Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CONTROLOBJ.CTR\*
+	!	.p
+	!	Object Control File.
+	!
+	! Index:
+	!	.x Object Control File
+	!	.x AD_CONTROLOBJ
+	!--

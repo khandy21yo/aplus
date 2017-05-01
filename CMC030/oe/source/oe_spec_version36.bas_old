@@ -1,0 +1,136 @@
+1	%TITLE "Update files to from version 3.3 to 3.6"
+	%SBTTL "OE_SPEC_VERSION36"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1995 BY
+	!
+	! Software Solutions
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions.
+	!
+	! Software Solutions assumes no responsibility for the use or
+	! reliability of its software on equipment which is not supported
+	! by Software Solutions.
+	!
+	!++
+	! Abstract:HELP
+	!	.B
+	!	.LM +5
+	!	This program updates any files necessary to convert from
+	!	version 3.5 or earlier for changes made in the file
+	!	layouts in version 3.6
+	!	.lm -5
+	!
+	! Index:
+	!	.x Update Version>Order Entry
+	!	.x Order Entry>Update Version
+	!
+	! Compile:
+	!
+	!	$ BAS OE_SOURCE:OE_SPEC_VERSION36/LINE
+	!	$ LINK/EXE=OE_EXE: OE_SPEC_VERSION36, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE OE_SPEC_VERSION36.OBJ;*
+	!
+	! Author:
+	!
+	!	04/04/95 - Kevin Handy
+	!
+	! Modification History:
+	!
+	!	08/21/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	12/16/99 - Kevin Handy
+	!		Use whatever remains in the deposit number as
+	!		part of the old PO number.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include cdd
+	!
+	%INCLUDE "SOURCE:[OE.OPEN]OE_REGHEADER.HB"
+	MAP (OE_REGHEADER)	OE_REGHEADER_CDD	OE_REGHEADER
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+	! Open RegHeader files
+	!
+300	%INCLUDE "SOURCE:[OE.OPEN]OE_REGHEADER.MOD"
+
+1000	!
+	! Get front of file
+	!
+	RESET #OE_REGHEADER.CH%
+
+1100	!
+	! Loop through all records in register
+	!
+	GET #OE_REGHEADER.CH%
+
+1120	OLDCUSTPO$ = OE_REGHEADER::DEPOSIT + OE_REGHEADER::OLDCUSTPO
+
+	IF (TRM$(OLDCUSTPO$) <> "") AND (OE_REGHEADER::CUSTPO = "")
+	THEN
+		OE_REGHEADER::CUSTPO = OLDCUSTPO$
+		UPDATE #OE_REGHEADER.CH%
+		PRINT ".";
+		PRINT IF CCPOS(0%) >= 50%
+	END IF
+
+	GOTO 1100
+
+2000	PRINT
+	PRINT "Finished"
+	CLOSE OE_REGHEADER.CH%
+	GOTO 32767
+
+19000	!***************************************************************
+	! ERROR TRAPPING
+	!***************************************************************
+
+	SELECT ERR
+
+	CASE 154%
+		!
+		! Wait for 5 seconds if record is lock
+		!
+		SLEEP 5%
+		RESUME
+
+	END SELECT
+
+	SELECT ERL
+
+	CASE 300%
+		PRINT "Unable to open OE_REGHEADER file"
+		RESUME 32767
+
+	CASE 1120%
+		RESUME 2000
+
+	END SELECT
+
+	!
+	! Resume to display untrapped error
+	!
+	ON ERROR GOTO 0
+
+32767	END

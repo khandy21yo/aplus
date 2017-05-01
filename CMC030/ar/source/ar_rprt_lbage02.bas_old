@@ -1,0 +1,485 @@
+1	%TITLE "AR Legal Billing Aging Report by Client/Matter"
+	%SBTTL "AR_RPRT_LBAGE02"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1991 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:AR0200
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*AR Legal Billing Aging Report by Client/matter\* provides a means to print
+	!	a report which will reflect the AR balances (aged) for each
+	!	Client/matter.
+	!	The report will print in Client _# sequence.
+	!	Sub-totals will be shown for each Client with
+	!	a report grand total.
+	!	.b
+	!	The report will print the following information:
+	!	.table 3,25
+	!	.te
+	!	Client Number
+	!	.te
+	!	Matter Number
+	!	.te
+	!	Matter Description
+	!	.te
+	!	Aged Totals
+	!	.end table
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$  BAS AR_SOURCE:AR_RPRT_LBAGE02.BAS/LINE
+	!	$  LINK/EXE=AR_EXE:*.EXE AR_RPRT_LBAGE02, FUNC_LIB:CMCLINK/OPTION
+	!	$  DELETE AR_RPRT_LBAGE02.OBJ;*
+	!
+	! Author:
+	!
+	!	04/30/91 - Val James Allen
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN"
+	MAP (AR_OPEN)		AR_OPEN_CDD		AR_OPEN
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSBAL"
+	MAP (AR_CUSBAL)		AR_CUSBAL_CDD		AR_CUSBAL
+	DIM			AR_CUSBAL_CDD		ARRAY_CUSBAL(1%)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_MATTER"
+	MAP (LB_MATTER)		LB_MATTER_CDD		LB_MATTER
+
+	COM (CH_AR_OPEN) AR_OPEN.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING		FUNCTION DATE_STOREDATE
+	EXTERNAL STRING		FUNCTION PRNT_DATE
+	EXTERNAL LONG		FUNCTION LB_FUNC_AGEAR
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Client\*
+	!	.b
+	!	.lm +5
+	!	The ^*From Client\* field in the AR Legal Billing Aged Report
+	!	Setting Screen provides the means to begin the report
+	!	with a selected Client by entering the selection in this
+	!	field.
+	!	.b
+	!	A blank setting will cause the report to begin with the first
+	!	Client code in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x From Client>Print by Client/matter
+	!	.x Print by Client/matter>From Client
+	!
+	!--
+
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Client\*
+	!	.b
+	!	.lm +5
+	!	The ^*To Client\* field in the Report
+	!	Setting Screen provides the means to enter a selected Client
+	!	code with which the report will end by entering the selection
+	!	in this field.
+	!	.b
+	!	A blank setting will cause the report to end with the last
+	!	Client code in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x To Client>Print by Client/matter
+	!	.x Print by Client/matter>To Client
+	!
+	!--
+
+	AGE_DATE$	= DATE_STOREDATE(UTL_REPORTX::OPTDEF(2%))
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Age Date\*
+	!	.b
+	!	.lm +5
+	!	The contents of the ^*Age Date\* field will determine the base date
+	!	from which aging of the accounts will be calculated.
+	!	.b
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Age>Date
+	!	.x Date>Age
+	!
+	!--
+
+
+	CALL READ_DEVICE('LB_MATTER',LB_MATTER.DEV1$,STAT%)
+
+300	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+310	!
+	! Open files
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_MATTER.OPN"
+
+
+370	!
+	! Open AR_CONTROL file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.MOD"
+
+	GET #AR_CONTROL.CH%, REGARDLESS
+
+	UNLOCK #AR_CONTROL.CH%
+
+380	!
+	! Open cash dispersments file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) =	"AR LEGAL BILLING AGED RECEIVABLES BY CLIENT/MATTER"
+
+	TITLE$(2%) =	"Aged as of: "+PRNT_DATE(AGE_DATE$, 8%)
+	TITLE$(3%) = ""
+
+	TITLE$(4%) =	"Client#    Matter#    MatterDescription                       " + &
+			"   Current      30Days      60Days      90Days  " + &
+			"  120+Days  BalanceDue"
+	TITLE$(5%) = ""
+
+	%PAGE
+
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #LB_MATTER.CH%, KEY #0%
+	ELSE
+		FIND #LB_MATTER.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+	THIS_CLIENT$ = ""
+	RTA0 = 0.0
+	RTA1 = 0.0
+	RTA2 = 0.0
+	RTA3 = 0.0
+	RTA4 = 0.0
+	RTAB = 0.0
+
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #LB_MATTER.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF (LB_MATTER::CLINUM > TO.ITEM$) AND TO.ITEM$ <> ""
+
+	IF LB_MATTER::CLINUM <> THIS_CLIENT$
+	THEN
+		GOSUB ClientTotal
+	END IF
+
+17200	IF EDIT$(LB_MATTER::CLIENT_TO_BILL, -1%) = ""
+	THEN
+		LB_MATTER::CLIENT_TO_BILL = LB_MATTER::CLINUM
+	END IF
+
+	!
+	! Collect aging information
+	!
+	TEMP% = LB_FUNC_AGEAR(LB_MATTER::CLIENT_TO_BILL, &
+			AGE_DATE$, &
+			"", &
+			LB_MATTER::MATTER_NUM, &
+			LB_MATTER::B_METHOD, &
+			NUM_ACCT%, &
+			ARRAY_CUSBAL())
+
+	BALANCE = ARRAY_CUSBAL(1%)::AGING(0%) + &
+			ARRAY_CUSBAL(1%)::AGING(1%) + &
+			ARRAY_CUSBAL(1%)::AGING(2%) + &
+			ARRAY_CUSBAL(1%)::AGING(3%) + &
+			ARRAY_CUSBAL(1%)::AGING(4%) + &
+			ARRAY_CUSBAL(1%)::CHARGE
+
+
+	CTA0 = CTA0+ARRAY_CUSBAL(1%)::AGING(0%)+ARRAY_CUSBAL(1%)::CHARGE
+	CTA1 = CTA1+ARRAY_CUSBAL(1%)::AGING(1%)
+	CTA2 = CTA2+ARRAY_CUSBAL(1%)::AGING(2%)
+	CTA3 = CTA3+ARRAY_CUSBAL(1%)::AGING(3%)
+	CTA4 = CTA4+ARRAY_CUSBAL(1%)::AGING(4%)
+	CTAB = CTAB + BALANCE
+
+	RTA0 = RTA0+ARRAY_CUSBAL(1%)::AGING(0%)+ARRAY_CUSBAL(1%)::CHARGE
+	RTA1 = RTA1+ARRAY_CUSBAL(1%)::AGING(1%)
+	RTA2 = RTA2+ARRAY_CUSBAL(1%)::AGING(2%)
+	RTA3 = RTA3+ARRAY_CUSBAL(1%)::AGING(3%)
+	RTA4 = RTA4+ARRAY_CUSBAL(1%)::AGING(4%)
+	RTAB = RTAB + BALANCE
+
+	GOTO GetNextRec IF BALANCE = 0.0
+
+
+	TEXT$ = LB_MATTER::CLIENT_TO_BILL + " " + &
+		LB_MATTER::MATTER_NUM + " " + &
+		LB_MATTER::DESCR + &
+		FORMAT$(ARRAY_CUSBAL(1%)::AGING(0%) + ARRAY_CUSBAL(1%)::CHARGE, "#######.##") + "  " + &
+		FORMAT$(ARRAY_CUSBAL(1%)::AGING(1%), "#######.##") + "  " + &
+		FORMAT$(ARRAY_CUSBAL(1%)::AGING(2%), "#######.##") + "  " + &
+		FORMAT$(ARRAY_CUSBAL(1%)::AGING(3%), "#######.##") + "  " + &
+		FORMAT$(ARRAY_CUSBAL(1%)::AGING(4%), "#######.##") + "  " + &
+		FORMAT$(BALANCE, "#######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	NUM_HITS = NUM_HITS + 1%
+
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	GOSUB ClientTotal
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	!
+	! Grand total the report here
+	!
+
+	TEXT$ = "Grand Total for Report:" + SPACE$(39%) + &
+	FORMAT$(RTA0, "#######.##") + "  " + &
+	FORMAT$(RTA1, "#######.##") + "  " + &
+	FORMAT$(RTA2, "#######.##") + "  " + &
+	FORMAT$(RTA3, "#######.##") + "  " + &
+	FORMAT$(RTA4, "#######.##") + "  " + &
+	FORMAT$(RTAB, "#######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+
+ ClientTotal:
+
+	GOTO 18010 IF THIS_CLIENT$ = ""
+
+	GOTO 18010 IF NUM_HITS < 1%
+
+	GOTO 18000 IF NUM_HITS < 2%
+
+	TEXT$ = "Client Totals:" + SPACE$(48%) + &
+	FORMAT$(CTA0, "#######.##") + "  " + &
+	FORMAT$(CTA1, "#######.##") + "  " + &
+	FORMAT$(CTA2, "#######.##") + "  " + &
+	FORMAT$(CTA3, "#######.##") + "  " + &
+	FORMAT$(CTA4, "#######.##") + "  " + &
+	FORMAT$(CTAB, "#######.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+18000
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+18010
+	THIS_CLIENT$ = LB_MATTER::CLINUM
+	CTA0 = 0.0
+	CTA1 = 0.0
+	CTA2 = 0.0
+	CTA3 = 0.0
+	CTA4 = 0.0
+	CTAB = 0.0
+	NUM_HITS = 0%
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+		CASE 154%	! Locked record
+			SLEEP 1%
+			RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+		!
+		! AR Customer file
+		!
+		CASE 300%
+			FILENAME$ = "AR_35CUSTOM"
+
+		!
+		! LB Matter file
+		!
+		CASE 310%
+			FILENAME$ = "LB_MATTER"
+
+		!
+		! AR Control file
+		!
+		CASE 370%
+			IF ERR = 5%
+			THEN
+				!
+				! Fake a control file
+				!
+				AR_CONTROL::AR_ACCT = ""
+				AR_CONTROL::RETAIN = 0%
+				AR_CONTROL::LASTPERCLOSE = 0%
+				AR_CONTROL::YEAR = ""
+				AR_CONTROL::CLOSEFLAG = "0"
+				AR_CONTROL::CTITLE = "Customer"
+				AR_CONTROL::AGEPER(0) = 30%
+				AR_CONTROL::AGENAM(0) = "Current"
+				AR_CONTROL::AGEPER(1) = 30%
+				AR_CONTROL::AGENAM(1) = "31 to 60 days"
+				AR_CONTROL::AGEPER(2) = 30%
+				AR_CONTROL::AGENAM(2) = "61 to 90 days"
+				AR_CONTROL::AGEPER(3) = 30%
+				AR_CONTROL::AGENAM(3) = "91 to 120 days"
+				AR_CONTROL::AGEPER(4) = 30%
+				AR_CONTROL::AGENAM(4) = "121 and over"
+
+				RESUME 380
+			END IF
+			FILENAME$ = "AR_CONTROL"
+
+		!
+		! Unable to open AR_OPEN
+		!
+		CASE 380%
+			FILENAME$ = "AR_OPEN"
+
+		CASE 17000%
+			RESUME ExitProgram IF ERR = 155%
+			FILENAME$ = "LB_MATTER"
+
+		CASE 17020%
+			RESUME Exittotal IF ERR = 11%
+			FILENAME$ = "LB_MATTER"
+
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

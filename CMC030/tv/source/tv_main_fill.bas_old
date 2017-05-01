@@ -1,0 +1,504 @@
+1	%TITLE "TV_MAIN_FILL - TV Traffic Fill Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_FILL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the TV Traffic Fill file.
+	!
+	! Index:
+	!
+	!	FILL
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_FILL/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_FILL
+	!	$ DELETE TV_MAIN_FILL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/11/87 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!	05/11/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_CLASS.HB"
+	MAP (TV_LOG_CLASS)	TV_LOG_CLASS_CDD	TV_LOG_CLASS
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_FILL.HB"
+	MAP (TV_FILL)		TV_FILL_CDD		TV_FILL
+	MAP (FOO_BAR_BLAH1)	TV_FILL_CDD		TV_FILL_OLD, TV_FILL2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_FILL) &
+		TV_FILL.CH%, &
+		TV_FILL.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION READ_SET
+
+	EXTERNAL STRING	FUNCTION PRNT_DATE
+	EXTERNAL STRING	FUNCTION PRNT_TIME
+
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "TV Traffic Fill Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_FILL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 9%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Fill_number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_FILL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_FILL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_FILL.CRE"
+		TV_FILL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_FILL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_FILL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_FILL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_FILL.CH%
+		RESET #TV_FILL.CH%
+		GET #TV_FILL.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	05, 04, "(01) Fill Number", &
+			06, 04, "(02) Description", &
+			07, 04, "(03) Class", &
+			08, 04, "(04) From Date", &
+			09, 04, "(05) To   Date", &
+			10, 04, "(06) Length", &
+			11, 04, "(07) Cuts", &
+			12, 04, "(08) Current cut", &
+			13, 04, "(09) Runs", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS( &
+				SMG_WINDOW::WNUMBER,XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Eloop:		SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_FILL::FILNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "05;30", TEMP$, &
+				TV_FILL::FILNUM, MFLAG, "'E", MVALUE )
+
+		CASE 2%
+			TV_FILL::DESCR = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "6;30", TEMP$, &
+				TV_FILL::DESCR, MFLAG, "'E", MVALUE )
+
+		CASE 3%
+			TV_FILL::FCLASS = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "7;30", TEMP$, &
+				TV_FILL::FCLASS, MFLAG, "'E", MVALUE )
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_FILL::FCLASS = TV_LOG_CLASS::CLASS &
+					IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+
+		CASE 4%
+			TV_FILL::FROM_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, "8;30", TEMP$, &
+				TV_FILL::FROM_DATE, MFLAG, "'E", MVALUE )
+
+		CASE 5%
+			TV_FILL::TO_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, "9;30", TEMP$, &
+				TV_FILL::TO_DATE, MFLAG, "'E", MVALUE )
+
+		CASE 6%
+			TV_FILL::LENGTH = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, "10;30", TEMP$, &
+				TV_FILL::LENGTH, MFLAG, "H", MVALUE )
+
+		CASE 7%
+			TV_FILL::CUTS = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, "11;30", TEMP$, &
+				TV_FILL::CUTS * 1.0, MFLAG, "####", MVALUE )
+
+		CASE 8%
+			TV_FILL::CURRENT_CUT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, "12;30", TEMP$, &
+				TV_FILL::CURRENT_CUT * 1.0, MFLAG, "####", MVALUE )
+
+		CASE 9%
+			TV_FILL::RUNS = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, "13;30", TEMP$, &
+				TV_FILL::RUNS * 1.0, MFLAG, "####", MVALUE )
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+
+		TV_MAIN_FILL = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF TV_FILL::FILNUM = ""
+			THEN
+				TV_MAIN_FILL = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #TV_FILL.CH%, &
+						KEY#0 EQ TV_FILL::FILNUM, &
+						REGARDLESS
+					TV_MAIN_FILL = 2%
+					CALL ENTR_3MESSAGE(SCOPE, "Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 3%
+			IF TV_FILL::FCLASS = ""
+			THEN
+				TV_MAIN_FILL = 1%
+			ELSE
+				!
+				! Is the input defined?
+				!
+				DISPLAY_DESCR$ = STRING$(40%,63%)
+				IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID,"Q0"+TV_FILL::FCLASS) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "CODE"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "CODE"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't
+						! allow them to enter undefined values.
+						!
+						TV_MAIN_FILL = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Fill class is undefined ", 1%)
+					ELSE
+						!
+						! Verify that they really want to
+						! enter an undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, &
+							"", "Fill class is " + &
+							"undefined, confirm entry " + &
+							"then press <DO> ", &
+							"N", 0%, "", "")
+						TV_MAIN_FILL = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= TV_FILL::DESCR
+
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					DISPLAY_DESCR$, 7%, 35%, ,SMG$M_BOLD)
+
+				END IF
+			END IF
+
+		END SELECT
+
+
+	CASE OPT_DISPLAY
+
+		DISPLAY_DESCR$ = STRING$(40%,63%)
+		DISPLAY_DESCR$ = TV_FILL::DESCR &
+			IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID,"Q0"+TV_FILL::FCLASS) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$, 7%, 35%, ,SMG$M_BOLD)
+
+
+	!
+	! Set TV_FILL_OLD value
+	!
+20500	CASE OPT_SETOLD
+
+		TV_FILL_OLD = TV_FILL
+
+	!
+	! Restore TV_FILL_OLD value
+	!
+	CASE OPT_RESETOLD
+
+		TV_FILL = TV_FILL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+
+		TV_FILL2 = TV_FILL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+
+		TV_FILL = TV_FILL2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Fill Number   " + &
+				"Description                      Cl   " + &
+				"Fr Date      To Date      " + &
+				"Length     Runs"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "015,048,054,067,080,091"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = TV_FILL::FILNUM + "    " + &
+				TV_FILL::DESCR + "   " + &
+				TV_FILL::FCLASS + "   " + &
+				PRNT_DATE( TV_FILL::FROM_DATE, 8% )+ "   " + &
+				PRNT_DATE( TV_FILL::TO_DATE, 8% )+ "   " + &
+				PRNT_TIME( TV_FILL::LENGTH, 0% ) + "   " + &
+				FORMAT$( TV_FILL::RUNS, "####" )
+
+		END SELECT
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+
+			FIND #TV_FILL.CH%, KEY#0 &
+				GE TV_FILL::FILNUM, REGARDLESS
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+		!
+		! Unable to open Read/Write
+		!
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			TV_MAIN_FILL = ERR
+			RESUME 770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 760%
+			TV_MAIN_FILL = ERR
+			RESUME 770
+
+		!
+		! Unable to reset
+		!
+		CASE 790%
+			RESUME 32767
+
+	END SELECT
+
+	RESUME ExitFunction
+
+32767	END FUNCTION

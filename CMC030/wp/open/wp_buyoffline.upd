@@ -1,0 +1,25 @@
+	!======================================================================
+	! WP_BUYOFFLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_BUYOFFLINE.CH%, STAT%)
+	CALL READ_DEVICE('WP_BUYOFFLINE',WP_BUYOFFLINE.DEV$, STAT%)
+
+	WP_BUYOFFLINE.NAME$ = WP_BUYOFFLINE.DEV$+"WP_BUYOFFLINE_"+BATCH_NO$+".JRL"
+
+	OPEN WP_BUYOFFLINE.NAME$ FOR INPUT AS FILE WP_BUYOFFLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_BUYOFFLINE, &
+		PRIMARY KEY &
+		( &
+			WP_BUYOFFLINE::JOB, &
+			WP_BUYOFFLINE::LLINE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			WP_BUYOFFLINE::LLINE, &
+			WP_BUYOFFLINE::JOB, &
+			WP_BUYOFFLINE::FG_ID_NO &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

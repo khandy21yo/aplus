@@ -1,0 +1,646 @@
+1	%TITLE "Restaurant Control File Maintainence"
+	%SBTTL "RM_MAIN_CONTROL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_MAIN_CONTROL(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	This program controls set post journal in the Restaurant
+	!	management system
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_MAIN_CONTROL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_MAIN_CONTROL
+	!	$ DELETE RM_MAIN_CONTROL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/16/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	03/02/88 - Frank F. Starman
+	!		Add new fields
+	!
+	!	05/18/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/28/96 - Kevin Handy
+	!		Reformst source code
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:PC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:RM_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.HB"
+	MAP	(RM_CONTROL)		RM_CONTROL_CDD	RM_CONTROL
+	MAP	(RM_CONTROL_OLD)	RM_CONTROL_CDD	RM_CONTROL_OLD, RM_CONTROL2
+
+	%INCLUDE "SOURCE:[PC.OPEN]PC_PRCTYPE.HB"
+	MAP	(PC_PRCTYPE)		PC_PRCTYPE_CDD	PC_PRCTYPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP	(UTL_TRANSTYPE)		UTL_TRANSTYPE_CDD	UTL_TRANSTYPE
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_RM_CONTROL) &
+		RM_CONTROL.CH%, &
+		RM_CONTROL.READONLY%
+	COM (TT_RM_CONTROL) &
+		CLOSETITLE$ = 20%, &
+		CLOSETYPE$(2%) = 20%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!******************************************************************
+		! Set up information
+		!******************************************************************
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Restaurant control file"
+		SMG_WINDOW::NHELP = "RM_MAIN_CONTROL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::FLAGS = 128% !Relative file
+		SMG_WINDOW::NITEMS= 10
+
+		SMG_WINDOW::NKEYS = 0%
+
+		CLOSETITLE$ = "Code   Description"
+		CLOSETYPE$(0%) = "2"
+		CLOSETYPE$(1%) = "0    No status"
+		CLOSETYPE$(2%) = "3    Posting"
+
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF RM_CONTROL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF RM_CONTROL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.CRE"
+		RM_CONTROL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		RM_CONTROL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(RM_CONTROL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = RM_CONTROL.CH%
+
+		GOSUB 28000
+
+	!
+	! Select function
+	!
+	CASE OPT_OPTLIST
+
+		MVALUE = "Change Blank Help eXit"
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+
+		DATA	04,  05, "(01) Issue ", &
+			05,  05, "(02) Inventory Receiver ", &
+			06,  05, "(03) Promotional Sales", &
+			07,  05, "(04) Employee Meal Sales", &
+			08,  05, "(05) Unit Sales", &
+			09,  05, "(06) Waste", &
+			12,  05, "(07) Menu Price", &
+			13,  05, "(08) Intended Menu Price", &
+			14,  05, "(09) Employee Meal Price", &
+			16,  05, "(10) Control Status", &
+			11,  09, "     Price Type Codes", &
+			03,  09, "     Transaction Type Codes ", &
+			0,   0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ ReEnter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+			RM_CONTROL::TTISSUE = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"4;33", TEMP$, &
+				RM_CONTROL::TTISSUE, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::TTISSUE = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 2%
+
+			RM_CONTROL::TTREC = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;33", TEMP$, &
+				RM_CONTROL::TTREC, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::TTREC = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 3%
+
+			RM_CONTROL::TTPROM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;33", TEMP$, &
+				RM_CONTROL::TTPROM, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::TTPROM = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 4%
+
+			RM_CONTROL::TTEMP = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;33", TEMP$, &
+				RM_CONTROL::TTEMP, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::TTEMP = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 5%
+
+			RM_CONTROL::TTSALES = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"8;33", TEMP$, &
+				RM_CONTROL::TTSALES, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::TTSALES = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 6%
+
+			RM_CONTROL::TTWASTE = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;33", TEMP$, &
+				RM_CONTROL::TTWASTE, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_TRANSTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::TTWASTE = &
+						UTL_TRANSTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 7%
+
+			RM_CONTROL::PRCMENU = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"12;33", TEMP$, &
+				RM_CONTROL::PRCMENU, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(PC_MAIN_PRCTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::PRCMENU = &
+						PC_PRCTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 8%
+
+			RM_CONTROL::INDMENU = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"13;33", TEMP$, &
+				RM_CONTROL::INDMENU, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(PC_MAIN_PRCTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::INDMENU= &
+						PC_PRCTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 9%
+
+			RM_CONTROL::PRCEMP = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"14;33", TEMP$, &
+				RM_CONTROL::PRCEMP, MFLAG, "'E",MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(PC_MAIN_PRCTYPE.ID, "V0  ") = 1%
+				THEN
+					RM_CONTROL::PRCEMP = PC_PRCTYPE::CODE
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 10%
+
+			RM_CONTROL::CONTROLFLAG = EDIT$(ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"16;33", TEMP$, RM_CONTROL::CONTROLFLAG, &
+				MFLAG, "'", MVALUE, CLOSETYPE$(), &
+				CLOSETITLE$, "005" ), -1%)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Set RM_CONTROL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		RM_CONTROL_OLD = RM_CONTROL
+
+	!
+	! Restore RM_CONTROL_OLD value
+	!
+	CASE OPT_RESETOLD
+		RM_CONTROL = RM_CONTROL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		RM_CONTROL2 = RM_CONTROL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		RM_CONTROL = RM_CONTROL2
+
+	END SELECT
+
+27000	EXIT FUNCTION
+
+28000	!
+	! Get control record
+	!
+	GET #RM_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	GOTO 28040
+
+28030	!
+	! Load in defaults for control file
+	!
+	RM_CONTROL::TTISSUE	= "??"
+	RM_CONTROL::TTREC	= "??"
+	RM_CONTROL::TTPROM	= "??"
+	RM_CONTROL::TTEMP	= "??"
+	RM_CONTROL::TTSALES	= "??"
+	RM_CONTROL::TTWASTE	= "??"
+	RM_CONTROL::PRCMENU	= "??"
+	RM_CONTROL::INDMENU	= "??"
+	RM_CONTROL::PRCEMP	= "??"
+	RM_CONTROL::CONTROLFLAG	= "0"
+
+	PUT #RM_CONTROL.CH%
+
+28040	RETURN
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		RM_MAIN_CONTROL = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		RM_MAIN_CONTROL = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record not found
+	!
+	CASE 28000%
+		RESUME 28030
+
+	!
+	! Record not found
+	!
+	CASE 28030%
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to add a record",0%)
+
+		RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION
+	!+-+-+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Issue\*
+	!	.p
+	!	The ^*Issue\* field provides the means to enter the code which indicates
+	!	an issue transaction when a transaction code is needed.
+	!
+	! Index:
+	!	.x Issue
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Inventory Receiver\*
+	!	.p
+	!	The ^*Inventory Receiver\* field provides the means to enter the code which
+	!	indicates an inventory receiver when a transaction code is needed.
+	!
+	! Index:
+	!	.x Inventory Receiver
+	!	.x Receiver>Inventory
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Promotional Sales\*
+	!	.p
+	!	The ^*Promotional Sales\* field provides the means to enter the code which
+	!	indicates a promotional sale when a transaction code is needed.
+	!
+	! Index:
+	!	.x Promotional Sales
+	!	.x Sales>Promotional
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Employee Meal Sales\*
+	!	.p
+	!	The ^*Employee Meal Sales\* field provides the means to enter the code which
+	!	indicates an employee meal sale when a transaction code is needed.
+	!
+	! Index:
+	!	.x Employee Meal Sales
+	!	.x Sales>Employee Meal
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Unit Sales\*
+	!	.p
+	!	The ^*Unit Sales\* field provides the means to enter the code which indicates
+	!	a unit sale when a transaction code is needed.
+	!
+	! Index:
+	!	.x Unit Sales
+	!	.x Sales>Unit
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Waste\*
+	!	.p
+	!	The ^*Waste\* field provides the means to enter the code which indicates
+	!	a waste transaction when a transaction code is needed.
+	!
+	! Index:
+	!	.x Waste
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD007
+	!	^*(07) Menu Price\*
+	!	.p
+	!	The ^*Menu Price\* field provides the means to enter the code which indicates
+	!	a menu price when a price code is needed.
+	!
+	! Index:
+	!	.x Menu Price
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD008
+	!	^*(08) Intended Menu Price\*
+	!	.p
+	!	The ^*Intended Menu Price\* field provides the means to enter the code which
+	!	indicates an intended menu price when a price code is needed.
+	!
+	! Index:
+	!	.x Intended Menu Price
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD009
+	!	^*(09) Employee Meal Price\*
+	!	.p
+	!	The ^*Employee Meal Price\* field provides the means to enter the code which
+	!	indicates an employee meal price when a price code is needed.
+	!
+	! Index:
+	!	.x Employee Meal Price
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD010
+	!	^*(10) Control Status\*
+	!	.p
+	!	The ^*Control Status\* field contains an indicator which shows the user
+	!	the process the system is conducting at the time.  This field is changed
+	!	by the system and the user should not manually change it.  The valid indicators
+	!	are:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	0 - No Status
+	!	.le
+	!	3 - Posting
+	!	.els
+	!
+	! Index:
+	!	.x Control Status
+	!	.x Status>Control
+	!
+	!--

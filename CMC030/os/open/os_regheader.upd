@@ -1,0 +1,36 @@
+	!======================================================================
+	! OS_REGHEADER file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OS_REGHEADER.CH%, STAT%)
+	CALL READ_DEVICE('OS_REGHEADER',OS_REGHEADER.DEV$, STAT%)
+
+	OS_REGHEADER.NAME$ = OS_REGHEADER.DEV$+"OS_REGHEADER.HIS"
+
+	OPEN OS_REGHEADER.NAME$ FOR INPUT AS FILE OS_REGHEADER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OS_REGHEADER, &
+		PRIMARY KEY &
+			OS_REGHEADER::ORDNUM, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::ORDTYPE, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::ORDCAT, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::CUSNUM, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OS_REGHEADER::BATCH, &
+			OS_REGHEADER::ORDNUM &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

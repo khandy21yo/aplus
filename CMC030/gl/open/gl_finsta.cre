@@ -1,0 +1,21 @@
+	!======================================================================
+	! GL_FINSTA file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_FINSTA.CH%, STAT%)
+	CALL READ_DEVICE('GL_FINSTA',GL_FINSTA.DEV$, STAT%)
+	CALL READ_PROTECTION('GL_FINSTA',GL_FINSTA.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(GL_FINSTA.PRO$, STAT%)
+
+	GL_FINSTA.NAME$ = GL_FINSTA.DEV$ + "GL_FINSTA.MAS"
+
+	OPEN GL_FINSTA.NAME$ AS FILE GL_FINSTA.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_FINSTA, &
+		PRIMARY KEY &
+			GL_FINSTA::PROMPT, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

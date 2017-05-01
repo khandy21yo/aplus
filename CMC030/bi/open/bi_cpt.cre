@@ -1,0 +1,36 @@
+	!======================================================================
+	! BI_CPT file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_CPT.CH%, STAT%)
+	CALL READ_DEVICE('BI_CPT',BI_CPT.DEV$, STAT%)
+	CALL READ_PROTECTION('BI_CPT',BI_CPT.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(BI_CPT.PRO$, STAT%)
+
+	BI_CPT.NAME$ = BI_CPT.DEV$+"BI_CPT.MAS"
+
+	OPEN BI_CPT.NAME$ AS FILE BI_CPT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_CPT, &
+		PRIMARY KEY &
+			BI_CPT::CPT, &
+		ALTERNATE KEY &
+		( &
+			BI_CPT::DESCRIPTION, &
+			BI_CPT::CPT &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			BI_CPT::CPTTYPE, &
+			BI_CPT::CPT &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			BI_CPT::CATEGORY, &
+			BI_CPT::CPT &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,24 @@
+	!======================================================================
+	! OE_PRODPROMO file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_PRODPROMO.CH%, STAT%)
+	CALL READ_DEVICE('OE_PRODPROMO',OE_PRODPROMO.DEV$, STAT%)
+
+	OE_PRODPROMO.NAME$ = OE_PRODPROMO.DEV$+"OE_PRODPROMO.MAS"
+
+	OPEN OE_PRODPROMO.NAME$ FOR INPUT AS FILE OE_PRODPROMO.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_PRODPROMO, &
+		PRIMARY KEY &
+		( &
+			OE_PRODPROMO::PRODUCT, &
+			OE_PRODPROMO::REFPROMO &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			OE_PRODPROMO::REFPROMO, &
+			OE_PRODPROMO::PRODUCT &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

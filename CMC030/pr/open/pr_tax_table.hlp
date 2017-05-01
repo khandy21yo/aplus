@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Tax Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TAX__TABLE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Tax Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TAX__TABLE.TBL\*
+	!	.p
+	!	Payroll Tax Table.
+	!
+	! Index:
+	!	.x Payroll Tax Table
+	!	.x PR_TAX_TABLE
+	!--

@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Employee Billing is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BA__BILTBL.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Agency System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Employee Billing
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BA__BILTBL.TBL\*
+	!	.p
+	!	Employee Billing.
+	!
+	! Index:
+	!	.x Employee Billing
+	!	.x BA_BILTBL
+	!--

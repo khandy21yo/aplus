@@ -1,0 +1,783 @@
+1	%TITLE "Billing Table Maintenance"
+	%SBTTL "BA_MAIN_BILTBL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BA_MAIN_BILTBL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.P
+	!	The ^*Billing Table Maintenance\* routine is used to enter and
+	!	maintain the Billing Table.  This table determines which agency
+	!	will be billed for a client, how much can be billed, and what
+	!	method will be used to bill the agency.
+	!
+	! Index:
+	!	.x Billing Table>Maintenance
+	!	.x Maintenance>Billing Table
+	!	.x Add>Billing Table
+	!	.x Change>Billing Table
+	!	.x Erase>Billing Table
+	!	.x Billing Table>Add
+	!	.x Billing Table>Change
+	!	.x Billing Table>Erase
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_MAIN_BILTBL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BA_MAIN_BILTBL
+	!	$ DELETE BA_MAIN_BILTBL.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	05/02/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/27/88 - Kevin Handy
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	07/15/91 - Kevin Handy
+	!		Removed extra line number 20100.
+	!
+	!	05/06/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/15/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:BA_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PR_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.HB"
+	MAP (BA_BILTBL)		BA_BILTBL_CDD		BA_BILTBL
+	MAP (BA_BILTBL_OLD)	BA_BILTBL_CDD		BA_BILTBL_OLD, BA_BILTBL2
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_EMP_MASTER.HB"
+	MAP (PR_EMP_MASTER)	PR_EMP_MASTER_CDD	PR_EMP_MASTER
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BA_BILTBL) &
+		BA_BILTBL.CH%, &
+		BA_BILTBL.READONLY%
+
+	COM (TT_BA_BILTBL) &
+		MTITLE$ = 32%, &
+		METHOD$(6%) = 32%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+	EXTERNAL LONG   FUNCTION LIBR_EXTRACTVAR
+	EXTERNAL LONG   FUNCTION LIBR_INSERTTEXT
+	EXTERNAL LONG   FUNCTION LIBR_DELETE
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 29000
+
+	%PAGE
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Billing Table Maintenance"
+		SMG_WINDOW::NHELP = "BA_MAIN_BILTBL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 10%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Employee-number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 3%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+			SMG_WINDOW::KFIELD(0%, 3%) = 4%
+
+		!
+		! Load in defaults for chart
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+		!
+		! List of types
+		!
+		MTITLE$ = "Method Description"
+		METHOD$(0%) = "5"
+		METHOD$(1%) = "1    Days"
+		METHOD$(2%) = "2    Hours"
+		METHOD$(3%) = "3    Units"
+		METHOD$(4%) = "4    Wages"
+		METHOD$(5%) = "5    Flat Rate"
+
+700		!
+		! Get info required for main file
+		!
+		IF BA_BILTBL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BA_BILTBL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.CRE"
+		BA_BILTBL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BA_BILTBL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BA_BILTBL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BA_BILTBL.CH%
+
+		RESET #BA_BILTBL.CH%
+		GET #BA_BILTBL.CH%, REGARDLESS
+
+	%PAGE
+
+	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!******************************************************************
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	2,  1, "(01) Client #", &
+			4,  1, "(02) Agency #", &
+			5,  1, "(03) Contract", &
+			6,  1, "(04) From Date", &
+			7,  1, "(05) To date", &
+			9,  1, "(06) Method", &
+			10,  1, "(07) Rate", &
+			11,  1, "(08) Billable", &
+			12,  1, "(09) Billed to date", &
+			13,  1, "(10) Batch #", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Select function
+	!
+	CASE OPT_OPTLIST
+
+		MVALUE = MVALUE + " nOtes"
+
+	!
+	! Direction
+	!
+	CASE OPT_MOREMENU
+
+		!
+		! Display notes
+		!
+		BA_BILTBL.DEV1$ = "SYS$LOGIN:" &
+			IF BA_BILTBL.DEV1$ = ""
+		ST% = LIBR_EXTRACTVAR( &
+			TRM$(BA_BILTBL.DEV1$) + "BA_BILTBL", &
+			LAST_NOTE$, &
+			EDIT$(BA_BILTBL::EMPNUM + "$" + &
+				BA_BILTBL::CUSNUM + "$" + &
+				BA_BILTBL::FROMDATE, 2%))
+
+		LAST_NOTE$ = ENTR_NOTE(SMG_WINDOW::WNUMBER, &
+			"9;1", TEMP$, &
+			LAST_NOTE$, 64%, "10;78", MVALUE)
+
+		ST% = LIBR_INSERTTEXT( &
+			TRM$(BA_BILTBL.DEV1$) + "BA_BILTBL", &
+			LAST_NOTE$, &
+			EDIT$(BA_BILTBL::EMPNUM + "$" + &
+				BA_BILTBL::CUSNUM + "$" + &
+				BA_BILTBL::FROMDATE, 2%))
+
+
+20200	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display
+	! data, set defaults, and return the data back according to
+	! MFLAG.
+	!******************************************************************
+	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Client _#\*
+	!	.p
+	!	The ^*Client _#\* field will accommodate up to ten (10) alphanumeric
+	!	characters, providing a field large enough to use Social Security
+	!	numbers as client numbers if desired. The format is user defined.
+	!	.p
+	!	This field is a key and must have a value. It cannot be null.
+	!	The client number will reference back to the payroll employee
+	!	.p
+	!	Pressing ^*List Choices\* at this field will provide a list of
+	!	valid Client _#'s.
+	!
+	! Index:
+	!	.x Client>Change
+	!	.x Client>Erase
+	!	.x Client>Add
+	!	.x Client>Number
+	!
+	!--
+
+			BA_BILTBL::EMPNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"2;25", TEMP$, &
+				BA_BILTBL::EMPNUM, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(PR_MAIN_EMPLOYEE.ID, "VX") = 1%)
+				THEN
+					BA_BILTBL::EMPNUM = &
+						PR_EMP_MASTER::EMPNUM
+				END IF
+				GOTO ELoop
+			END IF
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Agency _#\*
+	!	.p
+	!	The ^*Agency _#\* field assigns the identification
+	!	number for the agency that is to be billed. The field will
+	!	accommodate up to ten (10) alphanumeric characters.
+	!	.p
+	!	Pressing ^*List Choices\* at this field will provide a list
+	!	of valid Agency Numbers.
+	!
+	! Index:
+	!	.x Agency>Number
+	!	.x Number>Agency
+	!
+	!--
+
+			BA_BILTBL::CUSNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"4;25", TEMP$, &
+				BA_BILTBL::CUSNUM, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(BA_MAIN_CUSTOM.ID, "VX") = 1%)
+				THEN
+					BA_BILTBL::CUSNUM = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO ELoop
+			END IF
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Contract\*
+	!	.p
+	!	The ^*Contract\* field accommodates up to twenty (20)
+	!	alphanumeric characters and describes the contract
+	!	with the agency for this client.
+	!
+	! Index:
+	!	.x Contract
+	!
+	!--
+
+			BA_BILTBL::CONTRACT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;25", TEMP$, &
+				BA_BILTBL::CONTRACT, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) From Date\*
+	!	.p
+	!	The ^*From Date\* indicates when the billing will start for this
+	!	client.
+	!	.p
+	!	The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x From Date>Billing Table
+	!	.x Billing Table>From Date
+	!
+	!--
+
+			BA_BILTBL::FROMDATE = ENTR_3DATE(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;25", TEMP$, &
+				BA_BILTBL::FROMDATE, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) To Date\*
+	!	.p
+	!	The ^*To Date\* indicates when the billing will end for this
+	!	client.
+	!	.p
+	!	The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x To Date>Billing Table
+	!	.x Billing Table>To Date
+	!
+	!--
+
+			BA_BILTBL::TODATE = ENTR_3DATE(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;25", TEMP$, &
+				BA_BILTBL::TODATE, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Method\*
+	!	.p
+	!	The ^*Method\* indicates what method will be used to bill the
+	!	agency. The following is a list of valid methods.
+	!	.b 1
+	!	.LM +10
+	!	.list 0,"*"
+	!	.le
+	!	1 - Days
+	!	.le
+	!	2 - Hours
+	!	.le
+	!	3 - Units
+	!	.le
+	!	4 - Wages
+	!	.le
+	!	5 - Flat Rate
+	!	.els
+	!	.FILL
+	!	.lm -10
+	!	.P
+	!	Pressing ^*<List Choices>\* at this field will display the valid
+	!	billing Methods.
+	!
+	! Index:
+	!	.x Method>Billing Table
+	!	.x Method>Billing Table
+	!
+	!--
+
+			BA_BILTBL::METHOD = ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;25", TEMP$, &
+				BA_BILTBL::METHOD, MFLAG, "'", MVALUE, &
+				METHOD$(), MTITLE$, "007")
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!	^*(07) Rate\*
+	!	.P
+	!	The ^*Rate\* field provides the means to enter the rate to be charged
+	!	to the agency. The value of this field is a floating point number.
+	!	The rate can range from .01 to 99,999,999.99. The system will
+	!	automatically insert the decimal point two positions from the right
+	!	if no decimal is entered.
+	!
+	! Index:
+	!	.x Billing Table>Rate
+	!	.x Rate>Billing Table
+	!
+	!--
+
+			BA_BILTBL::RATE = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"10;25", TEMP$, &
+				BA_BILTBL::RATE, MFLAG, "###,###.####", MVALUE)
+
+		CASE 8%
+
+	!++
+	! Abstract:FLD008
+	!	^*(08) Billable\*
+	!	.P
+	!	The ^*Billable\* field provides the means to enter an amount
+	!	representing the maximum amount which is to be billed for a
+	!	specific client. Once this amount has been reached, a warning
+	!	will print in the billing journal when an attempt is made to charge
+	!	addition fees. At that point, the fee extension will equal zero,
+	!	but may be overridden.
+	!	.p
+	!	The value in this field is a floating point number and may
+	!	range from .01 to 999,999,999.99. The system will automatically
+	!	insert the decimal point two positions from the right if no decimal
+	!	is entered.
+	!
+	! Index:
+	!	.x Billing Table>Billable
+	!	.x Billable>Billing Table
+	!
+	!--
+
+			BA_BILTBL::BILLABLE = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;25", TEMP$, &
+				BA_BILTBL::BILLABLE, MFLAG, &
+				"###,###,###.##", MVALUE)
+
+		CASE 9%
+
+	!++
+	! Abstract:FLD009
+	!	^*(09) Billed to Date\*
+	!	.P
+	!	The ^*Billed to Date\* field contains the amount billed to date
+	!	for a client. This field is updated by the system when billings are
+	!	posted. The value is compared with the value in the billable amount
+	!	field to determine when the billings to date have equaled the contracted
+	!	billable amount for a client.
+	!	.p
+	!	The value of this field is a floating point number and ranges
+	!	from .01 to 999,999,999.99.
+	!
+	! Index:
+	!	.x Billing Table>Billed to Date
+	!	.x Billed to Date>Billing Table
+	!
+	!--
+
+			BA_BILTBL::BILTODAT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"12;25", TEMP$, &
+				BA_BILTBL::BILTODAT, MFLAG, &
+				"###,###,###.##", MVALUE)
+
+		CASE 10%
+
+	!++
+	! Abstract:FLD010
+	!	^*(10) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* is used by the posting process to ensure that
+	!	one client is not updated more than once.
+	!	.P
+	!	The batch number will be assigned to the last batch that modified
+	!	the billed to date amount.
+	!
+	! Index:
+	!	.x Batch>Billing Table
+	!	.x Billing Table>Batch
+	!	.x Batch>Update
+	!	.x Update>Batch
+	!
+	!--
+
+			BA_BILTBL::BATCH = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"13;25", TEMP$, &
+				BA_BILTBL::BATCH, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+		CASE "Change", "Blank", "Initialize"
+
+			BA_BILTBL.DEV1$ = "SYS$LOGIN:" &
+				IF BA_BILTBL.DEV1$ = ""
+			ST% = LIBR_EXTRACTVAR( &
+				TRM$(BA_BILTBL.DEV1$) + "BA_BILTBL", &
+				LAST_NOTE$, &
+				EDIT$(BA_BILTBL_OLD::EMPNUM + "$" + &
+					BA_BILTBL_OLD::CUSNUM + "$" + &
+					BA_BILTBL_OLD::FROMDATE, 2%))
+
+			ST% = LIBR_DELETE( &
+				TRM$(BA_BILTBL.DEV1$) + "BA_BILTBL", &
+				EDIT$(BA_BILTBL_OLD::EMPNUM + "$" + &
+					BA_BILTBL_OLD::CUSNUM + "$" + &
+					BA_BILTBL_OLD::FROMDATE, 2%))
+
+			ST% = LIBR_INSERTTEXT( &
+				TRM$(BA_BILTBL.DEV1$) + "BA_BILTBL", &
+				LAST_NOTE$, &
+				EDIT$(BA_BILTBL::EMPNUM + "$" + &
+					BA_BILTBL::CUSNUM + "$" + &
+					BA_BILTBL::FROMDATE, 2%))
+
+		CASE "Erase"
+
+			BA_BILTBL.DEV1$ = "SYS$LOGIN:" &
+				IF BA_BILTBL.DEV1$ = ""
+
+			ST% = LIBR_DELETE( &
+				TRM$(BA_BILTBL.DEV1$) + "BA_BILTBL", &
+				EDIT$(BA_BILTBL::EMPNUM + "$" + &
+					BA_BILTBL::CUSNUM + "$" + &
+					BA_BILTBL::FROMDATE, 2%))
+
+		END SELECT
+
+20300	CASE OPT_TESTENTRY
+		BA_MAIN_BILTBL = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			BA_MAIN_BILTBL = FUNC_TESTENTRY( SMG_WINDOW, &
+				BA_BILTBL::EMPNUM, &
+				PR_EMP_MASTER::EMPNAME, &
+				"BA", MLOOP, "PRG", &
+				"Employee Number", PR_MAIN_EMPLOYEE.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				PR_EMP_MASTER::EMPNAME, &
+				2%, 40%, , SMG$M_BOLD)
+
+		CASE 2%
+			BA_MAIN_BILTBL = FUNC_TESTENTRY( SMG_WINDOW, &
+				BA_BILTBL::CUSNUM, &
+				AR_35CUSTOM::CUSNAM, &
+				"BA", MLOOP, "PRG", &
+				"Agency Number", BA_MAIN_CUSTOM.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				AR_35CUSTOM::CUSNAM, &
+				4%, 40%, , SMG$M_BOLD)
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(PR_MAIN_EMPLOYEE.ID, "Q0" + BA_BILTBL::EMPNUM) <> 1%
+			THEN
+				PR_EMP_MASTER::EMPNAME = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				PR_EMP_MASTER::EMPNAME, &
+				2%, 40%, , SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(BA_MAIN_CUSTOM.ID, "Q0" + BA_BILTBL::CUSNUM) <> 1%
+			THEN
+				AR_35CUSTOM::CUSNAM = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				AR_35CUSTOM::CUSNAM, &
+				4%, 40%, , SMG$M_BOLD)
+		END IF
+
+
+20500	CASE OPT_SETOLD
+		BA_BILTBL_OLD = BA_BILTBL
+
+	CASE OPT_RESETOLD
+		BA_BILTBL = BA_BILTBL_OLD
+
+	CASE OPT_SETDEFAULT
+		BA_BILTBL2 = BA_BILTBL
+
+	CASE OPT_RESETDEFAULT
+		BA_BILTBL = BA_BILTBL2
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		CASE 1%
+
+			MVALUE = "  Client #   Agency #   Contract #           " + &
+				"From Date   To Date   Method      Rate        " + &
+				"Billable   Billed to Date"
+
+		CASE 2%
+
+			MVALUE = "013,024,045,056,067,074,087,102"
+
+		CASE 3%
+
+			MVALUE = &
+				BA_BILTBL::EMPNUM + " " + &
+				BA_BILTBL::CUSNUM + " " + &
+				BA_BILTBL::CONTRACT + " " + &
+				PRNT_DATE(BA_BILTBL::FROMDATE, 8%) + " " + &
+				PRNT_DATE(BA_BILTBL::TODATE, 8%) + "    " + &
+				BA_BILTBL::METHOD + "   " + &
+				FORMAT$(BA_BILTBL::RATE, "###,###.####") + " " + &
+				FORMAT$(BA_BILTBL::BILLABLE, "###,###,###.##") + " " + &
+				FORMAT$(BA_BILTBL::BILTODAT, "###,###,###.##")
+
+		END SELECT
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BA_BILTBL.CH%, &
+				KEY #0% GE BA_BILTBL::EMPNUM + &
+					BA_BILTBL::CUSNUM + &
+					BA_BILTBL::FROMDATE, &
+				REGARDLESS
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!******************************************************************
+	SELECT ERR
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BA_MAIN_BILTBL = ERR
+		RESUME 770
+
+	CASE 760%
+		BA_MAIN_BILTBL = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

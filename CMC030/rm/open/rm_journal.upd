@@ -1,0 +1,20 @@
+	!======================================================================
+	! RM_JOURNAL file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(RM_JOURNAL.CH%, STAT%)
+	CALL READ_DEVICE('RM_JOURNAL',RM_JOURNAL.DEV$, STAT%)
+
+	RM_JOURNAL.NAME$ = RM_JOURNAL.DEV$+"RM_JOURNAL_"+BATCH_NO$+".JRL"
+
+	OPEN RM_JOURNAL.NAME$ FOR INPUT AS FILE RM_JOURNAL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP RM_JOURNAL, &
+		PRIMARY KEY &
+		( &
+			RM_JOURNAL::LOCATION, &
+			RM_JOURNAL::STARTDATE, &
+			RM_JOURNAL::TRANSTYPE &
+		)	, &
+		ACCESS MODIFY, ALLOW NONE
+

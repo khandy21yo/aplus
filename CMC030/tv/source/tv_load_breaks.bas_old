@@ -1,0 +1,429 @@
+1	%TITLE "TV_LOAD_BREAKS - Load breaks into array"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	SUB TV_LOAD_BREAKS(IO_MESSAGE%, TOTAL_BREAKS%, &
+		TV_LOG_BREAK_CDD TV_BREAK_ARRAY(), &
+		LONG BREAK_TOTCOM(), LONG BREAK_AVAIL())
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This function loads in information about all of the
+	!	available breaks, and the spots that are already
+	!	scheduled into them.
+	!
+	!	NOTE: This function expects channels to be open and
+	!	passed through map areas.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!	IO_MESSAGE%
+	!		Window for output of any nasty messages that
+	!		the program may come up with.
+	!
+	! Output:
+	!
+	!	TOTAL_BREAKS%
+	!		The total number of breaks that were found that
+	!		can be scheduled into.
+	!
+	!	TV_BREAK_ARRAY()
+	!		The breaks, stored in any array.
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_LOAD_BREAKS/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_LOAD_BREAKS
+	!	$ DELETE TV_LOAD_BREAKS.OBJ;*
+	!
+	! Author:
+	!
+	!	12/04/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.HB"
+	MAP (TV_LOG_BREAK) TV_LOG_BREAK_CDD TV_LOG_BREAK
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.HB"
+	MAP (TV_BREAK_TYPE) TV_BREAK_TYPE_CDD TV_BREAK_TYPE
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP (TV_LOGSPOTS) TV_LOGSPOTS_CDD TV_LOGSPOTS
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+	MAP (TV_COMMER) TV_COMMER_CDD TV_COMMER
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.HB"
+	MAP (TV_CONTROL) TV_CONTROL_CDD TV_CONTROL
+
+	!
+	! Special record for conflicts
+	!
+	MAP (QBERT) RFA QBERT_RFA
+	MAP (QBERT) STRING QBERT_STRING = 6
+
+	RECORD TV_TEMP_CONFLICT_CDD
+		STRING	TTIME = 6%		! Time of spot
+		STRING	TFLAG = 1%		! Type flag
+						! A = Form (here)
+						! B = Form (over)
+						! C = Conflict (here)
+						! D = Conflict (over)
+		STRING	TKEY = 8%		! Data (based on type)
+		STRING	TRFA = 6%		! Pointer to spot
+		INTEGER	TPRIOR			! Priority of spot
+		INTEGER	TLENGTH			! Length of break
+		STRING	TSTATUS = 3%		! Spot status
+	END RECORD
+
+	MAP (TV_TEMP_CONFLICT) TV_TEMP_CONFLICT_CDD TV_TEMP_CONFLICT
+
+	!
+	! Channels and stuff to pass around
+	!
+	MAP (CH_TV_LOG_BREAK) &
+		TV_LOG_BREAK.CH%
+
+	MAP (CH_TV_BREAK_TYPE) &
+		TV_BREAK_TYPE.CH%
+
+	MAP (CH_TV_LOGSPOTS) &
+		TV_LOGSPOTS.CH%
+
+	MAP (CH_TV_COMMER) &
+		TV_COMMER.CH%
+
+	MAP (CH_TV_TEMP_CONFLICT) &
+		TV_TEMP_CONFLICT.CH%
+
+	!
+	! Functions
+	!
+	EXTERNAL LONG   FUNCTION TIME_CODE
+	EXTERNAL STRING FUNCTION TV_FIND_CONFLICT
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilization
+	!*******************************************************************
+
+	ON ERROR GOTO 19000
+
+	QBERT_STRING = STRING$(6%, 0%)
+
+1000	!*******************************************************************
+	! Create new temp work file
+	!*******************************************************************
+
+	IF TV_TEMP_CONFLICT.CH% <= 0%
+	THEN
+		CALL ASSG_CHANNEL(TV_TEMP_CONFLICT.CH%, ST%)
+	ELSE
+		CLOSE #TV_TEMP_CONFLICT.CH%
+	END IF
+
+	CALL READ_DEVICE("UTL_WORK", UTL_WORK.DEV$, ST%)
+
+	OPEN UTL_WORK.DEV$ + "TV_TEMP_CONFLICT.TMP" FOR OUTPUT AS FILE TV_TEMP_CONFLICT.CH%, &
+		INDEXED FIXED, &
+		MAP TV_TEMP_CONFLICT, &
+		PRIMARY KEY (TV_TEMP_CONFLICT::TTIME, &
+			TV_TEMP_CONFLICT::TFLAG, &
+			TV_TEMP_CONFLICT::TKEY) DUPLICATES, &
+		ALTERNATE KEY TV_TEMP_CONFLICT::TRFA DUPLICATES, &
+		TEMPORARY
+
+4000	!*******************************************************************
+	! Load in the breaks for this date, so that they don't need to
+	! be loaded for every order
+	!*******************************************************************
+
+ LoadBreaks:
+
+	TOTAL_BREAKS% = 0%
+	RESET #TV_LOG_BREAK.CH%
+
+4010	GET #TV_LOG_BREAK.CH%, REGARDLESS
+
+4020	!
+	! Check the break type to see if there are any avails
+	! allowed for this type.  If not, don't even store
+	! it in the array since it can't be scheduled into.
+	!
+	! Only types 0 (Regular break), 2 (In-tape), and 3 (Avail with ID)
+	! can be scheduled into.
+	!
+	GET #TV_BREAK_TYPE.CH%, KEY #0 EQ TV_LOG_BREAK::BRKTYPE &
+		IF (TV_BREAK_TYPE::BTYPE <> TV_LOG_BREAK::BRKTYPE)
+
+	GOTO 4010 IF (INSTR(1%, "023", TV_BREAK_TYPE::BFLAG) = 0%)
+
+4030	!
+	! Add this break to the list.
+	!
+	TOTAL_BREAKS% = TOTAL_BREAKS% + 1%
+	TV_BREAK_ARRAY(TOTAL_BREAKS%) = TV_LOG_BREAK
+
+	GOTO 4010
+
+4090	!
+	! Done loading breaks
+	!
+
+	%PAGE
+
+5000	!*******************************************************************
+	! Load in spots
+	!*******************************************************************
+
+	FOR LOOP% = 1% TO TOTAL_BREAKS%
+
+		BREAK_TOTCOM(LOOP%) = 0%
+		BREAK_AVAIL(LOOP%) = TIME_CODE(TV_BREAK_ARRAY(LOOP%)::LENGTH)
+
+	NEXT LOOP%
+
+	RESET #TV_LOGSPOTS.CH%, KEY #2%		! Do by form.
+
+5010	!
+	! Load in next spot
+	!
+	GET #TV_LOGSPOTS.CH%, REGARDLESS
+
+	!
+	! Search for break that this spot belongs to
+	!
+	SPOT_BREAK% = 0%
+	FOR LOOP% = 1% TO TOTAL_BREAKS%
+		IF TV_LOGSPOTS::SCH_TIME = TV_BREAK_ARRAY(LOOP%)::SCH_TIME
+		THEN
+			SPOT_BREAK% = LOOP%
+			GOTO 5015
+		END IF
+	NEXT LOOP%
+
+5015	!
+	! Count the commercials in a break, and decrease the amount
+	! of avails for the break.
+	!
+	BREAK_TOTCOM(SPOT_BREAK%) = BREAK_TOTCOM(SPOT_BREAK%) + 1%
+	BREAK_AVAIL(SPOT_BREAK%) = BREAK_AVAIL(SPOT_BREAK%) - &
+		TIME_CODE(TV_LOGSPOTS::LENGTH)
+
+	!
+	! Handle fill seperately from commercials, since fill
+	! does not have a conflcit code attached to it.
+	!
+	GOTO 5010 IF TV_LOGSPOTS::SCH_TYPE = "1"
+
+5020	IF TV_LOGSPOTS::SCH_TYPE = "0"
+	THEN
+		!
+		! Load in header, if not already loaded
+		!
+		GET #TV_COMMER.CH%, KEY#0 EQ TV_LOGSPOTS::FRMNUM, REGARDLESS
+	END IF
+
+5030	!
+	! Get conflicts
+	!
+	IF TV_LOGSPOTS::SCH_TYPE = "0"
+	THEN
+		!
+		! Normal type of spot
+		!
+		SPOT_CONFLICT$ = TV_FIND_CONFLICT(TV_LOGSPOTS::CUSNUM, &
+			TV_COMMER::CONFLICT)
+	ELSE
+		!
+		! In-tape spot
+		!
+		TV_COMMER::FRMNUM = ""
+		TV_COMMER::PRIORITY = 32767%
+		TV_COMMER::SPOT_SEP = ""
+		TV_COMMER::PROD_SEP = ""
+		SPOT_CONFLICT$ = TV_FIND_CONFLICT("", TV_LOGSPOTS::CONFLICT)
+	END IF
+
+
+	!
+	! Create records in temp file for this form
+	!
+	SPOT_SEP% = TIME_CODE(TV_COMMER::SPOT_SEP)
+	SPOT_SEP% = TIME_CODE(TV_CONTROL::DEFAULT_SPOT_SEPER) IF SPOT_SEP% = 0%
+	PROD_SEP% = TIME_CODE(TV_COMMER::PROD_SEP)
+	PROD_SEP% = TIME_CODE(TV_CONTROL::DEFAULT_PROD_SEPER) IF PROD_SEP% = 0%
+	SCH_TIME% = TIME_CODE(TV_LOGSPOTS::SCH_TIME)
+
+	!
+	! Load in all information for the break conflicts
+	!
+	QBERT_RFA = GETRFA(TV_LOGSPOTS.CH%)
+
+	TV_TEMP_CONFLICT::TRFA = QBERT_STRING
+	TV_TEMP_CONFLICT::TPRIOR = TV_COMMER::PRIORITY
+	TV_TEMP_CONFLICT::TLENGTH = TIME_CODE(TV_LOGSPOTS::LENGTH)
+	TV_TEMP_CONFLICT::TSTATUS = TV_LOGSPOTS::SPOTS_FLAG + TV_LOGSPOTS::SPOTS_CODE
+
+	FOR LOOP% = 1% TO TOTAL_BREAKS%
+
+		TEMP% = TIME_CODE(TV_BREAK_ARRAY(LOOP%)::SCH_TIME)
+
+		!
+		! Is this the exact time slot for this spot?
+		!
+		IF (TEMP% = SCH_TIME%)
+		THEN
+			!
+			! Conflict here
+			!
+			TV_TEMP_CONFLICT::TTIME = TV_BREAK_ARRAY(LOOP%)::SCH_TIME
+			TV_TEMP_CONFLICT::TFLAG = "A"
+			TV_TEMP_CONFLICT::TKEY = TV_LOGSPOTS::FRMNUM
+			PUT #TV_TEMP_CONFLICT.CH%
+
+			!
+			! Conflict here
+			!
+			TV_TEMP_CONFLICT::TFLAG = "C"
+			FOR LOOP1% = 1% TO LEN(SPOT_CONFLICT$) STEP 9%
+				TV_TEMP_CONFLICT::TKEY = MID(SPOT_CONFLICT$, LOOP1%, 8%)
+				PUT #TV_TEMP_CONFLICT.CH%
+			NEXT LOOP1%
+			GOTO 5050
+		END IF
+
+		!
+		! Is there a form conflict
+		!
+		IF (TEMP% > SCH_TIME% - SPOT_SEP%) AND &
+			(TEMP% < SCH_TIME% + SPOT_SEP%)
+		THEN
+			!
+			! Conflict here
+			!
+			TV_TEMP_CONFLICT::TTIME = TV_BREAK_ARRAY(LOOP%)::SCH_TIME
+			TV_TEMP_CONFLICT::TFLAG = "B"
+			TV_TEMP_CONFLICT::TKEY = TV_LOGSPOTS::FRMNUM
+			PUT #TV_TEMP_CONFLICT.CH%
+		END IF
+
+		!
+		! Is there a conflict code conflict
+		!
+		IF (TEMP% > SCH_TIME% - PROD_SEP%) AND &
+			(TEMP% < SCH_TIME% + PROD_SEP%)
+		THEN
+			!
+			! Conflict here
+			!
+			TV_TEMP_CONFLICT::TTIME = TV_BREAK_ARRAY(LOOP%)::SCH_TIME
+			TV_TEMP_CONFLICT::TFLAG = "D"
+			FOR LOOP1% = 1% TO LEN(SPOT_CONFLICT$) STEP 9%
+				TV_TEMP_CONFLICT::TKEY = MID(SPOT_CONFLICT$, LOOP1%, 8%)
+				PUT #TV_TEMP_CONFLICT.CH%
+			NEXT LOOP1%
+		END IF
+
+5050	NEXT LOOP%
+
+	!
+	! Get next spot to try
+	!
+	GOTO 5010
+
+6000	EXIT SUB
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Error trapping
+	!*******************************************************************
+
+	SELECT ERL
+
+	!
+	! Unable to load any breaks
+	!
+	CASE 4000%, 4010%
+		RESUME 4090
+
+	!
+	! Unable to find break type. Assume it is usable
+	!
+	CASE 4020%
+		RESUME 4030
+
+	!
+	! End of spot file
+	!
+	CASE 5000%, 5010%
+		RESUME 6000
+
+	!
+	! Unable to find header
+	!
+	CASE 5020%
+		TV_COMMER::FRMNUM = ""
+		TV_COMMER::PRIORITY = 32767%
+		TV_COMMER::SPOT_SEP = ""
+		TV_COMMER::PROD_SEP = ""
+		RESUME 5030
+
+	END SELECT
+
+	!
+	! Can't handle any other errors, so quit looking for breaks
+	!
+	RESUME 4090
+
+	END SUB

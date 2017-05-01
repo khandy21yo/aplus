@@ -1,0 +1,59 @@
+1	!
+	!++
+	! Description:
+	!
+	!	MERGE two PC_COST master files together.
+	!	BE CAREFUL THAT THIS IS WHAT YOU REALLY WANT TO DO
+	!
+	! History:
+	!
+	!	04/01/2002 - Kevin Handy
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.HB"
+	MAP (PC_COST) PC_COST_CDD PC_COST
+
+100	!
+	! Open up product master file
+	!
+	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.OPN"
+	PC_COST_PLAZA.CH% = PC_COST.CH%
+	RESET #PC_COST_PLAZA.CH%
+	PC_COST.CH% = 0%
+
+200	!
+	! Open up other product file
+	!
+	PC_COST.DEV$ = "$DISK2:[ROBSON]"
+	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.MOD"
+	PC_COST_MARCO.CH% = PC_COST.CH%
+	PC_COST.CH% = 0%
+
+1000	!
+	! Search for the next "O" category item
+	!
+	WHEN ERROR IN
+		GET #PC_COST_PLAZA.CH%, REGARDLESS
+	USE
+		CONTINUE 2000
+	END WHEN
+
+1010	WHEN ERROR IN
+		PUT #PC_COST_MARCO.CH%
+	USE
+		PRINT "FAILED: " + PC_COST::PRODUCT + " " + &
+			PC_COST::LOCATION
+		CONTINUE 1900
+	END WHEN
+
+	PRINT "ADDED: " + &
+		PC_COST::PRODUCT + " " + &
+		PC_COST::LOCATION
+
+1900	GOTO 1000
+
+2000	!
+
+32767	END

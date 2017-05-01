@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll ERNDED Definition File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__ERNDED__DEF.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll ERNDED Definition File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__ERNDED__DEF.MAS\*
+	!	.p
+	!	Payroll ERNDED Definition File.
+	!
+	! Index:
+	!	.x Payroll ERNDED Definition File
+	!	.x PR_ERNDED_DEF
+	!--

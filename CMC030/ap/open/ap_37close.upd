@@ -1,0 +1,27 @@
+	!======================================================================
+	! AP_37CLOSE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_37CLOSE.CH%, STAT%)
+	CALL READ_DEVICE('AP_37CLOSE',AP_37CLOSE.DEV$, STAT%)
+
+	AP_37CLOSE.NAME$ = AP_37CLOSE.DEV$+"AP_37CLOSE_"+YYYY_PP$+".LED"
+
+	OPEN AP_37CLOSE.NAME$ FOR INPUT AS FILE AP_37CLOSE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_37CLOSE, &
+		PRIMARY KEY &
+		( &
+			AP_37CLOSE::VENNUM, &
+			AP_37CLOSE::TRANKEY &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AP_37CLOSE::VENNUM, &
+			AP_37CLOSE::INVNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_37CLOSE::BATCH &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

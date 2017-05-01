@@ -1,0 +1,14 @@
+	!======================================================================
+	! BI_CONTROL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('BI_CONTROL',BI_CONTROL.DEV$, STAT%)
+
+	BI_CONTROL.NAME$ = BI_CONTROL.DEV$+"BI_CONTROL.CTR"
+
+	OPEN BI_CONTROL.NAME$ FOR INPUT AS FILE BI_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP BI_CONTROL, &
+		ACCESS READ, ALLOW MODIFY
+

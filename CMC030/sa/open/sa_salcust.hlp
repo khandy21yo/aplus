@@ -1,0 +1,20 @@
+	!======================================================================
+	! SA_SALCUST file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SA_SALCUST.CH%, STAT%)
+	CALL READ_DEVICE('SA_SALCUST',SA_SALCUST.DEV$, STAT%)
+
+	SA_SALCUST.NAME$ = SA_SALCUST.DEV$+"SA_SALCUST_"+YYYY$+".HIS"
+
+	OPEN SA_SALCUST.NAME$ FOR INPUT AS FILE SA_SALCUST.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SA_SALCUST, &
+		PRIMARY KEY &
+		( &
+			SA_SALCUST::CUSNUM, &
+			SA_SALCUST::PERIOD, &
+			SA_SALCUST::ACCOUNT &
+		)	, &
+		
+

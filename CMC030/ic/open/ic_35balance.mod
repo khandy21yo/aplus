@@ -1,0 +1,25 @@
+	!======================================================================
+	! IC_35BALANCE file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_35BALANCE.CH%, STAT%)
+	CALL READ_DEVICE('IC_35BALANCE',IC_35BALANCE.DEV$, STAT%)
+
+	IC_35BALANCE.NAME$ = IC_35BALANCE.DEV$+"IC_35BALANCE.HIS"
+
+	OPEN IC_35BALANCE.NAME$ FOR INPUT AS FILE IC_35BALANCE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_35BALANCE, &
+		PRIMARY KEY &
+		( &
+			IC_35BALANCE::PRODUCT, &
+			IC_35BALANCE::LOCATION, &
+			IC_35BALANCE::TRANSTYPE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			IC_35BALANCE::LOCATION, &
+			IC_35BALANCE::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

@@ -1,0 +1,203 @@
+1	%TITLE "Product Master"
+	%SBTTL "PO_MAST_PRODUCT"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a committment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Product Master\* screen provides the means to assign
+	!	and identify a new product number or maintain information
+	!	concerning an existing product.
+	!
+	! Index:
+	!	.x Product Description>Tables
+	!	.x Tables>Product Description
+	!
+	! Option:
+	!	PD_MAIN_PRODUCT$HELP
+	!	PO_MAIN_PRODCROSS$HELP
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS PO_SOURCE:PO_MAST_PRODUCT/NOLINE
+	!	$ LINK/EXE=PO_EXE: PO_MAST_PRODUCT,-
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE PO_MAST_PRODUCT.OBJ;*
+	!
+	! Author:
+	!
+	!	03/14/90 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	02/20/92 - Frank F. Starman
+	!		Remove the pack.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(PD_MAIN_PRODUCT.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "FUNC_INCLUDE:AP_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PO_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.PD.PD_PRODUCT"
+	MAP	(PD_PRODUCT)		PD_PRODUCT_CDD	PD_PRODUCT
+	MAP	(PD_PRODUCT_OLD)	PD_PRODUCT_CDD	PD_PRODUCT_OLD
+
+	%INCLUDE %FROM %CDD "CDD$TOP.PO.PO_PARTCROSS"
+	MAP	(PO_PARTCROSS)		PO_PARTCROSS_CDD	PO_PARTCROSS
+	MAP	(PO_PARTCROSS_OLD)	PO_PARTCROSS_CDD	PO_PARTCROSS_OLD, PO_PARTCROSS2
+
+	EXTERNAL LONG FUNCTION AP_MAIN_VENDOR
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODUCT
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODTYPE
+	EXTERNAL LONG FUNCTION PD_MAIN_CATEGORY
+	EXTERNAL LONG FUNCTION UTL_MAIN_MEASURE
+	EXTERNAL LONG FUNCTION PD_MAIN_LABEL
+	EXTERNAL LONG FUNCTION PO_MAIN_PRODCROSS
+	EXTERNAL LONG FUNCTION MAIN_JOURNAL
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+		CASE PD_MAIN_PRODUCT.ID
+			MAINT_GROUP = PD_MAIN_PRODUCT(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+			SELECT MOPTION
+
+				CASE OPT_OPTLIST
+					MVALUE = MVALUE + " vendor-Product"
+
+				CASE OPT_MOREMENU
+					SELECT PRG_ITEM
+					CASE "vendor-Product"
+						V% = MAIN_JOURNAL(PO_MAIN_PRODCROSS.ID, "")
+					END SELECT
+
+				CASE OPT_AFTEROPT
+
+					SELECT MVALUE
+
+					CASE "Add"
+						MAINT_GROUP = MAIN_JOURNAL(PO_MAIN_PRODCROSS.ID, "A")
+
+					CASE "Change"
+						IF PD_PRODUCT_OLD::PRODUCT_NUM <> &
+							PD_PRODUCT::PRODUCT_NUM
+						THEN
+							TEMP$ = PD_PRODUCT::PRODUCT_NUM + ""
+							PD_PRODUCT = PD_PRODUCT_OLD
+							MAINT_GROUP = MAIN_JOURNAL( &
+								PO_MAIN_PARTCROSS.ID, "C" + TEMP$)
+						END IF
+
+					CASE "Erase"
+						MAINT_GROUP = MAIN_JOURNAL(PO_MAIN_PRODCROSS.ID, "E")
+
+				END SELECT
+
+			END SELECT
+
+
+		CASE AP_MAIN_VENDOR.ID
+			MAINT_GROUP = AP_MAIN_VENDOR(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE PD_MAIN_PRODTYPE.ID
+			MAINT_GROUP = PD_MAIN_PRODTYPE(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE PD_MAIN_CATEGORY.ID
+			MAINT_GROUP = PD_MAIN_CATEGORY(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE PD_MAIN_LABEL.ID
+			MAINT_GROUP = PD_MAIN_LABEL(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE UTL_MAIN_MEASURE.ID
+			MAINT_GROUP = UTL_MAIN_MEASURE(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE PO_MAIN_PRODCROSS.ID
+			MAINT_GROUP = PO_MAIN_PRODCROSS(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

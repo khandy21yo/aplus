@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Overhead Subject File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__OVERHEAD__DEF.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Overhead Subject File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__OVERHEAD__DEF.TBL\*
+	!	.p
+	!	Payroll Overhead Subject File.
+	!
+	! Index:
+	!	.x Payroll Overhead Subject File
+	!	.x PR_OVERHEAD_DEF
+	!--

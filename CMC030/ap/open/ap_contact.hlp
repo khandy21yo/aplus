@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Contact File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__CONTACT.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Payable System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Contact File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__CONTACT.MAS\*
+	!	.b
+	!	.LM +5
+	!	Contact File.  The contact person for the company including how to reach them.
+	!
+	! Index:
+	!	.x Contact File
+	!	.x AP_CONTACT
+	!
+	!--

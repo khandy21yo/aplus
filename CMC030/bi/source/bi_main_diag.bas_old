@@ -1,0 +1,386 @@
+1	%TITLE "Diagnosis Codes"
+	%SBTTL "BI_MAIN_DIAG"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_DIAG(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Diagnosis Code\* screen provides for entry of a code which identifies
+	!	a particular diagnosis and its description.
+	!
+	! Index:
+	!	.x Diagnosis Code>Add
+	!	.x Diagnosis Code>Erase
+	!	.x Diagnosis Code>Change
+	!	.x Diagnosis Code>Maintain
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_DIAG/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN BI_MAIN_DIAG
+	!	$ DELETE BI_MAIN_DIAG.OBJ;*
+	!
+	! Author:
+	!
+	!	10/31/88 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_DIAG.HB"
+	MAP (BI_DIAG)		BI_DIAG_CDD		BI_DIAG
+	MAP (BI_DIAG_OLD)	BI_DIAG_CDD		BI_DIAG_OLD, BI_DIAG2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BI_DIAG) &
+		BI_DIAG.CH%, &
+		BI_DIAG.READONLY%
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Diagnosis Code Description"
+		SMG_WINDOW::NHELP = "BI_MAIN_DIAG"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 2%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Code"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "Description"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BI_DIAG.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BI_DIAG.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BI.OPEN]BI_DIAG.CRE"
+		BI_DIAG.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_DIAG.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BI_DIAG.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BI_DIAG.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BI_DIAG.CH%
+		RESET #BI_DIAG.CH%
+		GET #BI_DIAG.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	04, 05, "(01) Diagnosis Code", &
+			05, 05, "(02) Description", &
+			00, 00, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Reenter:	SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Diagnosis Code\*
+	!	.p
+	!	The ^*Diagnosis Code\* field is provided to enter a code
+	!	which will reference a particular diagnosis.
+	!	.p
+	!	The field will accept six (6) alphanumeric characters.
+	!
+	! Index:
+	!	.x Diagnosis Code
+	!	.x Code>Diagnosis
+	!
+	!--
+
+			BI_DIAG::DIAGNOSIS = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "04;28", TEMP$, &
+				BI_DIAG::DIAGNOSIS, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Description\*
+	!	.p
+	!	The ^*Description\* field provides a means to enter a
+	!	meaningful description for a specific diagnosis code
+	!	which was entered in field (01).
+	!	.p
+	!	This field may contain up to forty (40) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Description>Diagnosis Code
+	!	.x Diagnosis Code>Description
+	!
+	!--
+
+			BI_DIAG::DESCRIPTION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "05;28", TEMP$, &
+				BI_DIAG::DESCRIPTION, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+
+		BI_MAIN_DIAG = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF BI_DIAG::DIAGNOSIS = ""
+			THEN
+				BI_MAIN_DIAG = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #BI_DIAG.CH%, &
+						KEY#0% EQ BI_DIAG::DIAGNOSIS + "", &
+						REGARDLESS
+
+					BI_MAIN_DIAG = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		END SELECT
+
+
+20500	CASE OPT_SETOLD
+
+		BI_DIAG_OLD = BI_DIAG
+
+	CASE OPT_RESETOLD
+
+		BI_DIAG = BI_DIAG_OLD
+
+	CASE OPT_SETDEFAULT
+
+		BI_DIAG2 = BI_DIAG
+
+	CASE OPT_RESETDEFAULT
+
+		BI_DIAG = BI_DIAG2
+
+	CASE OPT_VIEW
+
+		SELECT MLOOP
+
+		CASE 1%
+			MVALUE = "  Diagnosis Description"
+
+		CASE 2%
+
+			MVALUE = "012"
+
+		CASE 3%
+			MVALUE = BI_DIAG::DIAGNOSIS + "    "+ &
+				BI_DIAG::DESCRIPTION
+
+		END SELECT
+
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #BI_DIAG.CH%, &
+				KEY#0% GE BI_DIAG::DIAGNOSIS + "", REGARDLESS
+		CASE 1%
+
+			FIND #BI_DIAG.CH%, &
+				KEY#1% GE BI_DIAG::DESCRIPTION + "", &
+				REGARDLESS
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap Errors
+	!***************************************************************
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BI_MAIN_DIAG = ERR
+		RESUME 770
+
+	CASE 760%
+		BI_MAIN_DIAG = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

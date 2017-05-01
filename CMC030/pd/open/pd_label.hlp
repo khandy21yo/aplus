@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Label Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PD__LABEL.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*PD\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Product Label Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PD__LABEL.TBL\*
+	!	.p
+	!	Product Label Description.
+	!
+	! Index:
+	!	.x Product Label Description
+	!	.x PD_LABEL
+	!--

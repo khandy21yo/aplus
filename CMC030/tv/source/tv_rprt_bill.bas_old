@@ -1,0 +1,335 @@
+1	%TITLE "TV_RPRT_BILL - TV Traffic Invoice Report"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program prints the Program/Break files.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	02/08/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_RPRT_BILL
+	!	$ LINK/EXECUTABLE=TV_EXE:*.EXE TV_RPRT_BILL, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_RPRT_BILL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_BILL"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.HB"
+	MAP	(TV_BILL)	TV_BILL_CDD		TV_BILL
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSTOM"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP	(AR_CUSTOM)	AR_CUSTOM_CDD		AR_CUSTOM
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION PRNT_DATE
+	EXTERNAL STRING  FUNCTION DATE_STOREDATE
+	EXTERNAL STRING  FUNCTION PRNT_TIME
+	EXTERNAL LONG    FUNCTION TIME_CODE
+	EXTERNAL STRING  FUNCTION TIME_INVCODE
+	EXTERNAL STRING  FUNCTION DATE_STOREDATE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Set up from user input
+	!
+	FROM.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$	= EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	FROM.DATE$	= DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(2%), 132%))
+	TO.DATE$	= DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(3%), 132%))
+
+300	!
+	! Open TV_BILL file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.OPN"
+
+310	!
+	! Open customer file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.OPN"
+
+1000	!
+	! Set up title
+	!
+ ReportTitle:
+
+	!
+	! Title
+	!
+	TITLE$(1%) = "Invoice Report"
+	TITLE$(2%) = "TV Traffic System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(4%) = "    Date       Spot     Form No. " + &
+		"Sked  Length       Rate Fl Code Cart      Cut  Description"
+
+	TITLE$(5%) = ""
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #TV_BILL.CH%, KEY #0%
+	ELSE
+		FIND #TV_BILL.CH%, KEY #0% GE FROM.ITEM$
+	END IF
+
+	!
+	! Initialize totals
+	!
+	CURRENT_CUSTOMER$ = "%^&!%#^&!#%^&@%$"
+	TOTAL_SPOTS% = 0%
+	TOTAL_SPOTS_LENGTH% = 0%
+	TOTAL_DOLLARS = 0.0
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #TV_BILL.CH%, REGARDLESS
+
+	!
+	! Exit if done
+	!
+	IF (TV_BILL::CUSNUM > TO.ITEM$) AND (TO.ITEM$ <> "")
+	THEN
+		GOTO ExitTotal
+	END IF
+
+	!
+	! Skip record if date out of range
+	!
+	IF (TV_BILL::SCH_DATE < FROM.DATE$)
+	THEN
+		GOTO GetNextRec
+	END IF
+
+	IF (TV_BILL::SCH_DATE > TO.DATE$) AND (TO.DATE$ <> "")
+	THEN
+		GOTO GetNextRec
+	END IF
+
+	!
+	! Handle customer number changing
+	!
+	GOSUB NewCustomer IF CURRENT_CUSTOMER$ <> TV_BILL::CUSNUM
+
+	!
+	! Print one record
+	!
+	TEXT$ = "    " + &
+		PRNT_DATE(TV_BILL::SCH_DATE, 8%) + " " + &
+		PRNT_TIME(TV_BILL::SCH_TIME, 0%) + " " + &
+		TV_BILL::FRMNUM + "  " + &
+		TV_BILL::SKEDNUM + "  " + &
+		PRNT_TIME(TV_BILL::LENGTH, 0%) + " " + &
+		FORMAT$(TV_BILL::RATE, "$$####.##") + " " + &
+		TV_BILL::SPOTS_FLAG + "  " + &
+		TV_BILL::SPOTS_CODE + "   " + &
+		TV_BILL::CARTNUM + " " + &
+		TV_BILL::CUTNUM + " " + &
+		TV_BILL::DESCR
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	TOTAL_SPOTS% = TOTAL_SPOTS% + 1%
+	TOTAL_SPOTS_LENGTH% = TOTAL_SPOTS_LENGTH% + &
+		TIME_CODE(TV_BILL::LENGTH)
+	TOTAL_DOLLARS = TOTAL_DOLLARS + TV_BILL::RATE
+
+	GOTO GetNextRec
+
+	%PAGE
+
+17100	!
+	! Search for a customer, and display whatever
+	! comes up.
+	!
+ NewCustomer:
+	GET #AR_CUSTOM.CH%, KEY #0 EQ TV_BILL::CUSNUM
+
+17110	CURRENT_CUSTOMER$ = AR_CUSTOM::CUSNUM + ""
+
+	TEXT$ = TV_BILL::CUSNUM + "  " + AR_CUSTOM::CUSNAM
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 5%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	RETURN
+
+	%PAGE
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	TEXT$ = "Total Spots         " + FORMAT$(TOTAL_SPOTS%, "#####") + &
+		"  " + PRNT_TIME(TIME_INVCODE(TOTAL_SPOTS_LENGTH%), 0%) + &
+		"  " + FORMAT$(TOTAL_DOLLARS, "$$######.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", PROGRAM$, "ERROR" + NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	!
+	! Record locked
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 300%, 17000%
+		PROGRAM$ = "TV_BREAK"
+		RESUME HelpError
+
+	CASE 310%
+		PROGRAM$ = "AR_CUSTOM"
+		RESUME HelpError
+
+	!
+	! End of LOG_PROGRAM file
+	!
+	CASE 17020%
+		RESUME ExitTotal IF ERR = 11%
+
+	!
+	! No customer name found
+	!
+	CASE 17100%
+		AR_CUSTOM::CUSNUM = TV_BILL::CUSNUM
+		AR_CUSTOM::CUSNAM = "???? Undefined"
+		RESUME 17110
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	PROGRAM$ = SCOPE::PRG_PROGRAM
+	RESUME HelpError
+
+32767	END

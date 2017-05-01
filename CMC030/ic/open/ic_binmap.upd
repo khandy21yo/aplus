@@ -1,0 +1,24 @@
+	!======================================================================
+	! IC_BINMAP file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_BINMAP.CH%, STAT%)
+	CALL READ_DEVICE('IC_BINMAP',IC_BINMAP.DEV$, STAT%)
+
+	IC_BINMAP.NAME$ = IC_BINMAP.DEV$+"IC_BINMAP.MAS"
+
+	OPEN IC_BINMAP.NAME$ FOR INPUT AS FILE IC_BINMAP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_BINMAP, &
+		PRIMARY KEY &
+		( &
+			IC_BINMAP::PRODUCT, &
+			IC_BINMAP::LOCATION &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			IC_BINMAP::LOCATION, &
+			IC_BINMAP::PRODUCT &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

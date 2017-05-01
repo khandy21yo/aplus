@@ -1,0 +1,1466 @@
+1	%TITLE "Cash Receipt Journal Header Maintenance"
+	%SBTTL "AR_MAIN_LBCRJ"
+	%IDENT "V3.3"
+
+	FUNCTION LONG AR_MAIN_LBCRJ(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Maintain Cash Receipts Journal\* option provides the means
+	!	to enter and maintain cash receipt transactions. After selecting
+	!	this option, a screen will appear for selection of a batch number.
+	!	If a new batch number is to be created, press ^*<Do>\* to bypass
+	!	the existing batch number screen. A screen will appear accommodating
+	!	entry of a new batch number.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Maintain>Cash Receipt Journal
+	!	.x Cash Receipt Journal>Maintenance
+	!
+	! Option:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_MAIN_LBCRJ/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP AR_MAIN_LBCRJ
+	!	$ DELETE AR_MAIN_LBCRJ.OBJ;*
+	!
+	! Author:
+	!
+	!	05/12/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	11/14/89 - Kevin Handy
+	!		Modified to fix bug where entering type '10'
+	!		while an undefined customer customer was in
+	!		item 3 caused program to lock-up.
+	!
+	!	02/14/91 - Valentine's day
+	!		Modified for user friendly cash receipts.
+	!
+	!	04/15/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	04/21/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	10/04/93 - Kevin Handy
+	!		Changed "=<" to "<=".
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include Files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! Maps and CDD
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_LBCRJH"
+	MAP (AR_LBCRJH)		AR_LBCRJH_CDD		AR_LBCRJH
+	MAP (AR_LBCRJH_OLD)	AR_LBCRJH_CDD		AR_LBCRJH_OLD, &
+							AR_LBCRJH2
+
+	%INCLUDE %FROM %CDD "CDD$TOP.GL.GL_CHART"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_LBCRJL"
+	MAP (AR_LBCRJL)		AR_LBCRJL_CDD		AR_LBCRJL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN"
+	MAP (AR_OPEN)		AR_OPEN_CDD		AR_OPEN
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN_DIST"
+	MAP (AR_OPEN_DIST)	AR_OPEN_DIST_CDD	AR_OPEN_DIST
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION ENTR_3STRING
+	EXTERNAL STRING  FUNCTION ENTR_3STRINGLIST
+	EXTERNAL STRING  FUNCTION ENTR_3DATE
+	EXTERNAL STRING  FUNCTION PRNT_DATE
+	EXTERNAL REAL    FUNCTION ENTR_3NUMBER
+	EXTERNAL REAL    FUNCTION FUNC_ROUND
+	EXTERNAL INTEGER FUNCTION ENTR_3CHOICE
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+	EXTERNAL LONG    FUNCTION MAIN_JOURNAL
+	EXTERNAL LONG    FUNCTION FUNC_TESTENTRY
+
+	DIM INV_ARRAY$(500%)
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (TT_AR_LBCRJ) &
+		BATCH_NO$ = 2%, &
+		CASH_FLAG$ = 1%
+
+	COM (TT_AR_LBCRJH) &
+		TYPTITLE$ = 20%, &
+		TYPTYPE$(2%) = 20%
+
+	COM (CH_LB_CRJH) &
+		AR_LBCRJH.CH%, &
+		AR_LBCRJH.READONLY%
+
+	COM (CH_AR_LBCRJL) &
+		AR_LBCRJL.CH%, &
+		AR_LBCRJL.READONLY%
+
+	COM (CH_AR_OPEN) &
+		AR_OPEN.CH%
+
+	COM (CH_AR_OPEN_DIST) &
+		AR_OPEN_DIST.CH%
+
+
+	!
+	! Declare some variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	ON ERROR GOTO 29000
+
+	%PAGE
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Cash Receipt Journal "+ BATCH_NO$ + &
+					" Maintenance"
+		SMG_WINDOW::NHELP = "AR_MAIN_LBCRJ"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 10%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Receipt-number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		!
+		! Type
+		!
+		TYPTITLE$	= "Type   Description"
+		TYPTYPE$(0%)	= "2"
+		TYPTYPE$(1%)	= "09  ROA."
+		TYPTYPE$(2%)	= "10  Cash receipt."
+
+		!
+		! Load in defaults for chart
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW)
+
+700		!
+		! Declare channels
+		!
+		IF AR_LBCRJH.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF AR_LBCRJH.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[AR.OPEN]AR_LBCRJH.CRE"
+		AR_LBCRJH.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[AR.OPEN]AR_LBCRJH.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		AR_LBCRJH.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(AR_LBCRJH.CH%)
+
+		GOTO ExitFunction
+
+790		SMG_WINDOW::CHAN  = AR_LBCRJH.CH%
+		RESET #AR_LBCRJH.CH%
+		GET #AR_LBCRJH.CH%, REGARDLESS
+
+	%PAGE
+
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Line_items auTo_load_lines"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "Line_items"
+			!
+	!++
+	! Abstract:LINE_ITEMS
+	!	^*Line_Items\*
+	!	.b
+	!	.lm +5
+	!	The ^*Line_Items\* option in the COMMAND menu provides access to the
+	!	distribution screen where distribution to the General Ledger
+	!	accounts is entered and maintained.
+	!	.b
+	!	If the system is a cash based system, then the distribution should be
+	!	to revenue accounts. If the system is an accural system, then the distribution
+	!	should be to accounts receivable GL account or other appropriate accounts.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Line Items
+	!
+	!--
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(AR_LBCRJH.CH%)
+
+			AR_MAIN_LBCRJ = MAIN_JOURNAL(AR_MAIN_LBCRJ_LINE.ID, "")
+
+		!
+		! Auto load of lines
+		!
+		CASE "auTo_load_lines"
+
+	!++
+	!Abstract:AUTO_LOAD_LINES
+	!	.p
+	!	^*Auto__Load__Lines\* option will provide for selection
+	!	of multiple invoices for cash receipts and will load the
+	!	distribution section of the process with the selected
+	!	invoices automatically.  User may then perform selected
+	!	processes under the ^*Line__Items\* process.
+
+		GOSUB ListInvoices
+
+
+
+		END SELECT
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!******************************************************************
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Receipt",		&
+			2,  1, "(02) A/R Type",	&
+			3,  1, "(03)",			&
+			9,  1, "(04) Description",	&
+			1, 46, "(05) Trans date",	&
+			2, 46, "(06) Account",		&
+			5, 46, "(07) Check #",		&
+			6, 46, "(08) Deposit #",	&
+			7, 46, "(09) Amount",		&
+			9, 46, "(10) Apply 1st Invoice#", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_CONTROL::CTITLE, 10%), 3%, 6%)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+20200	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display
+	! data, set defaults, and return the data back according to
+	! MFLAG.
+	!******************************************************************
+	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		TEMP1% = SCOPE.EXIT%
+
+ E0Loop:	SCOPE.EXIT% = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	.ts 55
+	!	^*(01) Receipt	8 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Receipt\* field is provided to enter the number of the receipt issued
+	!	for payment received from the customer.
+	!	In the event that receipts are not used, enter a sequential number for
+	!	each receipt (ie: 1, 2, 3, etc.)
+	!	.lm -5
+	!
+	! Index:
+	!	.x Receipt
+	!
+	!--
+			AR_LBCRJH::RECNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"1;16", TEMP$, &
+				AR_LBCRJH::RECNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	.ts 55
+	!	^*(02) Accounts Receivable Type	09 or 10\*
+	!	.b
+	!	.lm +5
+	!	The ^*Accounts Receivable Type\* field designates whether the receipt is to
+	!	be applied as a credit to an Account Receivable or whether the record is a
+	!	miscellaneous receipt having no relationship to an Account Receivable.
+	!	.b
+	!	Valid values are:
+	!	.table 3,25
+	!	.te
+	!	^*09\* =  ROA - Apply as a credit to an A/R
+	!	.te
+	!	^*10\* =  Miscellaneous receipt, no relationship to A/R
+	!	.end table
+	!	^*Note:\* When the receipt type is "10", the cursor will skip to field 04
+	!	(Description), since the customer number for this type of receipt is
+	!	not applicable.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+			AR_LBCRJH::TRATYP = ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"2;16", "", &
+				AR_LBCRJH::TRATYP, MFLAG, "'E", MVALUE, &
+				TYPTYPE$(), TYPTITLE$, "005")
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	^*(03) Customer\*
+	!	.b
+	!	.lm +5
+	!	The ^*Customer Number\* is to be entered with the customer number which
+	!	has been established in the Customer Master File.
+	!	.b
+	!	This field will be bypassed if the type (field 02) is ^*"10 - Miscellaneous
+	!	Receipt"\*.
+	!	.b
+	!	Valid customer numbers may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+			IF (TEMP$ = "Add") AND (AR_LBCRJH::TRATYP = "10")
+			THEN
+				AR_LBCRJH::CUSNUM = ""
+				TEMP% = MFLAG OR 1%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			AR_LBCRJH::CUSNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"3;17", TEMP$, &
+				AR_LBCRJH::CUSNUM, TEMP%, "'E", MVALUE)
+
+			SELECT SCOPE.EXIT%
+
+			CASE SMG$K_TRM_F14
+				IF (MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX  ") = 1%)
+				THEN
+					AR_LBCRJH::CUSNUM = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO E0Loop
+
+			CASE SMG$K_TRM_F17
+				IF (MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "M0"+AR_LBCRJH::CUSNUM) = 1%)
+				THEN
+					AR_LBCRJH::CUSNUM = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO E0Loop
+
+			END SELECT
+
+			SCOPE.EXIT% = TEMP1% IF TEMP% AND 1%
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	.ts 55
+	!	^*(04) Description	25 Characters\*
+	!	.b
+	!	.lm +5
+	!	The ^*Description\* field will contain a description of the transactions.
+	!	If the transaction is an Accounts Receivable type "09", a comment in this field
+	!	would generally have little value.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Description
+	!
+	!--
+			AR_LBCRJH::DESCR = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;20", TEMP$, &
+				AR_LBCRJH::DESCR, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+	!++
+	! Abstract:FLD005
+	!	.ts 55
+	!	^*(05) Transaction date	MMDDYYYY or MMDDYY\*
+	!	.b
+	!	.lm +5
+	!	The ^*Transaction date\* field contains the date the receipt was issued.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Transaction Date
+	!
+	!--
+			AR_LBCRJH::TRADAT = ENTR_3DATE(SCOPE, SMG_WINDOW::WNUMBER, &
+				"1;64", TEMP$, &
+				AR_LBCRJH::TRADAT, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+	!++
+	! Abstract:FLD006
+	!	^*(06) Account\*
+	!	.b
+	!	.lm +5
+	!	The ^*Account\* field provides the means to enter the General Ledger cash
+	!	account number to which this receipt will be debited.
+	!	.b
+	!	Valid General Ledger account numbers may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Account
+	!
+	!--
+			AR_LBCRJH::ACCT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"2;61", TEMP$, &
+				AR_LBCRJH::ACCT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE.EXIT% = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					AR_LBCRJH::ACCT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO E0Loop
+			END IF
+
+		CASE 7%
+	!++
+	! Abstract:FLD007
+	!	^*(07) Check Number\*
+	!	.b
+	!	.lm +5
+	!	The ^*Check Number\* field provides the means to enter the number of the check
+	!	received for payment in this transaction. If payment were made in cash,
+	!	CASH could be typed.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Check Number
+	!
+	!--
+			AR_LBCRJH::CHECK = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;64", TEMP$, &
+				AR_LBCRJH::CHECK, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+	!++
+	! Abstract:FLD008
+	!	^*(08) Deposit Number\*
+	!	.b
+	!	.lm +5
+	!	The ^*Deposit Number\* field refers to the number of the bank deposit in which
+	!	a cash receipt is included.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Deposit Number
+	!
+	!--
+			AR_LBCRJH::DEPOSIT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;64", TEMP$, &
+				AR_LBCRJH::DEPOSIT, MFLAG, "'E", MVALUE)
+
+		CASE 9%
+	!++
+	! Abstract:FLD009
+	!	^*(09) Amount\*
+	!	.b
+	!	.lm +5
+	!	The ^*Amount\* field contains the total amount received for a particular
+	!	transaction.
+	!	.b
+	!	The field accommodates a number as large as a plus (+) or minus (-)
+	!	9,999,999.99.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Amount
+	!
+	!--
+			AR_LBCRJH::AMNT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;64", TEMP$, &
+				AR_LBCRJH::AMNT, MFLAG, "######.##", MVALUE)
+
+		CASE 10%
+	!++
+	! Abstract:FLD010
+	!	^*(10) Apply 1st Invoice#\*
+	!	.b
+	!	.lm +5
+	!	The ^*Apply 1st Invoice#\* field refers to the invoice number
+	!	with which to have the automatic load (if the system is cash based)
+	!	begin its application with. If the system is an accural system
+	!	this field should be left blank (even with an entry it will have no
+	!	effect). If this field is left blank the application will begin
+	!	with the oldest invoice.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Apply 1st Invoice#
+	!
+	!--
+			AR_LBCRJH::INVOICE = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;70", TEMP$, &
+				AR_LBCRJH::INVOICE, MFLAG, "'E", MVALUE)
+
+
+		END SELECT
+
+		PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		AR_MAIN_LBCRJ = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF AR_LBCRJH::RECNUM = ''
+			THEN
+				AR_MAIN_LBCRJ = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #AR_LBCRJH.CH%, KEY#0 EQ AR_LBCRJH::RECNUM, &
+						REGARDLESS
+
+					AR_MAIN_LBCRJ = 2%
+					CALL ENTR_3MESSAGE(SCOPE, "Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 3%
+			!
+			! Check customer if transaction type is not "10"
+			!
+			IF AR_LBCRJH::TRATYP = "10"
+			THEN
+				AR_35CUSTOM::CUSNAM = STRING$( &
+					LEN(AR_35CUSTOM::CUSNAM), ASCII(" "))
+
+				AR_35CUSTOM::ADD1 = STRING$( &
+					LEN(AR_35CUSTOM::ADD1), ASCII(" "))
+
+				AR_35CUSTOM::ADD2 = STRING$( &
+					LEN(AR_35CUSTOM::ADD2), ASCII(" "))
+
+				AR_35CUSTOM::ADD3 = STRING$( &
+					LEN(AR_35CUSTOM::ADD3), ASCII(" "))
+
+				AR_35CUSTOM::CITY = STRING$( &
+					LEN(AR_35CUSTOM::CITY), ASCII(" "))
+
+				AR_35CUSTOM::STATE = STRING$( &
+					LEN(AR_35CUSTOM::STATE), ASCII(" "))
+
+				AR_35CUSTOM::ZIP = STRING$( &
+					LEN(AR_35CUSTOM::ZIP), ASCII(" "))
+			ELSE
+				!
+				! Is the input defined?
+				!
+				AR_MAIN_LBCRJ, ST% = FUNC_TESTENTRY( SMG_WINDOW, &
+					AR_LBCRJH::CUSNUM, AR_35CUSTOM::CUSNAM, &
+					"AR", MLOOP, "CUST", &
+					"Customer number", AR_MAIN_35CUSTOM.ID)
+
+				IF ST% <> 0%
+				THEN
+					AR_35CUSTOM::ADD1 = STRING$( &
+						LEN(AR_35CUSTOM::ADD1), ASCII("?"))
+
+					AR_35CUSTOM::ADD2 = STRING$( &
+						LEN(AR_35CUSTOM::ADD2), ASCII("?"))
+
+					AR_35CUSTOM::ADD3 = STRING$( &
+						LEN(AR_35CUSTOM::ADD3), ASCII("?"))
+
+					AR_35CUSTOM::CITY = STRING$( &
+						LEN(AR_35CUSTOM::CITY), ASCII("?"))
+
+					AR_35CUSTOM::STATE = STRING$( &
+						LEN(AR_35CUSTOM::STATE), ASCII("?"))
+
+					AR_35CUSTOM::ZIP = STRING$( &
+						LEN(AR_35CUSTOM::ZIP), ASCII("?"))
+
+				END IF
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				'4'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				'5'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 30%), &
+				'6'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD3, 30%), &
+				'7'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + AR_35CUSTOM::COUNTRY +SPACE$(30%), 30%), &
+				'8'L, '6'L, , SMG$M_BOLD)
+
+		CASE 6%
+			!
+			! Is the input defined?
+			!
+			AR_MAIN_LBCRJ = FUNC_TESTENTRY( SMG_WINDOW, &
+				AR_LBCRJH::ACCT, GL_CHART::DESCR, &
+				"AR", MLOOP, "ACCT", &
+				"Account number", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR, 30%), &
+				'3'L, '51'L, , SMG$M_BOLD)
+
+		END SELECT
+
+	!
+	! Display additional information
+	!
+	CASE OPT_DISPLAY
+
+		AR_MAIN_LBCRJ = 0%
+
+		!
+		! Is the input defined?
+		!
+		IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, 'Q0' + AR_LBCRJH::CUSNUM) <> 1%
+		THEN
+			AR_35CUSTOM::CUSNAM = "????????????????????"
+			AR_35CUSTOM::ADD1 = "????????????????????"
+			AR_35CUSTOM::ADD2 = "????????????????????"
+			AR_35CUSTOM::ADD3 = "????????????????????"
+			AR_35CUSTOM::CITY = ""
+			AR_35CUSTOM::STATE = ""
+			AR_35CUSTOM::ZIP = ""
+			AR_35CUSTOM::COUNTRY = ""
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				'4'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				'5'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					LEFT(AR_35CUSTOM::ADD2, 30%), &
+				'6'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					LEFT(AR_35CUSTOM::ADD3, 30%), &
+				'7'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + AR_35CUSTOM::COUNTRY + SPACE$(30%), 30%), &
+				'8'L, '6'L, , SMG$M_BOLD)
+		END IF
+
+		!
+		! Is the input defined?
+		!
+		IF MAIN_WINDOW(GL_MAIN_CHART.ID, 'Q0' + AR_LBCRJH::ACCT) <> 1%
+		THEN
+			GL_CHART::DESCR = "????????????????????"
+		END IF
+
+		!
+		! Print chart description
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(GL_CHART::DESCR,30%), &
+			'3'L, '51'L, , SMG$M_BOLD)
+
+	!
+	! Set AR_LBCRJH_OLD value
+	!
+20500	CASE OPT_SETOLD
+		AR_LBCRJH_OLD = AR_LBCRJH
+
+	!
+	! Restore AR_LBCRJH_OLD value
+	!
+	CASE OPT_RESETOLD
+		AR_LBCRJH = AR_LBCRJH_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		AR_LBCRJH2 = AR_LBCRJH
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		AR_LBCRJH = AR_LBCRJH2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = ' Invoice   Cust#'
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = '011'
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = AR_LBCRJH::RECNUM + " " + &
+				TRM$(AR_LBCRJH::CUSNUM)
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #AR_LBCRJH.CH%, &
+				KEY#0 GE AR_LBCRJH::RECNUM, &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Force auto load of lines
+			!
+			GOSUB ListInvoices
+
+			!
+			! Add line items also
+			!
+			AR_MAIN_LBCRJ = MAIN_JOURNAL(AR_MAIN_LBCRJ_LINE.ID, "")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF AR_LBCRJH_OLD::RECNUM <> AR_LBCRJH::RECNUM
+			THEN
+				TEMP$ = AR_LBCRJH::RECNUM + ""
+				AR_LBCRJH = AR_LBCRJH_OLD
+				AR_MAIN_LBCRJ = MAIN_JOURNAL(AR_MAIN_LBCRJ_LINE.ID, "C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			AR_MAIN_LBCRJ = MAIN_JOURNAL(AR_MAIN_LBCRJ_LINE.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+
+28000
+ ExitFunction:
+	EXIT FUNCTION
+
+ ListInvoices:
+28100	!*******************************************************************
+	! Create a list of invoices and ask for which one they want.
+	!*******************************************************************
+
+	AR_OPEN.ENDFLAG% = 0%
+
+	NEXTLINE$ = "000"
+
+	AMOUNTLEFT = AR_LBCRJH::AMNT
+
+
+	!
+	! If the AR_OPEN file has not yet been opened, then open it.
+	!
+	GOTO 28105 IF AR_OPEN.CH% > 0%
+
+	!
+	! Open main file (existing) for modification
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+
+28105	GOTO 28110 IF AR_LBCRJL.CH% > 0%
+
+	!
+	! Open line file for adding into the sucker
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_LBCRJL.CRE"
+	AR_LBCRJL.READONLY% = 0%
+
+28110	!
+	! The open item file should now be opened.  Search for
+	! The first record for this customer.
+	!
+	INV_ARRAY% = 0%
+	GET #AR_OPEN.CH%, KEY #0 GE AR_LBCRJH::CUSNUM, REGARDLESS
+
+28120	!
+	! Skip out if done with this customer
+	!
+	GOTO 28200 IF AR_OPEN::CUSNUM <> AR_LBCRJH::CUSNUM
+
+	!
+	! Keep track of the current invoice.
+	!
+	INV.DATE$, INV.DATE1$ = AR_OPEN::TRADAT + ""
+	INV.DATE1$ = "00000000" IF AR_OPEN::TRATYP = "04"	! Sort to front
+	INV.INVNUM$ = AR_OPEN::INVNUM + ""
+	INV.DESCR$ = AR_OPEN::DESCR + ""
+	INV.MATTER$ = AR_OPEN::SUBACC + ""
+
+	IF AR_OPEN::TRATYP = "02"
+	THEN
+		INV.AMOUNT = 0.0
+	ELSE
+		INV.AMOUNT = AR_OPEN::SALAMT
+	END IF
+
+28130	!
+	! Pull in additional information for this invoice
+	!
+	GET #AR_OPEN.CH%, REGARDLESS
+
+	IF (AR_OPEN::CUSNUM = AR_LBCRJH::CUSNUM) AND (AR_OPEN::INVNUM = INV.INVNUM$)
+	THEN
+		INV.AMOUNT = INV.AMOUNT + AR_OPEN::SALAMT &
+			UNLESS AR_OPEN::TRATYP = "02"
+		GOTO 28130
+	END IF
+
+28135	!
+	! Skip if paid off
+	!
+
+	GOTO 28200 IF INV.AMOUNT = 0.0 AND AR_OPEN.ENDFLAG% = -1%
+
+	GOTO 28120 IF INV.AMOUNT = 0.0
+
+
+	!
+	! New user friendly stuff goes here
+	!
+	FIND #AR_LBCRJL.CH%, KEY#0 GE AR_LBCRJH::RECNUM, REGARDLESS
+
+28136
+
+	GET #AR_LBCRJL.CH%
+
+	GOTO 28139 IF AR_LBCRJL::RECNUM <> AR_LBCRJH::RECNUM
+
+	NEXTLINE$ = AR_LBCRJL::LLINE IF AR_LBCRJL::LLINE > NEXTLINE$
+
+	GOTO 28136 IF AR_LBCRJL::INVNUM <> INV.INVNUM$
+
+	INV.AMOUNT = INV.AMOUNT + AR_LBCRJL::AMOUNT
+
+	AMOUNTLEFT = AMOUNTLEFT + AR_LBCRJL::AMOUNT
+
+	GOTO 28136
+
+28139
+
+	INV.AMOUNT = FUNC_ROUND(INV.AMOUNT, 2%)
+
+	GOTO 28200 IF INV.AMOUNT = 0.0 AND AR_OPEN.ENDFLAG% = -1%
+
+	GOTO 28120 IF INV.AMOUNT = 0.0
+
+	TEXT$ = &
+		INV.DATE1$ + INV.DATE$ + &
+		INV.INVNUM$ + &
+		INV.DESCR$ + &
+		FORMAT$(INV.AMOUNT, "#######.##") + &
+		INV.MATTER$
+
+	!
+	! Add (insertion) to list
+	!
+	GOTO 28140 IF TEXT$ < INV_ARRAY$(LOOP%) &
+		FOR LOOP% = 1% TO INV_ARRAY%
+	LOOP% = INV_ARRAY% + 1%
+
+28140	INV_ARRAY$(LOOP1% + 1%) = INV_ARRAY$(LOOP1%) &
+		FOR LOOP1% = INV_ARRAY% TO LOOP% STEP -1%
+	INV_ARRAY$(LOOP%) = TEXT$
+	INV_ARRAY% = INV_ARRAY% + 1%
+
+	GOTO 28120 IF AR_OPEN.ENDFLAG% = 0%
+
+28200	! We should now have a good list.
+	! Now reformat the list into a user readable format
+	! and use enter_choices to select one of them.
+	!
+	INV_ARRAY$(0%) = NUM1$(INV_ARRAY%)
+	FOR LOOP% = 1% TO INV_ARRAY%
+		INV_ARRAY$(LOOP%) = &
+			"  " + &
+			MID(INV_ARRAY$(LOOP%), 17%, 8%) + " " + &
+			PRNT_DATE(MID(INV_ARRAY$(LOOP%), 9%, 8%), 8%) + " " + &
+			MID(INV_ARRAY$(LOOP%), 25%, 25%) + " " + &
+			MID(INV_ARRAY$(LOOP%), 50%, 10%) + " " + &
+			MID(INV_ARRAY$(LOOP%), 60%, 10%)
+
+	NEXT LOOP%
+
+	IF CASH_FLAG$ = "Y"
+	THEN
+		GOTO 28400
+	END IF
+
+	TEMP% = ENTR_3CHOICE(SCOPE, "", &
+		"", &
+		INV_ARRAY$(), &
+		SELECTED$, &
+		32%, &
+		"List of Current Invoices  - unapplied amount: " + FORMAT$(AMOUNTLEFT, "###,###.##"), &
+		"011,022,028", &
+		0%)
+
+
+28250
+		GOTO 28290 IF SELECTED$ = ""
+
+		X% = POS(SELECTED$, ",", 1%)
+		Y% = X% + 1%
+		X% = X% - 1%
+
+		GOTO 28290 IF X% <= 0%
+
+		TEMP% = VAL%(LEFT(SELECTED$, X%))
+
+		SELECTED$ = RIGHT(SELECTED$, Y%)
+
+		AR_LBCRJL::RECNUM = AR_LBCRJH::RECNUM
+
+		AR_LBCRJL::TRATYP = "1"
+
+		AR_LBCRJL::ALLOCATE = ""
+
+		AR_LBCRJL::STAFF = ""
+
+		AR_LBCRJL::LLINE = FORMAT$(VAL%(NEXTLINE$) + 1%, "<0>##")
+
+		NEXTLINE$ = AR_LBCRJL::LLINE
+
+		AR_LBCRJL::INVNUM = MID(INV_ARRAY$(TEMP%),3%, 8%)
+		AR_LBCRJL::AMOUNT = -VAL(RIGHT(INV_ARRAY$(TEMP%), 49%))
+
+
+		GOSUB LookupAccount
+
+		PUT #AR_LBCRJL.CH%
+
+		GOTO 28250
+
+28290	RETURN
+
+	%PAGE
+
+ LookupAccount:
+	!*******************************************************************
+	! Look up account number for this invoice in the accounts receivable
+	! register, and place it in the crj line item if apporpriate.
+	!*******************************************************************
+
+28300	GET #AR_OPEN.CH%, &
+		KEY #0% EQ AR_LBCRJH::CUSNUM + AR_LBCRJL::INVNUM, &
+		REGARDLESS
+
+	AR_LBCRJL::ACCT = AR_OPEN::ARACCT
+
+	AR_LBCRJL::ALLOCATE = ""
+
+	AR_LBCRJL::STAFF = ""
+
+	AR_LBCRJL::MATTER_NUM = AR_OPEN::SUBACC
+
+28390	RETURN
+
+28400	!
+	! Auto distribution of revenue accounts attached thru AR_OPEN_DIST
+	!
+	GOTO 28405 IF AR_OPEN_DIST.CH% > 0%
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN_DIST.OPN"
+
+28405
+
+	FIND #AR_LBCRJL.CH%, KEY#0% EQ AR_LBCRJH::RECNUM, REGARDLESS
+
+28406
+
+	CALL ENTR_3MESSAGE(SCOPE, "Can't Autoload with lines already assigned - press Return", 0%)
+
+	RETURN
+
+28407
+
+	CALL ENTR_3MESSAGE(SCOPE, "Autoloading lines now - please wait", 1%)
+
+
+	AR_LBCRJL::RECNUM = AR_LBCRJH::RECNUM
+	AR_LBCRJL::TRATYP = "1"
+
+	AMOUNTLEFT = FUNC_ROUND(AMOUNTLEFT, 2%)
+
+	IF AR_LBCRJH::INVOICE = ""
+	THEN
+		START_FLAG$ = "Y"
+	ELSE
+		START_FLAG$ = "N"
+	END IF
+
+	FOR LOOP% = 1% TO INV_ARRAY%
+
+
+		AR_LBCRJL::INVNUM = MID(INV_ARRAY$(LOOP%),3%, 8%)
+
+		IF START_FLAG$ = "N"
+		THEN
+			GOTO 28480 IF AR_LBCRJL::INVNUM < AR_LBCRJH::INVOICE
+		END IF
+
+		START_FLAG$ = "Y"
+
+		GOSUB LookupStuff
+
+		DISTAMT = VAL(RIGHT(INV_ARRAY$(LOOP%), 49%))
+
+		DISTAMT = FUNC_ROUND(DISTAMT, 2%)
+
+		IF AMOUNTLEFT < DISTAMT
+		THEN
+			DISTAMT = AMOUNTLEFT
+			AMOUNTLEFT = 0.0
+		ELSE
+			AMOUNTLEFT = AMOUNTLEFT - DISTAMT
+		END IF
+
+		ORIGDISTAMT = DISTAMT
+		GOSUB GetFeeTotal
+		ORIGDISTAMT = DISTAMT + COSTTOTAL
+
+28410		FIND #AR_OPEN_DIST.CH%, KEY#0% GE AR_LBCRJH::CUSNUM + &
+			AR_LBCRJL::INVNUM, REGARDLESS
+
+		REV_ACCT$ = ""
+		REV_AMT = 0.0
+		FEEFLAG$ = ""
+
+28420		GET #AR_OPEN_DIST.CH%
+
+		IF AR_OPEN_DIST::CUSNUM + AR_OPEN_DIST::INVNUM <> &
+			AR_LBCRJH::CUSNUM + AR_LBCRJL::INVNUM
+		THEN
+			GOSUB BuildDoodoo
+			GOTO 28480
+		END IF
+
+		IF REV_ACCT$ = ""
+		THEN
+			REV_ACCT$ = AR_OPEN_DIST::ACCT
+			AR_LBCRJL::ALLOCATE = AR_OPEN_DIST::TAXTYP
+			AR_LBCRJL::STAFF = AR_OPEN_DIST::STAFF_NUM
+			FEEFLAG$ = AR_OPEN_DIST::TAXTYP
+		END IF
+
+		IF REV_ACCT$ <> AR_OPEN_DIST::ACCT
+		THEN
+			GOSUB BuildDoodoo
+			REV_ACCT$ = AR_OPEN_DIST::ACCT
+			AR_LBCRJL::ALLOCATE = AR_OPEN_DIST::TAXTYP
+			AR_LBCRJL::STAFF = AR_OPEN_DIST::STAFF_NUM
+			FEEFLAG$ = AR_OPEN_DIST::TAXTYP
+		END IF
+
+		REV_AMT = REV_AMT + AR_OPEN_DIST::AMOUNT
+
+		GOTO 28420
+
+28480
+
+		GOTO 28490 IF AMOUNTLEFT <= 0.0
+
+		NEXT LOOP%
+
+28490
+		CALL ENTR_3MESSAGE(SCOPE, "", 1%)
+
+		RETURN
+
+
+ BuildDoodoo:
+28500
+		REV_AMT = FUNC_ROUND(REV_AMT, 2%)
+
+		GOTO 28520 IF REV_AMT = 0.0
+
+		IF FEEFLAG$ = "F"
+		THEN
+			GOTO 28520 IF ORIGDISTAMT = 0.0
+			GOTO 28520 IF FEETOTAL = 0.0
+			PERC = REV_AMT/FEETOTAL
+			REV_AMT = -ORIGDISTAMT * PERC
+		END IF
+
+		IF DISTAMT + REV_AMT < 0.0
+		THEN
+			REV_AMT = -DISTAMT
+		END IF
+
+		AR_LBCRJL::LLINE = FORMAT$(VAL%(NEXTLINE$) + 1%, "<0>##")
+		NEXTLINE$ = AR_LBCRJL::LLINE
+		AR_LBCRJL::AMOUNT = REV_AMT
+		AR_LBCRJL::ACCT = REV_ACCT$
+
+
+28510		PUT #AR_LBCRJL.CH%
+
+		DISTAMT = DISTAMT + REV_AMT
+
+		REV_AMT = 0.0
+
+28520		RETURN
+
+ LookupStuff:
+	!*******************************************************************
+	! Look up matter number for this invoice in the accounts receivable
+	! register, and place it in the crj line item if apporpriate.
+	!*******************************************************************
+
+	AR_LBCRJL::MATTER_NUM = ""
+
+28600	GET #AR_OPEN.CH%, &
+		KEY #0% EQ AR_LBCRJH::CUSNUM + AR_LBCRJL::INVNUM, &
+		REGARDLESS
+
+	AR_LBCRJL::MATTER_NUM = AR_OPEN::SUBACC
+
+28690	RETURN
+
+ GetFeeTotal:
+28700
+	FEETOTAL = 0.0
+	COSTTOTAL = 0.0
+
+	FIND #AR_OPEN_DIST.CH%, KEY#0% GE AR_LBCRJH::CUSNUM + AR_LBCRJL::INVNUM, REGARDLESS
+
+28710
+	GET #AR_OPEN_DIST.CH%
+
+	IF AR_OPEN_DIST::CUSNUM + AR_OPEN_DIST::INVNUM <> &
+		AR_LBCRJH::CUSNUM + AR_LBCRJL::INVNUM
+	THEN
+		GOTO 28720
+	END IF
+
+	IF AR_OPEN_DIST::TAXTYP = "F"
+	THEN
+		FEETOTAL = FEETOTAL + AR_OPEN_DIST::AMOUNT
+	ELSE
+		COSTTOTAL = COSTTOTAL + AR_OPEN_DIST::AMOUNT
+	END IF
+
+	GOTO 28710
+
+28720
+	FEETOTAL = FUNC_ROUND(FEETOTAL, 2%)
+	COSTTOTAL = FUNC_ROUND(COSTTOTAL, 2%)
+
+	RETURN
+
+
+29000	!****************************************************************
+	! Trap errors
+	!****************************************************************
+	SELECT ERL
+		!
+		! Unable to open Read/Write
+		!
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			AR_MAIN_LBCRJ = ERR
+			RESUME 770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 760%
+			AR_MAIN_LBCRJ = ERR
+			RESUME 770
+
+		!
+		! Unable to reset
+		!
+		CASE 790%
+			RESUME 32767
+
+
+		!
+		! Header does not exist for line
+		!
+		CASE 5000%
+			RESUME 29900
+
+		!
+		! Record does not already exist
+		!
+		CASE 20300%
+			RESUME 32767 IF ERR = 155%
+		!
+		! Invoice list choices
+		!
+		CASE 28100%
+			RESUME 28290
+
+		CASE 28105%
+			RESUME 28290
+
+		CASE 28110%
+			RESUME 28200
+
+		CASE 28130%
+			AR_OPEN.ENDFLAG% = -1%
+			RESUME 28135 IF ERR = 11%
+
+		!
+		! New user friendly stuff is error trapped here
+		!
+		CASE 28135%
+			RESUME 28139
+
+		CASE 28136%
+			RESUME 28139 IF ERR= 11%
+
+		CASE 28300%
+			RESUME 28390
+
+		CASE 28400%
+			RESUME 28490
+
+		CASE 28405%
+			RESUME 28407
+
+		CASE 28410%
+			RESUME 28480
+
+		CASE 28420%
+			GOSUB BuildDoodoo
+			RESUME 28480
+
+		CASE 28600%
+			RESUME 28690
+
+		CASE 28700%
+			RESUME 28720
+
+		CASE 28710%
+			RESUME 28720
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+29900	!
+	! Handle no header for Line function here
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Sorry, but there is no current header item", 0%)
+	GOTO 32767
+
+32767	END FUNCTION
+	!+-+-+
+	!++
+	! Abstract:AUTO_LOAD_LINES
+	!	^*Auto Load Lines\*
+	!	.b
+	!	.lm +5
+	!	The ^*Auto Load Lines\* field in the COMMAND line allows for invoices to be
+	!	loaded automatically and the attached distribution of those invoices.
+	!	.b
+	!	If the system is a cash based system then the distribution load will be applied
+	!	to the first invoice (oldest) or the indicated first invoice number
+	!	in the header.  If the system is an accural based system then the user
+	!	will be allowed to pick the
+	!	invoices with which to distribute against.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--

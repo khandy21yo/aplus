@@ -1,0 +1,158 @@
+1	%TITLE "Customer Name/Address Maintenance"
+	%SBTTL "PC_SPEC_CHANGEDATE"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1992 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho  83402
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!
+	! Index:
+	!
+	! Compile:
+	!
+	!	$ BAS PC_SOURCE:PC_SPEC_CHANGEDATE/LINE
+	!	$ LINK/EXEC:PC_EXE PC_SPEC_CHANGEDATE,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE PC_SPEC_CHANGEDATE.OBJ;*
+	!
+	! Author:
+	!
+	!	04/18/97 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	08/25/97 - Kevin Handy
+	!		Clean up (Check)
+	!		Change second error trap for 1010 to 1100.
+	!
+	!	08/21/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.HB"
+	MAP (PC_COST) PC_COST_CDD PC_COST
+
+	%INCLUDE "SOURCE:[PC.OPEN]PC_PRICE.HB"
+	MAP (PC_PRICE) PC_PRICE_CDD PC_PRICE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+120	%INCLUDE "SOURCE:[PC.OPEN]PC_COST.MOD"
+
+130	%INCLUDE "SOURCE:[PC.OPEN]PC_PRICE.MOD"
+
+	GOTO 1100	! HACK TO SKIP PC_PRICE FILE
+
+1000	!
+	! Get one price from input file
+	!
+	RESET #PC_PRICE.CH%
+
+1010	!
+	! See if the product number really exists
+	!
+	GET #PC_PRICE.CH%
+
+1020	IF PC_PRICE::XDATE = "19970515" AND &
+		LEFT(PC_PRICE::PRODUCT_NUM, 3%) = "BWK"
+	THEN
+		PC_PRICE::XDATE = "19970415"
+		UPDATE #PC_PRICE.CH%
+		PRINT PC_PRICE::PRODUCT_NUM, PC_PRICE::XDATE
+	END IF
+
+	GOTO 1010
+
+
+1100	!
+	! Get one price from input file
+	!
+	RESET #PC_COST.CH%
+
+1110	!
+	! See if the product number really exists
+	!
+	WHEN ERROR IN
+		GET #PC_COST.CH%
+	USE
+		CONTINUE 5000 IF ERR = 11%
+		FILENAME$ = "PC_COST"
+		CONTINUE HelpError
+	END WHEN
+
+1120	IF PC_COST::EFFDATE = "19970515" AND &
+		LEFT(PC_COST::PRODUCT, 3%) = "BWK"
+	THEN
+		DELETE #PC_COST.CH%
+		PC_COST::EFFDATE = "19970415"
+		PUT #PC_COST.CH%
+		PRINT PC_COST::PRODUCT, PC_COST::EFFDATE
+	END IF
+
+	GOTO 1110
+
+
+5000	CLOSE #PC_PRICE.CH%
+	CLOSE PC_COST.CH%
+	CLOSE #1%
+
+	GOTO 32767
+
+19000	!
+	! TRAP ERRORS
+	!
+	SELECT ERL
+
+	!
+	! End of ascii file
+	!
+	CASE 1000%
+		RESUME 1100 IF ERR = 11%
+
+	!
+	! Bad price
+	!
+	CASE 1010%
+		RESUME 1100 IF ERR = 11%
+
+	!
+	! End of ascii file
+	!
+	CASE 1100%
+		RESUME 5000 IF ERR = 11%
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+32767	END

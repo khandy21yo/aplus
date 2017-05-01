@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Pay History is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__HIS__PAY.ARC\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Payroll Pay History
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__HIS__PAY.ARC\*
+	!	.p
+	!	Payroll Pay History.
+	!
+	! Index:
+	!	.x Payroll Pay History
+	!	.x PR_HIS_PAY
+	!--

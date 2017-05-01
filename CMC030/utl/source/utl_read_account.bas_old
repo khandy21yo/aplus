@@ -1,0 +1,155 @@
+1	%TITLE "Read Transaction Type Account File"
+	%SBTTL "UTL_READ_ACCOUNT"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION STRING UTL_READ_ACCOUNT(XLOCATION$, XTRANSTYPE$)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! Computer Management Center assumes no responsibility for the use
+	! or reliability of its software on equipment which is not supported
+	! by Computer Management Center.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function returns Account number from transaction type
+	!	account file
+	!
+	! Input:
+	!
+	!	XLOCATION$   is a location number
+	!	XTRANSTYPE$   is a transaction type
+	!
+	! Output:
+	!
+	!	account number
+	!
+	! Example:
+	!
+	! Compile:
+	!
+	!	$ BAS UTL_SOURCE:UTL_READ_ACCOUNT/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP UTL_READ_ACCOUNT
+	!	$ DELETE UTL_READ_ACCOUNT.OBJ;*
+	!
+	! Author:
+	!
+	!	07/18/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	04/30/92 - Dan Perkins
+	!		Return account description if undefined.
+	!
+	!	05/07/92 - Frank F. Starman
+	!		Return more specific account description if undefined.
+	!
+	!	06/12/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	06/06/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	COM (READ_UTL_ACCOUNT)	UTL_ACCOUNT.CH%
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_ACCOUNT.HB"
+	MAP	(UTL_ACCOUNT)	UTL_ACCOUNT_CDD	UTL_ACCOUNT
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+	! Set initial value
+	!
+	SELECT XTRANSTYPE$
+	CASE "CC"
+		UTL_READ_ACCOUNT = "Cycle Count Acct"
+	CASE "IS"
+		UTL_READ_ACCOUNT = "Inv Issue Acct"
+	CASE "MA"
+		UTL_READ_ACCOUNT = "Manuf Prod Acct"
+	CASE "RE"
+		UTL_READ_ACCOUNT = "Inv Receiver Acct"
+	CASE "RT"
+		UTL_READ_ACCOUNT = "Return Inv Acct"
+	CASE "SA"
+		UTL_READ_ACCOUNT = "Reg Sale Acct"
+	CASE "SE"
+		UTL_READ_ACCOUNT = "Empl Sale Acct"
+	CASE "SP"
+		UTL_READ_ACCOUNT = "Prom Sale Acct"
+	CASE "TR"
+		UTL_READ_ACCOUNT = "Transfer Acct"
+	CASE "WA"
+		UTL_READ_ACCOUNT = "Waste Acct"
+	CASE "WR"
+		UTL_READ_ACCOUNT = "Warranty Acct"
+	CASE ELSE
+		UTL_READ_ACCOUNT = "Transaction Acct"
+	END SELECT
+
+1000	IF UTL_ACCOUNT.CH% <= 0%
+	THEN
+		%INCLUDE "SOURCE:[UTL.OPEN]UTL_ACCOUNT.OPN"
+	END IF
+
+2000	GET #UTL_ACCOUNT.CH%, KEY#1% EQ XLOCATION$ + XTRANSTYPE$, REGARDLESS
+	UTL_READ_ACCOUNT = UTL_ACCOUNT::ACCOUNT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+	%PAGE
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	IF ERR=154%
+	THEN
+		SLEEP 1%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+	CASE 1000%
+		RESUME ExitFunction IF ERR = 5%
+
+	CASE 2000%
+		RESUME ExitFunction IF ERR = 155% OR ERR = 9%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+	END FUNCTION

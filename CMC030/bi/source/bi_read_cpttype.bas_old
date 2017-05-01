@@ -1,0 +1,163 @@
+1	%TITLE "Read in CPT Type and Account"
+	%SBTTL "BI_READ_CPTTYPE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_READ_CPTTYPE(STRING CPTTYPE, &
+		BI_CPTTYPE_CDD BI_CPTTYPE_EXAM)
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function, given a CPT Type, will return the
+	!	record from the Insurance Billing CPT Type file associated
+	!	with this particular CPT Type.
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Inputs:
+	!
+	!	CPTTYPE		is the given Current Procedural Terminology
+	!		Code Type.
+	!
+	! Outputs:
+	!
+	!	BI_CPTTYPE	is the record associated with the given
+	!		CPT Type.
+	!	Returned Value	is CMC$_NORMAL if the search for the
+	!		record was successful, CMC$_UNDEFINED if the
+	!		record wasn't found, or CMC$_UNTERROR if there
+	!		was an error of some sort.
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_READ_CPTTYPE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_READ_CPTTYPE
+	!	$ DELETE BI_READ_CPTTYPE.OBJ;*
+	!
+	! Author:
+	!
+	!	07/13/89 - Aaron Redd
+	!
+	! Modification History:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	08/05/2000 - Kevin Handy
+	!		Use WHEN ERROR IN
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include special CMC codes
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.HB"
+	MAP	(BI_CPTTYPE)	BI_CPTTYPE_CDD	BI_CPTTYPE
+
+	!
+	! Common memory areas
+	!
+	COM (BI_READ_CPTTYPE.COM) BI_CPTTYPE.CH%
+
+	%PAGE
+
+	!
+	! Set returned initial value (assume failure)
+	!
+	BI_READ_CPTTYPE = CMC$_UNDEFINED
+
+	!
+	! Open the BI CPT Type file if not already open
+	!
+100	IF BI_CPTTYPE.CH% <= 0%
+	THEN
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.OPN"
+		USE
+			CONTINUE ExitFunction IF ERR = 5%
+			FILENAME$ = "BI_CPTTYPE"
+			CONTINUE HelpError
+		END WHEN
+	END IF
+
+	!
+	! Get the BI_CPTTYPE record and set it to be returned
+	! to the main program
+	!
+200	WHEN ERROR IN
+		GET #BI_CPTTYPE.CH%, KEY #0% EQ CPTTYPE, REGARDLESS
+	USE
+		CONTINUE ExitFunction IF (ERR = 155%) OR (ERR = 9%)
+		FILENAME$ = "BI_CPTTYPE"
+		CONTINUE HelpError
+	END WHEN
+
+	BI_CPTTYPE_EXAM = BI_CPTTYPE
+
+	!
+	! Reset returned value for success
+	!
+	BI_READ_CPTTYPE = CMC$_NORMAL
+
+ ExitFunction:
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+32767	!******************************************************************
+	! End of function BI_READ_CPTTYPE
+	!******************************************************************
+	END FUNCTION

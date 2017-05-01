@@ -1,0 +1,21 @@
+	!======================================================================
+	! RM_JOURPROD file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(RM_JOURPROD.CH%, STAT%)
+	CALL READ_DEVICE('RM_JOURPROD',RM_JOURPROD.DEV$, STAT%)
+
+	RM_JOURPROD.NAME$ = RM_JOURPROD.DEV$+"RM_JOURPROD_"+BATCH_NO$+".JRL"
+
+	OPEN RM_JOURPROD.NAME$ FOR INPUT AS FILE RM_JOURPROD.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP RM_JOURPROD, &
+		PRIMARY KEY &
+		( &
+			RM_JOURPROD::LOCATION, &
+			RM_JOURPROD::STARTDATE, &
+			RM_JOURPROD::TRANSTYPE, &
+			RM_JOURPROD::SEQNUM &
+		)	, &
+		ACCESS MODIFY, ALLOW NONE
+

@@ -1,0 +1,38 @@
+	!======================================================================
+	! IC_BALANCE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_BALANCE.CH%, STAT%)
+	CALL READ_DEVICE('IC_BALANCE',IC_BALANCE.DEV$, STAT%)
+
+	IC_BALANCE.NAME$ = IC_BALANCE.DEV$+"IC_BALANCE.HIS"
+
+	OPEN IC_BALANCE.NAME$ FOR INPUT AS FILE IC_BALANCE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_BALANCE, &
+		PRIMARY KEY &
+		( &
+			IC_BALANCE::PRODUCT, &
+			IC_BALANCE::LOCATION, &
+			IC_BALANCE::PERIOD, &
+			IC_BALANCE::CLASS, &
+			IC_BALANCE::RECTYPE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			IC_BALANCE::BATCH, &
+			IC_BALANCE::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			IC_BALANCE::LOCATION, &
+			IC_BALANCE::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			IC_BALANCE::PERIOD, &
+			IC_BALANCE::RECTYPE, &
+			IC_BALANCE::CLASS &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

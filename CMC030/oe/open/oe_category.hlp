@@ -1,0 +1,33 @@
+	!++
+	! Error:5
+	!	^*The Sales Order Category Description Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__CATEGORY.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Order Entry System\* going
+	!	under MASTER and TABLE and run the process again.
+	!
+	! Index:
+	!	.x Sales Order Category Description Table
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__CATEGORY.TBL\*
+	!	.B
+	!	.LM +5
+	!	Sales Order Category Description Table.
+	!	
+	!	
+	!	
+	!	.LM -5
+	!
+	! Index:
+	!	.x Sales Order Category Description Table
+	!	.x OE_CATEGORY
+	!
+	!--

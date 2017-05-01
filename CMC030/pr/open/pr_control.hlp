@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Payroll Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Payroll System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Payroll Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__CONTROL.CTR\*
+	!	.p
+	!	Payroll Control File.
+	!
+	! Index:
+	!	.x Payroll Control File
+	!	.x PR_CONTROL
+	!--

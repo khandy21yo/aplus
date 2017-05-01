@@ -1,0 +1,51 @@
+!+
+!-
+
+!+
+! The first line defines the name of your sharable library image.
+!-
+NAME = CMC_VECTOR
+
+!+
+! The next line specifies the identification string.  The
+! identification string is the version number of the sharable
+! library image.
+!-
+IDENTIFICATION = "V2.9"
+
+!+
+! The following line specifies the global section match control.
+! Match control can be used to control wether programs previously
+! linked with this sharable library image need to be relinked.
+! The control consists of three parts; match criteria, a major ID
+! and a minor ID.
+!
+! The major ID can be changed to force a program to be relinked.
+! Unless you need to force programs linked with this sharable
+! image to be relinked, do not change the major ID.
+!
+! The minor ID is used in combination with the match criteria to
+! determine wether a new link operation is necessary as well.
+! In this option file, the match criteria is 'LEQUIL' (less than
+! or equal).  This means that any progrm linked with a version of
+! this sharable library image that has a minor ID less than, or
+! equal to this minor ID, may run.  Programs linked with a version
+! of this sharable library image with a minor ID greater than
+! this minor ID may not run.  The minor ID should be changed when
+! the size of the transfer vector is changed (increased).
+!-
+GSMATCH = LEQUAL,2,9
+
+!+
+!-
+
+!+
+!-
+COLLECT = CLUSTER1, CMC_VECTOR
+COLLECT = CLUSTER2, $CODE, $PDATA, _OTS$CODE
+COLLECT = CLUSTER4, $ARRAY, $DESC, $DATA, $CHAR_STRING_CONSTANTS
+
+!+
+!-
+FUNC_LIB:CMC_3VECTOR.OLB/LIBRARY
+SYS$SHARE:VAXCRTLG.EXE/SHARE

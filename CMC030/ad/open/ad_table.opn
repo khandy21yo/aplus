@@ -1,0 +1,20 @@
+	!======================================================================
+	! AD_TABLE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_TABLE.CH%, STAT%)
+	CALL READ_DEVICE('AD_TABLE',AD_TABLE.DEV$, STAT%)
+
+	AD_TABLE.NAME$ = AD_TABLE.DEV$+"AD_TABLE.TBL"
+
+	OPEN AD_TABLE.NAME$ FOR INPUT AS FILE AD_TABLE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_TABLE, &
+		PRIMARY KEY &
+		( &
+			AD_TABLE::OPTTABLE, &
+			AD_TABLE::YEARS, &
+			AD_TABLE::EFFDATE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Asset Depreciation Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Assets Depreciation System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Asset Depreciation Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CONTROL.CTR\*
+	!	.b
+	!	.lm +5
+	!	Asset Depreciation Control File.
+	!
+	! Index:
+	!	.x Asset Depreciation Control File
+	!	.x AD_CONTROL
+	!
+	!--

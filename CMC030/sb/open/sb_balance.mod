@@ -1,0 +1,28 @@
+	!======================================================================
+	! SB_BALANCE file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_BALANCE.CH%, STAT%)
+	CALL READ_DEVICE('SB_BALANCE',SB_BALANCE.DEV$, STAT%)
+
+	SB_BALANCE.NAME$ = SB_BALANCE.DEV$+"SB_BALANCE.HIS"
+
+	OPEN SB_BALANCE.NAME$ FOR INPUT AS FILE SB_BALANCE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_BALANCE, &
+		PRIMARY KEY &
+		( &
+			SB_BALANCE::SYSTEM, &
+			SB_BALANCE::SUBACCOUNT, &
+			SB_BALANCE::OPERATION, &
+			SB_BALANCE::ACCOUNT, &
+			SB_BALANCE::PERIOD &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			SB_BALANCE::PERIOD, &
+			SB_BALANCE::SYSTEM, &
+			SB_BALANCE::SUBACCOUNT &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

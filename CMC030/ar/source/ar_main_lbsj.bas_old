@@ -1,0 +1,940 @@
+1	%TITLE "Sales Journal Header Maintenance"
+	%SBTTL "AR_MAIN_LBSJ"
+	%IDENT "V3.3"
+
+	FUNCTION LONG AR_MAIN_LBSJ(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	This program maintains the Marketing SJH file.
+	!
+	! Index:
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_MAIN_LBSJ/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP AR_MAIN_LBSJ
+	!	$ DELETE AR_MAIN_LBSJ.OBJ;*
+	!
+	! Author:
+	!
+	!	07/22/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	02/23/88 - Aaron Redd
+	!		Added hard table under AR Type
+	!
+	!	05/16/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	08/14/91 - Kevin Handy
+	!		Removed A+.
+	!
+	!	04/15/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	04/22/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	02/22/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+
+	!
+	! Maps
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD		AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_SJH"
+	MAP (AR_SJH)		AR_SJH_CDD		AR_SJH
+	MAP (AR_SJH_OLD)	AR_SJH_CDD		AR_SJH_OLD, AR_SJH2
+
+	%INCLUDE %FROM %CDD "CDD$TOP.GL.GL_CHART"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (TT_AR_SJH) &
+		ARTITLE$ = 20%, &
+		ARTYPE$(5%) = 20%
+
+	COM (CH_AR_SJH) &
+		AR_SJH.CH%,		&
+		AR_SJH.READONLY%
+
+	COM (CH_AR_SJL) &
+		AR_SJL.CH%
+
+	COM (TT_AR_SJ) &
+		BATCH_NO$ = 2%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION ENTR_3STRING
+	EXTERNAL STRING  FUNCTION ENTR_3STRINGLIST
+	EXTERNAL STRING  FUNCTION ENTR_3DATE
+	EXTERNAL REAL    FUNCTION ENTR_3NUMBER
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+	EXTERNAL LONG    FUNCTION MAIN_JOURNAL
+	EXTERNAL LONG    FUNCTION FUNC_TESTENTRY
+
+	!
+	! Declare some variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Sales Journal "+ BATCH_NO$ + &
+					" Maintenance"
+		SMG_WINDOW::NHELP = "AR_MAIN_LBSJ"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 10%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Invoice-number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+		!
+		! AR type
+		!
+		ARTITLE$	= "Type   Description"
+		ARTYPE$(0%)	= "5"
+		ARTYPE$(1%)	= "01   Receivable"
+		ARTYPE$(2%)	= "02   Cash Sale"
+		ARTYPE$(3%)	= "03   Debit Memo"
+		ARTYPE$(4%)	= "04   Service Charge"
+		ARTYPE$(5%)	= "08   Credit Memo"
+
+700		!
+		! Declare channels
+		!
+		IF AR_SJH.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF AR_SJH.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[AR.OPEN]AR_SJH.CRE"
+		AR_SJH.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[AR.OPEN]AR_SJH.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		AR_SJH.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(AR_SJH.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = AR_SJH.CH%
+		RESET #AR_SJH.CH%
+		GET #AR_SJH.CH%, REGARDLESS
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Line_items"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "Line_items"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(AR_SJH.CH%)
+
+			AR_MAIN_LBSJ = MAIN_JOURNAL(AR_MAIN_LBSJ_LINE.ID, "")
+
+		END SELECT
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Invoice", &
+			2,  1, "(02)", &
+			9,  1, "(03) Description", &
+			1, 46, "(04) Trans date", &
+			2, 46, "(05) AR/Cash", &
+			4, 46, "(06) AR type", &
+			5, 46, "(07) Receipt #", &
+			6, 46, "(08) Check #", &
+			7, 46, "(09) Deposit #", &
+			9, 46, "(10) Amount", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_CONTROL::CTITLE, 10%), 2%, 6%)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		TEMP1% = SCOPE.EXIT%
+
+ E0Loop:	SCOPE.EXIT% = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Invoice\*
+	!	.p
+	!	The ^*Invoice\* field provides the means to center the number or reference
+	!	for a particular service charge document.
+	!	If the system has automatically calculated a service charge this number
+	!	has been assigned and should not be changed.  If you are adding a new service
+	!	charge you will assign the Invoice number.  It is suggested that you use some
+	!	sort of indicator if this is the case (ie: SC9nnnnn).
+	!	.p
+	!	The field accommodates up to eight (8) alphanumeric characters.
+	!
+	! Index:
+	!	.x Invoice
+	!
+	!--
+			AR_SJH::INVNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"1;16", TEMP$, &
+				AR_SJH::INVNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) Customer\*
+	!	.p
+	!	The ^*Customer\* field is provided to enter a customer code which should have
+	!	been entered in the Master Name Address file for a particular customer.
+	!	.p
+	!	If the code entered has been assigned, the customer's name and address
+	!	information will appear.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at this field causes
+	!	a list of valid customer codes to appear.
+	!	.p
+	!	If a nonexisting code is entered, the system will ask the user to confirm
+	!	the code entered.  If the code entered is not confirmed the user is given
+	!	another opportunity to enter a valid code.  If the code entered is confirmed,
+	!	the system will ask the user if the number is to be added to the Customer
+	!	Master Name Address file.  If the response to that question if "Yes", the
+	!	system will automatically be rerouted to the Customer Masterfile maintenance
+	!	routine and return to the Sales Journal maintenance routine the appropriate
+	!	master record which has been entered.
+	!
+	! Index:
+	!	.x Customer
+	!
+	!--
+			AR_SJH::CUSNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"2;17", TEMP$, &
+				AR_SJH::CUSNUM, MFLAG, &
+				"'E", MVALUE)
+
+				IF (SCOPE.EXIT% = SMG$K_TRM_F14)
+				THEN
+					IF (MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX  ") = 1%)
+					THEN
+						AR_SJH::CUSNUM = &
+							AR_35CUSTOM::CUSNUM
+					END IF
+					GOTO E0Loop
+				END IF
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	^*(03) Description\*
+	!	.p
+	!	The ^*Description\* field provides the means to enter a brief description
+	!	in reference to the transaction represented by an invoice.
+	!	.p
+	!	It is suggested that this field be used to describe only unusual conditions.
+	!	Routine use of this field may not prove to be time effective.
+	!	.p
+	!	The field accommodates up to twenty-six (26) alphanumeric characters.
+	!
+	! Index:
+	!	.x Description
+	!
+	!--
+			AR_SJH::DESCR = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;20", TEMP$, &
+				AR_SJH::DESCR, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	^*(04) Transaction Date\*
+	!	.p
+	!	The ^*Transaction Date\* field provides the means to enter the date for a
+	!	particular transaction.
+	!	.p
+	!	This field requires an entry and will not default to the current date.  The
+	!	format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x Transaction Date
+	!
+	!--
+			AR_SJH::TRADAT = ENTR_3DATE(SCOPE, SMG_WINDOW::WNUMBER, &
+				"1;64", TEMP$, &
+				AR_SJH::TRADAT, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+	!++
+	! Abstract:FLD005
+	!	^*(05) Accounts Receivable\Cash\*
+	!	.p
+	!	The ^*Accounts Receivable\Cash\* field is provided to enter the appropriate
+	!	"Accounts Receivable\* or "Cash" account number established in the General
+	!	Ledger Chart of Accounts. The selection is dependent upon whether a sale
+	!	is a charge sale or a cash sale to be recorded as a transaction in a customer's
+	!	file.
+	!	.p
+	!	If yours is a cash based system then you will not use this field as no update
+	!	to general ledger will take place.
+	!	.p
+	!	The field accommodates twenty (20) alphanumeric characters.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at this field causes
+	!	a list of General Ledger Chart of Account numbers to be displayed.
+	!
+	! Index:
+	!	.x Accounts Receivable\Cash
+	!	.x Cash|Accounts Receivable
+	!
+	!--
+			AR_SJH::ARACCT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"2;61", TEMP$, &
+				AR_SJH::ARACCT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE.EXIT% = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					AR_SJH::ARACCT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO E0Loop
+			END IF
+
+		CASE 6%
+	!++
+	! Abstract:FLD006
+	!	^*(06) Accounts Receivable Type\*
+	!	.p
+	!	The ^*Accounts Receivable Type\* field is used to define the type of
+	!	transaction represented by a record.
+	!	.p
+	!	Valid values are:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	01 - Sale on Account
+	!	.le
+	!	02 - Cash Sale
+	!	.le
+	!	03 - Debit Memo
+	!	.le
+	!	04 - Service Charge
+	!	.le
+	!	08 - Credit Memo
+	!	.els
+	!	.lm -10
+	!	Pressing ^*<List Choices>\* while the cursor is located at this field causes
+	!	a list of valid types to be displayed.
+	!	.note
+	!	When adding a record, the next three fields (Receipt, Check, and Deposit)
+	!	will be bypassed unless the value in field (06) is 02 (Cash) or 08 (Credit
+	!	Memo).
+	!	.end note
+	!
+	! Index:
+	!	.x Accounts Receivable Type
+	!
+	!--
+			AR_SJH::TRATYP = ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"4;64", TEMP$, &
+				AR_SJH::TRATYP, MFLAG, "'E", MVALUE, &
+				ARTYPE$(),ARTITLE$,"005")
+
+		CASE 7%
+	!++
+	! Abstract:FLD007
+	!	^*(07) Receipt Number\*
+	!	.p
+	!	The ^*Receipt Number\* field provides the means to enter the number of a
+	!	receipt if issued for a cash sale.  When cash sales are accounted for using
+	!	cash register closing totals, a receipt number would not necessarily be
+	!	applicable.  This field may be bypassed.
+	!	.p
+	!	The field will accommodate an entry of up to eight (8) alphanumeric characters.
+	!	.note
+	!	During an add function, this field is bypassed unless the transaction type
+	!	is either a Cash Sale or a Credit Memo.
+	!	.end note
+	!
+	! Index:
+	!	.x Receipt Number
+	!
+	!--
+			IF (TEMP$ = "Add") AND (INSTR(1%, "02,08", AR_SJH::TRATYP) = 0%)
+			THEN
+				TEMP% = MFLAG OR 1%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			AR_SJH::RECNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;64", TEMP$, &
+				AR_SJH::RECNUM, TEMP%, "'E", MVALUE)
+
+			SCOPE.EXIT% = TEMP1% IF TEMP% AND 1%
+
+		CASE 8%
+	!++
+	! Abstract:FLD008
+	!	^*(08) Check Number\*
+	!	.p
+	!	The ^*Check Number\* field is provided to enter the number of a check issued
+	!	by a customer in the even of a cash sale.  If a check was not received for
+	!	the sale, or if the record represents a summary of cash sales such as a register
+	!	total, this field would appropriately be left blank.
+	!	.p
+	!	The field will accommodate up to six (6) alphanumeric characters.
+	!	.note
+	!	During an Add function, this field is bypassed unless the transaction type
+	!	represented either a Cash Sale or a Credit Memo.
+	!	.end note
+	!
+	! Index:
+	!	.x Check Number
+	!
+	!--
+			IF (TEMP$ = "Add") AND (INSTR(1%, "02,08", AR_SJH::TRATYP) = 0%)
+			THEN
+				TEMP% = MFLAG OR 1%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			AR_SJH::CHECK = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;64", TEMP$, &
+				AR_SJH::CHECK, TEMP%, "'E", MVALUE)
+
+			SCOPE.EXIT% = TEMP1% IF TEMP% AND 1%
+
+		CASE 9%
+	!++
+	! Abstract:FLD009
+	!	^*(09) Deposit Number\*
+	!	.p
+	!	The ^*Deposit Number\* field provides the means to enter the number of the
+	!	bank deposit in which a cash receipt is included.  If CMC's Check
+	!	Reconciliation is used the deposit number field ^&must\& contains a valid
+	!	deposit number.  The use of this field is optional, however, if the Check
+	!	Reconciliation system is not used.  It is important that deposit numbers
+	!	assigned be outside the parameters established for check number.
+	!	.p
+	!	This field accommodates up to six (6) characters.
+	!	.note
+	!	During an Add function, this field is skipped unless the transaction type
+	!	is either a Cash Sale or a Credit Memo.
+	!	.end note
+	!
+	! Index:
+	!	.x Deposit Number
+	!
+	!--
+			IF (TEMP$ = "Add") AND (INSTR(1%, "02,08", AR_SJH::TRATYP) = 0%)
+			THEN
+				TEMP% = MFLAG OR 1%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			AR_SJH::DEPOSIT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;64", TEMP$, &
+				AR_SJH::DEPOSIT, TEMP%, "'E", MVALUE)
+
+			SCOPE.EXIT% = TEMP1% IF TEMP% AND 1%
+
+		CASE 10%
+	!++
+	! Abstract:FLD010
+	!	^*(10) Amount\*
+	!	.p
+	!	The ^*Amount\* field in the Sales Journal is provided to enter the total
+	!	invoice amount, including any freight, sales taxes, etc.^*
+	!	.note
+	!	Sales tax will be a separate line item in the distribution.\*
+	!	.end note
+	!	.p
+	!	The field accommodates an entry as large as a plus (+) or minus(-) 999999.99.
+	!
+	! Index:
+	!	.x Amount
+	!
+	!--
+			AR_SJH::AMOUNT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;64", TEMP$, &
+				AR_SJH::AMOUNT, MFLAG, "##,###,###.##", MVALUE)
+
+		END SELECT
+
+		PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		AR_MAIN_LBSJ = 0%
+
+		SELECT MLOOP
+
+		CASE 2%
+			!
+			! Is the input defined?
+			!
+			AR_MAIN_LBSJ, ST% = FUNC_TESTENTRY( SMG_WINDOW, &
+				AR_SJH::CUSNUM, AR_35CUSTOM::CUSNAM, &
+				"AR", MLOOP, "CUST", &
+				"Customer number", AR_MAIN_35CUSTOM.ID)
+
+			IF ST% <> 0%
+			THEN
+				AR_35CUSTOM::ADD1 = &
+					STRING$(LEN(AR_35CUSTOM::ADD1), ASCII("?"))
+
+				AR_35CUSTOM::ADD2 = &
+					STRING$(LEN(AR_35CUSTOM::ADD2), ASCII("?"))
+
+				AR_35CUSTOM::ADD3 = &
+					STRING$(LEN(AR_35CUSTOM::ADD3), ASCII("?"))
+
+				AR_35CUSTOM::CITY = &
+					STRING$(LEN(AR_35CUSTOM::CITY), ASCII("?"))
+
+				AR_35CUSTOM::STATE = &
+					STRING$(LEN(AR_35CUSTOM::STATE), ASCII("?"))
+
+				AR_35CUSTOM::ZIP = &
+					STRING$(LEN(AR_35CUSTOM::ZIP), ASCII("?"))
+
+				AR_35CUSTOM::COUNTRY = &
+					STRING$(LEN(AR_35CUSTOM::COUNTRY), ASCII("?"))
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				'3'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				'4'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 30%), &
+				'5'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD3, 30%), &
+				'6'L, '6'L, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + AR_35CUSTOM::COUNTRY + SPACE$(30%), 30%), &
+				'7'L, '6'L, , SMG$M_BOLD)
+
+		CASE 5%
+			!
+			! Is the input defined?
+			!
+			AR_MAIN_LBSJ = FUNC_TESTENTRY( SMG_WINDOW, &
+				AR_SJH::ARACCT, GL_CHART::DESCR, &
+				"AR", MLOOP, "ACCT", &
+				"Account number", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR, 30%), &
+				'3'L, '51'L, , SMG$M_BOLD)
+
+		END SELECT
+
+	!
+	! Display additional information
+	!
+	CASE OPT_DISPLAY
+
+		AR_MAIN_LBSJ = 0%
+
+		!
+		! Is the input defined?
+		!
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, 'Q0' + AR_SJH::CUSNUM) <> 1%
+			THEN
+				AR_35CUSTOM::CUSNAM = "????????????????????"
+				AR_35CUSTOM::ADD1 = "????????????????????"
+				AR_35CUSTOM::ADD2 = "????????????????????"
+				AR_35CUSTOM::ADD3 = "????????????????????"
+				AR_35CUSTOM::CITY = ""
+				AR_35CUSTOM::STATE = ""
+				AR_35CUSTOM::ZIP = ""
+				AR_35CUSTOM::COUNTRY = ""
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				'3'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				'4'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 30%), &
+				'5'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD3, 30%), &
+				'6'L, '6'L, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + AR_35CUSTOM::COUNTRY + SPACE$(30%), 30%), &
+				'7'L, '6'L, , SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(5%) AND 2%)=0%
+		THEN
+			!
+			! Is the input defined?
+			!
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID, 'Q0' + AR_SJH::ARACCT) <> 1%
+			THEN
+				GL_CHART::DESCR = "????????????????????"
+			END IF
+
+			!
+			! Print chart description
+			!
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR,30%), &
+				'3'L, '51'L, , SMG$M_BOLD)
+		END IF
+
+	!
+	! Set AR_SJH_OLD value
+	!
+20500	CASE OPT_SETOLD
+		AR_SJH_OLD = AR_SJH
+
+	!
+	! Restore AR_SJH_OLD value
+	!
+	CASE OPT_RESETOLD
+		AR_SJH = AR_SJH_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		AR_SJH2 = AR_SJH
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		AR_SJH = AR_SJH2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = ' Invoice   Cust#'
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = '011'
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = AR_SJH::INVNUM + " " + &
+				TRM$(AR_SJH::CUSNUM)
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #AR_SJH.CH%, &
+				KEY#0 GE AR_SJH::INVNUM, &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			AR_MAIN_LBSJ = MAIN_JOURNAL(AR_MAIN_LBSJ_LINE.ID, "A")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF AR_SJH_OLD::INVNUM <> AR_SJH::INVNUM
+			THEN
+				TEMP$ = AR_SJH::INVNUM + ""
+				AR_SJH = AR_SJH_OLD
+				AR_MAIN_LBSJ = MAIN_JOURNAL(AR_MAIN_LBSJ_LINE.ID, "C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			AR_MAIN_LBSJ = MAIN_JOURNAL(AR_MAIN_LBSJ_LINE.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+	SELECT ERL
+		!
+		! Unable to open Read/Write
+		!
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			AR_MAIN_LBSJ = ERR
+			RESUME 770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 760%
+			AR_MAIN_LBSJ = ERR
+			RESUME 770
+
+		!
+		! Unable to reset
+		!
+		CASE 790%
+			RESUME 32767
+
+		!
+		! Header does not exist for line
+		!
+		CASE AR_MAIN_35CUSTOM.ID
+			RESUME 29900
+
+		!
+		! Record does not already exist
+		!
+		CASE 20300%
+			RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+29900	!
+	! Handle no header for Line function here
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Sorry, but there is no current header item", 0%)
+	GOTO 32767
+
+32767	END FUNCTION
+	!+-+-+
+	!++
+	! Abstract:LINE_ITEMS
+	!	^*Line Items\*
+	!	.p
+	!	The ^*Line Items\* option on the COMMAND line provides for loading of the
+	!	distribution to the General Ledger for the Service Charge or other A/R entry.
+	!	If your system is cash based (in the LB control file you said no GL)
+	!	then These line items must be the expected distribution of the cash receipt.
+	!
+	! Index:
+	!
+	!--

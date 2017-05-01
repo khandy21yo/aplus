@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Sales Journal Header is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__SJH.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Accounts Receivable System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Sales Journal Header
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__SJH.JRL\*
+	!	- Sales Journal Header.
+	!
+	! Index:
+	!	.x Sales Journal Header
+	!	.x AR_SJH
+	!--

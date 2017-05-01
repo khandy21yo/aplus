@@ -1,0 +1,258 @@
+% Review checklist
+\documentstyle{book}
+\makeindex
+\begin{document}
+\title{CMC Review Checklist}
+\author{R. Peterson \and K. Handy \and C. Larson \and F. Starman}
+\date{October 20, 1987}
+\maketitle
+\tableofcontents
+\chapter{Source Code Review Checklist}
+ \section {Understandability Checklist}
+ \begin{enumerate}
+  \item The program represents one, unique, logical function.
+  \item The program contains one entry and one exit point.
+  \item Called program return to calling programs.
+  \item Meaningful comments regarding program function and passed parameters
+    are used.
+  \item Comments for each subroutine are present.
+  \item Variable names are meaningful and clearly defined.
+  \item There is only one language instruction per source code line.
+  \item Source code is indented to represent logical order.
+  \item GOTO branching is confined within a subroutine and not confusing.
+  \item Code is logical and understandable.
+  \item Modification history log is documented in program.
+  \item Date written is documented in program.
+  \item Variables are used for one purpose; no duality of function.
+  \item Error messages are descriptive.
+ \end{enumerate}
+ \section {Reliability Checklist}
+ \begin{enumerate}
+  \item Variables are initialized.
+  \item Error/recovery routines are present.
+  \item Input data is validated.
+ \end{enumerate}
+ \section {Modifiability Checklist}
+ \begin{enumerate}
+  \item The program is modularly coded and well structured.
+  \item Sufficient memory capacity is available to add additional code.
+  \item There is no redundant code present in the program.
+  \item Common library routines are used.
+  \item Variables are grouped together and easily located.
+  \item The program has minimal hardcoded literal references to data fields
+    that are volatile.
+  \item Hardcoded references to libraries are avoided if possible.
+  \item Program module/subroutines exhibit low coupling.
+ \end{enumerate}
+ \section {Efficiency Checklist}
+ \begin{enumerate}
+  \item Exception and infrequently executed subroutines are isolated in
+    separate modules.
+  \item Invariant code is outside of loops.\\[.1in]
+    This is often done by optimizers in compilers.
+  \item Coding techniques are efficient.\\[.1in]
+    Use correct (ie. fastest, cleanest) algorithms.
+  \item Conditional evaluations test the most likely cases first.
+  \item Core loaded tables used when possible to minimize I/O.\\[.1in]
+    An array loaded from a file should only be loaded once per program
+    run, not every time.
+  \item Uneccessary I/O is avoided.
+ \end{enumerate}
+ \section {Standardization Checklist}
+ \begin{enumerate}
+  \item Consistent naming conventions.
+  \begin{itemize}
+   \item Modules/subroutines
+   \item Fields
+   \item Variables
+   \item Tags/Labels/Line numbers
+  \end{itemize}
+  \item Consistent comment formats are used.
+ \end{enumerate}
+\chapter{System Architecture - Subsystems}
+ \section {Understandability Checklist}
+ \begin{enumerate}
+  \item The subsystem represents one unique, local function with few
+    dependencies upon other subsystems (cohesion).
+  \item Menus are consistent with subsystem functionality.
+  \item Subsystems that reference another subsystems data (coupling)
+    are clearly documented.
+  \item The subsystem's function can be understood without information
+    about how it relates to other subsystems.
+ \end{enumerate}
+ \section {Reliability Checklist}
+ \begin{enumerate}
+  \item In comparison to other subsystems, the subsystem can be considered
+    reliable based on its history of test problem results.
+ \end{enumerate}
+ \section {Modifiability Checklist}
+ \begin{enumerate}
+  \item Data rate independence of the programs which use them (data
+    include messages, and master files).
+  \item Extraneous files within the subsystem are avoided.
+ \end{enumerate}
+ \section {Standardization Checklist}
+ \begin{enumerate}
+  \item Naming conventions are used consistently.
+  \begin{itemize}
+   \item Programs.
+   \item Files.
+   \item Records.
+   \item Fields.
+   \item Screens.
+   \item Reports.
+   \item Data areas.
+  \end{itemize}
+ \end{enumerate}
+\chapter{System Architecture - Data files}
+ \section {Understandability Checklist}
+ \begin{enumerate}
+  \item All data items (fields) are referenced in a corresponding data
+    dictionary.
+  \item The file is well structured. (3rd normal)
+  \begin{enumerate}
+   \item File contains only logically related records.
+   \item Values in fields make sense in context of the field.
+   \item Multiple unrelated record types within a single file are non existent.
+  \end{enumerate}
+ \end{enumerate}
+ \section {Modifiability Checklist}
+ \begin{enumerate}
+  \item Data is independent of the programs which use it.
+  \item Redundant data items across files are avoided (unless
+    performance considerations).
+  \item Complex indexing mechanisms used to access data items in
+    other fields are avoided.
+ \end{enumerate}
+\chapter{Technical System Documentation}
+ \section {Completeness Checklist}
+ \begin{enumerate}
+  \item A system diagram has been prepared.
+  \item A system summary by subsystem as been prepared.
+  \item File definitions have been prepared.
+  \item Screen samples have been prepared.
+  \item Report samples have been prepared.
+  \item A menu hierarchy has been included.
+  \item A comprehensive system test plan with test data has been prepared.
+  \item A test problem report log has been compiled.
+ \end{enumerate}
+ \section {Useability/Understandability Checklist}
+ \begin{enumerate}
+  \item All system outputs, inputs, and processes are clearly identified
+    in the system overview documentation.
+  \item Module interrelationships and system flow are clearly identified
+    in the system overview documentation.
+  \item The overview documentation is easily read and neat in appearance.
+  \item The system overview documentation represents a complete and
+    current view of the system.
+ \end{enumerate}
+\chapter{Technical (Application) Program Documentation}
+ \section {Understandability Checklist}
+ \begin{enumerate}
+  \item A program summary has been prepared.
+  \item A program macro diagram has been prepared.
+  \item A program structure chart has been prepared.
+  \item Program error messages are listed.
+  \item Program table definitions have been prepared.
+  \item Report layouts are included.
+  \item Screen formats are included.
+  \item A structure chart of the system depicting the program
+    components is included.
+ \end{enumerate}
+ \section {Useability/Understandability Checklist}
+ \begin{enumerate}
+  \item program relationships (called and calling) are clearly identified
+    in the program summary and macro diagram.
+  \item The program relationships identified in the program summary and
+    macro diagram are accurate when compared to the program source code.
+  \item File relationships (references and updates) are clearly
+    identified in the program summary and macro diagram.
+  \item The file relationships identified in the program summary and
+    macro diagram are accurate when compared to the program source
+    code.
+  \item Technical documentation is easy to read and neat in appearance.
+  \item The corresponding program documentation represents a complete
+    and current view of the program.
+ \end{enumerate}
+\chapter{User Documentation}
+ \section {Completeness Checklist}
+ \begin{enumerate}
+  \item A table of contents with chapters, sections, subjects, and
+    page numbers is included.
+  \item A key word index with detailed entries is included.
+  \item System setup instructions by subsystem is included.
+  \item A system requirements list is included for hardware and software.
+  \item A functional summary of the system has been prepared.
+  \item A functional summary for each subsystem has been prepared.
+  \item The documentation can be understood and used by a wide
+    audience, including accounting and data processing personnel.
+ \end{enumerate}
+ \section {Useability/Understandability Checklist}
+ \begin{enumerate}
+  \item Headings introduce and highlight key points.
+  \item Type is large enough to be easy to read.
+  \item Technical terminology is avoided.
+  \item Concepts are supported by specific examples.
+  \item Screens, reports, and forms are illustrated.
+  \item Examples and illustrations are labeled and referenced from
+    the text.
+  \item A problem determination and resolution reference is available.
+  \item Scanability of documentation is increased through the use of
+    reference aids such as page tabs.
+  \item User documentation represents a complete and current view
+    of the system.
+  \item On-line help.
+  \item Error correction actions.
+  \item Error correction help on-line.
+ \end{enumerate}
+ \section {Modifiability Checklist}
+ \begin {enumerate}
+  \item The user documentation is contained on diskettes or other media.
+  \item Documentation for custom versions is clearly identified as an
+    add-on or replacement to the generic documentation.
+  \item Version control on documentation.
+ \end {enumerate}
+\chapter {On-line Information Aids}
+ \section {Usaebility Checklist}
+ \begin {enumerate}
+  \item Prompting messages are clear, concise, and present for all fields.
+  \item Error messages are clear, concise, and non-threatening.
+  \item Error messages contain correction hints.
+  \item On-line documentation is present, meaningful, and contains
+    examples.
+  \item Prompt and error message formats are consistent between
+    subsystems.
+  \item The subsystems are usable without specialized DP knowledge.
+  \item Entry processing is tolerant of typical typing errors.
+ \end{enumerate}
+ \section {Thoroughness}
+ \begin{enumerate}
+  \item Help is provided for each screen.
+  \item Second level and error help for each error message.
+ \end{enumerate}
+\chapter {Overall System Integration}
+ \section {Usability Checklist}
+ \begin{enumerate}
+  \item All screens are designed in a consistent format.
+  \item Data entry and error correction is consistent across all
+    subsystems.
+  \item The system uses a main menu to guide the user.
+  \item All menu options are accessed in a predictable and
+    consistent fashion.
+  \item All menu options are exited in a predictable and
+    consistent fashion.
+  \item Permit interruptions of a task to start or resume another task
+    when operating in interactive mode.
+  \item Cancelling a process without detrimental or unexpected side
+    effects.
+  \item Cancelling a critical process is prohibited.
+  \item Menu options behave similarly in similar situations by minimizing
+    variences in response times.
+  \item Commands can be abbreviated.
+  \item Reduced input is accepted when actions are to be repeated.
+  \item The user can easily traverse between menu options.
+  \item Consistent/predictable use of keyboard, PF keys, special keys,
+    etc.
+  \item Novice vs. expert menu navigation modes.
+ \end{enumerate}
+\end{document}

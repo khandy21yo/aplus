@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Standard Cost is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PC__COST.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Product Standard Cost
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PC__COST.MAS\*
+	!	.p
+	!	Product Standard Cost.
+	!
+	! Index:
+	!	.x Product Standard Cost
+	!	.x PC_COST
+	!--

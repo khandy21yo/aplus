@@ -1,0 +1,16 @@
+	!======================================================================
+	! JC_CLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(JC_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('JC_CLASS',JC_CLASS.DEV$, STAT%)
+
+	JC_CLASS.NAME$ = JC_CLASS.DEV$+"JC_CLASS.TBL"
+
+	OPEN JC_CLASS.NAME$ FOR INPUT AS FILE JC_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP JC_CLASS, &
+		PRIMARY KEY &
+			JC_CLASS::CLASS, &
+		ACCESS READ, ALLOW MODIFY
+

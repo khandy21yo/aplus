@@ -1,0 +1,16 @@
+	!======================================================================
+	! GL_CATEGORY file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_CATEGORY.CH%, STAT%)
+	CALL READ_DEVICE('GL_CATEGORY',GL_CATEGORY.DEV$, STAT%)
+
+	GL_CATEGORY.NAME$ = GL_CATEGORY.DEV$+"GL_CATEGORY.TBL"
+
+	OPEN GL_CATEGORY.NAME$ FOR INPUT AS FILE GL_CATEGORY.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_CATEGORY, &
+		PRIMARY KEY &
+			GL_CATEGORY::CATEGORY, &
+		ACCESS READ, ALLOW MODIFY
+

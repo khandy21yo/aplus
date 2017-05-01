@@ -1,0 +1,26 @@
+	!======================================================================
+	! IC_35BALANCE file (create, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_35BALANCE.CH_NEW%, STAT%)
+	CALL READ_DEVICE('IC_35BALANCE',IC_35BALANCE.DEV$, STAT%)
+
+	IC_35BALANCE.NAME_NEW$ = IC_35BALANCE.DEV$+"IC_35BALANCE.HIS_NEW"
+
+	OPEN IC_35BALANCE.NAME_NEW$ FOR OUTPUT AS FILE IC_35BALANCE.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_35BALANCE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			IC_35BALANCE::PRODUCT, &
+			IC_35BALANCE::LOCATION, &
+			IC_35BALANCE::TRANSTYPE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			IC_35BALANCE::LOCATION, &
+			IC_35BALANCE::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

@@ -1,0 +1,24 @@
+	!======================================================================
+	! PO_PARTCROSS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_PARTCROSS.CH%, STAT%)
+	CALL READ_DEVICE('PO_PARTCROSS',PO_PARTCROSS.DEV$, STAT%)
+
+	PO_PARTCROSS.NAME$ = PO_PARTCROSS.DEV$+"PO_PARTCROSS.TBL"
+
+	OPEN PO_PARTCROSS.NAME$ FOR INPUT AS FILE PO_PARTCROSS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_PARTCROSS, &
+		PRIMARY KEY &
+		( &
+			PO_PARTCROSS::PRODUCT, &
+			PO_PARTCROSS::PRIORITY &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			PO_PARTCROSS::VENDOR, &
+			PO_PARTCROSS::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The General Ledger Mask is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__MASK.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x General Ledger Mask
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__MASK.TBL\*
+	!	.p
+	!	General Ledger Mask.
+	!
+	! Index:
+	!	.x General Ledger Mask
+	!	.x GL_MASK
+	!--

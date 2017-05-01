@@ -1,0 +1,397 @@
+1	%TITLE "Maintain Sales Journal"
+	%SBTTL "PW_MAST_PW"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 2000 BY
+	!
+	! Software Solutions, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions, Inc.
+	!
+	! Software Solutions, Inc. assumes no responsibility for the use
+	! or reliability of its software on equipment which is not
+	! supported by Software Solutions, Inc.
+	!
+	!++
+	! Abstract:HELP
+	!	.B
+	!	.LM +5
+	!	The ^*Maintain Sales Journal\* option
+	!	maintains regular sales and service charge journals.
+	!	.LM -5
+	!
+	! Index:
+	!
+	! Option:
+	!	PW_MAIN_PWH$HELP
+	!	PW_MAIN_PWL1$HELP
+	!	PW_MAIN_PWL2$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS PW_SOURCE:PW_MAST_PW/LINE
+	!	$ LINK/EXECUTABLE=PW_EXE: PW_MAST_PW,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE PW_MAST_PW.OBJ;*
+	!
+	! Author:
+	!
+	!	01/10/2000 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PW_WINDOW.INC"
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP	(GL_CHART)	GL_CHART_CDD	GL_CHART
+
+	!
+	! Common statements
+	!
+	COM (TT_PW_PW) &
+		BATCH_NO$ = 2%
+
+	COM (CH_GL_CHART) &
+		GL_CHART.CH%, &
+		GL_CHART.READONLY%
+
+	!
+	! Dimension statements
+	!
+	DIM PW_PWH_FILE$(100%)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+300	!******************************************************************
+	! Get batch number
+	!******************************************************************
+
+	!
+	! Look up device
+	!
+	CALL READ_DEVICE("PW_JH", PW_PWH.DEV$, STAT%)
+
+	!
+	! Find out what is already there
+	!
+	CALL FIND_FILE(PW_PWH.DEV$ + "PW_JH_*.JRL", PW_PWH_FILE$(), &
+		16%, "","")
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! If any files are in the list, then do a query screen
+	!
+	PW_PWH_FILE% = VAL%(PW_PWH_FILE$(0%))
+
+	IF PW_PWH_FILE%
+	THEN
+		!
+		! Get ONLY the batch number of the file
+		!
+		FOR LOOP% = 1% TO PW_PWH_FILE%
+			TEMP$ = RIGHT(PW_PWH_FILE$(LOOP%), 7%)
+			I% = INSTR(1%, TEMP$, ".")
+			I% = LEN(TEMP$) + 1% IF I% = 0%
+			PW_PWH_FILE$(LOOP%) = LEFT(TEMP$, I% - 1%)
+		NEXT LOOP%
+
+		!
+		! Query the user
+		!
+		X% = ENTR_3CHOICE(SCOPE, "", "", PW_PWH_FILE$(), "", &
+			0%, "PW Sales Journal Files", "", 0%)
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(PW_PWH_FILE$(X%), -1%)
+			GOTO 390
+		END IF
+	END IF
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	!
+	! Exit key ?
+	!
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask user for period
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		18%, &
+		80%, &
+		SMG_SCREEN_DATA% &
+	)
+
+310	!
+	! Print background
+	!
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"PW Sales Journal Maintenance", 10%, 24%)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Batch:   " + BATCH_NO$, &
+		12%, 31%)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		1%, &
+		1% &
+	)
+
+320	!
+	! Query user for batch number
+	!
+	BATCH_NO$ = ""
+	SCOPE::PRG_ITEM = "FLD01BATCH"
+	!++
+	! Abstract:FLD01BATCH
+	!
+	! Index:
+	!
+	!--
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, &
+		12%, 39%, BATCH_NO$, -1%, 16%)
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+		GOTO ExitProgram
+
+	CASE SMG$K_TRM_UP
+		GOTO 320
+
+	CASE SMG$K_TRM_DOWN
+		GOTO 320
+
+	CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+		! Good key
+
+	CASE ELSE
+		CALL ENTR_3BADKEY(SCOPE,SCOPE::SCOPE_EXIT)
+		GOTO 320
+
+	END SELECT
+
+	IF LEN(TRM$(BATCH_NO$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Please enter the BATCH number in XX format", 0%)
+		GOTO 320
+	END IF
+
+390	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+
+760	!
+	! Open chart of accounts read/only
+	!
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.OPN"
+	GL_CHART.READONLY% = -1%
+
+800	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(PW_MAIN_PWH.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%Page
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	!
+	! GL Chart of accounts
+	!
+	CASE 760
+		RESUME 800
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	RESUME ExitProgram
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+	%INCLUDE "FUNC_INCLUDE:PW_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:AP_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OE_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:SA_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION AP_MAIN_VENDOR
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+	EXTERNAL LONG FUNCTION PW_MAIN_PWH
+	EXTERNAL LONG FUNCTION PW_MAIN_PWL1
+	EXTERNAL LONG FUNCTION PW_MAIN_PWL2
+	EXTERNAL LONG FUNCTION AR_MAIN_CUSTYPE
+	EXTERNAL LONG FUNCTION GL_MAIN_CHART
+	EXTERNAL LONG FUNCTION OE_MAIN_CATEGORY
+	EXTERNAL LONG FUNCTION AR_MAIN_CONTACT
+	EXTERNAL LONG FUNCTION OE_MAIN_SALESTAX
+	EXTERNAL LONG FUNCTION UTL_MAIN_LOCATION
+	EXTERNAL LONG FUNCTION UTL_MAIN_COUNTRY
+	EXTERNAL LONG FUNCTION UT_MAIN_TERMS
+	EXTERNAL LONG FUNCTION UT_MAIN_CARRIER
+	EXTERNAL LONG FUNCTION SA_MAIN_SALESMAN
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODUCT
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE GL_MAIN_CHART.ID
+		MAINT_GROUP = GL_MAIN_CHART(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE AR_MAIN_35CUSTOM.ID
+		MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE AP_MAIN_VENDOR.ID
+		MAINT_GROUP = AP_MAIN_VENDOR(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PW_MAIN_PWH.ID
+		MAINT_GROUP = PW_MAIN_PWH(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PW_MAIN_PWL1.ID
+		MAINT_GROUP = PW_MAIN_PWL1(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PW_MAIN_PWL2.ID
+		MAINT_GROUP = PW_MAIN_PWL2(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE AR_MAIN_CUSTYPE.ID
+		MAINT_GROUP = AR_MAIN_CUSTYPE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_CATEGORY.ID
+		MAINT_GROUP = OE_MAIN_CATEGORY(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE AR_MAIN_CONTACT.ID
+		MAINT_GROUP = AR_MAIN_CONTACT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_SALESTAX.ID
+		MAINT_GROUP = OE_MAIN_SALESTAX(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_LOCATION.ID
+		MAINT_GROUP = UTL_MAIN_LOCATION(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_COUNTRY.ID
+		MAINT_GROUP = UTL_MAIN_COUNTRY(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UT_MAIN_TERMS.ID
+		MAINT_GROUP = UT_MAIN_TERMS(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UT_MAIN_CARRIER.ID
+		MAINT_GROUP = UT_MAIN_CARRIER(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE SA_MAIN_SALESMAN.ID
+		MAINT_GROUP = SA_MAIN_SALESMAN(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PD_MAIN_PRODUCT.ID
+		MAINT_GROUP = PD_MAIN_PRODUCT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+	END FUNCTION
+
+	!*******************************************************************
+	! Loadvar routine
+	!*******************************************************************
+
+30000	SUB FORM_LOADVAR(P1$, P2, P3$)
+
+	CALL PW_OUTP_PW_LOADVAR(P1$, P2, P3$)
+
+32767	END SUB
+

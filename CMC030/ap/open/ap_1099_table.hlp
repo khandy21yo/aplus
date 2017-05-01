@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The 1099 Definition Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__1099__TABLE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Payable System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x 1099 Definition Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__1099__TABLE.TBL\*
+	!	.p
+	!	1099 Definition Table.
+	!
+	! Index:
+	!	.x 1099 Definition Table
+	!	.x AP_1099_TABLE
+	!--

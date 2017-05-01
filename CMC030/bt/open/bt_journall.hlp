@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Billing to Agency Journal Lines is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BT__JOURNALL.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Billing Tuition System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Billing to Agency Journal Lines
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BT__JOURNALL.JRL\*
+	!	.p
+	!	Billing to Agency Journal Lines.
+	!
+	! Index:
+	!	.x Billing to Agency Journal Lines
+	!	.x BT_JOURNALL
+	!--

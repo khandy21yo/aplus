@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Asset Depreciation Ledger is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CALCULATION.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by the calculating process. Check the 
+        !       report settings for selected history.
+	!
+	! Index:
+	!	.x Asset Depreciation Ledger
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CALCULATION.LED\*
+	!	.p
+	!	Asset Depreciation Ledger.
+	!
+	! Index:
+	!	.x Asset Depreciation Ledger
+	!	.x AD_CALCULATION
+	!--

@@ -1,0 +1,21 @@
+	!======================================================================
+	! PP_CARDEXEMPT file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PP_CARDEXEMPT.CH%, STAT%)
+	CALL READ_DEVICE('PP_CARDEXEMPT',PP_CARDEXEMPT.DEV$, STAT%)
+
+	PP_CARDEXEMPT.NAME$ = PP_CARDEXEMPT.DEV$+"PP_CARDEXEMPT.MAS"
+
+	OPEN PP_CARDEXEMPT.NAME$ FOR INPUT AS FILE PP_CARDEXEMPT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PP_CARDEXEMPT, &
+		PRIMARY KEY &
+		( &
+			PP_CARDEXEMPT::CUSNUM, &
+			PP_CARDEXEMPT::CARD, &
+			PP_CARDEXEMPT::PRODUCT, &
+			PP_CARDEXEMPT::STATE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+

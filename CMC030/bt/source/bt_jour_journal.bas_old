@@ -1,0 +1,371 @@
+1	%TITLE "Employee Billing Maintenance"
+	%SBTTL "BT_JOUR_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain Billing Tuition Journal\* option provides the
+	!	means to enter or edit billing data which is to be billed to
+	!	a specific guardian. The screen also contains a function in
+	!	the COMMAND Menu, Line__items, where billing information may
+	!	be entered and maintained.
+	!
+	! Index:
+	!	.x Billing>Maintain Journal
+	!	.x Maintain>Billing Journal
+	!	.x Journal>Billing Maintenance
+	!
+	! Option:
+	!
+	!	BT_MAIN_JOURNAL$HELP
+	!	BT_MAIN_JOURNAL$NOTES
+	!	BT_MAIN_JOURNALL$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_JOUR_JOURNAL/LINE
+	!	$ LINK/EXEC:BT_EXE BT_JOUR_JOURNAL,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BT_JOUR_JOURNAL.OBJ;*
+	!
+	! Author:
+	!
+	!	05/26/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	03/09/91 - JEFF BEARD
+	!		ADD THE USAGE OF A BATCH NUMBER
+	!
+	!	02/26/92 - Kevin Handy
+	!		Modified to use AR_MAIN_CUSTOM instead of
+	!		BT_MAIN_CUSTOM because someone unamed (Frank)
+	!		decided to delete this function for some
+	!		unknown reason.
+	!
+	!	04/20/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards.
+	!		Modified to use AR_MAIN_35CUSTOM instead of
+	!		AR_MAIN_CUSTOM.
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code
+	!		Lose BT_BILL2.CH variable
+	!
+	!	08/25/97 - Kevin Handy
+	!		Use 'val' instead of 'val%'
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BT_WINDOW.INC"
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.HB"
+	MAP (BT_CONTROL)	BT_CONTROL_CDD	BT_CONTROL
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CUSTYP.HB"
+	MAP (BT_CUSTYP)		BT_CUSTYP_CDD	BT_CUSTYP
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_TUITION.HB"
+	MAP (BT_TUITION)		BT_TUITION_CDD	BT_TUITION
+
+	COM (CH_BT_CONTROL) &
+		BT_CONTROL.CH%
+
+	COM (CH_AR_35CUSTOM) &
+		AR_35CUSTOM.CH%
+
+	COM (CH_BT_CUSTYP) &
+		BT_CUSTYP.CH%
+
+	COM (CH_BT_TUITION) &
+		BT_TUITION.CH%
+
+	COM (BATCH) &
+		BATCH_NO$
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	!
+	! Look up device
+	!
+	CALL READ_DEVICE("BT_JOURNALH", BT_JOURNALH.DEV$, STAT%)
+
+300	!
+	! Query user for year of file
+	!
+	CALL FIND_FILE( BT_JOURNALH.DEV$ + "BT_JOURNALH_*.JRL", &
+		BT_JOURNALH_FILE$(), 16%, "", "")
+
+	BT_JOURNALH_FILE% = VAL%(BT_JOURNALH_FILE$(0%))
+
+	IF BT_JOURNALH_FILE%
+	THEN
+		BT_JOURNALH_FILE$(LOOP%) = &
+			MID(BT_JOURNALH_FILE$(LOOP%),13%,2%) &
+				FOR LOOP% = 1% TO BT_JOURNALH_FILE%
+
+		TEMP$ = "BT Bill Files"
+
+		X% = ENTR_3CHOICE(SCOPE, "", "", BT_JOURNALH_FILE$(), "", &
+			0%, TEMP$, "", 0%)
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(BT_JOURNALH_FILE$(X%),-1%)
+			GOTO 400
+		END IF
+	END IF
+
+	SELECT SCOPE::SCOPE_EXIT
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask for year
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		20%, &
+		80%, &
+		SMG_SCREEN_DATA% &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		1%, &
+		1% &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Batch number:", 11%, 30%)
+
+320	!
+	! Set up the help message
+	!
+	SCOPE::PRG_ITEM = "FLD01BATCH"
+
+	!++
+	! Abstract:FLD01BATCH
+	!	^*Batch Number\*
+	!	.p
+	!	The ^*Batch _#\* field will be bypassed if a Batch _# is
+	!	selected in the Units Journal File screen.  If a new batch
+	!	is to be created, the Batch _# would be entered here.
+	!
+	! Index:
+	!	.x Journal>Batch _#
+	!	.x Batch _#>Journal
+	!
+	!--
+	BATCH_NO$ = "01"
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 11%, 43%, &
+		BATCH_NO$, -1%, 16%)
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	BATCH_NO$ = EDIT$(BATCH_NO$, -1%)
+
+	IF LEN(TRM$(BATCH_NO$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Please enter the batch number in XX format", 0%)
+		GOTO 320
+	END IF
+
+400	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+700	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.MOD"
+
+	GET #BT_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+710	!
+	! Open customer File
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+720	!
+	! Open customer type table
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CUSTYP.OPN"
+
+730	!
+	! Open billing table file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_TUITION.OPN"
+
+740	GOTO 1000
+
+750	CALL HELP_3MESSAGE(SCOPE, "Missing BT CONTROL file", &
+		"ERR", "BT_CONTROL", "ERROR_CONTROL")
+	GOTO ExitProgram
+
+1000	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(BT_MAIN_JOURNAL.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 700%
+		RESUME 750 IF ERR = 5%
+		FILENAME$ = "BT_CONTROL"
+
+	CASE 710%
+		RESUME 730 IF ERR = 5%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 720%
+		RESUME 730 IF ERR = 5%
+		FILENAME$ = "BT_CUSTYPE"
+
+	CASE 730%
+		RESUME 740 IF ERR = 5%
+		FILENAME$ = "BT_TUITION"
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:BT_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+
+	EXTERNAL LONG FUNCTION GL_MAIN_CHART
+	EXTERNAL LONG FUNCTION PR_MAIN_EMPLOYEE
+	EXTERNAL LONG FUNCTION BT_MAIN_TUITION
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+	EXTERNAL LONG FUNCTION BT_MAIN_JOURNAL
+	EXTERNAL LONG FUNCTION BT_MAIN_JOURNALL
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE GL_MAIN_CHART.ID
+
+		MAINT_GROUP = GL_MAIN_CHART(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PR_MAIN_EMPLOYEE.ID
+
+		MAINT_GROUP = PR_MAIN_EMPLOYEE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE AR_MAIN_35CUSTOM.ID
+
+		MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BT_MAIN_TUITION.ID
+
+		MAINT_GROUP = BT_MAIN_TUITION(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BT_MAIN_JOURNAL.ID
+
+		MAINT_GROUP = BT_MAIN_JOURNAL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BT_MAIN_JOURNALL.ID
+
+		MAINT_GROUP = BT_MAIN_JOURNALL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

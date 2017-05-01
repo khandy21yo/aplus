@@ -1,0 +1,20 @@
+	!======================================================================
+	! PR_EMP_ACCRUAL_RATE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_EMP_ACCRUAL_RATE.CH%, STAT%)
+	CALL READ_DEVICE('PR_EMP_ACCRUAL_RATE',PR_EMP_ACCRUAL_RATE.DEV$, STAT%)
+
+	PR_EMP_ACCRUAL_RATE.NAME$ = PR_EMP_ACCRUAL_RATE.DEV$+"PR_EMP_ACCRUAL_RATE.MAS"
+
+	OPEN PR_EMP_ACCRUAL_RATE.NAME$ FOR INPUT AS FILE PR_EMP_ACCRUAL_RATE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_EMP_ACCRUAL_RATE, &
+		PRIMARY KEY &
+		( &
+			PR_EMP_ACCRUAL_RATE::EMPNUM, &
+			PR_EMP_ACCRUAL_RATE::ATYPE, &
+			PR_EMP_ACCRUAL_RATE::SDATE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

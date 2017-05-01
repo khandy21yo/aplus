@@ -1,0 +1,201 @@
+1	%TITLE "Insert a Text File into a Library"
+	%SBTTL "LIBR_INDEX"
+	%IDENT "V3.3"
+
+	FUNCTION LONG LIBR_INDEX(LIB_NAME$, &
+		KEY_NAME$, &
+		LIBR_INDEX$(), &
+		RFA LIB_RFA())
+
+	!
+	!		COPYRIGHT (C) 1987 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will generate an index of what modules
+	!	are in a library matching a key.
+	!
+	! Index:
+	!
+	! Parameter:
+	!
+	!	LIB_NAME$
+	!		Passed name of library to insert text into.
+	!
+	!	KEY_NAME$
+	!		Passed name of key to append to text.
+	!
+	!	LIBR_INDEX$()
+	!		List of modules matching the key, with
+	!		subscript (0) set to the number of items therin.
+	!
+	!	Returns a status code.
+	!
+	! Example:
+	!
+	!	ST% = LIBR_INDEX("HELP_GL", "*", A$())
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:LIBR_INDEX/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP LIBR_INDEX
+	!	$ DELETE LIBR_INDEX.OBJ;*
+	!
+	! Author:
+	!
+	!	01/07/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/22/88 - Kevin Handy
+	!		Modified to give user progam control if a library
+	!		doesn't exist.
+	!
+	!	07/19/88 - Kevin Handy
+	!		Removed defaulting to REF:
+	!
+	!	11/30/88 - Kevin Handy
+	!		Modified to close library if open fails.
+	!
+	!	05/29/90 - Frank F. Starman
+	!		Increase library key dimension from 1000 to 1500.
+	!
+	!	03/13/92 - Kevin Handy
+	!		Clean up vars (checkvar)
+	!
+	!	06/25/93 - Kevin Handy
+	!		Increase key dimension from 1500 to 3000.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+ !	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG LIBR_INDEX_A
+
+	MAP (LBR_JUNKJUNK) C_ARRAY%(19%)
+	MAP (LBR_JUNKJUNK) C_ARRAY$ = 88%
+
+	MAP (LBR_JUNKJUNK) &
+		K.NAME%, &
+		K.NAME$(3000%) = 39%, &
+		RFA K.RFA(3000%)
+
+	%PAGE
+
+	LIBR_INDEX = 1%
+
+100	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(L.INDEX%, LBR$C_READ)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to initilize library", 0%)
+		LIBR_INDEX = ST%
+		EXIT FUNCTION
+	END IF
+
+200	!
+	! Open the library function
+	!
+	ST% = LBR$OPEN(L.INDEX%, LIB_NAME$, , ".TLB", ,C_ARRAY$)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+ !		CALL ENTR_3MESSAGE(SCOPE, "Unable to open library " + NUM1$(ST%) + " " + &
+ !			C_ARRAY$, 4%)
+		LIBR_INDEX$(0%) = "0"
+		LIBR_EXTRACT = ST%
+		GOTO 900
+	END IF
+
+300	!
+	! Get the index
+	!
+	K.NAME% = 0%
+
+	IF KEY_NAME$ = ""
+	THEN
+		TEMP$ = "*"
+	ELSE
+		TEMP$ = KEY_NAME$
+	END IF
+
+	ST% = LBR$GET_INDEX(L.INDEX%, 1%, LIBR_INDEX_A, TEMP$)
+
+	LIBR_INDEX = ST%
+
+400	!
+	! Load in users array
+	!
+	LIBR_INDEX$(0%) = NUM1$(K.NAME%)
+
+	LIBR_INDEX$(I%) = TRM$(K.NAME$(I%)) FOR I% = 1% TO K.NAME%
+
+	LIB_RFA(I%) = K.RFA(I%) FOR I% = 1% TO K.NAME%
+
+900	!
+	! Close all files
+	!
+	JUNK% = LBR$CLOSE(L.INDEX%)
+
+	END FUNCTION
+
+
+20000	FUNCTION LONG LIBR_INDEX_A(KEY_NAME$, RFA TEXT.RFA)
+
+	!
+	! This sub-function is used to find all of the key names
+	! associated with the given text record.
+	!
+	MAP (LBR_JUNKJUNK) &
+		K.NAME%, &
+		K.NAME$(3000%) = 39%, &
+		RFA K.RFA(3000%)
+
+	K.NAME% = K.NAME% + 1%
+	K.NAME$(K.NAME%) = KEY_NAME$
+	K.RFA(K.NAME%) = TEXT.RFA
+
+	LIBR_INDEX_A = '1'L
+
+	END FUNCTION

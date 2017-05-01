@@ -1,0 +1,16 @@
+	!======================================================================
+	! WP_CLOSEJOUR file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_CLOSEJOUR.CH%, STAT%)
+	CALL READ_DEVICE('WP_CLOSEJOUR',WP_CLOSEJOUR.DEV$, STAT%)
+
+	WP_CLOSEJOUR.NAME$ = WP_CLOSEJOUR.DEV$+"WP_CLOSEJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN WP_CLOSEJOUR.NAME$ FOR INPUT AS FILE WP_CLOSEJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_CLOSEJOUR, &
+		PRIMARY KEY &
+			WP_CLOSEJOUR::JOB, &
+		ACCESS READ, ALLOW MODIFY
+

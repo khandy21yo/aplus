@@ -1,0 +1,44 @@
+	! 0100-0199	UTL * Utility System
+	! 0500-0599	CD * Compact Disc filing System
+	! 1000-1099	GL * General Ledger System
+	! 2000-2099	PO * Purchase Order
+	! 3400-3499     BR * Billing Retail
+	! 4200-4299	BI * Billing Insurance System
+	! 4300-4399	PW * PW Sales Order
+	! 4800-4899	BS * Billing for Services System
+	! 5500-5599	WP * Manufacturing WIP Order System
+	! 5800-5899	MO * Manufacturing Orders System
+	! 5900-5999	JC * Job Costing System
+	! 6000-6099	EL * Equipment Ledger System
+	! 6200-6299	LB * Legal Time and Billing System
+	! 6300-6399	SA * Sales Analysis System
+	! 6300-6399	SR * Service Request
+	! 6500-6599	CK * Check Reconsiliation System
+	! 6900-6999	OE * Order Entry System
+	! 7100-7199	SS * Support System
+	! 7200-7299	CM * Conflict Managemant System
+	! 7300-7399	BT * Billing Tuition System
+	! 7400-7499	BA * Billing Agency System
+	! 7500-7599	AD * Asset Depreciation System
+	! 7600-7699	TV * TV Traffic System
+	! 7700-7799	TM * Tenant Management System
+	! 7800-7899	AR * Accounts Recivable System
+	! 7900-7999	BC * Customer Billing System
+	! 7900-7999	JC * Job Costing System
+	! 8000-8099	PD * Product Description System
+	! 8100-8199	IC * Inventory Control System
+	! 8200-8299	RI * Recipe Ingredients System
+	! 8300-8399	PC * Price & Cost System
+	! 8400-8499	RM * Restaurant Management System
+	! 8500-8599	AP * Accounts Payable System
+	! 8600-8699	PR * Payroll System
+	! 8700-8799	BM * Bill of Materials System
+	! 8800-8899	MR * Material Requirement Planning System
+	! 8800-8899	PR * Payroll System
+	! 8800-8899	TK * Tool Kit
+	! 8900-8999	SA * Sub Ledger System
+	! 9000-9099	SP * Subcontracts Payable System
+	! 9100-9199	PS * Point Of Sale System
+	! 9500-9599	WD * Ward Listing System
+	! 9600-9699	OS * Order Sign
+	! 9900-9999	GM * Genealogical Management System

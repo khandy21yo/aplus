@@ -1,0 +1,1113 @@
+1	%TITLE "TV_COMMER - Commercial File Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_COMMER(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the Commercial file.
+	!
+	! Index:
+	!
+	!	TV
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_COMMER/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_COMMER
+	!	$ DELETE TV_MAIN_COMMER.OBJ;*
+	!
+	! Author:
+	!
+	!	11/16/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/10/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)		AR_CUSTOM_CDD	AR_CUSTOM
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SALESMAN.HB"
+	MAP (TV_SALESMAN)	TV_SALESMAN_CDD	TV_SALESMAN
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_CLASS.HB"
+	MAP (TV_LOG_CLASS)	TV_LOG_CLASS_CDD	TV_LOG_CLASS
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_SOURCE.HB"
+	MAP (TV_LOG_SOURCE)	TV_LOG_SOURCE_CDD	TV_LOG_SOURCE
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_REP.HB"
+	MAP (TV_REP)		TV_REP_CDD	TV_REP
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILTYP.HB"
+	MAP (TV_BILTYP)		TV_BILTYP_CDD	TV_BILTYP
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+	MAP (TV_COMMER)		TV_COMMER_CDD	TV_COMMER
+	MAP (TV_COMMER_OLD)	TV_COMMER_CDD	TV_COMMER_OLD, TV_COMMER2
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.HB"
+	MAP (TV_COMMER_CONFLICT) TV_COMMER_CONFLICT_CDD TV_COMMER_CONFLICT
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_COMMER) &
+		TV_COMMER.CH%, &
+		TV_COMMER.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION READ_SET
+	EXTERNAL STRING FUNCTION PRNT_DATE
+
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION MAIN_JOURNAL
+
+	!
+	! Declare some variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Commercial File Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_COMMER"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 24%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Order"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "Customer"
+			SMG_WINDOW::KFIELD(1%, 0%) = 2%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+			SMG_WINDOW::KFIELD(1%, 2%) = 1%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_COMMER.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_COMMER.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.CRE"
+		TV_COMMER.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_COMMER.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_COMMER.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_COMMER.CH%
+		RESET #TV_COMMER.CH%
+		GET #TV_COMMER.CH%, REGARDLESS
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " inStructions charGes"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "inStructions"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(TV_COMMER.CH%)
+
+			TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_INSTR.ID, "")
+
+		!
+		! Line option
+		!
+		CASE "charGes"
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(TV_COMMER.CH%)
+
+			TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_CHARGE.ID, "")
+
+		END SELECT
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Order No.", &
+			2,  1, "(02) Cust No.", &
+			3,  1, "(03) Class", &
+			4,  1, "(04) Source", &
+			5,  1, "(05) Priority", &
+			6,  1, "(06) Start date", &
+			7,  1, "(07) End date", &
+			8,  1, "(08) Cancelled", &
+			9,  1, "(09) Agency No.", &
+			10,  1, "(10)        Pct", &
+			11,  1, "(11) Rep", &
+			12,  1, "(12)        Pct", &
+			13,  1, "(13) Salesperson", &
+			14,  1, "(14)        Pct", &
+			15,  1, "(15) Contact", &
+			16,  1, "(16) Description", &
+			1, 53, "(17) Spot sep", &
+			2, 53, "(18) Prod sep", &
+			3, 53, "(19) PO Number", &
+			4, 53, "(20) Bill type", &
+			5, 53, "(21) Pkg Bill", &
+			6, 53, "(22) Match", &
+			7, 53, "(23) Bill date", &
+			8, 53, "(24) Conflict", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+			TV_COMMER::FRMNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;17", TEMP$, &
+				TV_COMMER::FRMNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+			TV_COMMER::CUSNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;17", TEMP$, &
+				TV_COMMER::CUSNUM, MFLAG, "'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+			CASE SMG$K_TRM_F14
+				TV_COMMER::CUSNUM = AR_CUSTOM::CUSNUM &
+					IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+				SCOPE::SCOPE_EXIT = 0%
+				GOTO ELoop
+
+			CASE SMG$K_TRM_F17
+				ST% = MAIN_WINDOW(TV_MAIN_CUSTOM.ID, &
+					"M0"+TV_COMMER::CUSNUM )
+				SCOPE::SCOPE_EXIT = 0%
+				GOTO ELoop
+
+			END SELECT
+
+		CASE 3%
+			TV_COMMER::CLASS = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;17", TEMP$, &
+				TV_COMMER::CLASS, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_COMMER::CLASS = TV_LOG_CLASS::CLASS &
+					IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 4%
+			TV_COMMER::SOURCE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;17", TEMP$, &
+				TV_COMMER::SOURCE, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_COMMER::SOURCE = TV_LOG_SOURCE::SOURCE &
+					IF MAIN_WINDOW(TV_MAIN_LOG_SOURCE.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 5%
+			TV_COMMER::PRIORITY = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;17", TEMP$, &
+				TV_COMMER::PRIORITY * 1.0, &
+				MFLAG, "###", MVALUE)
+
+		CASE 6%
+			TV_COMMER::START_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;17", TEMP$, &
+				TV_COMMER::START_DATE, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+			TV_COMMER::END_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;17", TEMP$, &
+				TV_COMMER::END_DATE, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+			TV_COMMER::CANCELLED = ENTR_3YESNO(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;20", TEMP$, &
+				TV_COMMER::CANCELLED, MFLAG, "'E", MVALUE)
+
+		CASE 9%
+			TV_COMMER::AGENCY_NUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"9;17", TEMP$, &
+				TV_COMMER::AGENCY_NUM, MFLAG, "'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+			CASE SMG$K_TRM_F14
+				TV_COMMER::AGENCY_NUM = AR_CUSTOM::CUSNUM &
+					IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+				SCOPE::SCOPE_EXIT = 0%
+				GOTO ELoop
+
+			CASE SMG$K_TRM_F17
+					ST% = MAIN_WINDOW(TV_MAIN_CUSTOM.ID, &
+						"M0"+TV_COMMER::AGENCY_NUM )
+				SCOPE::SCOPE_EXIT = 0%
+				GOTO ELoop
+
+			END SELECT
+
+		CASE 10%
+			IF (TEMP$ = "Add") AND (TV_COMMER::AGENCY_NUM = "")
+			THEN
+				FLAGTEMP% = 1%
+			ELSE
+				FLAGTEMP% = 0%
+			END IF
+
+			TV_COMMER::AGENCY_PCT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;17", TEMP$, &
+				TV_COMMER::AGENCY_PCT/100.0, MFLAG OR FLAGTEMP%, &
+				"###.##", MVALUE) * 100.0
+
+		CASE 11%
+			TV_COMMER::REP_NUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;17", TEMP$, &
+				TV_COMMER::REP_NUM, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_COMMER::REP_NUM = TV_REP::REP_NUM &
+					IF MAIN_WINDOW(TV_MAIN_REP.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 12%
+			IF (TEMP$ = "Add") AND (TV_COMMER::REP_NUM = "")
+			THEN
+				FLAGTEMP% = 1%
+			ELSE
+				FLAGTEMP% = 0%
+			END IF
+
+			TV_COMMER::REP_PCT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;17", TEMP$, &
+				TV_COMMER::REP_PCT/100.0, MFLAG OR FLAGTEMP%, &
+				"###.##", MVALUE) * 100.0
+
+		CASE 13%
+			TV_COMMER::SALES_NUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"13;17", TEMP$, &
+				TV_COMMER::SALES_NUM, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_COMMER::SALES_NUM = TV_SALESMAN::SALNUM &
+					IF MAIN_WINDOW(TV_MAIN_SALESMAN.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 14%
+			IF (TEMP$ = "Add") AND (TV_COMMER::SALES_NUM = "")
+			THEN
+				FLAGTEMP% = 1%
+			ELSE
+				FLAGTEMP% = 0%
+			END IF
+
+			TV_COMMER::SALES_PCT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"14;17", TEMP$, &
+				TV_COMMER::SALES_PCT/100.0, MFLAG OR FLAGTEMP%, &
+				"###.##", MVALUE) * 100.0
+
+		CASE 15%
+20240			TV_COMMER::CONTACT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"15;17", TEMP$, &
+				TV_COMMER::CONTACT, MFLAG, "'E", MVALUE)
+
+		CASE 16%
+			TV_COMMER::DESCR = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"16;20", TEMP$, &
+				TV_COMMER::DESCR, MFLAG, "'E", MVALUE)
+
+		CASE 17%
+			TV_COMMER::SPOT_SEP = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;68", TEMP$, &
+				TV_COMMER::SPOT_SEP, MFLAG, "H", MVALUE)
+
+		CASE 18%
+			TV_COMMER::PROD_SEP = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;68", TEMP$, &
+				TV_COMMER::PROD_SEP, MFLAG, "H", MVALUE)
+
+		CASE 19%
+			TV_COMMER::PO = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;68", TEMP$, &
+				TV_COMMER::PO, MFLAG, "'E", MVALUE)
+
+		CASE 20%
+			TV_COMMER::BILL_TYPE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;68", TEMP$, &
+				TV_COMMER::BILL_TYPE, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_COMMER::BILL_TYPE = TV_BILTYP::BTYPE &
+					IF MAIN_WINDOW(TV_MAIN_BILTYP.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 21%
+			TV_COMMER::BILL_FLAG = ENTR_3YESNO(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;68", TEMP$, &
+				TV_COMMER::BILL_FLAG, MFLAG, "'E", MVALUE)
+
+		CASE 22%
+			TV_COMMER::MATCH = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;68", TEMP$, &
+				TV_COMMER::MATCH, MFLAG, "'E", MVALUE)
+
+		CASE 23%
+			TV_COMMER::DATE_BILLED = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;68", TEMP$, &
+				TV_COMMER::DATE_BILLED, MFLAG, "'E", MVALUE)
+
+		CASE 24%
+			TV_COMMER::CONFLICT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;68", TEMP$, &
+				TV_COMMER::CONFLICT, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_COMMER::CONFLICT = TV_COMMER_CONFLICT::CODE &
+					IF MAIN_WINDOW(TV_MAIN_COMCON.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		TV_MAIN_COMMER = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_MAIN_COMMER = 1% IF TV_COMMER::FRMNUM = ""
+
+		CASE 2%
+			IF TV_COMMER::CUSNUM = ""
+			THEN
+				TV_MAIN_COMMER = 1%
+			ELSE
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(25%,63%)
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_COMMER::CUSNUM) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "CUSNUM"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "CUSNUM"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_COMMER = 1%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, &
+						SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_COMMER = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= AR_CUSTOM::CUSNAM
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(DISPLAY_DESCR$,24%),2%,28%, ,SMG$M_BOLD)
+
+			END IF
+			END IF
+
+		CASE 3%
+			IF TV_COMMER::CLASS = ""
+			THEN
+				TV_MAIN_COMMER = 1%
+			ELSE
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(40%,63%)
+			IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID,"Q0"+TV_COMMER::CLASS) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "COMTYP"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "COMTYP"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_COMMER = 1%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, &
+						SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_COMMER = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= TV_LOG_CLASS::DESCR
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(DISPLAY_DESCR$,24%),3%,28%, ,SMG$M_BOLD)
+
+			END IF
+			END IF
+
+		CASE 4%
+			IF TV_COMMER::SOURCE = ""
+			THEN
+				TV_MAIN_COMMER = 1%
+			ELSE
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(40%,63%)
+			IF MAIN_WINDOW(TV_MAIN_LOG_SOURCE.ID,"Q0"+TV_COMMER::SOURCE) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "COMSRC"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "COMSRC"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_COMMER = 1%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, &
+						SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_COMMER = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= TV_LOG_SOURCE::DESCR
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(DISPLAY_DESCR$,24%),4%,28%, ,SMG$M_BOLD)
+
+			END IF
+			END IF
+
+		CASE 9%
+			! Is the input defined?
+			!
+			IF TV_COMMER::AGENCY_NUM = ""
+			THEN
+				DISPLAY_DESCR$ = SPACE$(25%)
+			ELSE
+				DISPLAY_DESCR$ = STRING$(25%,63%)
+				IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_COMMER::AGENCY_NUM) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "AGENCY"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "AGENCY"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't allow
+						! them to enter undefined values.
+						!
+						TV_MAIN_COMMER = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Input undefined ", 0%)
+					ELSE
+						!
+						! Verify that they really want to enter an
+						! undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, &
+							SMG_WINDOW::WNUMBER, "", &
+							"Input undefined, enter anyway", &
+							"N", 0%, "", "")
+						TV_MAIN_COMMER = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= AR_CUSTOM::CUSNAM
+				END IF
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(DISPLAY_DESCR$,24%),9%,28%, ,SMG$M_BOLD)
+
+
+		CASE 11%
+			!
+			! Is the input defined?
+			!
+			IF TV_COMMER::REP_NUM = ""
+			THEN
+				DISPLAY_DESCR$ = SPACE$(25%)
+			ELSE
+				DISPLAY_DESCR$ = STRING$(25%,63%)
+				IF MAIN_WINDOW(TV_MAIN_REP.ID,"Q0"+TV_COMMER::REP_NUM) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "REPNUM"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "REPNUM"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't allow
+						! them to enter undefined values.
+						!
+						TV_MAIN_COMMER = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Input undefined ", 0%)
+					ELSE
+						!
+						! Verify that they really want to enter an
+						! undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, &
+							SMG_WINDOW::WNUMBER, "", &
+							"Input undefined, enter anyway", &
+							"N", 0%, "", "")
+						TV_MAIN_COMMER = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= TV_REP::RNAME
+				END IF
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(DISPLAY_DESCR$,24%),11%,28%, ,SMG$M_BOLD)
+
+
+		CASE 13%
+			!
+			! Is the input defined?
+			!
+			IF TV_COMMER::SALES_NUM = ""
+			THEN
+				DISPLAY_DESCR$ = SPACE$(25%)
+			ELSE
+				DISPLAY_DESCR$ = STRING$(25%,63%)
+				IF MAIN_WINDOW(TV_MAIN_SALESMAN.ID,"Q0"+TV_COMMER::SALES_NUM) <> 1%
+				THEN
+					!
+					! See if they are allowing undefined inputs
+					!
+					V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "SALNUM"), 1%)
+					V$ = LEFT(READ_SET("TV_ALLOW", "SALNUM"), 1%) &
+						IF V$ = ""
+
+					IF V$ = "N"
+					THEN
+						!
+						! Don't let them get past is we don't allow
+						! them to enter undefined values.
+						!
+						TV_MAIN_COMMER = 1%
+						CALL ENTR_3MESSAGE(SCOPE, &
+							"Input undefined ", 0%)
+					ELSE
+						!
+						! Verify that they really want to enter an
+						! undefined value.
+						!
+						V$ = ENTR_3YESNO(SCOPE, &
+							SMG_WINDOW::WNUMBER, "", &
+							"Input undefined, enter anyway", &
+							"N", 0%, "", "")
+						TV_MAIN_COMMER = 1% IF V$ = "N"
+					END IF
+				ELSE
+					DISPLAY_DESCR$= TV_SALESMAN::SNAME
+
+				END IF
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(DISPLAY_DESCR$,24%),13%,28%, ,SMG$M_BOLD)
+
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		DISPLAY_DESCR$ = STRING$(25%,63%)
+		DISPLAY_DESCR$ = AR_CUSTOM::CUSNAM &
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_COMMER::CUSNUM) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(DISPLAY_DESCR$,24%),2%,28%, ,SMG$M_BOLD)
+
+		DISPLAY_DESCR$ = STRING$(40%,63%)
+		DISPLAY_DESCR$ = TV_LOG_CLASS::DESCR &
+			IF MAIN_WINDOW(TV_MAIN_LOG_CLASS.ID,"Q0"+TV_COMMER::CLASS) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(DISPLAY_DESCR$,24%),3%,28%, ,SMG$M_BOLD)
+
+		DISPLAY_DESCR$ = STRING$(40%,63%)
+		DISPLAY_DESCR$ = TV_LOG_SOURCE::DESCR &
+			IF MAIN_WINDOW(TV_MAIN_LOG_SOURCE.ID,"Q0"+TV_COMMER::SOURCE) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(DISPLAY_DESCR$,24%),4%,28%, ,SMG$M_BOLD)
+
+		IF TV_COMMER::AGENCY_NUM = ""
+		THEN
+			DISPLAY_DESCR$ = SPACE$(25%)
+		ELSE
+			DISPLAY_DESCR$ = STRING$(25%,63%)
+			DISPLAY_DESCR$ = AR_CUSTOM::CUSNAM &
+				IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_COMMER::AGENCY_NUM) = 1%
+		END IF
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(DISPLAY_DESCR$,24%),9%,28%, ,SMG$M_BOLD)
+
+		IF TV_COMMER::REP_NUM = ""
+		THEN
+			DISPLAY_DESCR$ = SPACE$(25%)
+		ELSE
+			DISPLAY_DESCR$ = STRING$(25%,63%)
+			DISPLAY_DESCR$ = TV_REP::RNAME &
+				IF MAIN_WINDOW(TV_MAIN_REP.ID,"Q0"+TV_COMMER::REP_NUM) = 1%
+		END IF
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(DISPLAY_DESCR$,24%),11%,28%, ,SMG$M_BOLD)
+
+		IF TV_COMMER::SALES_NUM = ""
+		THEN
+			DISPLAY_DESCR$ = SPACE$(25%)
+		ELSE
+			DISPLAY_DESCR$ = STRING$(25%,63%)
+			DISPLAY_DESCR$ = TV_SALESMAN::SNAME &
+				IF MAIN_WINDOW(TV_MAIN_SALESMAN.ID,"Q0"+TV_COMMER::SALES_NUM) = 1%
+		END IF
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(DISPLAY_DESCR$,24%),13%,28%, ,SMG$M_BOLD)
+
+	!
+	! Set TV_COMMER_OLD value
+	!
+20500	CASE OPT_SETOLD
+		TV_COMMER_OLD = TV_COMMER
+
+	!
+	! Restore TV_COMMER_OLD value
+	!
+	CASE OPT_RESETOLD
+		TV_COMMER = TV_COMMER_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		TV_COMMER2 = TV_COMMER
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		TV_COMMER = TV_COMMER2
+		TV_COMMER::CONFIRM = "N"
+		TV_COMMER::MOD_NUM = 0%
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+			!
+			! Title (One line only)
+			!
+			CASE 1%
+				MVALUE = "  Cust No    Order No Clas " + &
+					"Source Start date " + &
+					"End date   Can Agency No"
+
+			!
+			! Positions of lines
+			!
+			CASE 2%
+				MVALUE = "013,022,027,034,045,056,060"
+
+			!
+			! Convert current record into text
+			!
+			CASE 3%
+
+				MVALUE = &
+					TV_COMMER::CUSNUM + " " + &
+					TV_COMMER::FRMNUM + " " + &
+					TV_COMMER::CLASS + "  " + &
+					TV_COMMER::SOURCE + "  " + &
+					PRNT_DATE(TV_COMMER::START_DATE, 8%) + " " + &
+					PRNT_DATE(TV_COMMER::END_DATE, 8%) + "  " + &
+					TV_COMMER::CANCELLED + "  " + &
+					TV_COMMER::AGENCY_NUM
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #TV_COMMER.CH%, &
+				KEY #0% GE TV_COMMER::FRMNUM, &
+				REGARDLESS
+		CASE 1%
+			FIND #TV_COMMER.CH%, &
+				KEY #1% GE TV_COMMER::CUSNUM + &
+					TV_COMMER::FRMNUM, &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle changing the commer file
+	!
+	CASE OPT_TESTOPT
+		SELECT SCOPE::PRG_ITEM
+
+		CASE "Change", "Blank", "Initialize"
+
+			!
+			! Update the change flag and the mod count as necessary
+			!
+			IF TV_COMMER::CONFIRM = "Y"
+			THEN
+				TV_COMMER::CONFIRM = "N"
+				TV_COMMER::MOD_NUM = &
+					TV_COMMER::MOD_NUM + 1%
+			END IF
+
+		END SELECT
+
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_INSTR.ID, "A")
+			TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_CHARGE.ID, "A")
+
+		!
+		! Change records
+		!
+		CASE "Change", "Blank"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF (TV_COMMER_OLD::FRMNUM <> TV_COMMER::FRMNUM)
+			THEN
+				TEMP$ = TV_COMMER::FRMNUM
+				TV_COMMER = TV_COMMER_OLD
+				TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_INSTR.ID, "C" + TEMP$)
+				TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_CHARGE.ID, "C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_INSTR.ID, "E")
+			TV_MAIN_COMMER = MAIN_JOURNAL(TV_MAIN_COMMER_CHARGE.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+		!
+		! Unable to open Read/Write
+		!
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			TV_MAIN_COMMER = ERR
+			RESUME 770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 760%
+			TV_MAIN_COMMER = ERR
+			RESUME 770
+
+		!
+		! Unable to reset
+		!
+		CASE 790%
+			RESUME 32767
+
+		!
+		! Record does not already exist
+		!
+		CASE 20300%
+			RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

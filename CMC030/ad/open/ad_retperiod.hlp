@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Retired Asset Last Period is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__RETPERIOD.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Retired Asset Last Period
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__RETPERIOD.MAS\*
+	!	.p
+	!	Retired Asset Last Period.
+	!
+	! Index:
+	!	.x Retired Asset Last Period
+	!	.x AD_RETPERIOD
+	!--

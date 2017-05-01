@@ -1,0 +1,19 @@
+	!======================================================================
+	! BI_DIAG file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_DIAG.CH%, STAT%)
+	CALL READ_DEVICE('BI_DIAG',BI_DIAG.DEV$, STAT%)
+
+	BI_DIAG.NAME$ = BI_DIAG.DEV$+"BI_DIAG.TBL"
+
+	OPEN BI_DIAG.NAME$ FOR INPUT AS FILE BI_DIAG.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_DIAG, &
+		PRIMARY KEY &
+			BI_DIAG::DIAGNOSIS, &
+		ALTERNATE KEY &
+			BI_DIAG::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

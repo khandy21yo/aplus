@@ -1,0 +1,1008 @@
+1	%TITLE "Customer Address Maintenance"
+	%SBTTL "BC_MAIN_CUSTOM"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BC_MAIN_CUSTOM(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.P
+	!	The ^*Maintain Name/Address File\* option provides the means to
+	!	enter and maintain specific information relative to each customer,
+	!	including the following:
+	!	.B
+	!	.LM +15
+	!	.LS 0,"*"
+	!	.LE
+	!	Number
+	!	.LE
+	!	Name
+	!	.LE
+	!	Alphabetic Sort Field
+	!	.LE
+	!	Address
+	!	.LE
+	!	Phone Number
+	!	.LE
+	!	Type
+	!	.LE
+	!	Method
+	!	.LE
+	!	Statement Flag
+	!	.LE
+	!	Service Charge Flag
+	!	.ELS
+	!	.LM -15
+	!
+	! Index:
+	!	.x Masterfile>Maintenance
+	!	.x Name/Address>Add
+	!	.x Name/Address>Erase
+	!	.x Name/Address>Change
+	!	.x Change>Name/Address
+	!	.x Add>Name/Address
+	!	.x Erase>Name/Address
+	!	.x Name>Maintenance
+	!	.x Maintenance>Name
+	!	.x Address>Maintenance
+	!	.x Maintenance>Address
+	!	.x Customer>Masterfile
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS BC_SOURCE:BC_MAIN_CUSTOM/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BC_MAIN_CUSTOM
+	!	$ DELETE BC_MAIN_CUSTOM.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	07/05/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/26/91 - Craig Tanner
+	!		Added list of choises to country feild.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	04/19/95 - Kevin Handy
+	!		Fix format parameter to entr_3phone.
+	!
+	!	10/15/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:BC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)		AR_35CUSTOM_CDD	AR_35CUSTOM
+	MAP (AR_35CUSTOM_OLD)	AR_35CUSTOM_CDD	AR_35CUSTOM_OLD, AR_35CUSTOM2
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTOMEX.HB"
+	MAP (BC_CUSTOMEX)	BC_CUSTOMEX_CDD	BC_CUSTOMEX
+	MAP (BC_CUSTOMEX_OLD)	BC_CUSTOMEX_CDD	BC_CUSTOMEX_OLD, BC_CUSTOMEX2
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTYP.HB"
+	MAP (BC_CUSTYP)		BC_CUSTYP_CDD	BC_CUSTYP
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_COUNTRY.HB"
+	MAP (UTL_COUNTRY)		UTL_COUNTRY_CDD		UTL_COUNTRY
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_AR_35CUSTOM) &
+		AR_35CUSTOM.CH%, &
+		AR_35CUSTOM.READONLY%
+
+	COM (CH_BC_CUSTOMEX) &
+		BC_CUSTOMEX.CH%, &
+		BC_CUSTOMEX.READONLY%
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	!
+	! List of types
+	!
+	ECTITLE$ = "Method Description"
+	EC$(0%) = "3"
+	EC$(1%) = "O    Open Billing"
+	EC$(2%) = "B    Balance Forward Billing"
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Agency Address Maintenance"
+		SMG_WINDOW::NHELP = "BC_MAIN_CUSTOM"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 15%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Agency-number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "aLpha-sort"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 3%
+
+		!
+		! Load in defaults for chart
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Get info required for main file
+		!
+		IF AR_35CUSTOM.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF AR_35CUSTOM.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.CRE"
+		AR_35CUSTOM.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		AR_35CUSTOM.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(AR_35CUSTOM.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = AR_35CUSTOM.CH%
+
+		RESET #AR_35CUSTOM.CH%
+		GET #AR_35CUSTOM.CH%, REGARDLESS
+
+800		!
+		! Get info required for main file
+		!
+		IF BC_CUSTOMEX.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			GOTO 890
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+850		%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTOMEX.CRE"
+		BC_CUSTOMEX.READONLY% = 0%
+		GOTO 890
+
+860		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTOMEX.OPN"
+		BC_CUSTOMEX.READONLY% = -1%
+
+		GOTO 890
+
+870		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BC_CUSTOMEX.CH%)
+
+890		! No more to do
+
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!******************************************************************
+
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Customer", &
+			2,  1, "(02) Name", &
+			3,  1, "(03) Alpha", &
+			4,  1, "(04) Add1", &
+			5,  1, "(05) Add2", &
+			6,  1, "(06) City", &
+			6, 29, "(07) State", &
+			7,  1, "(08) Zip", &
+			7, 29, "(09) Country", &
+			8,  1, "(10) Phone", &
+			8, 29, "(11) County", &
+			10,  1, "(12) Method         (O or B)", &
+			11,  1, "(13) Statement      (Y or N)", &
+			12,  1, "(14) Srvc Chrg      (Y or N)", &
+			14,  1, "(15) Cust Type", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+20200	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display
+	! data, set defaults, and return the data back according to
+	! MFLAG.
+	!******************************************************************
+
+	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Customer Number\*
+	!	.p
+	!	The ^*Customer Number\* field provides the means to assign an identification
+	!	number to be used for referencing a particular customer. It is
+	!	recommended that all customer numbers be the same length.
+	!	.p
+	!	The field will accommodate up to ten (10) alphanumeric characters.
+	!
+	! Index:
+	!	.x Customer>Number
+	!	.x Number>Customer
+	!
+	!--
+
+			AR_35CUSTOM::CUSNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;15", TEMP$, &
+				AR_35CUSTOM::CUSNUM, MFLAG, "'E", MVALUE)
+
+			BC_CUSTOMEX::CUSNUM = AR_35CUSTOM::CUSNUM &
+				IF (MFLAG AND 1%) = 0%
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!
+	!	^*(02) Name\*
+	!	.p
+	!	The ^*Name\* field is provided to enter the name of the Customer as
+	!	it would appear on all reports.
+	!	.p
+	!	The field will contain up to fifty (50) alphanumeric characters.
+	!
+	! Index:
+	!	.X Customer>Name
+	!	.x Name>Customer
+	!--
+
+			AR_35CUSTOM::CUSNAM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;13", TEMP$, &
+				AR_35CUSTOM::CUSNAM, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!
+	!	^*(03) Alpha sort\*
+	!	.P
+	!	The ^*Alpha Sort\* field contents enables the file to be sorted,
+	!	listed, or reported in alphabetical order.
+	!	.p
+	!	This field will contain up to fifteen (15) alphanumeric characters.
+	!
+	! Index:
+	!	.x Customer>Alpha Sort
+	!	.x Alpha Sort>Customer
+	!--
+
+			AR_35CUSTOM::ALPSRT = EDIT$(AR_35CUSTOM::CUSNAM, 32%) &
+				IF (TEMP1$ = "Add") AND &
+					((MFLAG AND 1%) = 0%) AND &
+					(AR_35CUSTOM::ALPSRT = "")
+
+			AR_35CUSTOM::ALPSRT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;13", TEMP$, &
+				AR_35CUSTOM::ALPSRT, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Address 1\*
+	!	.p
+	!	The ^*Address 1\* field provides the means to enter the address for
+	!	the customer. It is recommended that in the event of a one line street
+	!	address, this field be left blank and field (5) be used for the
+	!	street address.
+	!	.p
+	!	This field may contain up to twenty-five (25) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Address1>Customer
+	!	.x Customer>Address1
+	!
+	!--
+
+			AR_35CUSTOM::ADD1 = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;13", TEMP$, &
+				AR_35CUSTOM::ADD1, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Address 2\*
+	!	.p
+	!	The ^*Address 2\* field provides the means to enter the second line
+	!	street address for the Customer. It is recommended that in the event
+	!	there is a single line street address, this field be used for the entry.
+	!	.p
+	!	This field may contain up to twenty-one (21) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Address2>Customer
+	!	.x Customer>Address2
+	!
+	!--
+
+			AR_35CUSTOM::ADD2 = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;13", TEMP$, &
+				AR_35CUSTOM::ADD2, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!
+	!	^*(06) City\*
+	!	.P
+	!	The ^*City\* field is provided to enter the city in which the
+	!	Customer is located.
+	!	.p
+	!	The field may contain up to fifteen (15) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Customer>City
+	!	.x City>Customer
+	!--
+
+			AR_35CUSTOM::CITY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;13", TEMP$, &
+				AR_35CUSTOM::CITY, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!	^*(07) State\*
+	!	.P
+	!	The ^*State\* field provides the means to enter the State in which the Customer
+	!	is located.
+	!	.p
+	!	The field will accommodate a two (2) character state postal code.
+	!
+	! Index:
+	!	.x State>Customer
+	!	.x Customer>State
+	!	.x State>Customer
+	!	.x State>Customer
+	!
+	!--
+
+			AR_35CUSTOM::STATE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;42", TEMP$, &
+				AR_35CUSTOM::STATE, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+
+	!++
+	! Abstract:FLD008
+	!	^*(08) Zip\*
+	!	.P
+	!	The ^*Zip\* field provides for entry of the zip or postal code for the
+	!	area in which the Customer is located.
+	!	.p
+	!	This field may contain up to ten (10) alphanumeric characters.
+	!
+	! Index:
+	!	.x Zip>Customer
+	!	.x Customer>Zip
+	!
+	!--
+
+			AR_35CUSTOM::ZIP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;13", TEMP$, &
+				AR_35CUSTOM::ZIP, MFLAG, "'E", MVALUE)
+
+		CASE 9%
+
+	!++
+	! Abstract:FLD009
+	!	^*(09) Country\*
+	!	.P
+	!	The ^*Country\* field contains the country if the Customer
+	!	is located in a foreign country.
+	!	.p
+	!	This field may contain two (2) alphabetic characters.
+	!
+	! Index:
+	!	.x Country>Customer
+	!	.x Country>Customer
+	!
+	!--
+
+			AR_35CUSTOM::COUNTRY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;42", TEMP$, &
+				AR_35CUSTOM::COUNTRY, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_COUNTRY.ID, "V0" + &
+					AR_35CUSTOM::COUNTRY) = 1%
+				THEN
+					AR_35CUSTOM::COUNTRY = &
+						UTL_COUNTRY::COUNTRY
+				END IF
+				GOTO ELoop
+			END IF
+
+		CASE 10%
+
+	!++
+	! Abstract:FLD010
+	!
+	!	^*(10) Phone\*
+	!	.P
+	!	The ^*Phone\* field is for entry of the Customer's telephone number.
+	!	.p
+	!	The field will contain ten (10) numeric characters.  Special
+	!	characters are not required.
+	!
+	! Index:
+	!	.x Customer>Phone
+	!	.x Customer>Telephone
+	!	.x Phone>Customer
+	!	.x Telephone>Customer
+	!--
+
+			AR_35CUSTOM::PHONE = ENTR_3PHONE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;13", TEMP$, &
+				AR_35CUSTOM::PHONE, 2% OR MFLAG, 0%, MVALUE)
+
+		CASE 11%
+
+	!++
+	! Abstract:FLD011
+	!
+	!	^*(11) County\*
+	!	.p
+	!	The ^*County\* field provides the means to enter the code
+	!	for the County in which this particular Customer is located.
+	!	.p
+	!	The field will contain two (2) characters.
+	!
+	! Index:
+	!	.x Customer>County
+	!	.x County>Customer
+	!--
+
+			AR_35CUSTOM::COUNTY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;42", TEMP$, &
+				AR_35CUSTOM::COUNTY, MFLAG, "'E", MVALUE)
+
+		CASE 12%
+
+	!++
+	! Abstract:FLD012
+	!
+	!	^*(12) Method (O or B)\*
+	!	.P
+	!	The ^*Method\* field provides the means to choose either the Open
+	!	or the Balance Forward method of accounting for Accounts Receivable.
+	!	.p
+	!	Valid values are:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	^*O\* = Open Method
+	!	.le
+	!	^*B\* = Balance Forward
+	!	.els
+	!	.lm -10
+	!
+	! Index:
+	!	.x Customer>Method
+	!	.x Method>Customer
+	!--
+
+			AR_35CUSTOM::METHOD = EDIT$( ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, "10;17", &
+				TEMP$ + " (O/B)", AR_35CUSTOM::METHOD, MFLAG, &
+				"'", MVALUE, EC$(), ECTITLE$, "007"), -1%)
+
+		CASE 13%
+
+	!++
+	! Abstract:FLD013
+	!	^*(13) Statement\*
+	!	.P
+	!	The ^*Statement\* field provides the option of printing or not printing
+	!	a statement for a particular Customer.
+	!	.p
+	!	Valid values are:
+	!	.b
+	!	.lm +15
+	!	.list 0,"*"
+	!	.le
+	!	^*Y\* (Yes)
+	!	.le
+	!	^*N\* (No)
+	!	.els
+	!	.LM -15
+	!
+	! Index:
+	!	.x Customer>Statement Flag
+	!
+	!--
+
+			AR_35CUSTOM::STMTFLG = ENTR_3YESNO(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;17", TEMP$, &
+				AR_35CUSTOM::STMTFLG, MFLAG, "'E", MVALUE)
+
+		CASE 14%
+
+	!++
+	! Abstract:FLD014
+	!	^*(14) Service Charge\*
+	!	.P
+	!	The ^*Service Charge\* field indicates if a customer is to
+	!	be charged a service charge on past due balances.
+	!	.p
+	!	Valid values are:
+	!	.b
+	!	.lm +10
+	!	.list 0,"*"
+	!	.le
+	!	^*Y\* (Yes)
+	!	.le
+	!	^*N\* (No)
+	!	.els
+	!
+	! Index:
+	!	.x Customer>Service Charge
+	!	.x Service Charge>Customer
+	!
+	!--
+
+			AR_35CUSTOM::SERCHRG = ENTR_3YESNO(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;17", TEMP$, &
+				AR_35CUSTOM::SERCHRG, MFLAG, "'E", MVALUE)
+
+		CASE 15%
+
+	!++
+	! Abstract:FLD015
+	!	^*(15) Customer Type\*
+	!	.p
+	!	The ^*Customer Type\* field provides the means to enter a
+	!	two (2) character alphanumeric code which will identify a
+	!	particular customer type.
+	!	.p
+	!	Customer types are used to determine the A/R Account _# and
+	!	the Sales Account _# which can be found in the ARTOGL Table.
+	!
+	! Index:
+	!	.x Customer>Type
+	!	.x Type>Customer
+	!
+	!--
+
+			GOSUB ReadExtra &
+				IF (BC_CUSTOMEX::CUSNUM <> AR_35CUSTOM::CUSNUM)
+
+			BC_CUSTOMEX::CUSTYP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"14;17", TEMP$, &
+				BC_CUSTOMEX::CUSTYP, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				IF (MAIN_WINDOW(BC_MAIN_CUSTYP.ID, "VX") = 1%)
+				THEN
+					BC_CUSTOMEX::CUSTYP = BC_CUSTYP::CUSTYP
+				END IF
+				GOTO ELoop
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+		BC_MAIN_CUSTOM = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF AR_35CUSTOM::CUSNUM = ""
+			THEN
+				BC_MAIN_CUSTOM = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #AR_35CUSTOM.CH%, &
+						KEY#0% EQ AR_35CUSTOM::CUSNUM + "", &
+						REGARDLESS
+
+					BC_MAIN_CUSTOM = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 12%
+			BC_MAIN_CUSTOM = 1% IF AR_35CUSTOM::METHOD <> "O" AND &
+				AR_35CUSTOM::METHOD <> "B"
+
+		END SELECT
+
+20500	CASE OPT_SETOLD
+		AR_35CUSTOM_OLD = AR_35CUSTOM
+		BC_CUSTOMEX_OLD = BC_CUSTOMEX
+
+	CASE OPT_RESETOLD
+		AR_35CUSTOM = AR_35CUSTOM_OLD
+		BC_CUSTOMEX = BC_CUSTOMEX_OLD
+
+	CASE OPT_SETDEFAULT
+		AR_35CUSTOM2 = AR_35CUSTOM
+		BC_CUSTOMEX2 = BC_CUSTOMEX
+
+	CASE OPT_RESETDEFAULT
+		AR_35CUSTOM = AR_35CUSTOM2
+		BC_CUSTOMEX = BC_CUSTOMEX2
+		BC_CUSTOMEX::CUSNUM = AR_35CUSTOM::CUSNUM
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		CASE 1%
+
+			MVALUE = "  Agency #   Name                      Address" + &
+				"                                          City, State" + &
+				"                  Zip Code"
+
+		CASE 2%
+
+			MVALUE = "013,039,087,116"
+
+		CASE 3%
+
+			MVALUE = &
+				AR_35CUSTOM::CUSNUM + " " + &
+				LEFT(AR_35CUSTOM::CUSNAM + SPACE$(25%), &
+				25%) + " " + &
+				LEFT(AR_35CUSTOM::ADD1 + "/" + &
+					AR_35CUSTOM::ADD2 + SPACE$(48%), &
+					48%) + " " + &
+				LEFT(AR_35CUSTOM::CITY + " " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::COUNTRY + SPACE$(28%), &
+					28%) + " " + &
+				TRM$(AR_35CUSTOM::ZIP)
+
+		END SELECT
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #AR_35CUSTOM.CH%, &
+				KEY #0% GE AR_35CUSTOM::CUSNUM + "", &
+				REGARDLESS
+
+		CASE 1%
+			FIND #AR_35CUSTOM.CH%, &
+				KEY #3% GE AR_35CUSTOM::ALPSRT + "", &
+				REGARDLESS
+
+		END SELECT
+
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		CASE "Add"
+			GOSUB ChangeExtra
+
+		CASE "Change", "Blank", "Initialize"
+			IF AR_35CUSTOM_OLD::CUSNUM <> AR_35CUSTOM::CUSNUM
+			THEN
+				GOSUB ChangeExtraKey
+			ELSE
+				GOSUB ChangeExtra
+			END IF
+
+		CASE "Erase"
+			GOSUB DeleteExtra
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+	%PAGE
+
+ ReadExtra:
+28000	!*******************************************************************
+	! Read in extra record for current customer, if available
+	!*******************************************************************
+
+	GET #BC_CUSTOMEX.CH%, KEY#0% EQ AR_35CUSTOM::CUSNUM, REGARDLESS
+
+28010	RETURN
+
+ ChangeExtra:
+28020	!*******************************************************************
+	! Change/Add customer extra information
+	!*******************************************************************
+
+	BC_CUSTOMEX::CUSNUM = AR_35CUSTOM::CUSNUM + ""
+
+	FIND #BC_CUSTOMEX.CH%, KEY#0% EQ AR_35CUSTOM::CUSNUM + ""
+
+	UPDATE #BC_CUSTOMEX.CH%
+
+	GOTO 28040
+
+28030	PUT #BC_CUSTOMEX.CH%
+
+28040	RETURN
+
+ DeleteExtra:
+28050	!*******************************************************************
+	! Change/Add customer extra information
+	!*******************************************************************
+
+	GET #BC_CUSTOMEX.CH%, KEY#0% EQ AR_35CUSTOM::CUSNUM + ""
+
+	DELETE #BC_CUSTOMEX.CH%
+
+28060	RETURN
+
+ ChangeExtraKey:
+28070	!*******************************************************************
+	! Change/Add customer extra information
+	!*******************************************************************
+
+	FIND #BC_CUSTOMEX.CH%, KEY#0% EQ AR_35CUSTOM_OLD::CUSNUM + ""
+
+	DELETE #BC_CUSTOMEX.CH%
+
+	GOSUB ChangeExtra
+
+28080	RETURN
+
+	%PAGE
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BC_MAIN_CUSTOM = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BC_MAIN_CUSTOM = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Unable to open Read/Write
+	!
+	CASE 850%
+		RESUME 860 IF ERR = 10%
+		BC_MAIN_CUSTOM = ERR
+		RESUME 870
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 860%
+		BC_MAIN_CUSTOM = ERR
+		RESUME 870
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Unable to find a record for this extra file
+	!
+	CASE 28000
+		BC_CUSTOMEX::CUSNUM = AR_35CUSTOM::CUSNUM
+		BC_CUSTOMEX::CUSTYP = BC_CUSTOMEX2::CUSTYP
+		RESUME 28010
+
+	!
+	! Unable to find extra record to update (Currently
+	! ignores errors it cannot handle)
+	!
+	CASE 28020%
+		RESUME 28030 IF ERR = 155%
+		RESUME 28040
+
+	CASE 28030%
+		RESUME 28040
+
+	!
+	! Unable to find extra record to delete (Currently
+	! ignores errors it cannot handle)
+	!
+	CASE 28050%
+		RESUME 28060
+
+	!
+	! Unable to find extra record to Change (Currently
+	! ignores errors it cannot handle)
+	!
+	CASE 28070%
+		RESUME 28080
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

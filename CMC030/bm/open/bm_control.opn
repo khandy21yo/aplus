@@ -1,0 +1,14 @@
+	!======================================================================
+	! BM_CONTROL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BM_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('BM_CONTROL',BM_CONTROL.DEV$, STAT%)
+
+	BM_CONTROL.NAME$ = BM_CONTROL.DEV$+"BM_CONTROL.CTR"
+
+	OPEN BM_CONTROL.NAME$ FOR INPUT AS FILE BM_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP BM_CONTROL, &
+		ACCESS READ, ALLOW MODIFY
+

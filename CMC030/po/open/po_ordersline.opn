@@ -1,0 +1,20 @@
+	!======================================================================
+	! PO_ORDERSLINE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_ORDERSLINE.CH%, STAT%)
+	CALL READ_DEVICE('PO_ORDERSLINE',PO_ORDERSLINE.DEV$, STAT%)
+
+	PO_ORDERSLINE.NAME$ = PO_ORDERSLINE.DEV$+"PO_ORDERSLINE_"+BATCH_NO$+".JRL"
+
+	OPEN PO_ORDERSLINE.NAME$ FOR INPUT AS FILE PO_ORDERSLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_ORDERSLINE, &
+		PRIMARY KEY &
+		( &
+			PO_ORDERSLINE::PO, &
+			PO_ORDERSLINE::PO_LINE, &
+			PO_ORDERSLINE::RECEIVEDATE &
+		)	DUPLICATES , &
+		ACCESS READ, ALLOW MODIFY
+

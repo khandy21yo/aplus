@@ -1,0 +1,31 @@
+	!======================================================================
+	! BI_CPT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_CPT.CH%, STAT%)
+	CALL READ_DEVICE('BI_CPT',BI_CPT.DEV$, STAT%)
+
+	BI_CPT.NAME$ = BI_CPT.DEV$+"BI_CPT.MAS"
+
+	OPEN BI_CPT.NAME$ FOR INPUT AS FILE BI_CPT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_CPT, &
+		PRIMARY KEY &
+			BI_CPT::CPT, &
+		ALTERNATE KEY &
+		( &
+			BI_CPT::DESCRIPTION, &
+			BI_CPT::CPT &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			BI_CPT::CPTTYPE, &
+			BI_CPT::CPT &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			BI_CPT::CATEGORY, &
+			BI_CPT::CPT &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

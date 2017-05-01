@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Inventory Transaction is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__TRANSACTION.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Inventory Transaction
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__TRANSACTION.LED\*
+	!	- Inventory Transaction.
+	!
+	! Index:
+	!	.x Inventory Transaction
+	!	.x IC_TRANSACTION
+	!--

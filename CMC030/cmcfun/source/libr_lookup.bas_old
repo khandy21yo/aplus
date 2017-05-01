@@ -1,0 +1,152 @@
+1	%TITLE "Lookup a File in a Text Library"
+	%SBTTL "LIBR_LOOKUP"
+	%IDENT "V3.3"
+
+	FUNCTION LONG LIBR_LOOKUP(LIB_NAME$, KEY_NAME$)
+
+	!
+	!		COPYRIGHT (C) 1987 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will search a library for a specified
+	!	key, and return a status depending on if it can be
+	!	found or not.
+	!
+	! Parameter:
+	!
+	!	LIB_NAME$
+	!		Passed name of library to search.
+	!
+	!	KEY_NAME$
+	!		Passed name of key to search for.
+	!
+	!	Returns a status code.
+	!
+	! Example:
+	!
+	!	ST% = LIBR_LOOKUP("HELP_GL", "ADDRESS")
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:LIBR_LOOKUP/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP LIBR_LOOKUP
+	!	$ DELETE LIBR_LOOKUP.OBJ;*
+	!
+	! Author:
+	!
+	!	07/01/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	07/19/88 - Kevin Handy
+	!		Removed defaulting to REF:
+	!
+	!	11/30/88 - Kevin Handy
+	!		Modified to close library if open fails.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TXRFA
+	!		Variable used to test the data.
+	!
+	!	NULL.RFA
+	!		Variable used to enter the text information.
+	!
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+ !	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+
+	!
+	! Declare variables
+	!
+	DECLARE RFA TXRFA
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+	LIBR_LOOKUP = 1%
+
+100	!
+	! Set up the control structure if necessary
+	!
+	ST% = LBR$INI_CONTROL(LR.INDEX%, LBR$C_READ)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+ !		CALL ENTR_3MESSAGE(SCOPE, "Unable to initilize library", 0%)
+		LIBR_LOOKUP = ST%
+		EXIT FUNCTION
+	END IF
+
+200	!
+	! Open the library function
+	!
+	ST% = LBR$OPEN(LR.INDEX%, LIB_NAME$, , ".TLB")
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_LOOKUP = ST%
+		GOTO CloseLibrary
+	END IF
+
+300	!
+	! Search for key in file
+	!
+	ST% = LBR$LOOKUP_KEY(LR.INDEX%, KEY_NAME$, TXRFA)
+
+	IF (ST% AND 1%) = 0%
+	THEN
+		LIBR_LOOKUP = ST%
+		GOTO CloseLibrary
+	END IF
+
+1000	!
+	! Close library file
+	!
+ CloseLibrary:
+	ST% = LBR$CLOSE(LR.INDEX%)
+
+	EXIT FUNCTION
+
+19000	!
+	! Error trapping
+	!
+	LIBR_LOOKUP = -ERR
+	RESUME CloseLibrary
+
+	END FUNCTION

@@ -1,0 +1,16 @@
+	!======================================================================
+	! SA_TYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SA_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('SA_TYPE',SA_TYPE.DEV$, STAT%)
+
+	SA_TYPE.NAME$ = SA_TYPE.DEV$+"SA_TYPE.TBL"
+
+	OPEN SA_TYPE.NAME$ FOR INPUT AS FILE SA_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SA_TYPE, &
+		PRIMARY KEY &
+			SA_TYPE::TTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

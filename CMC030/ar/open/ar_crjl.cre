@@ -1,0 +1,24 @@
+	!======================================================================
+	! AR_CRJL file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CRJL.CH%, STAT%)
+	CALL READ_DEVICE('AR_CRJL',AR_CRJL.DEV$, STAT%)
+	CALL READ_PROTECTION('AR_CRJL',AR_CRJL.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(AR_CRJL.PRO$, STAT%)
+
+	AR_CRJL.NAME$ = AR_CRJL.DEV$+"AR_CRJL_"+BATCH_NO$+".JRL"
+
+	OPEN AR_CRJL.NAME$ AS FILE AR_CRJL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CRJL, &
+		PRIMARY KEY &
+		( &
+			AR_CRJL::RECNUM, &
+			AR_CRJL::LLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

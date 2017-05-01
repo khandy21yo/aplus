@@ -1,0 +1,365 @@
+1	%TITLE "Convert OE SHIPTO addresses from MicroData"
+	%SBTTL "OE_CONV_MDSHIPTO"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1991 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.B
+	!	.LM +5
+	!	.LM -5
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS OE_SOURCE:OE_CONV_MDSHIPTO/LINE
+	!	$ LINK/EXEC:OE_EXE OE_CONV_MDSHIPTO,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE OE_CONV_MDSHIPTO.OBJ;*
+	!
+	! Author:
+	!
+	!	10/08/91 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	10/08/91 - Kevin Handy
+	!		Modified to leave out addresses that match exactly
+	!		to the customer file.
+	!
+	!	04/27/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	05/28/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/21/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	06/09/99 - Kevin Handy
+	!		Lose line 800 (Dead code)
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[OE.OPEN]OE_SHIPTO.HB"
+	MAP (OE_SHIPTO)		OE_SHIPTO_CDD	OE_SHIPTO
+	MAP (OE_SHIPTO_BLANK)		OE_SHIPTO_CDD	OE_SHIPTO_BLANK
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM) AR_35CUSTOM_CDD AR_35CUSTOM
+
+	%page
+
+10	ON ERROR GOTO 19000
+
+	CALL ASSG_CHANNEL(ARSYS.CH%,STAT%)
+
+	!
+	! Open the keyboard
+	!
+	CALL READ_INITIALIZE
+
+	INPUT "For store number"; STORENO$
+
+200	! RESUME LINE
+
+	%INCLUDE "SOURCE:[OE.OPEN]OE_SHIPTO.CRE"
+
+
+210	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+250	OPEN ARSYS_ASC.DEV$ + "SHIP.ASC" FOR INPUT AS FILE ARSYS.CH%, &
+		RECORDSIZE 512%, &
+		ACCESS READ
+
+	OE_SHIPTO_BLANK::CUSNUM	= ""
+	OE_SHIPTO_BLANK::LINES	= "1"
+	OE_SHIPTO_BLANK::SHIPNAM	= ""
+	OE_SHIPTO_BLANK::ADD1	= ""
+	OE_SHIPTO_BLANK::ADD2	= ""
+	OE_SHIPTO_BLANK::ADD3	= ""
+	OE_SHIPTO_BLANK::CITY	= ""
+	OE_SHIPTO_BLANK::STATE	= ""
+	OE_SHIPTO_BLANK::ZIP	= ""
+	OE_SHIPTO_BLANK::COUNTRY	= ""
+	OE_SHIPTO_BLANK::SHIPVIA	= ""
+	OE_SHIPTO_BLANK::LOCATION	= "100"
+	OE_SHIPTO_BLANK::SALESMAN	= ""
+	OE_SHIPTO_BLANK::TAXCODE	= "ID"
+	OE_SHIPTO_BLANK::TAXEXEMP	= ""
+	OE_SHIPTO_BLANK::NOTES(I%)	= "" FOR I%=0% TO 2%
+
+	OE_SHIPTO = OE_SHIPTO_BLANK
+	A$(I%) = "" FOR I% = 1% TO 4%
+
+550	INPUT LINE #ARSYS.CH%, INP$
+	INP$ = EDIT$(INP$, 4%)
+
+560	IF RIGHT(INP$, LEN(INP$)-1%) = "<>"
+	THEN
+		INPUT LINE #ARSYS.CH%, INP1$
+		INP$ = LEFT(inp$, LEN(INP$)-2%) + EDIT$(INP1$, 4%)
+		GOTO 560
+	END IF
+
+	GOTO 550 IF INP$ = ""
+
+	I2% = INSTR(1%, INP$, ">")
+	FLD$ = SEG$(INP$, 2%, I2%-1%)
+	DTA$ = RIGHT(INP$, I2%+1%)
+
+ ! PRINT FLD$; TAB(20%); DTA$
+
+	SELECT FLD$
+
+	CASE "0", "CO#"
+		TEMP$ = RIGHT(DTA$, 8%)
+		I% = INSTR(1%, TEMP$, "-")
+		TEMP1$ = RIGHT(TEMP$, I% + 1%)
+		TEMP$ = LEFT(TEMP$, I% - 1%)
+		OE_SHIPTO::CUSNUM = TEMP$
+		I% = INSTR(1%, TEMP1$, "-")
+		IF I%
+		THEN
+			TEMP$ = RIGHT(TEMP1$, I%+1%)
+			CALL FUNC_INCREMENT(TEMP$)
+			OE_SHIPTO::LINES = TEMP$
+		END IF
+		THISSTORE$ = MID(DTA$, 5%, 3%)
+		STORELIST$ = STORELIST$ + "!" + THISSTORE$ &
+			IF INSTR(1%, STORELIST$, THISSTORE$) = 0%
+
+	CASE "1","NAME"
+		OE_SHIPTO::SHIPNAM = DTA$
+
+	CASE "2","ADDRESS-1"
+		A$(1%) = DTA$
+
+	CASE "3", "ADDR-LINE-2"
+		A$(2%) = DTA$
+
+	CASE "4", "ADDR-LINE-3"
+		A$(3%) = DTA$
+
+	CASE "5", "ADDRESS-4"
+		A$(4%) = DTA$
+
+	CASE "6", "INSTRUCTIONS"
+		NT% = 0%
+		I% = INSTR(1%, DTA$, '253'c)
+		WHILE I%
+			OE_SHIPTO::NOTES(nt%) = left(DTA$, i% - 1%)
+			DTA$ = RIGHT(DTA$, I%+1%)
+			I% = INSTR(1%, DTA$, '253'C)
+			NT% = NT% + 1%
+		NEXT
+		OE_SHIPTO::NOTES(NT%) = DTA$
+
+	CASE "7","SALESMAN"
+		OE_SHIPTO::SALESMAN = DTA$
+
+	CASE "8", "SHIPVIA"
+		OE_SHIPTO::SHIPVIA = DTA$
+
+	CASE "9", "TAX.JUR"
+		OE_SHIPTO::TAXCODE = DTA$
+
+	CASE "10", "TAXABLE"
+		! SKIP
+
+	CASE "11", "EXEMPT#"
+		OE_SHIPTO::TAXEXEMP = DTA$
+
+	CASE "12","WHSE"
+		OE_SHIPTO::LOCATION = DTA$
+
+600	CASE "END"
+
+		IF STORENO$ <> THISSTORE$
+		THEN
+			OE_SHIPTO = OE_SHIPTO_BLANK
+			A$(I%) = "" FOR I% = 1% TO 4%
+			GOTO 550
+		END IF
+
+610		GET #AR_35CUSTOM.CH%, KEY#0% EQ OE_SHIPTO::CUSNUM
+
+		!
+620		! Search for zip code
+		!
+		ZIP% = 0%
+		ZIP% = I% IF A$(I%) <> "" FOR I% = 1% TO 4%
+		IF LEN(A$(ZIP%)) = 5%
+		THEN
+			ZIP$ = A$(ZIP%)
+			A$(ZIP%) = ""
+		ELSE
+			I% = LEN(A$(ZIP%))
+			WHILE (I% >= 1%) AND &
+				(INSTR(1%, "0123456789-", &
+				MID(A$(ZIP%), I%, 1%)) <> 0%)
+
+				I% = I% - 1%
+			NEXT
+			ZIP$ = RIGHT(A$(ZIP%), I% + 1%)
+			A$(ZIP%) = TRM$(LEFT(A$(ZIP%), I%))
+		END IF
+
+		!
+		! Look for state stuck to end of a city
+		!
+		Z% = 0%
+		Z% = I% IF A$(I%) <> "" FOR I% = 1% TO 4%
+
+		IF Z%
+		THEN
+			!
+			! Lose period stuck on end.
+			!
+			IF RIGHT(A$(Z%),LEN(A$(Z%))) = "."
+			THEN
+				A$(Z%) = LEFT(A$(Z%), LEN(A$(Z%)) - 1%)
+			END IF
+
+			!
+			! Check for "xxxx, xx" format
+			!
+			IF MID(A$(Z%),LEN(A$(Z%))-3%,1%) = ","
+			THEN
+				OE_SHIPTO::state = right(a$(z%), len(a$(z%))-1%)
+				OE_SHIPTO::city = left(a$(z%), len(a$(z%))-4%)
+				a$(z%) = ""
+			END IF
+
+			IF RIGHT(A$(Z%),LEN(A$(Z%))-6%) = ", IDAHO"
+			THEN
+				OE_SHIPTO::state = "ID"
+				OE_SHIPTO::city = left(a$(z%), len(a$(z%))-7%)
+				A$(Z%) = ""
+			END IF
+
+			IF RIGHT(A$(Z%),LEN(A$(Z%))-5%) = ", UTAH"
+			THEN
+				OE_SHIPTO::state = "UT"
+				OE_SHIPTO::city = left(a$(z%), len(a$(z%))-6%)
+				A$(Z%) = ""
+			END IF
+
+		END IF
+
+		!
+		! Stick in addresses
+		!
+		OE_SHIPTO::ADD1 = A$(1%)
+		OE_SHIPTO::ADD2 = A$(2%)
+		OE_SHIPTO::ADD3 = A$(3%)
+		OE_SHIPTO::CITY = A$(4%) &
+			IF (OE_SHIPTO::CITY = "")
+		OE_SHIPTO::ZIP = ZIP$
+
+690		!
+		! Write out record
+		!
+		X% = 0%
+		X% = X% + (TRM$(OE_SHIPTO::NOTES(I%)) <> "") FOR I%=0% TO 2%
+
+		IF (OE_SHIPTO::SHIPNAM <> AR_35CUSTOM::CUSNAM) OR &
+			(OE_SHIPTO::ADD1 <> AR_35CUSTOM::ADD1) OR &
+			(OE_SHIPTO::ADD2 <> AR_35CUSTOM::ADD2) OR &
+			(OE_SHIPTO::ADD3 <> AR_35CUSTOM::ADD3) OR &
+			(OE_SHIPTO::CITY <> AR_35CUSTOM::CITY) OR &
+			(OE_SHIPTO::STATE <> AR_35CUSTOM::STATE) OR &
+			(OE_SHIPTO::ZIP <> AR_35CUSTOM::ZIP) OR &
+			(OE_SHIPTO::COUNTRY <> AR_35CUSTOM::COUNTRY) OR &
+			(OE_SHIPTO::SHIPVIA <> "  ") OR &
+			(OE_SHIPTO::LOCATION <> AR_35CUSTOM::LOCATION) OR &
+			(OE_SHIPTO::SALESMAN <> AR_35CUSTOM::SALESMAN) OR &
+			(OE_SHIPTO::TAXCODE <> AR_35CUSTOM::TAXCODE) OR &
+			(OE_SHIPTO::TAXEXEMP <> AR_35CUSTOM::TAXEXEMP) OR &
+			(X% <> 0%)
+		THEN
+			PUT #OE_SHIPTO.CH%
+		ELSE
+			PRINT "%Skipped exact match ";
+		END IF
+
+		PRINT OE_SHIPTO::CUSNUM
+
+695		A$(I%) = "" FOR I% = 1% TO 4%
+		OE_SHIPTO = OE_SHIPTO_BLANK
+
+	CASE ELSE
+		PRINT "Undefined code '"; FLD$; "'"
+	END SELECT
+
+	GOTO 550
+
+ !800
+	!
+	! Done
+	!
+ !	CLOSE OE_SHIPTO.CH%
+ !
+ !	PRINT "Store list"; STORELIST$
+ !
+ !	GOTO 32767
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap Errors
+	!*******************************************************************
+
+	SELECT ERL
+
+	CASE 550%
+
+	CASE 610%
+		PRINT "%No such customer "; OE_SHIPTO::CUSNUM
+		RESUME 695
+
+	CASE 690%
+		PRINT "%Put"; OE_SHIPTO::CUSNUM; " "; ERR; " "; ERT$(ERR)
+		RESUME 695
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+32767	END

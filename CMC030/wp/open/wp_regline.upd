@@ -1,0 +1,31 @@
+	!======================================================================
+	! WP_REGLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_REGLINE.CH%, STAT%)
+	CALL READ_DEVICE('WP_REGLINE',WP_REGLINE.DEV$, STAT%)
+
+	WP_REGLINE.NAME$ = WP_REGLINE.DEV$+"WP_REGLINE.HIS"
+
+	OPEN WP_REGLINE.NAME$ FOR INPUT AS FILE WP_REGLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_REGLINE, &
+		PRIMARY KEY &
+		( &
+			WP_REGLINE::JOB, &
+			WP_REGLINE::LLINE, &
+			WP_REGLINE::REC_TYPE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			WP_REGLINE::TTYPE, &
+			WP_REGLINE::ITEMCODE, &
+			WP_REGLINE::JOB, &
+			WP_REGLINE::LLINE, &
+			WP_REGLINE::REC_TYPE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			WP_REGLINE::BATCH &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

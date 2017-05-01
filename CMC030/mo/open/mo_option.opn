@@ -1,0 +1,25 @@
+	!======================================================================
+	! MO_OPTION file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_OPTION.CH%, STAT%)
+	CALL READ_DEVICE('MO_OPTION',MO_OPTION.DEV$, STAT%)
+
+	MO_OPTION.NAME$ = MO_OPTION.DEV$+"MO_OPTION.MAS"
+
+	OPEN MO_OPTION.NAME$ FOR INPUT AS FILE MO_OPTION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_OPTION, &
+		PRIMARY KEY &
+		( &
+			MO_OPTION::OPTGROUP, &
+			MO_OPTION::OPTN &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			MO_OPTION::PRODUCT, &
+			MO_OPTION::OPTGROUP, &
+			MO_OPTION::OPTN &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

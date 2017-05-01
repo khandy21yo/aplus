@@ -1,0 +1,16 @@
+	!======================================================================
+	! EL_TYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(EL_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('EL_TYPE',EL_TYPE.DEV$, STAT%)
+
+	EL_TYPE.NAME$ = EL_TYPE.DEV$+"EL_TYPE.TBL"
+
+	OPEN EL_TYPE.NAME$ FOR INPUT AS FILE EL_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP EL_TYPE, &
+		PRIMARY KEY &
+			EL_TYPE::TTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

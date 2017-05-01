@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The CPT Category is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__CATEGORY.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x CPT Category
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__CATEGORY.TBL\*
+	!	.p
+	!	CPT Category.
+	!
+	! Index:
+	!	.x CPT Category
+	!	.x BI_CATEGORY
+	!--

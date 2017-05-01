@@ -1,0 +1,229 @@
+1	%TITLE "TV_FIND_ROTATION - Fix the rotation on a order line"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	SUB TV_FIND_ROTATION(SKED_DATE$, &
+		TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED_INSTR)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This subroutine is used to fix the scheduling of
+	!	variable spots/day in the schedule instruction file
+	!	(TV_COMMER_SKED_INSTR), so that it can be done
+	!	consistently throught the entire system.
+	!
+	!	This includes negative values in the rotation, as
+	!	well as the In/Out sequence.
+	!
+	! Index:
+	!
+	!	Schedule
+	!
+	! Input:
+	!
+	!	SKED_DATE$
+	!		This is the date that the rotation is really
+	!		desired for.  The rotation will not vary
+	!		throught a week, but will vary between weeks.
+	!
+	!	TV_COMMER_SKED_INSTR
+	!		This is the record that is to be rotated.
+	!
+	! Output:
+	!
+	!	TV_COMMER_SKED_INSTR
+	!		This is the rotated record.
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_FIND_ROTATION/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_FIND_ROTATION
+	!	$ DELETE TV_FIND_ROTATION.OBJ;*
+	!
+	! Author:
+	!
+	!	12/03/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.HB"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION DATE_DAYCODE
+	EXTERNAL LONG FUNCTION DATE_DAYOFWEEK
+
+	%PAGE
+
+	!
+	! Calculate the number of weeks that the line has
+	! been running, and use that value to determine which day
+	! to start filling.  This is done first because it is needed
+	! in both the -1 business, and the In/Out stuff.
+	!
+	SKED_DAY% = DATE_DAYCODE(SKED_DATE$)
+	SKED_DOWK% = DATE_DAYOFWEEK(SKED_DAY%)
+
+	START_DAY% = DATE_DAYCODE(TV_COMMER_SKED_INSTR::START_DATE)
+	START_DOWK% = DATE_DAYOFWEEK(START_DAY%)
+
+	DIFF_WEEK% = ((SKED_DAY% - SKED_DOWK%) - (START_DAY% - START_DOWK%)) / 7%
+
+	!
+	! Determine the total of the negitive numbers
+	! in the spots/day array.  If there are no negitive values,
+	! then exit immediately.
+	!
+	TOT_NEG% = 0%
+	TOT_NEG% = TOT_NEG% - TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) &
+		IF TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) < 0% &
+		FOR LOOP% = 0% TO 6%
+	GOTO DoIO IF TOT_NEG% = 0%
+
+	!
+	! Using the number of weeks it has been running, calculate
+	! a starting day for filling in the rotation.
+	!
+	START_ROT% = DIFF_WEEK% - (DIFF_WEEK% / 7%) * 7%
+
+	!
+	! Now, calculate how many of the spots are rotatable by taking
+	! the total number and subtracting off the number that are
+	! not rotating.
+	!
+	TOTAL_ORDER% = TV_COMMER_SKED_INSTR::TOTAL_SPOTS
+	TOTAL_ORDER% = TOTAL_ORDER% - TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) &
+		IF TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) > 0% &
+		FOR LOOP% = 0% TO 6%
+	TOTAL_ORDER% = 0% IF TOTAL_ORDER% < 0%
+
+	!
+	! Now, we make two loops (One from the start_rot to the end,
+	! then one from 0 to start_rot)
+	!
+	FOR LOOP% = START_ROT% TO 6%
+
+		IF TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) < 0%
+		THEN
+			!
+			! Calculate the number of spots to put here as
+			! a percentage of the total spots left to
+			! the total negitive left, then adjust the
+			! total spots left and the total negitive left.
+			!
+			TEMP = -TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%)
+			TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) = &
+				(TEMP * TOTAL_ORDER%) / TOT_NEG% + .9
+			TOTAL_ORDER% = TOTAL_ORDER% - &
+				TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%)
+			TOT_NEG% = TOT_NEG% - TEMP
+		END IF
+	NEXT LOOP%
+
+	FOR LOOP% = 0% TO START_ROT% - 1%
+
+		IF TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) < 0%
+		THEN
+			!
+			! Calculate the number of spots to put here as
+			! a percentage of the total spots left to
+			! the total negitive left, then adjust the
+			! total spots left and the total negitive left.
+			!
+			TEMP = -TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%)
+			TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) = &
+				(TEMP * TOTAL_ORDER%) / TOT_NEG% + .9
+			TOTAL_ORDER% = TOTAL_ORDER% - &
+				TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%)
+			TOT_NEG% = TOT_NEG% - TEMP
+		END IF
+	NEXT LOOP%
+
+	!
+	! At this point, the rotation should be done. TOT_NEG% and
+	! TOTAL_ORDER% should be zero, but I don't test because it
+	! should not be necessary and there is nothing that I can
+	! do about it if it isn't.
+	!
+	IF (TV_COMMER_SKED_INSTR::IN_WEEKS <> 0%) AND &
+		(TV_COMMER_SKED_INSTR::OUT_WEEKS <> 0%)
+	THEN
+		!
+		! Convert In/Out weeks into the current part of the
+		! cycle (get rid of complete In/Out cycles)
+		!
+		TEMP1% = TV_COMMER_SKED_INSTR::IN_WEEKS + &
+			TV_COMMER_SKED_INSTR::OUT_WEEKS
+
+		TEMP% = DIFF_WEEK% - (DIFF_WEEK% / TEMP1%) * TEMP1%
+
+		!
+		! If we are not in the IN part of the cycle, remove
+		! all spots.
+		!
+		IF TEMP% >= TV_COMMER_SKED_INSTR::IN_WEEKS
+		THEN
+			TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(TEMP%) = 0% &
+				FOR TEMP% = 0% TO 6%
+		END IF
+	END IF
+
+
+ DoIO:	!
+	! Calculate total spots for this week now.
+	!
+	TEMP% = 0%
+	TEMP% = TEMP% + TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(LOOP%) &
+		FOR LOOP% = 0% TO 6%
+	TV_COMMER_SKED_INSTR::TOTAL_SPOTS = TEMP%
+
+	!
+	! Exit point of the function
+	!
+ ExitFunction:
+	END SUB

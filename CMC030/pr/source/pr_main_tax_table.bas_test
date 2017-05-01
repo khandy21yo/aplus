@@ -1,0 +1,1619 @@
+1	%TITLE "Payroll Tax Table Maintenance"
+	%SBTTL "PR_MAIN_TAX_TABLE"
+	%IDENT "V3.6 Calico"
+
+	FUNCTION LONG PR_MAIN_TAX_TABLE(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Federal, State, Local Tax Tables\* option in the Master Table
+	!	menu provides the means to access all tax table files for Federal,
+	!	State, city, county and school district jurisdictions.
+	!
+	! Index:
+	!	.x Tax Table>Federal Taxes
+	!	.x Tax Table>State Taxes
+	!	.x Tax Table>Local Taxes
+	!	.x Federal Taxes>Tax Table
+	!	.x State Taxes>Tax Table
+	!	.x Local Taxes>Tax Table
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS PR_SOURCE:PR_MAIN_TAX_TABLE/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN PR_MAIN_TAX_TABLE
+	!	$ DELETE PR_MAIN_TAX_TABLE.OBJ;*
+	!
+	! Author:
+	!
+	!	09/24/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/01/88 - Lance Williams
+	!		Modified to allow R/O open of file if R/W fails.
+	!	03/04/89 - Frank Starman
+	!		Added three fields for SUI
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	12/15/95 - Kevin Handy
+	!		Reformat source closer to 80 columns.
+	!		Change RIGHT(NUM1$()) to FORMAT$().
+	!
+	!	12/31/97 - Kevin Handy
+	!		Only display one character for status.
+	!		Add a list for state codes.
+	!		Lost unecessary external definitions.
+	!
+	!	02/18/97 - Kevin Handy
+	!		Added calc_basis "C" for Canada taxes.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.PR.PR_TAX_TABLE"
+	MAP (PR_TAX_TABLE)	PR_TAX_TABLE_CDD	PR_TAX_TABLE
+	MAP (PR_TAX_TABLE2)	PR_TAX_TABLE_CDD	PR_TAX_TABLE_OLD, PR_TAX_TABLE2
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_STATE"
+	MAP (UTL_STATE)		UTL_STATE_CDD		UTL_STATE
+
+	MAP (PR_TAX_YYYY) YYYY$ = 4%
+
+	!
+	! This common area must be mapped in both the main program and
+	! in PR_MAIN_TAX_TABLE.
+	!
+	COM (CH_PR_TAX_TABLE) &
+		PR_TAX_TABLE.CH%, &
+		STTITLE$ = 20%, &
+		ST$(5%) = 20%, &
+		CBTITLE$ = 20%, &
+		CB$(4%) = 20%, &
+		PR_TAX_TABLE.READONLY%
+
+	!
+	! Device assignment
+	!
+	COM (PR_TAX_TABLE_DEVICE) &
+		PR_TAX_TABLE.DEV$ = 40%, &
+		PR_TAX_TABLE.PRO$ = 40%
+
+	!
+	! Declare data types
+	!
+	DECLARE LONG XPOS, YPOS
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Payroll Tax Table Maintenance"
+		SMG_WINDOW::NHELP = "PR_MAIN_TAX_TABLE"
+		SMG_WINDOW::CHAN  = PR_TAX_TABLE.CH%
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 61%
+
+		SMG_WINDOW::LWIDTH  = 78%
+		SMG_WINDOW::LHEIGHT = 14%
+		SMG_WINDOW::LHPOS   = 2%
+		SMG_WINDOW::LVPOS   = 6%
+		SMG_WINDOW::LLAST   = 1%
+		SMG_WINDOW::LTITLE(0%) = "Status Page"
+		SMG_WINDOW::LPAGE(0%) = 16%
+		SMG_WINDOW::LTITLE(1%) = "Tax Table Page"
+		SMG_WINDOW::LPAGE(1%) = 61%
+
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Auth"
+			SMG_WINDOW::KFIELD(0%, 0%) = 3%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+			SMG_WINDOW::KFIELD(0%, 3%) = 3%
+
+		!
+		! Withholding types
+		!
+		STTITLE$= "Type Description"
+
+		ST$(0%) = "5"
+		ST$(1%) = "F    Federal"
+		ST$(2%) = "S    State"
+		ST$(3%) = "C    City"
+		ST$(4%) = "D    County"
+		ST$(5%) = "E    School"
+
+		!
+		! Calculation basis
+		!
+		CBTITLE$= "Basis Description"
+
+		CB$(0%) = "3"
+		CB$(1%) = "      Not Applicable"
+		CB$(2%) = "F     Federal percentage"
+		CB$(3%) = "C     Calc on fed tax"
+
+		IF INSTR(1%, " QV", MVALUE) <= 1%
+		THEN
+			!
+			! Load in defaults
+			!
+			CALL READ_DEFAULTS(SMG_WINDOW)
+		END IF
+
+700		!
+		! Declare channels
+		!
+		IF PR_TAX_TABLE.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF PR_TAX_TABLE.READONLY%
+			GOTO 790
+		END IF
+
+750		%INCLUDE "SOURCE:[PR.OPEN]PR_TAX_TABLE.CRE"
+		PR_TAX_TABLE.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[PR.OPEN]PR_TAX_TABLE.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		PR_TAX_TABLE.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(PR_TAX_TABLE.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = PR_TAX_TABLE.CH%
+		RESET #PR_TAX_TABLE.CH%
+		GET #PR_TAX_TABLE.CH%, REGARDLESS
+		UNLOCK	#PR_TAX_TABLE.CH%
+
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " cOpy"
+
+	!
+	! Window option
+	!
+	CASE OPT_MOREMENU
+
+		SELECT MVALUE
+		!
+		! Copy
+		!
+		CASE "cOpy"
+			GOSUB CopyOption
+
+			!
+			! Repaint record on screen
+			!
+			PR_MAIN_TAX_TABLE = 8%
+
+		END SELECT
+
+	!
+	! Display the background
+	!
+	CASE OPT_BACKGROUND
+
+		SELECT MLOOP
+
+		!
+		! Main screen
+		!
+		CASE 0%
+			SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+			DATA	1, 24, "(01) Auth", &
+				2, 24, "(02) Code", &
+				3, 24, "(03) Status", &
+				7,  1, "(04) OASDI Employer %", &
+				8,  1, "(05) OASDI Employee %", &
+				9,  1, "(06) OASDI Limit", &
+				11,  1, "(07) HI employer %", &
+				12,  1, "(08) HI Employee %", &
+				13,  1, "(09) HI Limit", &
+				7, 39, "(10) OST Min Lim", &
+				8, 39, "(11) OST %", &
+				9, 39, "(12) OST Max Lim", &
+				10, 39, "(13) OST Ded Lim", &
+				11, 39, "(14) SUI Min Lim", &
+				12, 39, "(15) SUI %", &
+				13, 39, "(16) SUI Max Lim", &
+				5, 39, "** Non-Federal Only **", &
+				5,  1, "** Federal Only **", &
+				0,  0, ""
+
+			RESTORE
+
+			READ XPOS, YPOS, XSTR$
+		I%=0%
+		WHILE (XPOS <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS, YPOS) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+			READ XPOS, YPOS, XSTR$
+			NEXT
+
+			SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! 1st page
+		!
+		CASE 1%
+			SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::LWINDOW)
+
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::LWINDOW)
+
+			DATA	1,  1, "(17) Calc Basis", &
+				2,  1, "(18) Basis %", &
+				3,  1, "(19) Std WH All", &
+				4,  1, "(20) Adj Gross %", &
+				5,  1, "(21) Min Std Adj", &
+				6,  1, "(22) Max Std Adj", &
+				7,  1, "(23) Pers Exempt", &
+				8,  1, "(24) Add Exempt", &
+				9,  1, "(25) Fed Credit %", &
+				10,  1, "(26) Exc Thresh", &
+				11,  1, "(27) Exc Thr. Rate", &
+				12,  1, "(28) Low Inc Exc", &
+				1, 41, "Tax Table", &
+				3, 41, "Over             Base      Percent", &
+				4, 31, "(29)             (30)            (31)", &
+				5, 31, "(32)             (33)            (34)", &
+				6, 31, "(35)             (36)            (37)", &
+				7, 31, "(38)             (39)            (40)", &
+				8, 31, "(41)             (42)            (43)", &
+				9, 31, "(44)             (45)            (46)", &
+				10, 31, "(47)             (48)            (49)", &
+				11, 31, "(50)             (51)            (52)", &
+				12, 31, "(53)             (54)            (55)", &
+				13, 31, "(56)             (57)            (58)", &
+				14, 31, "(59)             (60)            (61)", &
+				0,  0, ""
+
+			RESTORE
+			XPOS = -1%
+			READ XPOS, YPOS, XSTR$ UNTIL XPOS = 0%
+			READ XPOS, YPOS, XSTR$
+
+			I%=SMG_WINDOW::LPAGE(0%)
+			WHILE (XPOS <> 0)
+				I% = I% + 1%
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::LWINDOW, &
+					XSTR$, XPOS, YPOS) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+				READ XPOS, YPOS, XSTR$
+			NEXT
+
+			SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::LWINDOW)
+
+		END SELECT
+
+
+	!
+	! Enter/Display/Default
+	!
+20200	CASE OPT_ENTRY
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View "
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+		T.SE% = SCOPE::SCOPE_EXIT
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Authority\*
+	!	.p
+	!	The ^*Authority\* field in the Tax Table record allows for the entry of
+	!	a code for the specific tax authority to which a record relates.
+	!	Valid codes are:
+	!	.b
+	!	.lm +20
+	!	.LIST 0,"*"
+	!	.LE
+	!	F = Federal
+	!	.LE
+	!	S = State
+	!	.LE
+	!	C = City
+	!	.LE
+	!	D = County
+	!	.LE
+	!	E = School District
+	!	.ELS
+	!	.LM -20
+	!
+	! Index:
+	!	.x Tax>Authority>Tax Table
+	!	.x Authority>Tax Table
+	!	.x Tax Table>Authority
+	!
+	!--
+			PR_TAX_TABLE::AUTH  = EDIT$(ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"1;37", TEMP$, &
+				PR_TAX_TABLE::AUTH, MFLAG, "'", MVALUE, &
+				ST$(), STTITLE$, "005"), -1%)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Code\*
+	!	.P
+	!	The ^*Code\* field provides a two character field with which to identify
+	!	the specific State, city, county, or school district for corresponding tax
+	!	types. Codes must be equal to the codes established in the Tax Tables file.
+	!	State codes are equal to the State Post Office codes. Local tax codes must
+	!	be equal to the codes for the related jurisdictions as they exist in the Tax
+	!	Tables. The code field for Federal Withholding Tax type would be left blank.
+	!	.p
+	!	Multiple State and local tax jurisdictions may be entered for a single employee.
+	!
+	! Index:
+	!	.x Code>Tax Table
+	!	.x Tax Table>Code
+	!	.x State>Tax Table
+	!	.x Tax Table>State
+	!
+	!--
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::CODE = ""
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::CODE = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"2;37", TEMP$, &
+				PR_TAX_TABLE::CODE, TEMP%, &
+				"'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+
+			CASE SMG$K_TRM_F14
+
+				IF MAIN_WINDOW(UTL_MAIN_STATE.ID, "VXUS") = 1%
+				THEN
+					PR_TAX_TABLE::CODE = UTL_STATE::STATE
+				END IF
+				GOTO E0Loop
+
+ !			CASE SMG$K_TRM_F17
+ !
+ !				V% = MAIN_WINDOW(UTL_MAIN_STATE.ID, "MUS")
+ !				PR_TAX_TABLE::CODE = UTL_STATE::STATE
+ !				GOTO E0Loop
+
+			END SELECT
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Status\*
+	!	.p
+	!	The ^*Status\* field in a Tax Table record provides the means to
+	!	record the marital status code for a specific table.
+	!	.p
+	!	Standard codes are:
+	!	.b
+	!	.lm +15
+	!	.list 0,"*"
+	!	.le
+	!	M = Married
+	!	.le
+	!	S = Single
+	!	.els
+	!	.p
+	!	.lm -15
+	!	Special codes are:
+	!	.b
+	!	.lm +15
+	!	.list 0,"*"
+	!	.LE
+	!	H = Head of household
+	!	.LE
+	!	1 = Married, only one spouse with income
+	!	.le
+	!	2 = Married, both spouses with income, or
+	!	Married, claiming two or more exemptions,
+	!	depending upon the specific jurisdiction
+	!	.els
+	!
+	! Index:
+	!	.x Tax Table>Status
+	!	.x Status>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::TSTATUS = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"3;37", TEMP$, &
+				PR_TAX_TABLE::TSTATUS, MFLAG, &
+				"'", MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) OASDI Employer %\*
+	!	.p
+	!	The ^*OASDI Employer %\* field in a Tax Table record provides the
+	!	means to enter the employer's OASDI portion of the
+	!	FICA rate expressed as a percentage,
+	!	i.e. a rate of 6.20% must be entered as "6.20" rather than ".0620".
+	!
+	! Index:
+	!	.x FICA>Employer>Tax Table
+	!	.x Employer>FICA>Tax Table
+	!	.x OASDI>Employer>Tax Table
+	!	.x Employer>OASDI>Tax Table
+	!	.x Tax Table>FICA>Employer
+	!	.x Tax Table>Employer>FICA
+	!	.x Tax Table>OASDI>Employer
+	!	.x Tax Table>Employer>OASDI
+	!	.y OASDI
+	!	.y FICA
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  <> "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FICA_EMPR_PCT = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FICA_EMPR_PCT = FUNC_ROUND( &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;29", TEMP$, &
+				PR_TAX_TABLE::FICA_EMPR_PCT / 100.0, TEMP%, &
+				"##.##%", MVALUE) * 100.0, 2%)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) OASDI Employee %\*
+	!	.p
+	!	The ^*OASDI Employee %\* field in a Tax Table record provides the
+	!	means to enter the employees' OASDI portion of the
+	!	FICA rate expressed as a percentage,
+	!	i.e., a rate of 6.20% must be entered as "6.20" rather than ".0620".
+	!
+	! Index:
+	!	.x Tax Table>FICA>Employee
+	!	.x FICA>Employee>Tax Table
+	!	.x Tax Table>OASDI>Employee
+	!	.x OASDI>Employee>Tax Table
+	!	.y FICA
+	!	.y OASDI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  <> "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FICA_EMPE_PCT = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FICA_EMPE_PCT = FUNC_ROUND( &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"8;29", TEMP$, &
+				PR_TAX_TABLE::FICA_EMPE_PCT / 100.0, TEMP%, &
+				"##.##%", MVALUE) * 100.0, 2%)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!	^*(06) OASDI Limit\*
+	!	.p
+	!	The ^*OASDI Limit\* field in a Tax Table record provides the means
+	!	to enter the dollar amount of an employee's earnings after which
+	!	the OASDI portion of FICA taxes no longer apply.
+	!
+	! Index:
+	!	.x Tax Table>FICA>Limit
+	!	.x FICA>Limit>Tax Table
+	!	.x Tax Table>OASDI>Limit
+	!	.x OSADI>Limit>Tax Table
+	!	.y FICA
+	!	.y OASDI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  <> "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FICA_LIMIT = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FICA_LIMIT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;25", TEMP$, &
+				PR_TAX_TABLE::FICA_LIMIT, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!	^*(07) HI Employer %\*
+	!	.p
+	!	The ^*HI Employer %\* field in a Tax Table record provides the
+	!	means to enter the employer's HI portion of the
+	!	FICA rate expressed as a percentage,
+	!	i.e. a rate of 1.45% must be entered as "1.45" rather than ".0145".
+	!
+	! Index:
+	!	.x FICA>Employer>Tax Table
+	!	.x Employer>FICA>Tax Table
+	!	.x HI>Employer>Tax Table
+	!	.x Employer>HI>Tax Table
+	!	.y HI
+	!	.y FICA
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  <> "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FICA_EMPR_PCT_HI = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FICA_EMPR_PCT_HI = FUNC_ROUND( &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;29", TEMP$, &
+				PR_TAX_TABLE::FICA_EMPR_PCT_HI / 100.0, TEMP%, &
+				"##.##%", MVALUE) * 100.0, 2%)
+
+		CASE 8%
+
+	!++
+	! Abstract:FLD008
+	!	^*(08) HI Employee %\*
+	!	.p
+	!	The ^*HI Employee %\* field in a Tax Table record provides the
+	!	means to enter the employees' HI portion of the
+	!	FICA rate expressed as a percentage,
+	!	i.e., a rate of 1.45% must be entered as "1.45" rather than ".0145".
+	!
+	! Index:
+	!	.x Tax Table>FICA>Employee
+	!	.x FICA>Employee>Tax Table
+	!	.x Tax Table>HI>Employee
+	!	.x HI>Employee>Tax Table
+	!	.y HI
+	!	.y FICA
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  <> "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FICA_EMPE_PCT_HI = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FICA_EMPE_PCT_HI = FUNC_ROUND( &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"12;29", TEMP$, &
+				PR_TAX_TABLE::FICA_EMPE_PCT_HI / 100.0, TEMP%, &
+				"##.##%", MVALUE) * 100.0, 2%)
+
+		CASE 9%
+
+	!++
+	! Abstract:FLD009
+	!	^*(09) HI Limit\*
+	!	.p
+	!	The ^*HI Limit\* field in a Tax Table record provides the means
+	!	to enter the dollar amount of an employee's earnings after which
+	!	the HI portion of FICA taxes no longer apply.
+	!
+	! Index:
+	!	.x Tax Table>FICA>Limit
+	!	.x FICA>Limit>Tax Table
+	!	.x Tax Table>HI>Limit
+	!	.x HI>Limit>Tax Table
+	!	.y HI
+	!	.y FICA
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  <> "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FICA_LIMIT_HI = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FICA_LIMIT_HI = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"13;25", TEMP$, &
+				PR_TAX_TABLE::FICA_LIMIT_HI, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 10%
+
+	!++
+	! Abstract:FLD010
+	!	^*(10) OST Minimum Limit\*
+	!	.p
+	!	"Other State Tax" generally refers to State Disability Insurance
+	!	Taxes.
+	!	.p
+	!	The ^*Other State Tax Minimum Limit\* field in a Tax Table record
+	!	provides the means, for applicable jurisdictions, to enter a dollar
+	!	minimum limit below which the other tax does not apply.
+	!	.P
+	!	This definition is for OST tax that the employee pays. To define the
+	!	OST paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x Tax Table>OST>Minimum Limit
+	!	.x OST>Minimum Limit>Tax Table
+	!	.x Tax Table>SDI>Minimum Limit
+	!	.x SDI>Minimum Limit>Tax Table
+	!	.Y SDI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::OT_ANL_MIN = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::OT_ANL_MIN = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;57", TEMP$, &
+				PR_TAX_TABLE::OT_ANL_MIN, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 11%
+
+	!++
+	! Abstract:FLD011
+	!	^*(11) OST Percent\*
+	!	.p
+	!	"Other State Tax" generally refers to State Disability Insurance
+	!	Tax.
+	!	.p
+	!	The ^*Other State Tax Percentage\* field in a Tax Table record
+	!	provides the means, for applicable jurisdictions, to enter a value
+	!	expressed as a percentage. The percentage is used as a factor with
+	!	which to multiply taxable earnings, resulting in other taxes to be
+	!	withheld.
+	!	.P
+	!	This definition is for OST tax that the employee pays. To define the
+	!	OST paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x Tax Table>OST>Percentage
+	!	.x OST>Percentage>Tax Table
+	!	.x Tax Table>SDI>Percentage
+	!	.x SDI>Percentage>Tax Table
+	!	.y SDI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::OT_ANL_PCT = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::OT_ANL_PCT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"8;60", TEMP$, &
+				PR_TAX_TABLE::OT_ANL_PCT, TEMP%, &
+				"##.###%", MVALUE)
+
+		CASE 12%
+
+	!++
+	! Abstract:FLD012
+	!	^*(12) OST Maximum Limit\*
+	!	.p
+	!	"Other State Tax" generally refers to State Disability Insurance
+	!	Tax.
+	!	.p
+	!	The ^*Other State Tax Maximum Limit\* field in a Tax Table record
+	!	provides the means, for applicable jurisdictions, to enter a dollar
+	!	maximum limit above which the other tax does not apply.
+	!	.P
+	!	This definition is for OST tax that the employee pays. To define the
+	!	OST paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x Tax Table>OST>Maximum Limit
+	!	.x OST>Maximum Limit>Tax Table
+	!	.x Tax Table>SDI>Maximum Limit
+	!	.x SDI>Maximum Limit>Tax Table
+	!	.y SDI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::OT_ANL_MAX = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::OT_ANL_MAX = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;57", TEMP$, &
+				PR_TAX_TABLE::OT_ANL_MAX, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 13%
+
+	!++
+	! Abstract:FLD013
+	!	^*(13) OST Deduction Limit\*
+	!	.p
+	!	The ^*OST Deduction Limit\* field in a Tax Table record
+	!	provides the means, for applicable jurisdictions, to enter the dollar maximum
+	!	limit above which the other tax does not apply.
+	!	.P
+	!	This definition is for OST tax that the employee pays. To define the
+	!	OST paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x Tax Table>OST>Deduction Limit
+	!	.x OST>Deduction Limit>Tax Table
+	!	.x Tax Table>SDI>Deduction Limit
+	!	.x SDI>Deduction Limit>Tax Table
+	!	.y SDI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::OT_DED_MAX = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::OT_DED_MAX = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"10;57", TEMP$, &
+				PR_TAX_TABLE::OT_DED_MAX, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 14%
+
+	!++
+	! Abstract:FLD014
+	!	^*(14) SUI Minimum Limit\*
+	!	.p
+	!	The ^*SUI (State Unemployment Insurance) Minimum Limit\* field in the Tax Table
+	!	record provides the means, for applicable jurisdictions, to enter a dollar
+	!	minimum limit below which the tax does not apply.
+	!	.P
+	!	This definition is for SUI tax that the employee pays. To define the
+	!	SUI paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x SUI>Minimum Limit>Tax Table
+	!	.x Tax Table>SUI>Minimum Limit
+	!	.y SUI
+	!
+	!--
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::SUI_MIN = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::SUI_MIN = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;57", TEMP$, &
+				PR_TAX_TABLE::SUI_MIN, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 15%
+
+	!++
+	! Abstract:FLD015
+	!	^*(15) SUI Percent\*
+	!	.p
+	!	The ^*SUI (State Unemployment Insurance) Percent\* field in a Tax Table record
+	!	provides the means to enter, in jurisdictions where applicable,
+	!	the value expressed as a perecntage. The percentage is used as a factor with
+	!	which to multiply taxable earnings, resulting in taxes to be withheld.
+	!	.P
+	!	This definition is for SUI tax that the employee pays. To define the
+	!	SUI paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x Tax Table>SUI>Percent
+	!	.x SUI>Percent>Tax Table
+	!	.y SUI
+	!
+	!--
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::SUI_PCT = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::SUI_PCT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"12;60", TEMP$, &
+				PR_TAX_TABLE::SUI_PCT, TEMP%, &
+				"##.###%", MVALUE)
+
+		CASE 16%
+
+	!++
+	! Abstract:FLD016
+	!	^*(16) SUI Maximum Limit\*
+	!	.p
+	!	The ^*SUI (State Unemployment Insurance) Maximum Limit\*field in a Tax Table record
+	!	provides the means to enter, in jurisdictions where applicable, the
+	!	dollar maximum limit above which the tax does not apply.
+	!	.P
+	!	This definition is for SUI tax that the employee pays. To define the
+	!	SUI paid by the company, see the PROFILE maintenance.
+	!
+	! Index:
+	!	.x Tax Table>SUI>Maximum Limit
+	!	.x SUI>Maximum Limit>Tax Table
+	!	.y SUI
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::SUI_MAX = 0.0
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::SUI_MAX = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"13;57", TEMP$, &
+				PR_TAX_TABLE::SUI_MAX, TEMP%, &
+				"######.##", MVALUE)
+
+		CASE 17%
+
+	!++
+	! Abstract:FLD017
+	!	^*(17) Calculation Basis\*
+	!	.p
+	!	The ^*Calculation Basis\* field in a Tax Table record provides the
+	!	means to enter, when applicable, an ^*F\*.
+	!	.p
+	!	At least some State Tax jurisdictions compute State Withholding
+	!	Taxes as a percentage of Federal Withholding Taxes. Tax tables for
+	!	such jurisdictions must have a value of ^*F\* in this field. Otherwise,
+	!	this field ^&must\& be blank.
+	!
+	! Index:
+	!	.x Tax Table>Calculation Basis
+	!	.x Calculation Basis>Tax Table
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::CALC_BASIS = ""
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::CALC_BASIS = EDIT$(ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::LWINDOW, &
+				"1;18", TEMP$, &
+				PR_TAX_TABLE::CALC_BASIS, TEMP%, "'", MVALUE, &
+				CB$(), CBTITLE$, "006"), -1%)
+
+		CASE 18%
+
+	!++
+	! Abstract:FLD018
+	!	^*(18) Basis %\*
+	!	.p
+	!	The ^*Basis %\* field in a Tax Table record provides the means to
+	!	enter a percentage amount when a tax jurisdiction requires that State
+	!	(or possibly local) tax be computed as a percentage of Federal
+	!	withholding tax.
+	!
+	! Index:
+	!	.x Tax Table>Basis Percentage
+	!	.x Basis Percentage>Tax Table
+	!
+	!--
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::BASIS_PCT = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::BASIS_PCT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"2;18", TEMP$, &
+				PR_TAX_TABLE::BASIS_PCT, TEMP%, &
+				"##.###%", MVALUE)
+
+		CASE 19%
+
+	!++
+	! Abstract:FLD019
+	!	^*(19) Standard Withholding Allowance\*
+	!	.p
+	!	The ^*Standard Withholding Allowance\* field in a Tax Table record
+	!	provides the means to enter the dollar amount of the withholding
+	!	allowance for applicable jurisdictions.
+	!	.b
+	!	.Note
+	!	Standard Withholding Allowances must not be confused
+	!	with Personal Exemptions. (See information on field
+	!	(23) and (24) for Personal Exemptions.)
+	!	.END NOTE
+	!
+	! Index:
+	!	.x Tax Table>Standard Withholding Allowance
+	!	.x Standard Withholding Allowance>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::STD_WH = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"3;18", TEMP$, &
+				PR_TAX_TABLE::STD_WH, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 20%
+
+	!++
+	! Abstract:FLD020
+	!	^*(20) Adjusted Gross Percent\*
+	!	.p
+	!	The ^*Adjusted Gross Percent\* field provides the means to enter additional
+	!	exemptions. The exemptions must lie between the Maximum and Minimum Standard
+	!	Adjustments and are figured accordingly.
+	!
+	! Index:
+	!	.x Adjusted Gross Percent>Tax Table
+	!	.x Tax Table>Adjusted Gross Percent
+	!
+	!--
+
+
+			PR_TAX_TABLE::ADJ_GRS_PCT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"4;18", TEMP$, &
+				PR_TAX_TABLE::ADJ_GRS_PCT, MFLAG, &
+				"#####.###%", MVALUE)
+
+		CASE 21%
+
+	!++
+	! Abstract:FLD021
+	!	^*(21) Minimum Standard Adjustment\*
+	!	.p
+	!	The ^*Minimum Standard Adjustment\* field in a Tax Table record
+	!	provides the means to enter, in jurisdictions where applicable,
+	!	the dollar amount to be used for the minimum standard adjustment.
+	!
+	! Index:
+	!	.x Tax Table>Minimum Standard Adjustment
+	!	.x Minimum Standard Adjustment>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::MIN_STD_ADJ = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"5;18", TEMP$, &
+				PR_TAX_TABLE::MIN_STD_ADJ, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 22%
+
+	!++
+	! Abstract:FLD022
+	!	^*(22) Maximum Standard Adjustment\*
+	!	.p
+	!	The ^*Maximum Standard Adjustment\* field in a Tax Table record
+	!	provides the means to enter, in jurisdictions where applicable, the
+	!	dollar amount of the maximum standard adjustment.
+	!
+	! Index:
+	!	.x Tax Table>Maximum Standard Adjustment
+	!	.x Maximum Standard Adjustment>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::MAX_STD_ADJ = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"6;18", TEMP$, &
+				PR_TAX_TABLE::MAX_STD_ADJ, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 23%
+
+	!++
+	! Abstract:FLD023
+	!	^*(23) Personal Exemption\*
+	!	.p
+	!	The ^*Personal Exemption\* field in a Tax Table record provides the
+	!	means to enter the dollar amount allowed for a personal exemption
+	!	according to current jurisdictional regulations. During the execution
+	!	of the tax calculation process, the system will multiply the value of
+	!	this field times the number of exemptions claimed and subtract the
+	!	result from annualized gross earnings.
+	!
+	! Index:
+	!	.x Tax Table>Personal Exemption
+	!	.x Personal Exemption>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::PR_EX = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"7;18", TEMP$, &
+				PR_TAX_TABLE::PR_EX, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 24%
+
+	!++
+	! Abstract:FLD024
+	!	^*(24) Additional Personal Exemption\*
+	!	.p
+	!	The ^*Additional Personal Exemption\* field in a Tax Table record provides the
+	!	means to enter the dollar amount allowed for additional personal exemptions
+	!	according to current jurisdictional regulations. During the execution
+	!	of the tax calculation process, the system will multiply the value of
+	!	this field times the number of additional exemptions claimed and subtract the
+	!	result from annualized gross earnings.
+	!
+	! Index:
+	!	.x Tax Table>Personal Exemption>Additional
+	!	.x Personal Exemption>Additional>Tax Table
+	!	.x Tax Table>Additional>Personal Exemption
+	!	.x Additional>Personal Exemption>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::PR_EX_ADD = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"8;18", TEMP$, &
+				PR_TAX_TABLE::PR_EX_ADD, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 25%
+
+	!++
+	! Abstract:FLD025
+	!	^*(25) Federal Credit Percent\*
+	!	.p
+	!	The ^*Federal Credit Percent\* field provides the means to enter
+	!	the percentage of the federal taxes that are allowed as a deduction.
+	!	.note
+	!	This field has no effect on the calculation of federal
+	!	witholdings.
+	!	.END NOTE
+	!
+	! Index:
+	!	.x Federal Credit>Percent>Tax Table
+	!	.x Tax Table>Federal Credit>Percent
+	!
+	!--
+
+
+			IF PR_TAX_TABLE::AUTH  = "F"
+			THEN
+				TEMP% = MFLAG OR 1%
+				PR_TAX_TABLE::FED_CREDIT_PCT = 0%
+				SCOPE::SCOPE_EXIT = T.SE%
+			ELSE
+				TEMP% = MFLAG
+			END IF
+
+			PR_TAX_TABLE::FED_CREDIT_PCT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"9;18", TEMP$, &
+				PR_TAX_TABLE::FED_CREDIT_PCT, TEMP%, &
+				"#####.###%", MVALUE)
+
+		CASE 26%
+
+	!++
+	! Abstract:FLD026
+	!	^*(26) Exemption Threshold\*
+	!	.p
+	!	The ^*Personal Exemption Threshold\* field in a Tax Table record provides the
+	!	means to enter the dollar amount
+	!	where the phaseout of personel exemptions starts.
+	!	This field is used in conjunction with field (27) to handle the
+	!	phaseout specified by the Omnibus Budget Reconciliation Bill passed by
+	!	congress in October 1990.
+	!
+	! Index:
+	!	.x Tax Table>Personal Exemption>Threshold
+	!	.x Personal Exemption>Threshold>Tax Table
+	!	.x Threshold>Personel Exemption>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::THRESHOLD = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"10;18", TEMP$, &
+				PR_TAX_TABLE::THRESHOLD, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 27%
+
+	!++
+	! Abstract:FLD027
+	!	^*(27) Exemption Threshold Rate\*
+	!	.p
+	!	The ^*Exemption Threshold Rate\* field
+	!	is used with field (26) to provides the means to enter
+	!	the rate of exemption phaseout rate after hitting the threshold amount.
+	!	As passed by the Omnibus Budget Reconciliation Bill of October 1990,
+	!	the rate is 2% per $2500 (.0008), and 4% per $2500 (.0016) for married
+	!	people filing seperately.
+	!
+	! Index:
+	!	.x Exemption>Threshold Rate>Tax Table
+	!	.x Tax Table>Exemption>Threshold Rate
+	!	.x Threshold>Exemption>Tax Table
+	!
+	!--
+
+
+			PR_TAX_TABLE::THRESHOLD_RATE = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"11;18", TEMP$, &
+				PR_TAX_TABLE::THRESHOLD_RATE, MFLAG, &
+				"#####.#####", MVALUE)
+
+		CASE 28%
+
+	!++
+	! Abstract:FLD028
+	!	^*(28) Low Income Exclusion\*
+	!	.p
+	!	The ^*Low Income Exclusion\* field in a Tax Table record provides the
+	!	means to enter the dollar amount below which the employee will not
+	!	have to pay any taxes.
+	!	.note
+	!	This field was defined expecially for California's
+	!	Tax Tables, and is likely to be needed only for
+	!	that state.
+	!	.end note
+	!
+	! Index:
+	!	.x Tax Table>Low Income>Exclusion
+	!	.x Low Income>Exclusion>Tax Table
+	!	.x Exclusion>Low Income>Tax Table
+	!
+	!--
+
+			PR_TAX_TABLE::LOW_INCOME = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				"12;18", TEMP$, &
+				PR_TAX_TABLE::LOW_INCOME, MFLAG, &
+				"######.##", MVALUE)
+
+		CASE 29%, 32%, 35%, 38%, 41%, 44%, 47%, 50%, 53%, 56%, 59%
+
+			SCOPE::PRG_ITEM = "FLD029OVER"
+	!++
+	! Abstract:FLD029OVER
+	!	^*(29)... Over\*
+	!	.p
+	!	The fields in the ^*Over\* column of a Tax Table provide the means
+	!	to enter the least whole dollar amount in a tax bracket. The tax
+	!	bracket amounts must be entered in the Over column in ascending
+	!	order.
+	!	.p
+	!	If the annualized taxable earnings of an employee are equal to
+	!	or greater than the value in an Over field, but less than the value
+	!	in the next higher Over field, the value in the corresponding
+	!	Tax-Amount field is added to the difference between the annualized
+	!	earnings and the value of the Over field multiplied by the value of
+	!	the Plus % field divided by 100 to obtain the appropriate annualized
+	!	tax.
+	!
+	! Index:
+	!	.x Tax Table>Over Fields
+	!	.x Over Fields>Tax Table
+	!	.x Tax Table>Tax Brackets
+	!	.x Tax Brackets>Tax Table
+	!
+	!--
+
+			TEMP% = (MLOOP - 29%) / 3% + 1%
+
+			PR_TAX_TABLE::OVER(TEMP%) = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				NUM1$(TEMP% + 3%) + ";36", TEMP$, &
+				PR_TAX_TABLE::OVER(TEMP%), MFLAG, &
+				"#,###,###", MVALUE)
+
+		CASE 30%, 33%, 36%, 39%, 42%, 45%, 48%, 51%, 54%, 57%, 60%
+
+			SCOPE::PRG_ITEM = "FLD030BASE"
+	!++
+	! Abstract:FLD030BASE
+	!
+	!	^*(30)... Base\*
+	!	.p
+	!	The fields in the ^*Base\* column in a Tax Table record provide
+	!	a means to enter an annualized base tax amount which relates to
+	!	the tax bracket amount in the Over column.
+	!
+	! Index:
+	!	.x Tax Table>Base Amount
+	!	.x Base Amount>Tax Table
+	!	.x Tax Brackets>Tax Table
+	!	.x Tax Table>Tax Brackets
+	!--
+
+			TEMP% = (MLOOP - 30%) / 3% + 1%
+
+			PR_TAX_TABLE::TAXAMT(TEMP%) = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				NUM1$(TEMP% + 3%) + ";53", TEMP$, &
+				PR_TAX_TABLE::TAXAMT(TEMP%), MFLAG, &
+				"###,###.##", MVALUE)
+
+		CASE 31%, 34%, 37%, 40%, 43%, 46%, 49%, 52%, 55%, 58%, 61%
+
+			SCOPE::PRG_ITEM = "FLD031PER"
+	!++
+	! Abstract:FLD031PER
+	!	^*(31)... Percent\*
+	!	.p
+	!	The fields in the ^*Percent\* column of the Tax Tables provides the
+	!	means to enter an amount expressed as a percentage. The percentage
+	!	of 12% must be entered as "12." rather than as ".12".
+	!	.p
+	!	The value of the field (divided by 100) is multiplied by the
+	!	difference between the annualized taxable earnings and the tax
+	!	bracket amount in the related Over field. The result is added to
+	!	the corresponding amount in the Base field in order to arrive at an
+	!	annualized tax amount.
+	!
+	! Index:
+	!	.x Tax Table>Percent
+	!	.x Percent>Tax Tables
+	!	.x Tax Brackets>Tax Table
+	!	.x Tax Table>Tax Brackets
+	!
+	!--
+
+			TEMP% = (MLOOP - 31%) / 3% + 1%
+
+			PR_TAX_TABLE::PLUS(TEMP%) = ENTR_3NUMBER(SCOPE, SMG_WINDOW::LWINDOW, &
+				NUM1$(TEMP% + 3%) + ";69", TEMP$, &
+				PR_TAX_TABLE::PLUS(TEMP%), MFLAG, &
+				"###.###%", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+
+		PR_MAIN_TAX_TABLE = 0%
+
+	!
+	! Set PR_TAX_TABLE_OLD value
+	!
+20500	CASE OPT_SETOLD
+		PR_TAX_TABLE_OLD = PR_TAX_TABLE
+
+	!
+	! Restore PR_TAX_TABLE_OLD value
+	!
+	CASE OPT_RESETOLD
+		PR_TAX_TABLE = PR_TAX_TABLE_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		PR_TAX_TABLE2 = PR_TAX_TABLE
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		PR_TAX_TABLE = PR_TAX_TABLE2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Auth  Code  Status"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "008,014"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = PR_TAX_TABLE::AUTH + "     " + &
+				PR_TAX_TABLE::CODE + "    " + &
+				PR_TAX_TABLE::TSTATUS
+
+		END SELECT
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #PR_TAX_TABLE.CH%, &
+				KEY #0% GE PR_TAX_TABLE::AUTH + &
+					PR_TAX_TABLE::CODE + &
+					PR_TAX_TABLE::TSTATUS, &
+				REGARDLESS
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+ CopyOption:
+27000	!*******************************************************************
+	! Copy Tax table from prior year
+	!*******************************************************************
+
+	WORK_YYYY$ = FORMAT$( (VAL( XLATE( YYYY$, STRING$(48%,0%) + &
+		"0123456789")) - 1%), "<0>###")
+
+	INP$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, "", &
+		"Confirm Copying Tax Table from " + WORK_YYYY$ + " then press <Do>", &
+		"N", 0%, "", "")
+
+	RETURN IF INP$ <> "Y"
+
+	PR_TAX_TABLE_TEMP.CH% = PR_TAX_TABLE.CH%
+	PR_TAX_TABLE.CH% = 0%
+
+	TEMP_YYYY$ = YYYY$
+
+	YYYY$ = WORK_YYYY$
+
+27010	CALL ASSG_CHANNEL(PR_TAX_TABLE.CH%,STAT%)
+	IF STAT%
+	THEN
+		PR_MAIN_TAX_TABLE = 1%
+		EXIT FUNCTION
+	END IF
+
+	%INCLUDE "SOURCE:[PR.OPEN]PR_TAX_TABLE.OPN"
+
+	OLD_PR_TAX_TABLE.CH% = PR_TAX_TABLE.CH%
+
+	PR_TAX_TABLE.CH% = PR_TAX_TABLE_TEMP.CH%
+	YYYY$ = TEMP_YYYY$
+
+27015	RESET	#OLD_PR_TAX_TABLE.CH%
+	GET	#OLD_PR_TAX_TABLE.CH%, REGARDLESS
+
+27020	CALL ENTR_3MESSAGE(SCOPE, "Creating new Tax Table file for " + YYYY$, 1%)
+
+	CLOSE PR_TAX_TABLE.CH%
+
+	KILL PR_TAX_TABLE.DEV$ + "PR_TAX_TABLE_" + YYYY$ + ".TBL" &
+		FOR I% = 1% TO 10%
+
+27030	!
+	! create new Tax Table file
+	!
+	%INCLUDE "SOURCE:[PR.OPEN]PR_TAX_TABLE.CRE"
+
+	CALL ENTR_3MESSAGE(SCOPE, "Adding records to Tax Table File", 1%)
+
+27070	!
+	! Add record to the file
+	!
+	PUT #PR_TAX_TABLE.CH%
+
+27080	GET #OLD_PR_TAX_TABLE.CH%, REGARDLESS
+
+	GOTO 27070
+
+27200	YYYY$ = TEMP_YYYY$
+	PR_TAX_TABLE.CH% = PR_TAX_TABLE_TEMP.CH%
+
+	CALL ENTR_3MESSAGE(SCOPE, "", 1%)
+
+	RESET #PR_TAX_TABLE.CH%
+	GET #PR_TAX_TABLE.CH%, REGARDLESS
+	UNLOCK #PR_TAX_TABLE.CH%
+
+27250	CLOSE OLD_PR_TAX_TABLE.CH%
+
+27300	RETURN
+
+	%Page
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		PR_MAIN_TAX_TABLE = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		PR_MAIN_TAX_TABLE = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Prior year file is missing
+	!
+	CASE 27010%
+		CALL ENTR_3MESSAGE(SCOPE, "Prior year tax table does not exist", 0%)
+		RESUME 27250
+
+	!
+	! Prior year file is empty
+	!
+	CASE 27015%
+		CALL ENTR_3MESSAGE(SCOPE, "Prior year tax table is empty", 0%)
+		RESUME 27250
+
+	!
+	! Kill Current tax table
+	!
+	CASE 27020%
+		RESUME 27030
+
+	!
+	! End of file
+	!
+	CASE 27080%
+		RESUME 27200
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

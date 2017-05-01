@@ -1,0 +1,220 @@
+1	%TITLE "Insured Address Maintenance"
+	%SBTTL "BI_MAST_INSURED"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Patient Master\* option provides a means to access
+	!	a screen where information regarding both patient and
+	!	insured is entered and maintained.
+	!
+	! Index:
+	!	.x Patient>Master
+	!	.x Patient>Add
+	!	.x Patient>Erase
+	!	.x Patient>Change
+	!	.x Change>Patient
+	!	.x Erase>Patient
+	!	.x Add>Patient
+	!	.x Master>Patient
+	!	.x Insured>Master
+	!	.x Insured>Add
+	!	.x Insured>Erase
+	!	.x Insured>Change
+	!	.x Add>Insured
+	!	.x Erase>Insured
+	!	.x Change>Insured
+	!	.x Master>Insured
+	!
+	! Option:
+	!
+	!	BI_MAIN_PATIENT$HELP
+	!	BI_MAIN_INSURED$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAST_INSURED/LINE
+	!	$ LINK/EXEC:BI_EXE BI_MAST_INSURED,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BI_MAST_INSURED.OBJ;*
+	!
+	! Author:
+	!
+	!	11/01/88 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE" FUNC_INCLUDE:BI_WINDOW.INC"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+1000	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(BI_MAIN_INSURED.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.HB"
+	MAP	(BI_INSURED)		BI_INSURED_CDD	BI_INSURED
+	MAP	(BI_INSURED_OLD)	BI_INSURED_CDD	BI_INSURED_OLD
+	MAP	(BI_INSURED_ONE)	BI_INSURED_CDD	BI_INSURED_ONE
+
+	EXTERNAL LONG FUNCTION MAIN_WINDOW
+
+	EXTERNAL LONG FUNCTION BI_MAIN_INSURED
+	EXTERNAL LONG FUNCTION BI_MAIN_CARRIER
+	EXTERNAL LONG FUNCTION BI_MAIN_PATIENT
+	EXTERNAL LONG FUNCTION UTL_MAIN_COUNTRY
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE BI_MAIN_INSURED.ID
+		MAINT_GROUP = BI_MAIN_INSURED(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " Patient"
+
+		CASE OPT_MOREMENU
+			BI_INSURED_ONE = BI_INSURED
+			SELECT EDIT$(MVALUE, -1%)
+			!
+			! Patient
+			!
+			CASE "PATIENT"
+				MAINT_GROUP = MAIN_WINDOW(BI_MAIN_PATIENT.ID,"")
+			END SELECT
+
+		CASE OPT_AFTEROPT
+
+			SELECT MVALUE
+			CASE "Change", "Blank", "Initialize"
+				IF BI_INSURED::INSURED <> &
+					BI_INSURED_OLD::INSURED
+				THEN
+					BI_INSURED_ONE = BI_INSURED_OLD
+					MAINT_GROUP = MAIN_WINDOW( &
+						BI_MAIN_INSURED.ID, "C")
+				END IF
+			CASE "Erase"
+				BI_INSURED_ONE = BI_INSURED
+				MAINT_GROUP = MAIN_WINDOW(BI_MAIN_INSURED.ID,"E")
+
+			END SELECT
+		END SELECT
+
+	CASE BI_MAIN_CARRIER.ID
+		MAINT_GROUP = BI_MAIN_CARRIER(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_COUNTRY.ID
+		MAINT_GROUP = UTL_MAIN_COUNTRY(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BI_MAIN_PATIENT.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = BI_INSURED_ONE::INSURED
+
+		CASE OPT_SUBWIND
+			SELECT MLOOP
+			CASE 6%
+				MVALUE = BI_INSURED::INSURED
+			CASE ELSE
+				MVALUE = BI_INSURED_ONE::INSURED
+			END SELECT
+		END SELECT
+
+		MAINT_GROUP = BI_MAIN_PATIENT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

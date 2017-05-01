@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Tuition Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BT__TUITION.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Tuition System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Tuition Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BT__TUITION.MAS\*
+	!	.p
+	!	Tuition Table.
+	!
+	! Index:
+	!	.x Tuition Table
+	!	.x BT_TUITION
+	!--

@@ -1,0 +1,1210 @@
+1	%TITLE "Invouce Journal Post Program"
+	%SBTTL "PW_POST_PW"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 2000 BY
+	! Software Solutions, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions, Inc.
+	!
+	! Software Solutions, Inc. assumes no responsibility for the use
+	! or reliability of its software on equipment which is not
+	! supported by Software Solutions, Inc.
+	!
+	!++
+	! ID:PWPST
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Post Sales Journal\* option is provided to post entries
+	!	which have been made in the Sales Journal to the General
+	!	Ledger System and the Accounts Receivable Register.
+	!	.b
+	!	If the entries being posted are out of balance, the message,
+	!	^*"Batch is OUT OF BALANCE - POSTING IS ABORTED. Hit any key
+	!	to continue"\*, will appear on the screen. Any imbalance must
+	!	be corrected before the posting can be executed. Corrections
+	!	are made in the Sales Journal Maintenance routine.
+	!	.b
+	!	After the posting is completed, the system will return to the
+	!	Sales Journal Menu screen.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Post>Sales Journal
+	!	.x Sales Journal>Post
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS PW_SOURCE:PW_POST_PW/LINE
+	!	$ LINK/EXE=PW_EXE: PW_POST_PW, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE PW_POST_PW.OBJ;*
+	!
+	! Author:
+	!
+	!	04/06/2000 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include constants and and some functions
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[PW.OPEN]PW_JH.HB"
+	MAP (PW_JH)		PW_JH_CDD	PW_JH
+
+	%INCLUDE "SOURCE:[PW.OPEN]PW_JL.HB"
+	MAP (PW_JL)		PW_JL_CDD	PW_JL
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.HB"
+	MAP (AR_CONTROL)	AR_CONTROL_CDD	AR_CONTROL
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_CONTROL.HB"
+	MAP (AP_CONTROL)	AP_CONTROL_CDD	AP_CONTROL
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.HB"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN_DIST.HB"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_SALTAXLED.HB"
+	%INCLUDE "SOURCE:[AP.OPEN]AP_VENDOR.HB"
+	%INCLUDE "SOURCE:[AP.OPEN]AP_OPEN.HB"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION	AR_EXAM_CUSTOM
+	EXTERNAL LONG	FUNCTION	AR_TRAN_POSTAR
+	EXTERNAL LONG	FUNCTION	AP_EXAM_VENDOR
+	EXTERNAL LONG	FUNCTION	AP_TRAN_POSTAP
+	EXTERNAL LONG	FUNCTION	ASSG_POSTBATCH
+	EXTERNAL LONG	FUNCTION	GL_EXAM_CHART
+	EXTERNAL LONG	FUNCTION	GL_TRAN_POSTGL
+	EXTERNAL LONG	FUNCTION	OUTP_UNDEFCODES
+
+	!
+	! Declare internal variables
+	!
+	DECLARE AR_35CUSTOM_CDD		AR_35CUSTOM_EXAM
+	DECLARE AR_OPEN_CDD		AR_OPEN
+	DECLARE AR_OPEN_DIST_CDD	AR_OPEN_DIST
+	DECLARE AR_SALTAXLED_CDD	AR_SALTAXLED
+	DECLARE AP_VENDOR_CDD		AP_VENDOR_EXAM
+	DECLARE AP_OPEN_CDD		AP_OPEN
+	DECLARE	GL_CHART_CDD		GL_CHART_EXAM
+	DECLARE	GL_YYYY_PP_CDD		GL_YYYY_PP
+	DECLARE	UTL_REPORTX_CDD		UTL_REPORTX
+
+	DECLARE	LONG			EXIT_STATUS
+	DECLARE	LONG			INTR_STATUS
+	DECLARE	LONG			PRNT_SUMMARY
+	DECLARE LONG			CHECK_PERIOD
+
+	DECLARE	STRING			BATCH_NUMBER
+	DECLARE	STRING			GLPERIOD
+	DECLARE	STRING			AR.INTER.PERIOD
+	DECLARE	STRING			GL.INTER.PERIOD
+	DECLARE	STRING			POSTDATE
+	DECLARE	STRING			POSTTIME
+	DECLARE	STRING			TEXT
+	DECLARE	STRING			TITLE(10%)
+
+	%PAGE
+
+	!**************************************************************
+	! Get some stuff done before we start
+	!**************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Title
+	!
+	TITLE(1%) = "SALES  JOURNAL  POSTING  PROTOCOL"
+	TITLE(2%) = "PW Invoicing System"
+	TITLE(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE(4%) = "."
+
+	%PAGE
+
+	!**************************************************************
+	! Process `from user' input
+	!**************************************************************
+
+	!
+	! Set user defined fields
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GLPERIOD = TRM$(UTL_REPORTX::OPTDEF(0%))
+	!++
+	! Abstract:FLD01
+	!	.x Post Period>Post Sales Journal
+	!	^*(01) Post Period\*
+	!	.b
+	!	.lm +5
+	!	The ^*Post Period\* field provides the means to determine
+	!	the year and the accounting period corresponding to which the
+	!	Sales Journal records are to be posted in the General Ledger.
+	!	.b
+	!	The format for entry is YYYYPP.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Post Sales Journal>Post Period
+	!
+	!--
+	BATCH_NO$ = TRM$(UTL_REPORTX::OPTDEF(1%))
+	!++
+	! Abstract:FLD02
+	!	^*(02) Batch to Post\*
+	!	.b
+	!	.lm +5
+	!	The ^*Batch to Post\* field allows for entry of the batch
+	!	_# of the Sales Journal which is to be posted.
+	!	.b
+	!	Only one batch at a time may be posted.
+	!	.b
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Batch to Post>Post Sales Journal
+	!	.x Post Sales Journal>Batch to Post
+	!
+	!--
+	CHECK_DATE$ = TRM$(UTL_REPORTX::OPTDEF(2%))
+	!++
+	! Abstract:FLD03
+	!	^*(03) Check Dates\*
+	!	.b
+	!	.lm +5
+	!	The ^*Check Dates\* allows for the option of checking the date of all
+	!	transactions before posting.  If ^*Y\* is entered, the dates of all
+	!	transactions will
+	!	be checked to insure they are within the specified accounting period.  If
+	!	Y is entered and dates are found that are not within the date range for
+	!	posting, the posting will be aborted.  If
+	!	^*N\* is entered, the dates will not be checked
+	!	and all transactions will be posted.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Check Dates>Post Sales Journal
+	!	.x Post Sales Journal>Check Dates
+	!
+	!--
+
+	CHECK_PERIOD = SUBOPT_NOOPT
+	CHECK_PERIOD = SUBOPT_CHECK IF (CHECK_DATE$ = "Y")
+
+300	!
+	! Open Accounts Receivable SJ header file
+	!
+	WHEN ERROR IN
+		%INCLUDE "SOURCE:[PW.OPEN]PW_JH.UPD"
+	USE
+		FILENAME$ = "PW_JH"
+		CONTINUE HelpError
+	END WHEN
+
+310	!
+	! Open AR Sales Journal line items file
+	!
+	WHEN ERROR IN
+		%INCLUDE "SOURCE:[PW.OPEN]PW_JL.UPD"
+	USE
+		FILENAME$ = "PW_JL"
+		CONTINUE HelpError
+	END WHEN
+
+320	!
+	! Get information from ar control file
+	!
+	WHEN ERROR IN
+		%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.OPN"
+		GET #AR_CONTROL.CH%, RECORD 1%
+	USE
+		FILENAME$ = "AR_CONTROL"
+		CONTINUE HelpError
+	END WHEN
+
+330	!
+	! Get information from ar control file
+	!
+	WHEN ERROR IN
+		%INCLUDE "SOURCE:[AP.OPEN]AP_CONTROL.OPN"
+		GET #AP_CONTROL.CH%, RECORD 1%
+	USE
+		FILENAME$ = "AP_CONTROL"
+		CONTINUE HelpError
+	END WHEN
+
+	%PAGE
+
+	!******************************************************************
+	!	1) See if the posting process has been interrupted
+	!	2) If not interrupted, go on
+	!	3) If interrupted, delete the superceded ledger records
+	!		and then continue
+	!******************************************************************
+
+	!******************************************************************
+	! Check if posting process has been interrupted
+	!******************************************************************
+
+	!
+	! Open up batch control file and check if interrupted
+	!
+	INTR_STATUS = ASSG_POSTBATCH(OPT_RESTART, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "PW_JH", BATCH_NO$, &
+		GL.INTER.PERIOD, AR.INTER.PERIOD)
+
+	SELECT INTR_STATUS
+
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Process was interrupted
+	!
+	CASE CMC$_WARNING
+
+		IF TRM$(GL.INTER.PERIOD) <> ""
+		THEN
+			GOTO Aborted IF &
+				GL_TRAN_POSTGL(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+				"", "", GL.INTER.PERIOD) <> CMC$_NORMAL
+		END IF
+
+		IF TRM$(AR.INTER.PERIOD) <> ""
+		THEN
+			GOTO Aborted IF &
+				AR_TRAN_POSTAR(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+				"", "", "", AR.INTER.PERIOD) <> CMC$_NORMAL
+
+			GOTO Aborted IF &
+				AP_TRAN_POSTAP(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+				"", "", "", AR.INTER.PERIOD) <> CMC$_NORMAL
+		END IF
+
+	!
+	! Abort post process
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	%PAGE
+
+ AssignBatch:
+	!******************************************************************
+	!	1) Assign a batch number
+	!	2) Make sure no legitimate records in the ledger already
+	!		have this batch number; if any records do have
+	!		this newly assigned number, go back to (1) and
+	!		get a new one.
+	!******************************************************************
+	!
+	! Open up batch control file and get a batch number
+	!
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ASSIGN, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "PW_JH", BATCH_NO$, &
+		GLPERIOD, "") <> CMC$_NORMAL
+
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_CHECK, SUBOPT_NOOPT, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		"", "", GLPERIOD)
+
+	SELECT EXIT_STATUS
+
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Something's definitely wrong here
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	EXIT_STATUS = AR_TRAN_POSTAR(OPT_CHECK, SUBOPT_NOOPT, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		"", "", "", GLPERIOD)
+
+	SELECT EXIT_STATUS
+
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Something's definitely wrong here
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	EXIT_STATUS = AP_TRAN_POSTAP(OPT_CHECK, SUBOPT_NOOPT, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		"", "", "", GLPERIOD)
+
+	SELECT EXIT_STATUS
+
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Something's definitely wrong here
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	%PAGE
+
+	!******************************************************************
+	!	1) List the debits/credits transmittal for the user while
+	!		also putting the journal data in temporary files
+	!	2) If confirmation, then go on
+	!******************************************************************
+
+	!******************************************************************
+	! Create transmittal
+	!******************************************************************
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ADDREC, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "PW_JH", BATCH_NO$, &
+		"", "") <> CMC$_NORMAL
+
+	POSTDATE = DATE_TODAY
+	POSTTIME = TIME_NOW
+
+	!
+	! Blank flags
+	!
+	CUSTNUM$, ARACCT$, TRANDAT$ = " "
+
+	RESET #PW_JH.CH%
+
+ ReadHeader:
+	!
+	! Read in one record from the header file
+	!
+3000	WHEN ERROR IN
+		GET #PW_JH.CH%
+	USE
+		IF ERR = 154%
+		THEN
+			SLEEP 1%
+			RETRY
+		END IF
+
+		CONTINUE Confirm
+	END WHEN
+
+	!
+	! Set some initial variable values
+	!
+	TOTAL_AMOUNT = 0.0
+	TOTAL_DISCOUNT = 0.0
+	TOTAL_OTHER = 0.0
+	PRINTHEAD% = 0%
+
+	!
+	! Get the customer description
+	!
+	EXIT_STATUS = AR_EXAM_CUSTOM(PW_JH::SOLDTO, AR_35CUSTOM_EXAM)
+
+	SELECT EXIT_STATUS
+
+	!
+	! Success; go on
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Undefined; set flag and go on
+	!
+	CASE CMC$_UNDEFINED
+		CUSTNUM$ = "*"
+
+	!
+	! SNAFU:  Situation Normal - All Fouled Up
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! See if AR Account number is defined
+	!
+	EXIT_STATUS = GL_EXAM_CHART(AR_CONTROL::AR_ACCT, GL_CHART_EXAM)
+
+	SELECT EXIT_STATUS
+
+	!
+	! Success; go on
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Undefined; set a flag and go on
+	!
+	CASE CMC$_UNDEFINED
+		ARACCT$ = "*"
+
+	!
+	! SNAFU:  (Situation Normal - it's All Fouled Up)
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+ ProcessLines:
+	!
+	! Find the first line item for the header
+	!
+3100	WHEN ERROR IN
+		FIND #PW_JL.CH%, KEY #0% EQ PW_JH::ORDNUM
+	USE
+		IF ERR = 154%
+		THEN
+			SLEEP 1%
+			RETRY
+		END IF
+
+		CONTINUE ProcessHeader
+	END WHEN
+
+ LineItem:
+	!
+	! Get the (next) line item
+	!
+3200	WHEN ERROR IN
+		GET #PW_JL.CH%
+	USE
+		IF ERR = 154%
+		THEN
+			SLEEP 1%
+			RETRY
+		END IF
+
+		CONTINUE ProcessHeader IF ERR = 11%
+		FILENAME$ = "PW_JL"
+		CONTINUE HelpError
+	END WHEN
+
+	!
+	! Finish up the header if we're done with the line items
+	!
+	GOTO ProcessHeader IF PW_JL::ORDNUM <> PW_JH::ORDNUM
+
+	SELECT PW_JL::WINDOW
+	CASE "1"
+		!
+		! AP entries
+		!
+
+		!
+		! Check the vendor number - is it defined?
+		!
+		EXIT_STATUS = AP_EXAM_VENDOR(PW_JL::VENNUM, AP_VENDOR_EXAM)
+
+		SELECT EXIT_STATUS
+
+		!
+		! Success; go on
+		!
+		CASE CMC$_NORMAL
+
+		!
+		! Undefined; set flag and go on
+		!
+		CASE CMC$_UNDEFINED
+			VENDNUM$ = "*"
+
+		!
+		! SNAFU:  Situation Normal - All Fouled Up
+		!
+		CASE ELSE
+			TEXT$ = "Transaction " + TRM$(PW_JH::ORDNUM) + &
+				" - " + TRM$(PW_JL::VENNUM) + &
+				"Invalid Vendor Number!"
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+			GOTO Aborted
+
+		END SELECT
+
+		!
+		! Generate a GL record to pass through to the post function
+		!
+		GL_YYYY_PP::ACCT	= PW_JL::ACCNUM
+		GL_YYYY_PP::SOURCE	= "WJ"
+		GL_YYYY_PP::REFNO	= PW_JH::INVNUM
+		GL_YYYY_PP::DESCR	= AP_VENDOR_EXAM::VENNAM
+		GL_YYYY_PP::XREFNO	= PW_JL::VENNUM
+		GL_YYYY_PP::POSTIM	= TIME_NOW
+		GL_YYYY_PP::POSDAT	= DATE_TODAY
+		GL_YYYY_PP::TRANKEY	= PW_JH::ORDNUM
+		GL_YYYY_PP::SUBACC	= ""
+		GL_YYYY_PP::OPERATION	= ""
+		GL_YYYY_PP::UNITS	= 0.0
+		GL_YYYY_PP::HOURS	= 0.0
+		GL_YYYY_PP::UPDSTA	= ""
+		GL_YYYY_PP::BTHNUM	= BATCH_NUMBER
+		GL_YYYY_PP::AMOUNT	= PW_JL::EXT
+		GL_YYYY_PP::TRANDAT	= PW_JH::INVDAT
+		GL_YYYY_PP::CKNO	= ""
+
+		!
+		! See if GL Chart number is defined
+		!
+		EXIT_STATUS = GL_EXAM_CHART(GL_YYYY_PP::ACCT, GL_CHART_EXAM)
+
+		SELECT EXIT_STATUS
+
+		!
+		! Success; go on
+		!
+		CASE CMC$_NORMAL
+
+		!
+		! Undefined; set a flag and go on
+		!
+		CASE CMC$_UNDEFINED
+			ACCTNUM$ = "*"
+
+		!
+		! SNAFU:  (Situation Normal - it's All Fouled Up)
+		!
+		CASE ELSE
+			GOTO Aborted
+
+		END SELECT
+
+		!
+		! Put the record into the temporary file
+		!
+		EXIT_STATUS = GL_TRAN_POSTGL(OPT_ADDREC, CHECK_PERIOD, "", TITLE(), &
+			UTL_REPORTX, GL_YYYY_PP, GL_CHART_EXAM, GLPERIOD)
+
+		!
+		! Check the date; is it out of range?
+		!
+		SELECT EXIT_STATUS
+
+		!
+		! Date is correct; go on
+		!
+		CASE CMC$_NORMAL
+
+		!
+		! Warning; check subaccount number
+		!
+		CASE CMC$_WARNING
+
+		!
+		! Date is not in the correct period
+		!
+		CASE CMC$_DATEOUT
+			TRANDAT$ = "*"
+
+		!
+		! Something else going wrong
+		!
+		CASE ELSE
+			GOTO Aborted
+
+		END SELECT
+
+		!
+		! Generate a AP record to pass through to the post function
+		!
+		AP_OPEN::VENNUM		= PW_JL::VENNUM
+		AP_OPEN::TRANKEY	= PW_JH::ORDNUM
+		AP_OPEN::TRANKEY_DATE	= PW_JH::INVDAT
+		AP_OPEN::INVNUM		= PW_JH::INVNUM
+		AP_OPEN::INVDAT		= PW_JH::INVDAT
+		AP_OPEN::INVAMT		= PW_JL::EXT
+		AP_OPEN::CODE_1099	= ""
+		AP_OPEN::AMT_1099	= 0.0
+		AP_OPEN::USE_JOB_NUM	= ""
+		AP_OPEN::USE_AMT	= 0.0
+		AP_OPEN::DISCDAT	= ""
+		AP_OPEN::DISAMT		= 0.0
+		AP_OPEN::DUEDAT		= ""
+		AP_OPEN::PONUM		= ""
+		AP_OPEN::AP_ACCT	= AP_CONTROL::AP_ACCT
+		AP_OPEN::CASH_ACCT	= ""
+		AP_OPEN::CKNUM		= ""
+		AP_OPEN::CKDAT		= ""
+		AP_OPEN::CKDESC		= ""
+		AP_OPEN::CKAMT		= 0.0
+		AP_OPEN::UPDATED	= GLPERIOD + "00"
+		AP_OPEN::CLOSEDATE	= ""
+		AP_OPEN::SELECTED	= ""
+		AP_OPEN::BATCH		= BATCH_NUMBER
+
+		!
+		! Put the AP Open record into the temporary file
+		!
+		GOTO Aborted IF AP_TRAN_POSTAP(OPT_ADDREC, SUBOPT_REGISTER, &
+			BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+			AP_OPEN, AP_OPEN_DIST, "") <> CMC$_NORMAL
+
+		!
+		! Was anything undefined?
+		!
+		IF INSTR(1%, VENDNUM$ + CASHACCT$ + APACCT$ + TRANDAT$, "*") AND &
+			(PRINTHEAD% = 0%)
+		THEN
+			!
+			! Put the invalid stuff in TEXT to send to OUTP_UNDEFCODES
+			!
+			TEXT = "HEADER " + PW_JH::ORDNUM + " " + &
+				VENDNUM$ + PW_JL::VENNUM + " " + &
+				APACCT$ + AP_CONTROL::AP_ACCT + " " + &
+				TRANDAT$ + PRNT_DATE(PW_JH::INVDAT, 0%)
+
+			!
+			! Keep undefined codes
+			!
+			GOTO Aborted &
+				IF OUTP_UNDEFCODES(OPT_ADDREC, TITLE(), &
+				UTL_REPORTX, TEXT) <> CMC$_NORMAL
+
+			!
+			! Blank flags
+			!
+			VENDNUM$, APACCT$, CASHACCT$, TRANDAT$ = " "
+
+		END IF
+
+
+	CASE "2"
+		!
+		! AR Entries
+		!
+		TOTAL_AMOUNT = TOTAL_AMOUNT + PW_JL::EXT
+
+		!
+		! Generate a GL record to pass through to the post function
+		!
+		GL_YYYY_PP::ACCT	= PW_JL::ACCNUM
+		GL_YYYY_PP::SOURCE	= "WJ"
+		GL_YYYY_PP::REFNO	= PW_JH::INVNUM
+		GL_YYYY_PP::TRANDAT	= PW_JH::INVDAT
+		GL_YYYY_PP::DESCR	= AR_35CUSTOM_EXAM::CUSNAM
+		GL_YYYY_PP::AMOUNT	= PW_JL::EXT
+		GL_YYYY_PP::XREFNO	= PW_JH::SOLDTO
+		GL_YYYY_PP::POSTIM	= POSTTIME
+		GL_YYYY_PP::POSDAT	= POSTDATE
+		GL_YYYY_PP::CKNO	= ""
+		GL_YYYY_PP::TRANKEY	= PW_JH::ORDNUM
+		GL_YYYY_PP::SUBACC	= ""
+		GL_YYYY_PP::OPERATION	= ""
+		GL_YYYY_PP::UNITS	= PW_JL::QTY
+		GL_YYYY_PP::HOURS	= 0.0
+		GL_YYYY_PP::UPDSTA	= ""
+		GL_YYYY_PP::BTHNUM	= BATCH_NUMBER
+
+		!
+		! See if GL Chart number is defined
+		!
+		EXIT_STATUS = GL_EXAM_CHART(GL_YYYY_PP::ACCT, GL_CHART_EXAM)
+
+		SELECT EXIT_STATUS
+
+		!
+		! Success; go on
+		!
+		CASE CMC$_NORMAL
+
+		!
+		! Undefined; set a flag and go on
+		!
+		CASE CMC$_UNDEFINED
+			ACCTNUM$ = "*"
+
+		!
+		! SNAFU:  (Situation Normal - it's All Fouled Up)
+		!
+		CASE ELSE
+			GOTO Aborted
+
+		END SELECT
+
+		!
+		! Put the record into the temporary file
+		!
+		EXIT_STATUS = GL_TRAN_POSTGL(OPT_ADDREC, CHECK_PERIOD, "", TITLE(), &
+			UTL_REPORTX, GL_YYYY_PP, GL_CHART_EXAM, GLPERIOD)
+
+		!
+		! Check the date; is it out of range?
+		!
+		SELECT EXIT_STATUS
+
+		!
+		! Date is correct; go on
+		!
+		CASE CMC$_NORMAL
+
+		!
+		! Warning; check subaccount number
+		!
+		CASE CMC$_WARNING
+
+		!
+		! Date is not in the correct period
+		!
+		CASE CMC$_DATEOUT
+			TRANDAT$ = "*"
+
+		!
+		! Something else going wrong
+		!
+		CASE ELSE
+			GOTO Aborted
+
+		END SELECT
+
+		!
+		! Generate a AR_OPEN_DIST record to pass through to the
+		! post function
+		!
+		AR_OPEN_DIST::INVNUM		= PW_JH::INVNUM
+		AR_OPEN_DIST::CUSNUM		= PW_JH::SOLDTO
+		AR_OPEN_DIST::SLINE		= PW_JL::JLINE
+		AR_OPEN_DIST::ACCT		= PW_JL::ACCNUM
+		AR_OPEN_DIST::SUBACCT		= ""
+		AR_OPEN_DIST::AMOUNT		= PW_JL::EXT
+		AR_OPEN_DIST::QTY		= PW_JL::QTY
+		AR_OPEN_DIST::LTYPE		= "S"
+		AR_OPEN_DIST::TAXTYP		= "4"
+		AR_OPEN_DIST::DESCR		= AR_35CUSTOM_EXAM::CUSNAM
+		AR_OPEN_DIST::BATCH		= BATCH_NUMBER
+		AR_OPEN_DIST::STAFF_NUM		= ""
+		AR_OPEN_DIST::POST_DATE		= DATE_TODAY
+		AR_OPEN_DIST::POST_TIME		= POSTTIME
+
+		!
+		! Call the post function
+		!
+		GOTO Aborted IF AR_TRAN_POSTAR(OPT_ADDREC, SUBOPT_LINEITEM, &
+			BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+			AR_OPEN, AR_OPEN_DIST, AR_SALTAXLED, GLPERIOD) <> CMC$_NORMAL
+
+	CASE ELSE
+		!
+		! Undefined behaviour, should never be reached
+		!
+		GOTO Aborted
+
+	END SELECT
+
+ GoToNext:
+	!
+	! Was the account number undefined?
+	!
+	IF (ACCTNUM$ = "*") OR (SUBACCT$ = "*")
+	THEN
+		!
+		! Print out the header if it hasn't already been
+		!
+		IF PRINTHEAD% = 0%
+		THEN
+			!
+			! Put the header line in TEXT
+			!
+			TEXT = "HEADER " + PW_JH::INVNUM + " " + &
+				CUSTNUM$ + PW_JH::SOLDTO + " " + &
+				ARACCT$ + AR_CONTROL::AR_ACCT + " " + &
+				TRANDAT$ + PRNT_DATE(PW_JH::INVDAT, 8%)
+
+			!
+			! Keep undefined codes
+			!
+			GOTO Aborted &
+				IF OUTP_UNDEFCODES(OPT_ADDREC, &
+				TITLE(), UTL_REPORTX, &
+				TEXT) <> CMC$_NORMAL
+
+			PRINTHEAD% = -1%
+
+		END IF
+
+		!
+		! Put the invalid stuff in TEXT to send to OUTP_UNDEFCODES
+		!
+		TEXT = "  LINE                              " + &
+			ACCTNUM$ + PW_JL::ACCNUM + "           "
+
+		!
+		! Keep undefined codes
+		!
+		GOTO Aborted &
+			IF OUTP_UNDEFCODES(OPT_ADDREC, TITLE(), UTL_REPORTX, &
+				TEXT) <> CMC$_NORMAL
+
+		!
+		! Blank flags
+		!
+		ACCTNUM$, SUBACCT$ = " "
+
+	END IF
+
+	GOTO LineItem
+
+ ProcessHeader:
+	!
+	! Process the header
+	!
+
+3300	!
+	! Generate a GL record to pass through to the post function
+	!
+	GL_YYYY_PP::REFNO	= PW_JH::INVNUM
+	GL_YYYY_PP::DESCR	= AR_35CUSTOM_EXAM::CUSNAM
+	GL_YYYY_PP::XREFNO	= PW_JH::SOLDTO
+	GL_YYYY_PP::POSTIM	= POSTTIME
+	GL_YYYY_PP::POSDAT	= POSTDATE
+	GL_YYYY_PP::TRANKEY	= ""
+	GL_YYYY_PP::SUBACC	= ""
+	GL_YYYY_PP::OPERATION	= ""
+	GL_YYYY_PP::UNITS	= 0.0
+	GL_YYYY_PP::HOURS	= 0.0
+	GL_YYYY_PP::UPDSTA	= ""
+	GL_YYYY_PP::BTHNUM	= BATCH_NUMBER
+	GL_YYYY_PP::ACCT	= AR_CONTROL::AR_ACCT
+	GL_YYYY_PP::SOURCE	= "SJ"
+	GL_YYYY_PP::TRANDAT	= PW_JH::INVDAT
+	GL_YYYY_PP::AMOUNT	= TOTAL_AMOUNT
+	GL_YYYY_PP::CKNO	= ""
+	GL_YYYY_PP::TRANKEY	= ""
+
+	!
+	! Define AR Account number
+	!
+	GOTO Aborted IF &
+		GL_EXAM_CHART(GL_YYYY_PP::ACCT, GL_CHART_EXAM) <> CMC$_NORMAL
+
+	!
+	! Put the record into the temporary file
+	!
+	GOTO Aborted IF GL_TRAN_POSTGL(OPT_ADDREC, SUBOPT_NOOPT, "", &
+		TITLE(), UTL_REPORTX, GL_YYYY_PP, &
+		GL_CHART_EXAM, GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Generate a AR record to pass through to the post function
+	!
+	AR_OPEN::CUSNUM		= PW_JH::SOLDTO
+	AR_OPEN::INVNUM		= PW_JH::INVNUM
+	AR_OPEN::TRATYP		= "01"
+	AR_OPEN::TRADAT		= PW_JH::INVDAT
+	AR_OPEN::SALAMT		= TOTAL_AMOUNT
+	AR_OPEN::DISAMT		= -TOTAL_DISCOUNT
+	AR_OPEN::OTHCHG		= -TOTAL_OTHER
+	AR_OPEN::RECNUM		= ""
+	AR_OPEN::CHKNUM		= ""
+	AR_OPEN::ARACCT		= AR_CONTROL::AR_ACCT
+	AR_OPEN::SUBACC		= ""
+	AR_OPEN::SALNUM		= AR_35CUSTOM_EXAM::SALESMAN
+	AR_OPEN::DESCR		= AR_35CUSTOM_EXAM::CUSNAM
+	AR_OPEN::BATCH		= BATCH_NUMBER
+	AR_OPEN::UPDATED	= GLPERIOD + "00"
+	AR_OPEN::CLOSEDATE	= ""
+	AR_OPEN::DUEDATE	= ""
+	AR_OPEN::DISCOUNTDATE	= ""
+
+	!
+	! Call the post function
+	!
+	GOTO Aborted IF AR_TRAN_POSTAR(OPT_ADDREC, SUBOPT_REGISTER, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		AR_OPEN, AR_OPEN_DIST, AR_SALTAXLED, GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Was anything undefined?
+	!
+	IF INSTR(1%, CUSTNUM$ + ARACCT$ + TRANDAT$, "*") AND (PRINTHEAD% = 0%)
+	THEN
+		!
+		! Put the invalid stuff in TEXT to send to OUTP_UNDEFCODES
+		!
+		TEXT = "HEADER " + PW_JH::INVNUM + " " + &
+			CUSTNUM$ + PW_JH::SOLDTO + " " + &
+			ARACCT$ + AR_CONTROL::AR_ACCT + " " + &
+			TRANDAT$ + PRNT_DATE(PW_JH::INVDAT, 8%)
+
+		!
+		! Keep undefined codes
+		!
+		GOTO Aborted &
+			IF OUTP_UNDEFCODES(OPT_ADDREC, TITLE(), UTL_REPORTX, &
+				TEXT) <> CMC$_NORMAL
+
+		!
+		! Blank flags
+		!
+		CUSTNUM$, ARACCT$, TRANDAT$ = " "
+
+	END IF
+
+	GOTO ReadHeader
+
+ Confirm:
+	!******************************************************************
+	! Confirm posting
+	!******************************************************************
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_CONFIRM, SUBOPT_NOOPT, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		"", "", GLPERIOD)
+
+	EXIT_STATUS = EXIT_STATUS AND OUTP_UNDEFCODES(OPT_CONFIRM, TITLE(), &
+		UTL_REPORTX, "")
+
+	GOTO Aborted IF EXIT_STATUS <> CMC$_NORMAL
+
+	%PAGE
+
+	!******************************************************************
+	!	1) Since everything's correct and we have the user's
+	!		permission, transfer all data from the temporary
+	!		files into the ledger
+	!******************************************************************
+	!
+	! Begin posting
+	!
+	GOTO Interrupt IF &
+		GL_TRAN_POSTGL(OPT_POSTFILE, SUBOPT_DETAIL, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Post the AR Sales Journal header
+	!
+	GOTO Interrupt IF &
+		AR_TRAN_POSTAR(OPT_POSTFILE, SUBOPT_REGISTER, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Continue by posting the Sales Journal line items
+	!
+	GOTO Interrupt IF &
+		AR_TRAN_POSTAR(OPT_POSTFILE, SUBOPT_LINEITEM, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Post any Sales Tax items
+	!
+	GOTO Interrupt IF &
+		AR_TRAN_POSTAR(OPT_POSTFILE, SUBOPT_LEDGER, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Post the AP Purchase Journal header
+	!
+	GOTO Interrupt IF &
+		AP_TRAN_POSTAP(OPT_POSTFILE, SUBOPT_REGISTER, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Continue by posting the AP line items
+	!
+	GOTO Interrupt IF &
+		AP_TRAN_POSTAP(OPT_POSTFILE, SUBOPT_LINEITEM, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD) <> CMC$_NORMAL
+
+	%PAGE
+
+	!
+	! Remove files
+	!
+5000	CLOSE PW_JH.CH%
+	CLOSE PW_JL.CH%
+
+5010	WHEN ERROR IN
+		KILL PW_JH.DEV$ + "PW_JH_" + BATCH_NO$ + ".JRL" &
+			FOR I% = 1% TO 10%
+	USE
+		CONTINUE 5020
+	END WHEN
+
+5020	WHEN ERROR IN
+		KILL PW_JL.DEV$ + "PW_JL_" + BATCH_NO$ + ".JRL" &
+			FOR I% = 1% TO 10%
+	USE
+		CONTINUE Complete
+	END WHEN
+
+ Complete:
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_COMPLETE, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "PW_JH", BATCH_NO$, "", "")
+
+	PRNT_SUMMARY = SUBOPT_FINAL
+
+ ExitProgram:
+	!******************************************************************
+	! Exit normally
+	!******************************************************************
+	!
+	! Print credit and debit transmittals
+	!
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_SUMMARY, PRNT_SUMMARY, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD)
+
+	!
+	! Print undefined codes (if any)
+	!
+	TEXT = "Item   Invoice CustomerNum AR AccountNum       " + &
+		"TransDate SubAcct"
+
+	EXIT_STATUS = OUTP_UNDEFCODES(OPT_SUMMARY, TITLE(), UTL_REPORTX, TEXT)
+
+	!
+	! Finish up the transmittal
+	!
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Aborted:
+	!******************************************************************
+	! Abort process
+	!******************************************************************
+	IF INTR_STATUS <> CMC$_WARNING
+	THEN
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_ABORT,	BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "PW_JH", &
+			BATCH_NO$, "", "")
+		GOTO ExitProgram
+	END IF
+
+	%PAGE
+
+ Interrupt:
+	!******************************************************************
+	! Interrupt process
+	!******************************************************************
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_INTERRUPT, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "PW_JH", BATCH_NO$, "", "")
+
+	GOTO ExitProgram
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	!
+	! Trap untrapped errors
+	!
+	FILENAME$ = ""
+	RESUME HelpError
+
+	%PAGE
+
+32000	!******************************************************************
+	! End of posting program PW_POST_PW
+	!******************************************************************
+	END

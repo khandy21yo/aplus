@@ -1,0 +1,767 @@
+1	%TITLE "Convert AD from RSTS/E"
+	%SBTTL "AP_SPEC_CONVERT"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!	AP_SPEC_CONVERT$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS AP_SOURCE:AP_SPEC_CONVERT/LINE
+	!	$ LINK/EXEC:AP_EXE AP_SPEC_CONVERT,FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AP_SPEC_CONVERT.OBJ;*
+	!
+	! Author:
+	!
+	!	05/17/89 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/17/89 - Kevin Handy
+	!		Added recordsize option to open statement.
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to use READ_INITIALIZE.
+	!
+	!	06/16/92 - Kevin Handy
+	!		Update to current file layouts.
+	!
+	!	08/16/92 - Kevin Handy
+	!		Added error trap for "Integer overflow" at 2100.
+	!
+	!	09/29/92 - Kevin Handy
+	!		Modified to place vendor number in batch number
+	!		to speed up the file creation.
+	!		Modified to be able to find 1099 files.
+	!
+	!	02/02/93 - Kevin Handy
+	!		Modified to put vendor number in AP_OPEN
+	!		batch number like was done to AP_CLOSE.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	06/04/96 - Kevin Handy
+	!		Reformat source code.
+	!		Added batch number to AP_CDJ.
+	!		Look up device names for files before trying to
+	!		kill them.
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	07/30/99 - Kevin Handy
+	!		Fix minor conversion problems, update for current
+	!		file layouts.
+	!
+	!	09/13/2000 - Kevin Handy
+	!		Use WHEN ERROR IN
+	!		Use LIB$DELETE_FILE instead of KILL
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "LIB$ROUTINES" %FROM %LIBRARY "SYS$LIBRARY:BASIC$STARLET.TLB"
+
+10	ON ERROR GOTO 19000
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_1099_TABLE.HB"
+	MAP (AP_1099_TABLE)	AP_1099_TABLE_CDD	AP_1099_TABLE
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_1099_YYYY.HB"
+	MAP (AP_1099_YYYY)	AP_1099_YYYY_CDD	AP_1099_YYYY
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_CDJ.HB"
+	MAP (AP_CDJ)		AP_CDJ_CDD	AP_CDJ
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_CLOSE.HB"
+	MAP (AP_CLOSE)		AP_CLOSE_CDD	AP_CLOSE
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_CONTROL.HB"
+	MAP (AP_CONTROL)	AP_CONTROL_CDD	AP_CONTROL
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_OPEN.HB"
+	MAP (AP_OPEN)		AP_OPEN_CDD	AP_OPEN
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_PJH.HB"
+	MAP (AP_PJH)		AP_PJH_CDD	AP_PJH
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_PJL.HB"
+	MAP (AP_PJL)		AP_PJL_CDD	AP_PJL
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_VENDOR.HB"
+	MAP (AP_VENDOR)		AP_VENDOR_CDD	AP_VENDOR
+
+	EXTERNAL STRING  FUNCTION FIND_STRING
+	EXTERNAL STRING  FUNCTION DATE_TODAY
+
+	!
+	! Open the keyboard
+	!
+	CALL READ_INITIALIZE
+
+	CALL ASSG_CHANNEL(AP_CHKFRM.CH%, STAT%)
+	CALL ASSG_CHANNEL(AP_ATTFRM.CH%, STAT%)
+	CALL ASSG_CHANNEL(APSYS.CH%, STAT%)
+
+200	! RESUME LINE
+
+250	WHEN ERROR IN
+		OPEN APSYS_ASC.DEV$ + "APSYS.ASC" FOR INPUT AS FILE APSYS.CH%, &
+			RECORDSIZE 512%, &
+			ACCESS READ
+	USE
+		CALL ENTR_3MESSAGE(SCOPE, "APSYS.ASC file is missing", 0%)
+		CONTINUE ExitProgram
+	END WHEN
+
+550	WHEN ERROR IN
+		INPUT LINE #APSYS.CH%, INP$
+	USE
+		CONTINUE 560 IF STRG$ <> ""
+		CONTINUE 600
+	END WHEN
+
+	IF INSTR(1%, INP$, "<ENDFILE>") = 0% AND &
+		INSTR(1%, INP$, "<STARTFILE>") = 0%
+	THEN
+		IF INSTR(1%, INP$, "<>") = 0%
+		THEN
+			STRG$ = STRG$ + "<" + EDIT$(INP$, 4%) + ">"
+			GOTO 550
+		ELSE
+			STRG$ = STRG$ + INP$
+		END IF
+	END IF
+
+	STRG$ = STRG$ + INP$
+
+560	TEMP$ = "<STARTFILE>"
+
+	GOTO 580 IF INSTR(1%, STRG$, TEMP$) = 0%
+
+	ON_LOOP% = 0%
+	ON_LOOP% =  1% IF INSTR(1% + LEN(TEMP$), STRG$, "APCCTL")
+	ON_LOOP% =  2% IF INSTR(1% + LEN(TEMP$), STRG$, "VENDES")
+	ON_LOOP% =  3% IF INSTR(1% + LEN(TEMP$), STRG$, "APREG")
+	ON_LOOP% =  4% IF INSTR(1% + LEN(TEMP$), STRG$, "APCLOS")
+	ON_LOOP% =  5% IF INSTR(1% + LEN(TEMP$), STRG$, "AP109T")
+	ON_LOOP% =  6% IF INSTR(1% + LEN(TEMP$), STRG$, "CHKFRM")
+	ON_LOOP% =  7% IF INSTR(1% + LEN(TEMP$), STRG$, "ATTFRM")
+	IF INSTR(1% + LEN(TEMP$), STRG$, "AP1099")
+	THEN
+		ON_LOOP% =  8%
+		V% = INSTR(1% + LEN(TEMP$), STRG$, ".")
+		YEAR_1099$ = ""
+		YEAR_1099$ = "19" + MID(STRG$, V% + 1%, 2%) IF V% > 0%
+	END IF
+
+	ON_LOOP% = 9% IF INSTR(1% + LEN(TEMP$), STRG$, "APCDJ")
+	CDJ_BATCH$ = "01"
+
+	V% = INSTR(1% + LEN(TEMP$), STRG$, "APJ")
+	IF V%
+	THEN
+		ON_LOOP% = 10%
+		PJ_BATCH$ = ""
+		PJ_BATCH$ = MID(STRG$, V% + 3%, 2%) IF V% > 0%
+	END IF
+
+	V% = INSTR(1% + LEN(TEMP$), STRG$, "AP1")
+	IF V%
+	THEN
+		ON_LOOP% = 11%
+		PJ_BATCH$ = ""
+		PJ_BATCH$ = MID(STRG$, V% + 3%, 2%) IF V% > 0%
+	END IF
+
+	IF ON_LOOP% = 0%
+	THEN
+		PRINT STRG$
+		STOP
+	END IF
+
+	ON ON_LOOP% GOSUB &
+		1000,	2000,	3000,	4000,	5000,	6000, &
+		7000,	8000,	9000,	10000,	11000
+
+	STRG$ = ""
+	GOTO 550
+
+580	TEMP$ = "<ENDFILE>"
+
+	IF INSTR(1%, STRG$, TEMP$)
+	THEN
+
+		ON ON_LOOP% GOSUB &
+			1200,	2200,	3200,	4200,	5200,	6200, &
+			7200,	8200,	9200,	10200,	11200
+
+		STRG$ = ""
+		GOTO 550
+	END IF
+
+	ON ON_LOOP% GOSUB &
+		1100,	2100,	3100,	4100,	5100,	6100, &
+		7100,	8100,	9100,	10100,	11100
+
+	STRG$ = ""
+
+	GOTO 550
+
+600	GOTO ExitProgram
+
+1000	!
+	! AP_CONTROL file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new AP_CONTROL file", 1%)
+	CALL READ_DEVICE("AP_CONTROL", AP_CONTROL.DEV$, STAT%)
+ !	KILL AP_CONTROL.DEV$ + "AP_CONTROL.CTR"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_CONTROL.DEV$ + "AP_CONTROL.CTR;*")
+
+1050	%INCLUDE "SOURCE:[AP.OPEN]AP_CONTROL.CRE"
+
+	RETURN
+
+1100	!
+	! Create new control record
+	!
+	AP_CONTROL::AP_ACCT		= EDIT$(FIND_STRING(STRG$, "AP_ACCT"), -1%)
+	AP_CONTROL::CASH_ACCT		= EDIT$(FIND_STRING(STRG$, "CASH_ACCT"), -1%)
+	AP_CONTROL::DISCLOST_ACCT	= EDIT$(FIND_STRING(STRG$, "DISCLOST_ACCT"), -1%)
+	AP_CONTROL::LAST_TRANKEY	= FIND_STRING(STRG$, "LAST_TRANKEY")
+	AP_CONTROL::LAST_CKNUM		= FIND_STRING(STRG$, "LAST_CKNUM")
+
+	AP_CONTROL::CLOSEFLAG = "0"
+	AP_CONTROL::LASTPERCLOSE = 0%
+	AP_CONTROL::YEAR = DATE_TODAY
+	AP_CONTROL::RETAIN = 20%
+	AP_CONTROL::RETAIN_1099_ONLY = "N"
+
+
+	PUT #AP_CONTROL.CH%, RECORD 1%
+
+1190	RETURN
+
+1200	CLOSE #AP_CONTROL.CH%
+	RETURN
+
+2000	!
+	! Vendor file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new  AP_VENDOR file", 1%)
+	CALL READ_DEVICE("AP_VENDOR", AP_VENDOR.DEV$, STAT%)
+ !	KILL AP_VENDOR.DEV$ + "AP_VENDOR.MAS"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_VENDOR.DEV$ + "AP_VENDOR.MAS;*")
+
+2050	%INCLUDE "SOURCE:[AP.OPEN]AP_VENDOR.CRE"
+
+2090	! Convert the Vendor
+	COUNTER% = 0%
+	RETURN
+
+2100	!
+	! Create new AP_VENDOR record
+	!
+	COUNTER% = COUNTER% + 1%
+	AP_VENDOR::VENNUM	= FIND_STRING(STRG$, "VENNUM")
+	AP_VENDOR::VENNAM	= FIND_STRING(STRG$, "VENNAM")
+	AP_VENDOR::ADD1		= FIND_STRING(STRG$, "ADD1")
+	AP_VENDOR::ADD2		= FIND_STRING(STRG$, "ADD2")
+	AP_VENDOR::CITY		= FIND_STRING(STRG$, "CITY")
+	AP_VENDOR::STATE	= FIND_STRING(STRG$, "STATE")
+	AP_VENDOR::ZIP		= FIND_STRING(STRG$, "ZIP")
+	AP_VENDOR::COUNTRY	= FIND_STRING(STRG$, "COUNTRY")
+	AP_VENDOR::PHONE	= FIND_STRING(STRG$, "PHONE")
+	AP_VENDOR::POADD1	= FIND_STRING(STRG$, "POADD1")
+	AP_VENDOR::POADD2	= FIND_STRING(STRG$, "POADD2")
+	AP_VENDOR::POCITY	= FIND_STRING(STRG$, "POCITY")
+	AP_VENDOR::POSTATE	= FIND_STRING(STRG$, "POSTATE")
+	AP_VENDOR::POZIP	= FIND_STRING(STRG$, "POZIP")
+	AP_VENDOR::POCOUNTRY	= FIND_STRING(STRG$, "POCOUNTRY")
+	AP_VENDOR::POPHONE	= FIND_STRING(STRG$, "POPHONE")
+	AP_VENDOR::PURGE	= FIND_STRING(STRG$, "PURGE")
+	AP_VENDOR::FEDID	= FIND_STRING(STRG$, "FEDID")
+	AP_VENDOR::FLG1099	= FIND_STRING(STRG$, "FLG1099")
+	AP_VENDOR::DUEDATE	= FIND_STRING(STRG$, "DUEDATE")
+	AP_VENDOR::DUEDATE	= "" &
+		IF AP_VENDOR::DUEDATE = "00"
+
+	AP_VENDOR::DISDATE	= FIND_STRING(STRG$, "DISDATE")
+	AP_VENDOR::ALPSRT	= FIND_STRING(STRG$, "ALPSRT")
+
+	WHEN ERROR IN
+		AP_VENDOR::DUEDAYS	= VAL%(FIND_STRING(STRG$, "DUEDAYS"))
+	USE
+		AP_VENDOR::DUEDAYS	= 0%
+	END WHEN
+
+	WHEN ERROR IN
+		AP_VENDOR::DISDAYS	= VAL%(FIND_STRING(STRG$, "DISDAYS"))
+	USE
+		AP_VENDOR::DISDAYS	= 0%
+	END WHEN
+
+	WHEN ERROR IN
+		AP_VENDOR::DISCPER	= VAL%(FIND_STRING(STRG$, "DISCPER")) * 100.
+	USE
+		AP_VENDOR::DISCPER	= 0%
+	END WHEN
+
+2150	PUT #AP_VENDOR.CH%
+
+	RETURN
+
+2200	CLOSE #AP_VENDOR.CH%
+	RETURN
+
+3000	!
+	! AP open file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new  AP_OPEN file", 1%)
+	CALL READ_DEVICE("AP_OPEN", AP_OPEN.DEV$, STAT%)
+ !	KILL AP_OPEN.DEV$ + "AP_OPEN.LED"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_OPEN.DEV$ + "AP_OPEN.LED;*")
+
+3050	%INCLUDE "SOURCE:[AP.OPEN]AP_OPEN.CRE"
+
+3090	! Convert the AP OPEN
+	COUNTER% = 0%
+	RETURN
+
+3100	!
+	! Create new AP_OPEN record
+	!
+	COUNTER% = COUNTER% + 1%
+
+	AP_OPEN::VENNUM		= FIND_STRING(STRG$, "VENNUM")
+	AP_OPEN::TRANKEY	= FIND_STRING(STRG$, "TRANKEY")
+	AP_OPEN::TRANKEY_DATE	= FIND_STRING(STRG$, "TRAN_DATE")
+	AP_OPEN::INVNUM		= FIND_STRING(STRG$, "INVNUM")
+	AP_OPEN::INVDAT		= FIND_STRING(STRG$, "INVDAT")
+
+	AP_OPEN::INVAMT		= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0 &
+
+	AP_OPEN::INVAMT		= 0.0 IF AP_OPEN::TRANKEY = TRANKEY_TEST$
+
+	AP_OPEN::CODE_1099	= FIND_STRING(STRG$, "CODE_1099")
+	AP_OPEN::AMT_1099	= VAL(FIND_STRING(STRG$, "AMT_1099")) / 100.0
+	AP_OPEN::USE_JOB_NUM	= FIND_STRING(STRG$, "USE_JOB_NUM")
+	AP_OPEN::USE_AMT	= VAL(FIND_STRING(STRG$, "USE_AMT")) / 100.0
+	AP_OPEN::DISCDAT	= FIND_STRING(STRG$, "DISCDAT")
+	AP_OPEN::DISAMT		= VAL(FIND_STRING(STRG$, "DISAMT")) / 100.0
+	AP_OPEN::DUEDAT		= FIND_STRING(STRG$, "DUEDAT")
+	AP_OPEN::PONUM		= FIND_STRING(STRG$, "PONUM")
+	AP_OPEN::AP_ACCT	= EDIT$(FIND_STRING(STRG$, "AP_ACCT"), -1%)
+	AP_OPEN::CASH_ACCT	= EDIT$(FIND_STRING(STRG$, "CASH_ACCT"), -1%)
+
+	TEMP$ = EDIT$(FIND_STRING(STRG$, "CKNUM"), -1%)
+	TEMP$ = "" IF TEMP$ = "PAY"
+	AP_OPEN::CKNUM		= TEMP$
+
+	AP_OPEN::CKDAT		= FIND_STRING(STRG$, "CKDAT")
+	AP_OPEN::CKDESC		= FIND_STRING(STRG$, "CKDESC")
+
+	AP_OPEN::CKAMT		= 0.0
+	AP_OPEN::CKAMT		= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0 &
+	IF AP_OPEN::CKNUM <> ""
+
+	AP_OPEN::UPDATED	= FIND_STRING(STRG$, "UPDATED")
+	AP_OPEN::SELECTED	= "N"
+	AP_OPEN::BATCH		= AP_OPEN::VENNUM	! To speed up
+	AP_OPEN::CLOSEDATE	= ""
+
+	TRANKEY_TEST$ = AP_OPEN::TRANKEY
+
+	PUT #AP_OPEN.CH%
+
+	RETURN
+
+3200	CLOSE #AP_OPEN.CH%
+	RETURN
+
+4000	!
+	! AP open file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new  AP_CLOSE file", 1%)
+	CALL READ_DEVICE("AP_CLOSE", AP_CLOSE.DEV$, STAT%)
+ !	KILL AP_CLOSE.DEV$ + "AP_CLOSE.LED"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_CLOSE.DEV$ + "AP_CLOSE.LED;*")
+
+4050	%INCLUDE "SOURCE:[AP.OPEN]AP_CLOSE.CRE"
+
+4090	! Convert the AP OPEN
+	COUNTER% = 0%
+	RETURN
+
+4100	!
+	! Create new AP_CLOSE record
+	!
+	COUNTER% = COUNTER% + 1%
+	AP_CLOSE::VENNUM	= FIND_STRING(STRG$, "VENNUM")
+	AP_CLOSE::TRANKEY	= FIND_STRING(STRG$, "TRANKEY")
+	AP_CLOSE::TRANKEY_DATE	= FIND_STRING(STRG$, "TRAN_DATE")
+	AP_CLOSE::INVNUM	= FIND_STRING(STRG$, "INVNUM")
+	AP_CLOSE::INVDAT	= FIND_STRING(STRG$, "INVDAT")
+
+	AP_CLOSE::INVAMT	= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0 &
+
+	AP_CLOSE::INVAMT	= 0.0 IF AP_CLOSE::TRANKEY = TRANKEY_TEST$
+
+	AP_CLOSE::CODE_1099	= FIND_STRING(STRG$, "CODE_1099")
+	AP_CLOSE::AMT_1099	= VAL(FIND_STRING(STRG$, "AMT_1099")) / 100.0
+	AP_CLOSE::USE_JOB_NUM	= FIND_STRING(STRG$, "USE_JOB_NUM")
+	AP_CLOSE::USE_AMT	= VAL(FIND_STRING(STRG$, "USE_AMT")) / 100.0
+	AP_CLOSE::DISCDAT	= FIND_STRING(STRG$, "DISCDAT")
+	AP_CLOSE::DISAMT	= VAL(FIND_STRING(STRG$, "DISAMT")) / 100.0
+	AP_CLOSE::DUEDAT	= FIND_STRING(STRG$, "DUEDAT")
+	AP_CLOSE::PONUM		= FIND_STRING(STRG$, "PONUM")
+	AP_CLOSE::AP_ACCT	= EDIT$(FIND_STRING(STRG$, "AP_ACCT"), -1%)
+	AP_CLOSE::CASH_ACCT	= EDIT$(FIND_STRING(STRG$, "CASH_ACCT"), -1%)
+
+	TEMP$ = EDIT$(FIND_STRING(STRG$, "CKNUM"), -1%)
+	TEMP$ = "" IF TEMP$ = "PAY"
+	AP_CLOSE::CKNUM		= TEMP$
+
+	AP_CLOSE::CKDAT		= FIND_STRING(STRG$, "CKDAT")
+	AP_CLOSE::CKDESC	= FIND_STRING(STRG$, "CKDESC")
+
+	AP_CLOSE::CKAMT		= 0.0
+	AP_CLOSE::CKAMT		= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0 &
+		IF AP_CLOSE::CKNUM <> ""
+
+	AP_CLOSE::UPDATED	= FIND_STRING(STRG$, "UPDATED")
+	AP_CLOSE::SELECTED	= "N"
+	AP_CLOSE::BATCH		= AP_CLOSE::VENNUM	! To speed things up
+	AP_CLOSE::CLOSEDATE	= DATE_TODAY
+
+	TRANKEY_TEST$ = AP_CLOSE::TRANKEY
+
+	PUT #AP_CLOSE.CH%
+
+	RETURN
+
+4200	CLOSE #AP_CLOSE.CH%
+	RETURN
+
+5000	!
+	! AP_1099_TABLE file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new AP_1099_TABLE file", 1%)
+	CALL READ_DEVICE("AP_1099_TABLE", AP_1099_TABLE.DEV$, STAT%)
+ !	KILL AP_1099_TABLE.DEV$ + "AP_1099_TABLE.TBL"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_1099_TABLE.DEV$ + "AP_1099_TABLE.TBL;*")
+
+5050	%INCLUDE "SOURCE:[AP.OPEN]AP_1099_TABLE.CRE"
+
+	RETURN
+
+5100	!
+	! Create new AP_1099_TABLE record
+	!
+	AP_1099_TABLE::CODE	= FIND_STRING(STRG$, "CODE")
+	AP_1099_TABLE::DESCR	= FIND_STRING(STRG$, "DESCR")
+	AP_1099_TABLE::BASEAMT	= VAL(FIND_STRING(STRG$, "BASEAMT")) / 100.0
+	AP_1099_TABLE::FRMNUM	= FIND_STRING(STRG$, "FRMNUM")
+	AP_1099_TABLE::FRMLOC	= FIND_STRING(STRG$, "FRMLOC")
+
+	PUT #AP_1099_TABLE.CH%
+
+5190	RETURN
+
+5200	CLOSE #AP_1099_TABLE.CH%
+	RETURN
+
+6000	!
+	! AP_CHKFRM file does not exist, so create it
+	!
+	!======================================================================
+	FILE_NAME$ = "AP_CHKFRM.FRM"
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new " + FILE_NAME$ + " file", 1%)
+	CALL READ_DEVICE("AP_FORM", AP_FORM.DEV$, STAT%)
+ !	KILL AP_FORM.DEV$ + FILE_NAME$
+	SMG_STATUS% = LIB$DELETE_FILE(AP_FORM.DEV$ + FILE_NAME$ + ";*")
+
+6050	OPEN AP_FORM.DEV$ + FILE_NAME$ FOR OUTPUT AS FILE AP_CHKFRM.CH%, &
+		RECORDSIZE 132%
+
+	RETURN
+
+6100	PRINT #AP_CHKFRM.CH%, STRG$;
+
+	RETURN
+
+6200	CLOSE #AP_CHKFRM.CH%
+	RETURN
+
+7000	!
+	! AP_ATTFRM file does not exist, so create it
+	!
+	!======================================================================
+	FILE_NAME$ = "AP_ATTFRM.FRM"
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new " + FILE_NAME$ + " file", 1%)
+	CALL READ_DEVICE("AP_FORM", AP_FORM.DEV$, STAT%)
+ !	KILL AP_FORM.DEV$ + FILE_NAME$
+	SMG_STATUS% = LIB$DELETE_FILE(AP_FORM.DEV$ + FILE_NAME$ + ";*")
+
+7050	OPEN AP_FORM.DEV$ + FILE_NAME$ FOR OUTPUT AS FILE AP_ATTFRM.CH%, &
+		RECORDSIZE 132%
+
+	RETURN
+
+7100	PRINT #AP_ATTFRM.CH%, STRG$;
+
+	RETURN
+
+7200	CLOSE #AP_ATT_FRM.CH%
+	RETURN
+
+8000	!
+	! AP_1099_YYYY file does not exist, so create it
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new AP_1099_YYYY file", 1%)
+	CALL READ_DEVICE("AP_1099_YYYY", AP_1099_YYYY.DEV$, STAT%)
+ !	KILL AP_1099_YYYY.DEV$ + "AP_1099_" + YEAR_1099$ + ".HIS"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_1099_YYYY.DEV$ + "AP_1099_" + &
+		YEAR_1099$ + ".HIS;*")
+
+8050	%INCLUDE "SOURCE:[AP.OPEN]AP_1099_YYYY.CRE"
+
+	RETURN
+
+8100	!
+	! Create new AP_1099_YYYY record
+	!
+	!======================================================================
+	AP_1099_YYYY::VENNUM	= FIND_STRING(STRG$, "VENNUM")
+	AP_1099_YYYY::CODE	= FIND_STRING(STRG$, "CODE")
+	AP_1099_YYYY::TRANKEY	= FIND_STRING(STRG$, "TRANKEY")
+	AP_1099_YYYY::INVNUM	= FIND_STRING(STRG$, "INVNUM")
+	AP_1099_YYYY::INVDAT	= FIND_STRING(STRG$, "INVDAT")
+	AP_1099_YYYY::CKAMT	= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0
+	AP_1099_YYYY::CKNUM	= FIND_STRING(STRG$, "CKNUM")
+	AP_1099_YYYY::CKDAT	= FIND_STRING(STRG$, "CKDAT")
+	AP_1099_YYYY::AMT1099	= VAL(FIND_STRING(STRG$, "AMT1099")) / 100.0
+
+	PUT #AP_1099_YYYY.CH%
+
+8190	RETURN
+
+8200	CLOSE #AP_1099_YYYY.CH%
+	RETURN
+
+9000	!
+	! AP_CDJ file does not exist, so create it
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new AP_CDJ file", 1%)
+	CALL READ_DEVICE("AP_CDJ", AP_CDJ.DEV$, STAT%)
+ !	KILL AP_CDJ.DEV$ + "AP_CDJ_" + CDJ_BATCH$ + ".JRL"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_CDJ.DEV$ + "AP_CDJ_" + &
+		CDJ_BATCH$ + ".JRL;*")
+
+9050	BATCH_NO$ = CDJ_BATCH$
+	%INCLUDE "SOURCE:[AP.OPEN]AP_CDJ.CRE"
+
+	RETURN
+
+9100	!
+	! Create new AP_CDJ record
+	!
+	!======================================================================
+	AP_CDJ::VENNUM		= FIND_STRING(STRG$, "VENNUM")
+	AP_CDJ::TRANKEY		= FIND_STRING(STRG$, "TRANKEY")
+	AP_CDJ::INVNUM		= FIND_STRING(STRG$, "INVNUM")
+	AP_CDJ::INVDAT		= FIND_STRING(STRG$, "INVDAT")
+	AP_CDJ::INVAMT		= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0
+	AP_CDJ::CKNUM		= FIND_STRING(STRG$, "CKNUM")
+	AP_CDJ::CKDAT		= FIND_STRING(STRG$, "CKDAT")
+	AP_CDJ::CKDESC		= FIND_STRING(STRG$, "CKDESC")
+	AP_CDJ::DISCDAT		= FIND_STRING(STRG$, "DISCDAT")
+	AP_CDJ::DISAMT		= VAL(FIND_STRING(STRG$, "DISAMT")) / 100.0
+	AP_CDJ::DISC_LOST_AMT	= VAL(FIND_STRING(STRG$, "DISC_LOST_AMT")) / 100.0
+	AP_CDJ::DISCLOST_ACCT	= EDIT$(FIND_STRING(STRG$, "DISCLOST_ACCT"), -1%)
+	AP_CDJ::DUEDAT		= FIND_STRING(STRG$, "DUEDAT")
+	AP_CDJ::PONUM		= FIND_STRING(STRG$, "PONUM")
+	AP_CDJ::AP_ACCT		= EDIT$(FIND_STRING(STRG$, "AP_ACCT"), -1%)
+	AP_CDJ::CASH_ACCT	= EDIT$(FIND_STRING(STRG$, "CASH_ACCT"), -1%)
+
+	PUT #AP_CDJ.CH%
+
+9190	RETURN
+
+9200	CLOSE #AP_CDJ.CH%
+	RETURN
+
+10000	!
+	! AP_PJH file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new AP_PJH file", 1%)
+	CALL READ_DEVICE("AP_PJH", AP_PJH.DEV$, STAT%)
+ !	KILL AP_PJH.DEV$ + "AP_PJH" + PJ_BATCH$ + ".JRL"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_PJH.DEV$ + "AP_PJH" + &
+		PJ_BATCH$ + ".JRL;*")
+
+10050	BATCH_NO$ = PJ_BATCH$
+	%INCLUDE "SOURCE:[AP.OPEN]AP_PJH.CRE"
+
+	RETURN
+
+10100	!
+	! Create new AP_PJH record
+	!
+	AP_PJH::TRANKEY		= FIND_STRING(STRG$, "TRANKEY")
+	AP_PJH::VENNUM		= FIND_STRING(STRG$, "VENNUM")
+	AP_PJH::TRANKEY_DATE	= FIND_STRING(STRG$, "TRANKEY_DATE")
+	AP_PJH::INVNUM		= FIND_STRING(STRG$, "INVNUM")
+	AP_PJH::INVDAT		= FIND_STRING(STRG$, "INVDAT")
+	AP_PJH::INVAMT		= VAL(FIND_STRING(STRG$, "INVAMT")) / 100.0
+	AP_PJH::CODE_1099	= FIND_STRING(STRG$, "CODE_1099")
+	AP_PJH::AMT_1099	= VAL(FIND_STRING(STRG$, "AMT_1099")) / 100.0
+	AP_PJH::USE_JOB_NUM	= FIND_STRING(STRG$, "USE_JOB_NUM")
+	AP_PJH::USE_AMT		= VAL(FIND_STRING(STRG$, "USE_AMT")) / 100.0
+	AP_PJH::DISCDAT		= FIND_STRING(STRG$, "DISCDAT")
+	AP_PJH::DISCAMT		= VAL(FIND_STRING(STRG$, "DISCAMT")) / 100.0
+	AP_PJH::DUEDAT		= FIND_STRING(STRG$, "DUEDAT")
+	AP_PJH::PONUM		= FIND_STRING(STRG$, "PONUM")
+	AP_PJH::AP_ACCT		= EDIT$(FIND_STRING(STRG$, "AP_ACCT"), -1%)
+	AP_PJH::CASH_ACCT	= EDIT$(FIND_STRING(STRG$, "CASH_ACCT"), -1%)
+	AP_PJH::CKNUM		= FIND_STRING(STRG$, "CKNUM")
+	AP_PJH::CKDAT		= FIND_STRING(STRG$, "CKDAT")
+	AP_PJH::DESCR		= FIND_STRING(STRG$, "DESCR")
+	AP_PJH::CKAMT		= VAL(FIND_STRING(STRG$, "CKAMT")) / 100.0
+
+	PUT #AP_PJH.CH%
+
+10190	RETURN
+
+10200	CLOSE #AP_PJH.CH%
+	RETURN
+
+11000	!
+	! AP_PJL file does not exist, so create it
+	!
+	!======================================================================
+	CALL ENTR_3MESSAGE(SCOPE, "Creating new AP_PJL file", 1%)
+	CALL READ_DEVICE("AP_PJL", AP_PJL.DEV$, STAT%)
+ !	KILL AP_PJL.DEV$ + "AP_PJL" + PJ_BATCH$ + ".JRL"
+	SMG_STATUS% = LIB$DELETE_FILE(AP_PJL.DEV$ + "AP_PJL" + &
+		PJ_BATCH$ + ".JRL;*")
+
+11050	BATCH_NO$ = PJ_BATCH$
+	%INCLUDE "SOURCE:[AP.OPEN]AP_PJL.CRE"
+
+	RETURN
+
+11100	!
+	! Create new AP_PJL record
+	!
+	AP_PJL::TRANKEY		= FIND_STRING(STRG$, "TRANKEY")
+	AP_PJL::SLINE		= FIND_STRING(STRG$, "SLINE")
+	AP_PJL::PONUM		= FIND_STRING(STRG$, "PONUM")
+	AP_PJL::PO_LINE		= FIND_STRING(STRG$, "PO_LINE")
+	AP_PJL::ACCT		= EDIT$(FIND_STRING(STRG$, "ACCT"), -1%)
+	AP_PJL::SUBACC		= EDIT$(FIND_STRING(STRG$, "SUBACC"), -1%)
+	AP_PJL::OPERATION	= FIND_STRING(STRG$, "OPERATION")
+	AP_PJL::UNITS		= VAL(FIND_STRING(STRG$, "UNITS")) / 100.0
+	AP_PJL::AMOUNT		= VAL(FIND_STRING(STRG$, "AMOUNT")) / 100.0
+	AP_PJL::DISCAMT		= VAL(FIND_STRING(STRG$, "DISCAMT")) / 100.0
+	AP_PJL::USE_TAX_FLAG	= FIND_STRING(STRG$, "USE_TAX_FLAG")
+
+	PUT #AP_PJL.CH%
+
+11190	RETURN
+
+11200	CLOSE #AP_PJL.CH%
+	RETURN
+
+ ExitProgram:
+15000	!*******************************************************************
+	! Exit program
+	!*******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+	%Page
+
+19000	!*******************************************************************
+	! Error trapping
+	!*******************************************************************
+
+	!===================================================================
+	! Error NUMBER(ERR) cases
+	!===================================================================
+	SELECT ERR
+
+	CASE 134%, 153%	! Dup key detected, record already exists
+		IF ERL > 1000%
+		THEN
+			CALL ENTR_3MESSAGE(SCOPE, "DUPLICATE KEY/RECORD EXISTS ERL" + &
+				NUM1$(ERL) + " ERR" + NUM1$(ERR), 1%)
+			RESUME 1190
+		END IF
+	END SELECT
+
+	!===================================================================
+	! Error LINE(ERL) cases
+	!===================================================================
+
+	!
+	! Untrapped error
+	!
+	FILENAME$ = ""
+	RESUME HelpError
+
+32767	END

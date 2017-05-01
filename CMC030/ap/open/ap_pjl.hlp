@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Purchase Journal Line File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__PJL.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Accounts Payable System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Purchase Journal Line File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__PJL.JRL\*
+	!	.b
+	!	.lm +5
+	!	Purchase Journal Line File.
+	!
+	! Index:
+	!	.x Purchase Journal Line File
+	!	.x AP_PJL
+	!
+	!--

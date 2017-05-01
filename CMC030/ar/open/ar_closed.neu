@@ -1,0 +1,28 @@
+	!======================================================================
+	! AR_CLOSED file (create, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CLOSED.CH_NEW%, STAT%)
+	CALL READ_DEVICE('AR_CLOSED',AR_CLOSED.DEV$, STAT%)
+
+	AR_CLOSED.NAME_NEW$ = AR_CLOSED.DEV$+"AR_CLOSED.LED_NEW"
+
+	OPEN AR_CLOSED.NAME_NEW$ AS FILE AR_CLOSED.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CLOSED, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			AR_CLOSED::CUSNUM, &
+			AR_CLOSED::INVNUM, &
+			AR_CLOSED::TRATYP &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AR_CLOSED::SALNUM, &
+			AR_CLOSED::CUSNUM, &
+			AR_CLOSED::INVNUM, &
+			AR_CLOSED::TRATYP &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

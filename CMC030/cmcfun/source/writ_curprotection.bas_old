@@ -1,0 +1,161 @@
+1	%TITLE "Set Current Protection Code"
+	%SBTTL "WRIT_CURPROTECTION"
+	%IDENT "V3.3"
+
+	SUB WRIT_CURPROTECTION(NEWPRO$, STAT%)
+
+	!
+	!		COPYRIGHT (C) 1986 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This subroutine writes the current protection code to the file.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	NEWPRO$
+	!		The passed new protection code the user wants to enter.
+	!
+	!	Returned value
+	!		This subroutine sets the new protection code.
+	!
+	! Example:
+	!
+	!	CALL WRIT_CURPROTECTION('65555')
+	!
+	! Environment:
+	!
+	!	VMS/VAX BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:WRIT_CURPROTECTION/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP WRIT_CURPROTECTION
+	!	$ DELETE WRIT_CURPROTECTION.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	11/20/86 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	07/24/89 - Kevin Handy
+	!		Added to sharable library.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	I%
+	!		Integer used in the loop to pull off characters.
+	!
+	!--
+	%PAGE
+
+	!
+	! Initilize vars (NOTE: Uses long instead of word FOR A REASON)
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION SYS$SETDFPROT
+
+	%PAGE
+
+	!
+	! Make sure they are trying to set it, and not just living
+	! with the defaults.
+	!
+	EXIT SUB IF NEWPRO$ = ""
+
+	!
+	! Set default protection code
+	!
+	STAT% = 65535%		! No access
+
+	!
+	! Now, scan through string, and parse all of the groups
+	!
+	STAT$ = EDIT$(NEWPRO$, -1%)
+	GROUP% = 65536%
+
+	FOR I% = 1% TO LEN(STAT$)
+		!
+		! Pull off current character
+		!
+		CH$ = MID(NEWPRO$, I%, 1%)
+
+		!
+		! If it defines a new group, then set up for that group
+		!
+		IF MID(STAT$, I%+1%, 1%) = ":"
+		THEN
+			!
+			! Figure out which group is being referenced
+			!
+			SELECT CH$
+				CASE "S"		! System
+					GROUP% = 1%
+				CASE "O"		! Owner
+					GROUP% = 16%
+				CASE "G"		! Group
+					GROUP% = 256%
+				CASE "W"		! World
+					GROUP% = 4096%
+				CASE ELSE		! Ignore others
+					GROUP% = 65536%
+			END SELECT
+
+			GOTO 2000
+		END IF
+
+		!
+		! Must be a fill character, or a protection code character
+		!
+		SELECT CH$
+			CASE "R"			! Read
+				STAT% = STAT% AND NOT(GROUP% * 1%)
+			CASE "W"			! Write
+				STAT% = STAT% AND NOT(GROUP% * 2%)
+			CASE "E"			! Execute
+				STAT% = STAT% AND NOT(GROUP% * 4%)
+			CASE "D"			! Delete
+				STAT% = STAT% AND NOT(GROUP% * 8%)
+		END SELECT
+
+2000	NEXT I%
+
+	SYS_STATUS% = SYS$SETDFPROT(STAT% BY REF, )
+
+ !	IF (SYS_STATUS% AND 1%) = 0%
+ !	THEN
+ !		CALL ENTR_3MESSAGE(SCOPE, "Error setting default protection " + &
+ !			NUM1$(SYS_STATUS%), 0%)
+ !	END IF
+
+	END SUB

@@ -1,0 +1,16 @@
+	!======================================================================
+	! EL_CLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(EL_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('EL_CLASS',EL_CLASS.DEV$, STAT%)
+
+	EL_CLASS.NAME$ = EL_CLASS.DEV$+"EL_CLASS.TBL"
+
+	OPEN EL_CLASS.NAME$ FOR INPUT AS FILE EL_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP EL_CLASS, &
+		PRIMARY KEY &
+			EL_CLASS::CLASS, &
+		ACCESS READ, ALLOW MODIFY
+

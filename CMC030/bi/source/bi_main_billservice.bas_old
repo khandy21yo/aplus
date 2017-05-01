@@ -1,0 +1,713 @@
+1	%TITLE "Billing Insurance Line Item"
+	%SBTTL "BI_MAIN_BILLSERVICE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_BILLSERVICE(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Line Item\* program provides for entry and maintenance of the Billing
+	!	Insurance line file.
+	!
+	! Index:
+	!	.x Line Item
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_BILLSERVICE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_MAIN_BILLSERVICE
+	!	$ DELETE BI_MAIN_BILLSERVICE.OBJ;*
+	!
+	! Author:
+	!
+	!	11/04/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	03/16/92 - Dan Perkins
+	!		Allow for processing batches.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLL.HB"
+	MAP (BI_BILLL)		BI_BILLL_CDD	BI_BILLL
+	MAP (BI_BILLL_OLD)	BI_BILLL_CDD	BI_BILLL_OLD, BI_BILLL2
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLH.HB"
+	MAP (BI_BILLH)		BI_BILLH_CDD	BI_BILLH
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPT.HB"
+	MAP (BI_CPT)		BI_CPT_CDD	BI_CPT
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_DIAG.HB"
+	MAP (BI_DIAG)		BI_DIAG_CDD	BI_DIAG
+
+	!
+	! Create array to contain pointers and totals
+	!
+	RECORD RARRAY_RECORD
+		RFA	LINRFA		! Rfa pointer for record
+		REAL	AMOUNT		! Amount for record
+	END RECORD
+
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+
+	COM (TT_BI_BILLL) RARRAY_RECORD RARRAY(300%)	! Allocate for 300
+
+	COM (CH_BI_BILLH) &
+		BATCH_NO$ = 2%, &
+		BI_BILLH.CH%, &
+		BI_BILLH.READONLY%
+
+	COM (CH_BI_BILLL) &
+		BI_BILLL.CH%, &
+		BI_BILLL.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL REAL   FUNCTION BI_READ_RATE
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Medical Service"
+		SMG_WINDOW::NHELP = "BI_MAIN_BILLSERVICE"
+		SMG_WINDOW::HSIZE = 77%
+		SMG_WINDOW::VSIZE = 9%
+		SMG_WINDOW::HPOS  = 3%
+		SMG_WINDOW::VPOS  = 10%
+		SMG_WINDOW::NITEMS= 7%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::TOPLIN = 3%
+		SMG_WINDOW::BOTLIN = 8%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BI_BILLL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BI_BILLL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BI.OPEN]BI_BILLL.CRE"
+		BI_BILLL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_BILLL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BI_BILLL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BI_BILLL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BI_BILLL.CH%
+		RESET #BI_BILLL.CH%
+		GET #BI_BILLL.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  (01)       (02)  (03)                           " + &
+			"(04)    (05) (06)      (07)", &
+			1%, 1%, , SMG$M_REVERSE)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  ServDate   CPT   Description                    " + &
+			"Diag.  Hours Mult    Amount", &
+			2%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Extra display stuff
+	!
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! Generate totals
+		!
+		AMOUNT = 0.0
+
+		FOR I% = 1% TO SMG_WINDOW::TOTREC
+
+			AMOUNT = AMOUNT + RARRAY(I%)::AMOUNT
+
+		NEXT I%
+
+		!
+		! Display totals
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  Number of lines" + &
+			FORMAT$(SMG_WINDOW::TOTREC, "###") + &
+			"                                                " + &
+			FORMAT$(AMOUNT, "##,###.##") + &
+			"                   ", &
+			SMG_WINDOW::VSIZE, 1%, , SMG$M_REVERSE)
+
+		!
+		! Paint lines on screen
+		!
+		FOR I% = 1% TO 6%
+
+			A% = VAL%(MID("013,019,050,057,063,068", I%*4%-3%, 3%))
+
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_WINDOW::WNUMBER, &
+				1%, A%, SMG_WINDOW::BOTLIN, A%)
+
+		NEXT I%
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		XLINE$ = NUM1$(SMG_WINDOW::CURLIN)
+
+ Reentry:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Service Date\*
+	!	.p
+	!	The ^*Service Date\* field provides the means to enter the date
+	!	the service or procedure was performed.
+	!	.p
+	!	The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x Service Date
+	!	.x Date>Service
+	!
+	!--
+
+			BI_BILLL::SERVDATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";03", TEMP$, &
+				BI_BILLL::SERVDATE, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Current Procedural Terminology\*
+	!	.p
+	!	The ^*Current Procedural Terminology\* field is provided to enter the Current
+	!	Procedural Terminology code for the service or procedure performed.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located
+	!	at this field provides a list of valid Current Procedural Terminology codes.
+	!	.p
+	!	If the code entered is a valid code, field (03) description
+	!	will automatically be displayed.
+	!
+	! Index:
+	!	.x Current Procedural Terminology
+	!	.x CPT
+	!
+	!--
+
+			BI_BILLL::CPT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";14", TEMP$, &
+				BI_BILLL::CPT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(BI_MAIN_CPT.ID, "V0") = 1%
+				THEN
+					BI_BILLL::CPT = BI_CPT::CPT
+				END IF
+				GOTO Reentry
+			END IF
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Description\*
+	!	.p
+	!	The ^*Description\* field contains a description
+	!	of the Current Procedural Terminology  code entered in field (02).
+	!	.p
+	!	The description of the code as defined in the Current Procedural Terminology
+	!	Code file will automatically appear if the code is valid.
+	!
+	! Index:
+	!	.x Description
+	!
+	!--
+
+			IF (TEMP$ = "Add") AND (MFLAG AND 1%) = 0%
+			THEN
+				IF MAIN_WINDOW(BI_MAIN_CPT.ID, "Q0" + &
+					BI_BILLL::CPT) <> 1%
+				THEN
+					BI_CPT::DESCRIPTION = &
+						STRING$(LEN(BI_CPT::DESCRIPTION),ASCII("?"))
+				END IF
+				BI_BILLL::DESCRIPTION = BI_CPT::DESCRIPTION
+			END IF
+
+			BI_BILLL::DESCRIPTION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";20", TEMP$, &
+				BI_BILLL::DESCRIPTION, MFLAG, &
+				"'LLLLLLLLLLLLLLLLLLLLLLLLLLLLL", MVALUE)
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Diagnosis\*
+	!	.p
+	!	The ^*Diagnosis\* field provides the means to enter the
+	!	code which represents a particular diagnosis.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is
+	!	located at this field displays a list of valid
+	!	diagnosis codes.
+	!
+	! Index:
+	!	.x Diagnosis
+	!
+	!--
+
+			BI_BILLL::DIAGNOSIS = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";51", TEMP$, &
+				BI_BILLL::DIAGNOSIS, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(BI_MAIN_DIAG.ID, "V0") = 1%
+				THEN
+					BI_BILLL::DIAGNOSIS = &
+						BI_DIAG::DIAGNOSIS
+				END IF
+				GOTO Reentry
+			END IF
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Hours\*
+	!	.p
+	!	The ^*Hours\* field contains the amount of time
+	!	spent in performing a particular service or procedure.
+	!
+	! Index:
+	!	.x Hours
+	!
+	!--
+
+			BI_BILLL::LENTH = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";58", TEMP$, &
+				BI_BILLL::LENTH, MFLAG, "##.##", MVALUE)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Multiply\*
+	!	.p
+	!	The ^*Multiply\* field provides for entry of the number of
+	!	times the service or procedure was performed.
+	!
+	! Index:
+	!	.x Multiply
+	!
+	!--
+
+			BI_BILLL::MULTIPLIER = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";66", TEMP$, &
+				BI_BILLL::MULTIPLIER*1.0, MFLAG, "##", MVALUE)
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!	^*(07) Amount\*
+	!	.p
+	!	The ^*Amount\* field is provided to enter the amount which
+	!	will be charged for this particular service or procedure.
+	!
+	! Index:
+	!	.x Amount
+	!
+	!--
+
+			IF (TEMP$ = "Add") AND (MFLAG AND 1%) = 0%
+			THEN
+				BI_BILLL::AMOUNT = &
+					BI_READ_RATE(BI_BILLL::CPT, &
+						BI_BILLL::SERVDATE, &
+					FUNC_ROUND(BI_BILLL::LENTH* &
+						BI_BILLL::MULTIPLIER,2%))
+			END IF
+
+			BI_BILLL::AMOUNT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";69", TEMP$, &
+				BI_BILLL::AMOUNT, MFLAG, "##,###.##", MVALUE)
+
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BI_MAIN_BILLSERVICE = 0%
+
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		CASE "Change", "Blank", "Initialize"
+
+			IF (BI_BILLL_OLD::CPT <> BI_CPT::CPT)
+			THEN
+				IF MAIN_WINDOW(BI_MAIN_CPT.ID, "Q0" + &
+					BI_BILLL::CPT) <> 1%
+				THEN
+					BI_CPT::DESCRIPTION = &
+						STRING$(LEN(BI_CPT::DESCRIPTION),ASCII("?"))
+				END IF
+				BI_BILLL::DESCRIPTION = BI_CPT::DESCRIPTION
+
+			END IF
+
+		END SELECT
+
+	!
+	! Set BI_BILLL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BI_BILLL_OLD = BI_BILLL
+
+	!
+	! Restore BI_BILLL_OLD value
+	!
+	CASE OPT_RESETOLD
+		BI_BILLL = BI_BILLL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BI_BILLL2 = BI_BILLL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BI_BILLL = BI_BILLL2
+
+		!
+		! Set special default values for the key of a new record
+		! which is the most likely case when this function is to
+		! be called.
+		!
+		BI_BILLL::PATIENT= BI_BILLH::PATIENT
+		BI_BILLL::INSURED = BI_BILLH::INSURED
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BI_BILLL.CH%, &
+				KEY#0% GE BI_BILLL::PATIENT + &
+				BI_BILLL::INSURED + &
+				BI_BILLL::SERVDATE, &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle array of records
+	!
+27000	CASE OPT_ARRAY
+
+		!
+		! Select sub-option of array
+		!
+		SELECT MLOOP
+
+		!
+		! Load array with line items
+		!
+		CASE 1%
+
+			!
+			! Empty array
+			!
+			SMG_WINDOW::TOTREC = 0%
+
+27110			!
+			! Search for first record
+			!
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0% GE BI_BILLH::PATIENT + &
+				BI_BILLH::INSURED, &
+				REGARDLESS
+
+27120			!
+			! Get a record
+			!
+			GET #SMG_WINDOW::CHAN
+
+			IF BI_BILLL::INSURED+BI_BILLL::PATIENT  = &
+				BI_BILLH::INSURED+BI_BILLH::PATIENT
+			THEN
+				!
+				! Add information to array
+				!
+				SMG_WINDOW::TOTREC = SMG_WINDOW::TOTREC + 1%
+				RARRAY(SMG_WINDOW::TOTREC)::LINRFA = &
+					GETRFA(SMG_WINDOW::CHAN)
+				RARRAY(SMG_WINDOW::TOTREC)::AMOUNT = &
+					BI_BILLL::AMOUNT
+				GOTO 27120
+			END IF
+
+		!
+		! Remove one element of the array
+		!
+		CASE 2%
+			!
+			! Remove item pointed to by Mflag
+			!
+			FOR I% = MFLAG TO SMG_WINDOW::TOTREC - 1%
+				RARRAY(I%) = RARRAY(I% + 1%)
+			NEXT I%
+
+		!
+		! Set array item to current record
+		!
+		CASE 3%
+			RARRAY(MFLAG)::LINRFA = GETRFA(SMG_WINDOW::CHAN)
+			RARRAY(MFLAG)::AMOUNT = BI_BILLL::AMOUNT
+
+		!
+		! Load in current record, locked
+		!
+		CASE 4%
+27200			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA
+
+		!
+		! Load in current record, unlocked
+		!
+		CASE 5%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA, &
+				REGARDLESS
+
+		!
+		! Change the current record's key to match header.  The
+		! new key is probibly passes through MVALUE, unless some
+		! other means is devised.
+		!
+		CASE 6%
+			BI_BILLL::PATIENT = MID(MVALUE, 2%,10%)
+			BI_BILLL::INSURED = RIGHT(MVALUE, 12%)
+
+		END SELECT
+	END SELECT
+
+28000	EXIT FUNCTION
+
+	%PAGE
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BI_MAIN_BILLSERVICE = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BI_MAIN_BILLSERVICE = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Error while loading array
+	!
+	CASE 27110%
+		!
+		! Nothing to load
+		!
+		RESUME 28000
+
+	CASE 27120%
+		!
+		! Read all records
+		!
+		RESUME 28000 IF ERR = 11%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

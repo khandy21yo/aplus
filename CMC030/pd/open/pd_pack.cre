@@ -1,0 +1,21 @@
+	!======================================================================
+	! PD_PACK file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PD_PACK.CH%, STAT%)
+	CALL READ_DEVICE('PD_PACK',PD_PACK.DEV$, STAT%)
+	CALL READ_PROTECTION('PD_PACK',PD_PACK.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(PD_PACK.PRO$, STAT%)
+
+	PD_PACK.NAME$ = PD_PACK.DEV$+"PD_PACK.TBL"
+
+	OPEN PD_PACK.NAME$ AS FILE PD_PACK.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PD_PACK, &
+		PRIMARY KEY &
+			PD_PACK::CODE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

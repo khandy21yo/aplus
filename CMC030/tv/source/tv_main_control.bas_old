@@ -1,0 +1,414 @@
+1	%TITLE "TV_MAIN_CONTROL - TV Traffic Control File Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_CONTROL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	Maintains control file for the TV Traffic system.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Author:
+	!
+	!	12/16/87 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_CONTROL/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_CONTROL
+	!	$ DELETE TV_MAIN_CONTROL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	05/06/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.HB"
+	MAP (TV_CONTROL)	TV_CONTROL_CDD	TV_CONTROL
+	MAP (TV_CONTROL_OLD)	TV_CONTROL_CDD	TV_CONTROL_OLD, TV_CONTROL2
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "TV Traffic Control File Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAIN_CONTROL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 13%
+		SMG_WINDOW::FLAGS = 128%	! Relative file
+
+		SMG_WINDOW::NKEYS = 0%
+
+20700		!
+		! Declare channels
+		!
+		IF TV_CONTROL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_CONTROL.READONLY%
+			GOTO 20790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+20750		%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.CRE"
+		TV_CONTROL.READONLY% = 0%
+		GOTO 20790
+
+20760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_CONTROL.READONLY% = -1%
+
+		GOTO 20790
+
+20770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_CONTROL.CH%)
+
+		EXIT FUNCTION
+
+20790		SMG_WINDOW::CHAN  = TV_CONTROL.CH%
+
+		GOSUB 28000
+
+	CASE OPT_OPTLIST
+		MVALUE = "Change Blank Help eXit"
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Program", &
+			4,  6, "Weight/Spot", &
+			6,  1, "(02) Priority           /Prior", &
+			7,  1, "(03) Length             /Second", &
+			8,  1, "(04) Price              /Dollar", &
+			9,  1, "(05) Random             /Maximum", &
+			4, 45, "Weight/Break", &
+			6, 40, "(06) Worst              /Maximum", &
+			7, 40, "(07) Priority           /Prior", &
+			8, 40, "(08) Match              /Match", &
+			9, 40, "(09) Spot               /Spot", &
+			10, 40, "(10) Conflict           /Code", &
+			11, 40, "(11) Random             /Maximum", &
+			13,  1, "(12) Spot Sep.", &
+			14,  1, "(13) Prod Sep.", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+	CASE OPT_ENTRY
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Reenter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_CONTROL::PROGNUM = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"1;16", TEMP$, &
+				TV_CONTROL::PROGNUM, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 2%
+			TV_CONTROL::WEIGHT_PRIORITY = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;16", TEMP$, &
+				TV_CONTROL::WEIGHT_PRIORITY, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 3%
+			TV_CONTROL::WEIGHT_LENGTH = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;16", TEMP$, &
+				TV_CONTROL::WEIGHT_LENGTH, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 4%
+			TV_CONTROL::WEIGHT_COST = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"8;16", TEMP$, &
+				TV_CONTROL::WEIGHT_COST, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 5%
+			TV_CONTROL::WEIGHT_RANDOM = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;16", TEMP$, &
+				TV_CONTROL::WEIGHT_RANDOM, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 6%
+			TV_CONTROL::BADNESS_WORST = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;53", TEMP$, &
+				TV_CONTROL::BADNESS_WORST, &
+				MFLAG, "#######.##", MVALUE)
+
+		CASE 7%
+			TV_CONTROL::BADNESS_PRIORITY = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;55", TEMP$, &
+				TV_CONTROL::BADNESS_PRIORITY, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 8%
+			TV_CONTROL::BADNESS_MATCH = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"8;55", TEMP$, &
+				TV_CONTROL::BADNESS_MATCH, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 9%
+			TV_CONTROL::BADNESS_PER_SPOT = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;55", TEMP$, &
+				TV_CONTROL::BADNESS_PER_SPOT, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 10%
+			TV_CONTROL::BADNESS_CONFLICT = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"10;55", TEMP$, &
+				TV_CONTROL::BADNESS_CONFLICT, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 11%
+			TV_CONTROL::BADNESS_RANDOM = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;55", TEMP$, &
+				TV_CONTROL::BADNESS_RANDOM, &
+				MFLAG, "#####.##", MVALUE)
+
+		CASE 12%
+			TV_CONTROL::DEFAULT_SPOT_SEPER = &
+				ENTR_3TIME(SCOPE, SMG_WINDOW::WNUMBER, &
+				"13;16", TEMP$, &
+				TV_CONTROL::DEFAULT_SPOT_SEPER, &
+				MFLAG, "H", MVALUE)
+
+		CASE 13%
+			TV_CONTROL::DEFAULT_PROD_SEPER = &
+				ENTR_3TIME(SCOPE, SMG_WINDOW::WNUMBER, &
+				"14;16", TEMP$, &
+				TV_CONTROL::DEFAULT_PROD_SEPER, &
+				MFLAG, "H", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+	!
+	! Test values
+	!
+	CASE OPT_TESTENTRY
+		MAINT_GROUP = 0%
+
+	!
+	! Set TV_CONTROL_OLD value
+	!
+	CASE OPT_SETOLD
+		TV_CONTROL_OLD = TV_CONTROL
+
+	!
+	! Restore TV_CONTROL_OLD value
+	!
+	CASE OPT_RESETOLD
+		TV_CONTROL = TV_CONTROL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		TV_CONTROL2 = TV_CONTROL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		TV_CONTROL = TV_CONTROL2
+
+	END SELECT
+
+	EXIT FUNCTION
+
+28000	!
+	! Get period record
+	!
+	GET #TV_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	GOTO 28040
+
+28030	!
+	! Load in defaults for period file
+	!
+	TV_CONTROL::PROGNUM = "0000000001"
+	TV_CONTROL::WEIGHT_PRIORITY = 10.0
+	TV_CONTROL::WEIGHT_LENGTH = 1.5
+	TV_CONTROL::WEIGHT_COST = 1.0
+	TV_CONTROL::WEIGHT_RANDOM = 50.0
+	TV_CONTROL::BADNESS_PRIORITY = -10.0
+	TV_CONTROL::BADNESS_PER_SPOT = 50.0
+	TV_CONTROL::BADNESS_CONFLICT = 50.0
+	TV_CONTROL::BADNESS_MATCH = -200.0
+	TV_CONTROL::BADNESS_RANDOM = -50.0
+	TV_CONTROL::BADNESS_WORST = 9000000.0
+	TV_CONTROL::DEFAULT_SPOT_SEPER = "001000"
+	TV_CONTROL::DEFAULT_PROD_SEPER = "001500"
+
+	PUT #TV_CONTROL.CH%, RECORD 1%
+
+28040	RETURN
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+		!
+		! Unable to open Read/Write
+		!
+		CASE 20750%
+			RESUME 20760 IF ERR = 10%
+			MAINT_GROUP = ERR
+			RESUME 20770
+
+		!
+		! Unable to open Read/Only
+		!
+		CASE 20760%
+			MAINT_GROUP = ERR
+			RESUME 20770
+
+		!
+		! Unable to reset
+		!
+		CASE 20790%
+			RESUME 32767
+
+		!
+		! Record not found
+		!
+		CASE 28000%
+			RESUME 28030
+
+		!
+		! Record not found
+		!
+		CASE 28030%
+			CALL ENTR_3MESSAGE(SCOPE, &
+				"Unable to add period record", 0%)
+
+			RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

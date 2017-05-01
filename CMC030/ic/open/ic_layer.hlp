@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Product Cost Layer is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__LAYER.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting.  Check the report settings
+	!	for selected history.
+	!
+	! Index:
+	!	.x Product Cost Layer
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__LAYER.MAS\*
+	!	.b
+	!	Product Cost Layer.
+	!
+	! Index:
+	!	.x Product Cost Layer
+	!	.x IC_LAYER
+	!
+	!--

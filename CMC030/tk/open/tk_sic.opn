@@ -1,0 +1,31 @@
+	!======================================================================
+	! TK_SIC file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_SIC.CH%, STAT%)
+	CALL READ_DEVICE('TK_SIC',TK_SIC.DEV$, STAT%)
+
+	TK_SIC.NAME$ = TK_SIC.DEV$+"TK_SIC.TBL"
+
+	OPEN TK_SIC.NAME$ FOR INPUT AS FILE TK_SIC.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_SIC, &
+		PRIMARY KEY &
+			TK_SIC::SIC, &
+		ALTERNATE KEY &
+		( &
+			TK_SIC::DIVISION, &
+			TK_SIC::SIC &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			TK_SIC::DIVISION, &
+			TK_SIC::DESCRIPTION &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			TK_SIC::BUSINESSTYPE, &
+			TK_SIC::SIC &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

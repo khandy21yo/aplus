@@ -1,0 +1,521 @@
+1	%TITLE "Customer Type Definition File Maintenance"
+	%SBTTL "BA_MAIN_CUSTYP"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BA_MAIN_CUSTYP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain AR to GL Table\* option
+	!	provides the means to access the file where Agency Types are
+	!	determined along with related Accounts Receivable and General
+	!	Ledger revenue account masks. (See Appendix for further information
+	!	on account masking techniques.)
+	!
+	! Index:
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_MAIN_CUSTYP/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BA_MAIN_CUSTYP
+	!	$ DELETE BA_MAIN_CUSTYP.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	04/23/88 - Aaron Redd
+	!
+	! Modification history:
+	!
+	!	05/06/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/15/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTYP.HB"
+	MAP (BA_CUSTYP)		BA_CUSTYP_CDD		BA_CUSTYP
+	MAP (BA_CUSTYP_OLD)	BA_CUSTYP_CDD		BA_CUSTYP_OLD, BA_CUSTYP2
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BA_CUSTYP) &
+		BA_CUSTYP.CH%, &
+		BA_CUSTYP.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "ARTOGL maintenance"
+		SMG_WINDOW::NHELP = "BA_MAIN_CUSTYP"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 4%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Unit Type"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		!
+		! Load in defaults for chart
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BA_CUSTYP.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BA_CUSTYP.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTYP.CRE"
+		BA_CUSTYP.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[BA.OPEN]BA_CUSTYP.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BA_CUSTYP.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BA_CUSTYP.CH%)
+
+		GOTO ExitFunction
+
+790		SMG_WINDOW::CHAN  = BA_CUSTYP.CH%
+		RESET #BA_CUSTYP.CH%
+		GET #BA_CUSTYP.CH%, REGARDLESS
+
+	%PAGE
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!******************************************************************
+
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	6,  1, "(01) Agency Type", &
+			8,  1, "(02) AR Account", &
+			10,  1, "(03) Rev Account", &
+			12,  1, "(04) Description", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+20200	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display
+	! data, set defaults, and return the data back according to
+	! MFLAG.
+	!******************************************************************
+	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!
+	!	^*(01) Agency Type\*
+	!	.p
+	!	The ^*Agency Type\* field is provided to enter a user defined
+	!	number which will identify the type of a particular agency.
+	!	.p
+	!	The field provides two (2) spaces for an alphanumeric entry.
+	!
+	! Index:
+	!	.x Type>Agency
+	!	.x Agency>Type
+	!--
+
+			BA_CUSTYP::CUSTYP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;22", TEMP$, &
+				BA_CUSTYP::CUSTYP, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Accounts Receivable Account\*
+	!	.p
+	!	The ^*Accounts Receivable Account\* field is used to enter a General Ledger
+	!	account number for Accounts Receivable.
+	!	.p
+	!	Pressing ^*List Choices\* at this field will provide a list of
+	!	valid Accounts Receivable account numbers.
+	!
+	! Index:
+	!	.x Accounts Receivable Account
+	!
+	!--
+
+			BA_CUSTYP::AR_ACCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;22", TEMP$, &
+				BA_CUSTYP::AR_ACCT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					BA_CUSTYP::AR_ACCT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO Eloop
+			END IF
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Revenue Account\*
+	!	.p
+	!	The ^*Revenue Account\* field provides the means to enter a General Ledger
+	!	account number mask for the related revenue account.
+	!
+	! Index:
+	!	.x Revenue Account
+	!
+	!--
+
+			BA_CUSTYP::REV_MASK = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;22", TEMP$, &
+				BA_CUSTYP::REV_MASK, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					BA_CUSTYP::REV_MASK = &
+						GL_CHART::ACCT
+				END IF
+				GOTO Eloop
+			END IF
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	^*(04) Description\*
+	!	.p
+	!	The ^*Description\* field contains a brief description
+	!	for this particular agency type.
+	!	.p
+	!	The field will accommodate thirty (30) alphanumeric characters.
+	!
+	! Index:
+	!	.x Description
+	!
+	!--
+
+			BA_CUSTYP::DESCR = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;22", TEMP$, &
+				BA_CUSTYP::DESCR, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+		BA_MAIN_CUSTYP = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF BA_CUSTYP::CUSTYP = ""
+			THEN
+				BA_MAIN_CUSTYP = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #BA_CUSTYP.CH%, &
+						KEY#0% EQ BA_CUSTYP::CUSTYP + "", &
+						REGARDLESS
+
+					BA_MAIN_CUSTYP = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 2%
+			BA_MAIN_CUSTYP = FUNC_TESTENTRY( SMG_WINDOW, &
+				BA_CUSTYP::AR_ACCT, &
+				GL_CHART::DESCR, &
+				"BA", MLOOP, "PRG", &
+				"Account", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				GL_CHART::DESCR, 8%, 43%,, SMG$M_BOLD)
+
+
+		CASE 3%
+			BA_MAIN_CUSTYP = FUNC_TESTENTRY( SMG_WINDOW, &
+				BA_CUSTYP::REV_MASK, &
+				GL_CHART::DESCR, &
+				"BA", MLOOP, "PRG", &
+				"Account", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				GL_CHART::DESCR, 10%, 43%,, SMG$M_BOLD)
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			TEMP$ = LEFT("Account Mask" + SPACE$(40%), 40%)
+
+			IF INSTR(1%, BA_CUSTYP::AR_ACCT, "?") = 0%
+			THEN
+				IF MAIN_WINDOW( GL_MAIN_CHART.ID, &
+					"Q0" + BA_CUSTYP::AR_ACCT) = 1%
+				THEN
+					TEMP$ = GL_CHART::DESCR
+				ELSE
+					TEMP$ = STRING$(40%, ASCII("?"))
+				END IF
+			END IF
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				TEMP$, 8%, 43%,, SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			TEMP$ = LEFT("Account Mask" + SPACE$(40%), 40%)
+
+			IF INSTR(1%, BA_CUSTYP::REV_MASK, "?") = 0%
+			THEN
+				IF MAIN_WINDOW( GL_MAIN_CHART.ID, &
+					"Q0" + BA_CUSTYP::REV_MASK) = 1%
+				THEN
+					TEMP$ = GL_CHART::DESCR
+				ELSE
+					TEMP$ = STRING$(40%, ASCII("?"))
+				END IF
+			END IF
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				TEMP$, 10%, 43%,, SMG$M_BOLD)
+		END IF
+
+20500	CASE OPT_SETOLD
+		BA_CUSTYP_OLD = BA_CUSTYP
+
+	CASE OPT_RESETOLD
+		BA_CUSTYP = BA_CUSTYP_OLD
+
+	CASE OPT_SETDEFAULT
+		BA_CUSTYP2 = BA_CUSTYP
+
+	CASE OPT_RESETDEFAULT
+		BA_CUSTYP = BA_CUSTYP2
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		CASE 1%
+
+			MVALUE = "Type AR Account         " + &
+				"Rev Mask           Description"
+
+		CASE 2%
+
+			MVALUE = "005,024,043"
+
+		CASE 3%
+
+			MVALUE = &
+				BA_CUSTYP::CUSTYP + " " + &
+				BA_CUSTYP::AR_ACCT + " " + &
+				BA_CUSTYP::REV_MASK + " " + &
+				BA_CUSTYP::DESCR
+
+		END SELECT
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BA_CUSTYP.CH%, KEY #0% GE BA_CUSTYP::CUSTYP + "", &
+				REGARDLESS
+
+		END SELECT
+
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap Errors
+	!***************************************************************
+	SELECT ERR
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BA_MAIN_CUSTYP  = ERR
+		RESUME 770
+
+	CASE 760%
+		BA_MAIN_CUSTYP = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+	%PAGE
+
+32767	END FUNCTION

@@ -1,0 +1,16 @@
+	!======================================================================
+	! PO_ACKNOWLD file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_ACKNOWLD.CH%, STAT%)
+	CALL READ_DEVICE('PO_ACKNOWLD',PO_ACKNOWLD.DEV$, STAT%)
+
+	PO_ACKNOWLD.NAME$ = PO_ACKNOWLD.DEV$+"PO_ACKNOWLD.TBL"
+
+	OPEN PO_ACKNOWLD.NAME$ FOR INPUT AS FILE PO_ACKNOWLD.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_ACKNOWLD, &
+		PRIMARY KEY &
+			PO_ACKNOWLD::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,26 @@
+	!======================================================================
+	! BS_REGISTER file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BS_REGISTER.CH%, STAT%)
+	CALL READ_DEVICE('BS_REGISTER',BS_REGISTER.DEV$, STAT%)
+
+	BS_REGISTER.NAME$ = BS_REGISTER.DEV$+"BS_REGISTER.HIS"
+
+	OPEN BS_REGISTER.NAME$ FOR INPUT AS FILE BS_REGISTER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BS_REGISTER, &
+		PRIMARY KEY &
+		( &
+			BS_REGISTER::CLIENT, &
+			BS_REGISTER::PRG, &
+			BS_REGISTER::PERIOD &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			BS_REGISTER::BATCH, &
+			BS_REGISTER::CLIENT, &
+			BS_REGISTER::PRG &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

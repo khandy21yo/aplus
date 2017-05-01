@@ -1,0 +1,21 @@
+	!======================================================================
+	! MO_OPTGROUP file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_OPTGROUP.CH%, STAT%)
+	CALL READ_DEVICE('MO_OPTGROUP',MO_OPTGROUP.DEV$, STAT%)
+
+	MO_OPTGROUP.NAME$ = MO_OPTGROUP.DEV$+"MO_OPTGROUP.TBL"
+
+	OPEN MO_OPTGROUP.NAME$ FOR INPUT AS FILE MO_OPTGROUP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_OPTGROUP, &
+		PRIMARY KEY &
+			MO_OPTGROUP::OPTGROUP, &
+		ALTERNATE KEY &
+		( &
+			MO_OPTGROUP::SEQUENCE, &
+			MO_OPTGROUP::OPTGROUP &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

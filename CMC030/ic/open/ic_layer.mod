@@ -1,0 +1,25 @@
+	!======================================================================
+	! IC_LAYER file (open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_LAYER.CH%, STAT%)
+	CALL READ_DEVICE('IC_LAYER',IC_LAYER.DEV$, STAT%)
+
+	IC_LAYER.NAME$ = IC_LAYER.DEV$+"IC_LAYER.MAS"
+
+	OPEN IC_LAYER.NAME$ FOR INPUT AS FILE IC_LAYER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_LAYER, &
+		PRIMARY KEY &
+		( &
+			IC_LAYER::PRODUCT, &
+			IC_LAYER::LOCATION, &
+			IC_LAYER::TRANSDATE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			IC_LAYER::BATCH, &
+			IC_LAYER::PRODUCT &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+

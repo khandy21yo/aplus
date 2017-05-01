@@ -1,0 +1,16 @@
+	!======================================================================
+	! UTL_MACROS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_MACROS.CH%, STAT%)
+	CALL READ_DEVICE('UTL_MACROS',UTL_MACROS.DEV$, STAT%)
+
+	UTL_MACROS.NAME$ = "SYS$LOGIN:UTL_MACROS.TBL"
+
+	OPEN UTL_MACROS.NAME$ FOR INPUT AS FILE UTL_MACROS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_MACROS, &
+		PRIMARY KEY &
+			UTL_MACROS::COMMAND, &
+		ACCESS READ, ALLOW MODIFY
+

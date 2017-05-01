@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Units of Production Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__UNITS.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Assets Depreciation System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Units of Production Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__UNITS.JRL\*
+	!	.p
+	!	Units of Production Journal.
+	!
+	! Index:
+	!	.x Units of Production Journal
+	!	.x AD_UNITS
+	!--

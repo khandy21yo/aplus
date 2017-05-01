@@ -1,0 +1,24 @@
+	!======================================================================
+	! GL_GJ_LINE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_GJ_LINE.CH%, STAT%)
+	CALL READ_DEVICE('GL_GJ_LINE',GL_GJ_LINE.DEV$, STAT%)
+	CALL READ_PROTECTION('GL_GJ_LINE',GL_GJ_LINE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(GL_GJ_LINE.PRO$, STAT%)
+
+	GL_GJ_LINE.NAME$ = GL_GJ_LINE.DEV$+"GL_GJ_"+JRL_TYPE$+".JRL"
+
+	OPEN GL_GJ_LINE.NAME$ AS FILE GL_GJ_LINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_GJ_LINE, &
+		PRIMARY KEY &
+		( &
+			GL_GJ_LINE::JOURNAL, &
+			GL_GJ_LINE::ITEMNUM &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

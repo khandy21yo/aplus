@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Operations Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__OPER.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Operations Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__OPER.TBL\*
+	!	.p
+	!	Operations Table.
+	!
+	! Index:
+	!	.x Operations Table
+	!	.x PR_OPER
+	!--

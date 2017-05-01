@@ -1,0 +1,16 @@
+	!======================================================================
+	! UTL_PACKMAT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_PACKMAT.CH%, STAT%)
+	CALL READ_DEVICE('UTL_PACKMAT',UTL_PACKMAT.DEV$, STAT%)
+
+	UTL_PACKMAT.NAME$ = UTL_PACKMAT.DEV$+"UTL_PACKMAT.TBL"
+
+	OPEN UTL_PACKMAT.NAME$ FOR INPUT AS FILE UTL_PACKMAT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_PACKMAT, &
+		PRIMARY KEY &
+			UTL_PACKMAT::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

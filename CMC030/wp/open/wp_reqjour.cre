@@ -1,0 +1,25 @@
+	!======================================================================
+	! WP_REQJOUR file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_REQJOUR.CH%, STAT%)
+	CALL READ_DEVICE('WP_REQJOUR',WP_REQJOUR.DEV$, STAT%)
+	CALL READ_PROTECTION('WP_REQJOUR',WP_REQJOUR.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(WP_REQJOUR.PRO$, STAT%)
+
+	WP_REQJOUR.NAME$ = WP_REQJOUR.DEV$+"WP_REQJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN WP_REQJOUR.NAME$ AS FILE WP_REQJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_REQJOUR, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			WP_REQJOUR::JOB, &
+			WP_REQJOUR::LLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

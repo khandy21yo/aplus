@@ -1,0 +1,724 @@
+1	%TITLE "Location Balances"
+	%SBTTL "IC_RPRT_SHEET2_KBJ"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 2000 BY
+	!
+	! Software Solutions, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions, Inc.
+	!
+	! Software Solutions, Inc. assumes no responsibility for the use
+	! or reliability of its software on equipment which is not
+	! supported by Software Solutions, Inc.
+	!
+	!++
+	! ID:IC025
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Locations Balances\* option will print or display a report which
+	!	will contain the following information:
+	!	.table 3,25
+	!	.te
+	!	Product _#
+	!	.te
+	!	Description
+	!	.te
+	!	Type
+	!	.te
+	!	Category
+	!	.te
+	!	On Hand
+	!	.te
+	!	Allocated
+	!	.te
+	!	On Order
+	!	.end table
+	!	.lm -5
+	!
+	! Index:
+	!	.x Location Balances>Report
+	!	.x Report>Location Balances
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS IC_SOURCE:IC_RPRT_SHEET2_KBJ/LINE
+	!	$ LINK/EXE=IC_EXE: IC_RPRT_SHEET2_KBJ, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE IC_RPRT_SHEET2_KBJ.OBJ;*
+	!
+	! Author:
+	!
+	!	10/17/2000 - Kevin Handy
+	!
+	! Modification History:
+	!
+	!	10/18/2000 - Kevin Handy
+	!		New formula for safety stock
+	!
+	!	10/19/2000 - Kevin Handy
+	!		Add from/to period to titlw
+	!		Use Posted balance instead of current balance
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[IC.OPEN]IC_CONTROL.HB"
+	MAP (IC_CONTROL)	IC_CONTROL_CDD		IC_CONTROL
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[PO.OPEN]PO_PARTCROSS.HB"
+	MAP (PO_PARTCROSS)	PO_PARTCROSS_CDD	PO_PARTCROSS
+
+	%INCLUDE "SOURCE:[IC.OPEN]IC_35HISTORY.HB"
+	MAP (IC_35HISTORY)	IC_35HISTORY_CDD	IC_35HISTORY
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION IC_READ_35BALANCE
+
+	!
+	! Arays
+	!
+	DIM IC_35HISTORY.CH%(10%)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Item\*
+	!	.b
+	!	.lm +5
+	!	The ^*From Item\* field provides a means to begin the report
+	!	printing or displaying with a selected item number.  The value entered
+	!	must be in agreement with the value entered in field (10) Sort by.
+	!	.b
+	!	A blank field will cause the report to begin with the first
+	!	item number in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x From Item>Location Balances
+	!	.x Location Balances>From Item
+	!	.x Item>From
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Item\*
+	!	.b
+	!	.lm +5
+	!	The ^*To Item\* field provides a means to enter an item number
+	!	with which the report will end printing or displaying.  The value entered
+	!	must be in agreement with the value entered in field (10) Sort by.
+	!	.b
+	!	A blank setting will cause the report to end with the last
+	!	item number in the file.
+	!	.lm -5
+	!
+	! Index:
+	!	.x To Item>Location Balances
+	!	.x Location Balances>To Item
+	!	.x Item>To
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.b
+	!	.lm +5
+	!	The ^*Wildcard\* field provides the means to select designated
+	!	item numbers to be printed or displayed in the report by
+	!	entering a "Wildcard" selection in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Wildcard>Location Balances
+	!	.x Location Balances>Wildcard
+	!
+	!--
+
+	LOCATION$ = LEFT$(UTL_REPORTX::OPTDEF(4%), 4%)
+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Locations\*
+	!	.b
+	!	.lm +5
+	!	The ^*Locations\* field provides the means to enter the locations
+	!	codes (which have been established in the Utility system) that are
+	!	to be printed or displayed in the report.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Locations>Location Balances
+	!	.x Location Balances>Locations
+	!
+	!--
+
+	ZERO$ = EDIT$(UTL_REPORTX::OPTDEF(5%), 132%)
+
+	!++
+	! Abstract:FLD06
+	!	^*(06) Print Zero\*
+	!	.b
+	!	.lm +5
+	!	The ^*Print Zero\* balances setting in the Locations report
+	!	provides the option of printing or displaying the items which have or do
+	!	not have zero balances.
+	!	.b
+	!	Valid entries are:
+	!	.table 3,25
+	!	.te
+	!	^*Y\* - Yes
+	!	.te
+	!	^*N\* - No
+	!	.end table
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Print Zero>Location Balances
+	!	.x Location Balances>Print Zero
+	!
+	!--
+
+	FROM_PERIOD$ = LEFT$(UTL_REPORTX::OPTDEF(7%), 6%)
+
+	!++
+	! Abstract:FLD08
+	!	^*(08) From Period\*
+	!	.b
+	!	.lm +5
+	!	Specifies the starting period for the "average" calculation
+	!	.lm -5
+	!
+	! Index:
+	!	.x From Period>Location Balances
+	!	.x Location Balances>From Period
+	!
+	!--
+
+	TO_PERIOD$ = LEFT$(UTL_REPORTX::OPTDEF(8%), 6%)
+
+	IF (TO_PERIOD$ < FROM_PERIOD$)
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"'To Period' must be at or after 'From Period'", 0%)
+		GOTO ExitTotal
+	END IF
+
+	!++
+	! Abstract:FLD09
+	!	^*(09) To Period\*
+	!	.b
+	!	.lm +5
+	!	Specifies the ending period for the "average" calculation
+	!	.lm -5
+	!
+	! Index:
+	!	.x To Period>Location Balances
+	!	.x Location Balances>To Period
+	!
+	!--
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(9%), 132%)
+
+	!++
+	! Abstract:FLD10
+	!	^*(10) Sort by\*
+	!	.b
+	!	.lm +5
+	!	The ^*Sort by\* field provides the means to select an order
+	!	by which the report will print or be displayed.
+	!	.b
+	!	Valid settings are:
+	!	.table 3,25
+	!	.te
+	!	^*C\* - Product Category
+	!	.te
+	!	^*D\* - Product Description
+	!	.te
+	!	^*P\* - Product Number
+	!	.te
+	!	^*S\* - Secondary Code
+	!	.te
+	!	^*T\* - Product Type
+	!	.end table
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sort By>Location Balances
+	!	.x Location Balances>Sort By
+	!
+	!--
+
+	FROM_YEAR% = VAL%(LEFT(FROM_PERIOD$, 4%))
+	FROM_PERIOD% = VAL%(RIGHT(FROM_PERIOD$, 5%))
+	TO_YEAR% = VAL%(LEFT(TO_PERIOD$, 4%))
+	TO_PERIOD% = VAL%(RIGHT(TO_PERIOD$, 5%))
+
+300	WHEN ERROR IN
+		%INCLUDE "SOURCE:[IC.OPEN]IC_CONTROL.OPN"
+		GET #IC_CONTROL.CH%, RECORD 1%, REGARDLESS
+	USE
+		FILENAME$ = "IC_CONTROL"
+		CONTINUE HelpError
+	END WHEN
+
+	CLOSE IC_CONTROL.CH%
+
+	V% = READ_PERIOD("READ", IC_CONTROL::ERA, IC_CONTROL::PERIOD, &
+		PERIOD_DESCR$, STAT$, START_DATE$, END_DATE$, 0%)
+
+	YYYYPP$ = IC_CONTROL::PERIOD
+
+310	WHEN ERROR IN
+		%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+	USE
+		FILENAME$ = "PD_PRODUCT"
+		CONTINUE HelpError
+	END WHEN
+
+320	WHEN ERROR IN
+		%INCLUDE "SOURCE:[PO.OPEN]PO_PARTCROSS.OPN"
+	USE
+		FILENAME$ = "PO_PARTCROSS"
+		CONTINUE HelpError
+	END WHEN
+
+330	FOR YEARS% = FROM_YEAR% TO TO_YEAR%
+
+		IC_35HISTORY.CH% = 0%
+		YYYY$ = FORMAT$(YEARS%, "<0>###")
+
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[IC.OPEN]IC_35HISTORY.OPN"
+			IC_35HISTORY.CH%(YEARS% - FROM_YEAR%) = &
+				IC_35HISTORY.CH%
+		USE
+			IC_35HISTORY.CH%(YEARS% - FROM_YEAR%) = 0%
+		END WHEN
+
+	NEXT YEARS%
+
+ ReportTitle:
+	SELECT SORT.BY$
+
+	CASE "C"
+		SORT.KEY% = 2%
+		ADD.TITLE$ = "BY  CATEGORY"
+
+	CASE "D"
+		SORT.KEY% = 3%
+		ADD.TITLE$ = "BY  DESCRIPTION"
+
+	CASE "P"
+		SORT.KEY% = 0%
+		ADD.TITLE$ = "BY  PRODUCT  NUMBER"
+
+	CASE "T"
+		SORT.KEY% = 1%
+		ADD.TITLE$ = "BY  PRODUCT  TYPE"
+
+	CASE "S"
+		SORT.KEY% = 4%
+		ADD.TITLE$ = "BY  PRODUCT  SECONDARY  CODE"
+
+	END SELECT
+
+	!
+	! Title
+	!
+	TITLE$(1%) = "PRODUCT  LOCATION  BALANCES  " + ADD.TITLE$
+	TITLE$(2%) = "For Location " + LOCATION$ + &
+		" From Period " + FROM_PERIOD$ + " To Period " + TO_PERIOD$
+	TITLE$(3%) = "Inventory Control System"
+	TITLE$(4%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(5%) = "                                        " + &
+		"                             On      Safety  " + &
+		"      Lead         Min Averg Three"
+
+	TITLE$(6%) = "Product#       Description              " + &
+		"                Tp         Hand       Stock  " + &
+		"      Time       Order Month Usage"
+
+	TITLE$(7%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	COUNT_GROUP% = 0%
+	COUNT_TOTAL% = 0%
+	LAST_GROUP$ = ""
+
+17010	WHEN ERROR IN
+		IF FROM.ITEM$ = ""
+		THEN
+			RESET #PD_PRODUCT.CH%, KEY #SORT.KEY%
+		ELSE
+			FIND #PD_PRODUCT.CH%, &
+				KEY #SORT.KEY% GE FROM.ITEM$, &
+				REGARDLESS
+		END IF
+	USE
+		FILENAME$ = "PD_PRODUCT"
+		CONTINUE HelpError
+	END WHEN
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	WHEN ERROR IN
+		GET #PD_PRODUCT.CH%, REGARDLESS
+	USE
+		CONTINUE ExitTotal IF ERR = 11%
+		FILENAME$ = "PD_PRODUCT"
+		CONTINUE HelpError
+	END WHEN
+
+	!
+	! Check current record
+	!
+	GOTO GetNextRec IF PD_PRODUCT::SSTATUS <> "A"
+
+	SELECT SORT.BY$
+
+	CASE "C"
+		IF TO.ITEM$ <> ""
+		THEN
+			GOTO ExitTotal IF (PD_PRODUCT::CATEGORY > TO.ITEM$)
+		END IF
+
+		IF TEST_CATEGORY$ <> PD_PRODUCT::CATEGORY AND &
+			TEST_CATEGORY$ <>"" AND PRINT.LINE%
+		THEN
+			GOSUB SubTotal
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 2%)
+			PRINT.LINE% = 0%
+		END IF
+
+		TEST_CATEGORY$ = PD_PRODUCT::CATEGORY
+
+	CASE "D"
+		IF TO.ITEM$ <> ""
+		THEN
+			GOTO ExitTotal IF (PD_PRODUCT::DESCRIPTION > TO.ITEM$)
+		END IF
+
+		IF WLDCRD$ <> ""
+		THEN
+			GOTO GetNextRec IF &
+				COMP_STRING(EDIT$(PD_PRODUCT::DESCRIPTION, -1%), &
+				WLDCRD$) = 0%
+		END IF
+
+	CASE "P"
+		IF TO.ITEM$ <> ""
+		THEN
+			GOTO ExitTotal IF (PD_PRODUCT::PRODUCT_NUM > TO.ITEM$)
+		END IF
+
+		IF WLDCRD$ <> ""
+		THEN
+			GOTO GetNextRec IF &
+				COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM, -1%), &
+				WLDCRD$) = 0%
+		END IF
+
+	CASE "T"
+		IF TO.ITEM$ <> ""
+		THEN
+			GOTO ExitTotal IF (PD_PRODUCT::PROD_TYPE > TO.ITEM$)
+		END IF
+
+		IF WLDCRD$ <> ""
+		THEN
+			GOTO GetNextRec IF &
+				COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE, -1%), &
+				WLDCRD$) = 0%
+		END IF
+
+		IF TEST_PRODTYPE$ <> PD_PRODUCT::PROD_TYPE AND &
+			TEST_PRODTYPE$ <>"" AND PRINT.LINE%
+		THEN
+			GOSUB SubTotal
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 2%)
+			PRINT.LINE% = 0%
+		END IF
+
+		TEST_PRODTYPE$ = PD_PRODUCT::PROD_TYPE
+
+	CASE "S"
+		IF TO.ITEM$ <> ""
+		THEN
+			GOTO ExitTotal IF (PD_PRODUCT::SECONDARY_CODE> TO.ITEM$)
+		END IF
+
+		IF WLDCRD$ <> ""
+		THEN
+			GOTO GetNextRec IF &
+				COMP_STRING(EDIT$(PD_PRODUCT::SECONDARY_CODE, -1%), &
+				WLDCRD$) = 0%
+		END IF
+	END SELECT
+
+17300	!
+	! Get current balances
+	!
+	IF (IC_READ_35BALANCE(PD_PRODUCT::PRODUCT_NUM, &
+		LOCATION$, BALANCE(,)) AND 1%) = 0%
+	THEN
+		ONHAND = 0.0
+	ELSE
+		!
+		! Stop at posted balance
+		!
+		ONHAND = BALANCE(1%, 1%) + BALANCE(1%, 2%) !+ BALANCE(1%, 3%)
+	END IF
+
+	WHEN ERROR IN
+		GET #PO_PARTCROSS.CH%, &
+			KEY #0% EQ PD_PRODUCT::PRODUCT_NUM, &
+			REGARDLESS
+
+		LEAD = PO_PARTCROSS::LEAD
+		MINORD = PO_PARTCROSS::MINQTY
+	USE
+		LEAD = 0.0
+		MINORD = 0.0
+	END WHEN
+
+	GOSUB CalcAve
+
+	!
+	! 1st try at formula
+	!
+ !	IF LEAD <> 0.0
+ !	THEN
+ !		SAFETY = AVE3MONTH / (21.67 * LEAD * 5 / 7) * 1.25
+ !	ELSE
+ !		SAFETY = 0.0
+ !	END IF
+
+	!
+	! 2nd try at formula
+	!
+	SAFETY = (LEAD / 30.0) * AVE3MONTH * 1.25
+
+	IF (ZERO$ = "Y") OR &
+		(ONHAND <> 0.0) OR &
+		(LEAD <> 0.0) OR (MINORD <> 0.0) OR &
+		(AVE3MONTH <> 0.0)
+	THEN
+		TEXT$ = PD_PRODUCT::PRODUCT_NUM + " " + &
+			PD_PRODUCT::DESCRIPTION + " " + &
+			PD_PRODUCT::PROD_TYPE + " " + &
+			FORMAT$(-ONHAND, "############") + &
+			FORMAT$(SAFETY, "############") + &
+			FORMAT$(LEAD, "############") + &
+			FORMAT$(MINORD, "############") + &
+			FORMAT$(AVE3MONTH, "############")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, LIN%)
+	END IF
+
+17350	!
+	! Try for next record
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+	GOTO GetNextRec
+
+	!
+	! Need to set this up
+	!
+ SubTotal:
+	RETURN
+
+	!
+	! Print out totals
+	!
+ ExitTotal:
+	GOSUB SubTotal
+	TEXT$ = "Total of " + NUM1$(COUNT_TOTAL%) + " Parts"
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -2%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -2%)
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ CalcAve:
+18000	!*******************************************************************
+	! Calculate the period average
+	!*******************************************************************
+
+	!
+	! TOTAL_PERIODS% must not be zero, but this has been checked for
+	! in a previous test, until the user finds some way around it.
+	!
+	TOTAL_PERIODS% = (TO_YEAR% * 12% + TO_PERIOD%) - &
+		(FROM_YEAR% * 12% + FROM_PERIOD%) + 1%
+
+	AVE3MONTH = 0.0
+	TOTAL = 0.0
+
+	!
+	! Go through all the required years
+	!
+	FOR YEARS% = FROM_YEAR% TO TO_YEAR%
+
+		WHEN ERROR IN
+			FIND #IC_35HISTORY.CH%(YEARS% - FROM_YEAR%), &
+				KEY #0% EQ PD_PRODUCT::PRODUCT_NUM, &
+				REGARDLESS
+		USE
+			CONTINUE 18080
+		END WHEN
+
+		!
+		! In this year, what is the range of periods we need
+		! to look at.
+		!
+		IF YEARS% = FROM_YEAR%
+		THEN
+			START% = FROM_PERIOD% - 1%
+		ELSE
+			START% = 0%
+		END IF
+
+		IF YEARS% = TO_YEAR%
+		THEN
+			FINISH% = TO_PERIOD% - 1%
+		ELSE
+			FINISH% = 11%
+		END IF
+
+18020		WHEN ERROR IN
+			GET #IC_35HISTORY.CH%(YEARS% - FROM_YEAR%), &
+				REGARDLESS
+		USE
+			CONTINUE 18080
+		END WHEN
+
+		!
+		! If this is the right type, then summarize the data
+		!
+		IF IC_35HISTORY::PRODUCT = PD_PRODUCT::PRODUCT_NUM
+		THEN
+			IF IC_35HISTORY::TRANSTYPE = "SA" AND &
+				IC_35HISTORY::LOCATION = LOCATION$
+			THEN
+				FOR LOOP% = START% TO FINISH%
+
+					TOTAL = TOTAL - &
+						IC_35HISTORY::PQUANTITY(LOOP%)
+
+				NEXT LOOP%
+			END IF
+
+			GOTO 18020
+		END IF
+
+18080	NEXT YEARS%
+
+18090	AVE3MONTH = TOTAL / TOTAL_PERIODS%
+
+	RETURN
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	!
+	! Untrapped error
+	!
+	FILENAME$ = ""
+	RESUME HelpError
+
+32767	END

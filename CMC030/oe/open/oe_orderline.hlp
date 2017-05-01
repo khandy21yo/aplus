@@ -1,0 +1,24 @@
+	!======================================================================
+	! OE_ORDERLINE file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_ORDERLINE.CH%, STAT%)
+	CALL READ_DEVICE('OE_ORDERLINE',OE_ORDERLINE.DEV$, STAT%)
+
+	OE_ORDERLINE.NAME$ = OE_ORDERLINE.DEV$+"OE_ORDERLINE_"+BATCH_NO$+".JRL"
+
+	OPEN OE_ORDERLINE.NAME$ FOR INPUT AS FILE OE_ORDERLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_ORDERLINE, &
+		PRIMARY KEY &
+		( &
+			OE_ORDERLINE::ORDNUM, &
+			OE_ORDERLINE::LIN &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			OE_ORDERLINE::PRODUCT, &
+			OE_ORDERLINE::ORDNUM &
+		)	DUPLICATES CHANGES, &
+		
+

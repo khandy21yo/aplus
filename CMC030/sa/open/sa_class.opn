@@ -1,0 +1,16 @@
+	!======================================================================
+	! SA_CLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SA_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('SA_CLASS',SA_CLASS.DEV$, STAT%)
+
+	SA_CLASS.NAME$ = SA_CLASS.DEV$+"SA_CLASS.TBL"
+
+	OPEN SA_CLASS.NAME$ FOR INPUT AS FILE SA_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SA_CLASS, &
+		PRIMARY KEY &
+			SA_CLASS::CLASS, &
+		ACCESS READ, ALLOW MODIFY
+

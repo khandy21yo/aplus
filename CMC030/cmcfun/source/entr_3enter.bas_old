@@ -1,0 +1,471 @@
+1	%TITLE "Enter (on Screen) with Edit"
+	%SBTTL "ENTR_3ENTER"
+	%IDENT "V3.3"
+
+	FUNCTION INTEGER ENTR_3ENTER(SCOPE_STRUCT SCOPE, &
+		LONG XX_VDID, LONG CPOSY, LONG CPOSX, &
+		STRING XSTR, &
+		WORD START, WORD FLAG)
+
+	!
+	!		COPYRIGHT (C) 1986 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function is used to enter/edit a string on the screen
+	!	using the cursor movement keys (left and right) to
+	!	position the cursor inside of the string.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameter:
+	!
+	!	SCOPE
+	!		CMC Environment structure.
+	!
+	!	XX_VDID
+	!		Creates or deletes the window that holds the string.
+	!
+	!	CPOSY
+	!		The Y position (Horozontal) at which to start the entry.
+	!
+	!	CPOSX
+	!		The X position (Vertical) at which to start the entry.
+	!
+	!	XSTR
+	!		The string passed between the program and the user.
+	!		The program passes a default, and the user can edit it.
+	!
+	!	START
+	!		The passed variable that tells where to position the
+	!		cursor. (-1% defaults to 0%).
+	!
+	!	FLAG
+	!		.table
+	!		4% - Adds a forced keypunch mode.
+	!
+	!		8% - Sets a timeout.
+	!
+	!		16% - Force to upper case.
+	!
+	!		1024% - Don't handle any special keys.
+	!
+	!		4096% - Use blanks instead of underlines.
+	!		.endtable
+	!
+	!	Returned value
+	!		Enters a string on the screen and
+	!		positions the cursor inside of the string.
+	!
+	! Example:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:ENTR_3ENTER/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP ENTR_3ENTER
+	!	$ DELETE ENTR_3ENTER.OBJ;*
+	!
+	! Author:
+	!
+	!	06/21/84 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	08/30/84 - Kevin Handy
+	!		Added CTRL/U, delete line, delete word
+	!
+	!	06/26/86 - B. Craig Larsen
+	!		Added forced keypunch mode when (FLAG AND 4%) = 4%
+	!		and fixed the extra char bug.  Added a default key(F14)
+	!		which returns the original value of the field.
+	!		*****************************************************
+	!		** Note ** Default key changed to Control/R, since **
+	!		** Note ** F14 is defined as List Choices.	   **
+	!		*****************************************************
+	!
+	!	10/10/86 - B. Craig Larsen
+	!		FLAG AND 8% indicates a timeout requested and it is
+	!		passed into ENTRY where it is taken care of.
+	!
+	!	02/03/87 - Kevin Handy
+	!		Modified for SMG
+	!
+	!	06/24/87 - Kevin Handy
+	!		Modified for gold key
+	!
+	!	07/27/87 - Kevin Handy
+	!		Fixed problem with entering spaces.
+	!
+	!	09/15/87 - Kevin Handy
+	!		Fixed problem with timeouts.
+	!
+	!	01/20/88 - Kevin Handy
+	!		Added Control/H, Control/E to go to the front
+	!		or the end of the text.
+	!
+	!	02/03/88 - Kevin Handy
+	!		Fixed call to ENTRY so that all flag values
+	!		may pass through (this for flag and 1024).
+	!
+	!	02/09/89 - Kevin Handy
+	!		Modified to return SCOPE.EXIT as function value,
+	!		and return string through default value.
+	!		Also passes curser position as two integers
+	!		instead of a string.
+	!
+	!	09/22/89 - Kevin Handy
+	!		Modified for 4096% flag, in order to do away
+	!		with the function ENTR_NOLSTRING.
+	!		These two functions are similiar, and I didn't
+	!		like having two functions that were almost
+	!		identical.
+	!
+	!	11/15/89 - Kevin Handy
+	!		Taken from ENTR_ENTER.
+	!
+	!	05/29/90 - Kevin Handy
+	!		Modified to use ENTR_3ENTRYSTRING to be more
+	!		efficient.
+	!
+	!	06/01/90 - Kevin Handy
+	!		Fixed bug introduced in 05/29/90 that caused the
+	!		space bar on the first character position to act
+	!		funny.
+	!
+	!	08/21/90 - Frank F. Starman
+	!		Add 256 to the argument in ENTR_4SPECIALKEYS function.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!
+	!	XLEN%
+	!		Integer that holds the length of string.
+	!
+	!	WORK$
+	!		String used to force a different copy
+	!
+	!	CLEARFLAG%
+	!		Integer used to zero input string
+	!
+	!	CXPOS%
+	!		Integer telling the cursor position
+	!
+	!	NOCR%
+	!		Integer used to force keypunch mode
+	!
+	!	CPOSY
+	!		Long variable that holds the row.
+	!
+	!	CPOSX
+	!		Long variable that holds the column.
+	!
+	!	GETC$
+	!		String used to get one character.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPEDEF.COM"
+
+	!
+	! External functions
+	!
+	EXTERNAL WORD FUNCTION ENTR_4ENTRY
+	EXTERNAL WORD FUNCTION ENTR_3ENTRYSTRING
+	EXTERNAL WORD FUNCTION ENTR_4SPECIALKEYS
+
+	!
+	! Declare constants
+	!
+	DECLARE STRING CONSTANT WORDMARK = " ,.!?;:"
+
+	%PAGE
+
+ L500:
+	!
+	! Initilize information
+	!
+	XLEN%		= LEN(XSTR)			! Length of string
+	WORK$		= XSTR + ''			! Force different copy
+	CLEARFLAG%	= (START = -1%)			! Zero input string?
+	CXPOS%		= START				! Cursor position
+	CXPOS%		=     0% IF START = -1%		! default to 0.
+	NOCR%		=     0%			! Forced keypunch mode
+	NOCR%		=   128% IF (FLAG AND 4%)	! default to 0(normal)
+	IF (FLAG AND 4096%)
+	THEN
+		BLANK_CHAR$ = " "
+	ELSE
+		BLANK_CHAR$ = "_"
+	END IF
+	BLANK_CHAR% = ASCII(BLANK_CHAR$)
+
+	!
+	! Make the cursor appear
+	!
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, '0'L)
+
+	!
+	! Print the prompt to the user and initilize the cursor
+	!
+ L1000:
+	SMG_STATUS% = SMG$PUT_CHARS &
+	( &
+		XX_VDID,	! Window &
+		TRM$(WORK$) + STRING$(XLEN% - LEN(TRM$(WORK$)), BLANK_CHAR%) + &
+			" ",	! Message to display &
+		CPOSY,		! Line &
+		CPOSX		! Column &
+	)
+
+ L1100:	!
+	! Grab characters
+	!
+	SMG_STATUS% = SMG$SET_CURSOR_ABS &
+	( &
+		XX_VDID,	! Window &
+		CPOSY,		! Line &
+		CPOSX + CXPOS%	! Column &
+	)
+
+ L1110:	!
+	! Get one character
+	!
+	IF (RIGHT(WORK$, CXPOS%+1%) = "") AND (CXPOS% < XLEN%)
+	THEN
+		!
+		! We can read in a whole string (Better for CPU time if we
+		! can let the operating system do this)
+		!
+		GETC% = ENTR_3ENTRYSTRING(SCOPE, XX_VDID, 256% OR FLAG, &
+			LEN(WORK$) - CXPOS%, GETC$)
+		GETC% = ENTR_4SPECIALKEYS(SCOPE, XX_VDID by value, (256% OR FLAG) by value, GETC% BY VALUE) &
+			IF (FLAG AND 1024%) = 0%
+		GOTO NotAChar IF (GETC$ == "")
+		GETCFLAG% = -1%
+	ELSE
+		!
+		! We can only read in one character
+		!
+		GETC% = ENTR_4ENTRY(SCOPE, XX_VDID by value, (256% OR FLAG) by value)
+		GETC% = ENTR_4SPECIALKEYS(SCOPE, XX_VDID by value,(256% OR FLAG) by value, GETC% BY VALUE) &
+			IF (FLAG AND 1024%) = 0%
+		GETC$ = CHR$(GETC%)
+
+		!
+		! Handle special characters
+		!
+		GOTO NotAChar IF (GETC% < 32%) OR &
+			(GETC% >= 127% AND GETC% < 160%) OR (GETC% >= 255%)
+		GETCFLAG% = 0%
+	END IF
+
+	IF (CLEARFLAG%)
+	THEN
+		SMG_STATUS% = SMG$PUT_CHARS &
+		( &
+			XX_VDID,	! Window &
+			STRING$(LEN(WORK$)-1%, BLANK_CHAR%),	! Message to display &
+			CPOSY,		! Line &
+			CPOSX + 1%	! Column &
+		)
+		LSET WORK$ = ""
+	END IF
+
+	!
+	! If too many characters have been typed
+	!
+	IF (CXPOS% >= XLEN%)
+	THEN
+		SMG_STATUS% = SMG$RING_BELL(XX_VDID)
+		GOTO L1100
+	END IF
+
+	!
+	! Insert characters into string
+	!
+	GETC$ = EDIT$(GETC$, 32%) IF (FLAG AND 16%)
+	LSET WORK$ = LEFT(WORK$, CXPOS%) + GETC$ + RIGHT(WORK$, CXPOS% + 1%)
+
+	!TEMP$ = RIGHT(WORK$, CXPOS% + 1%)
+	TEMP$ = MID(WORK$, CXPOS% + 1%, LEN(GETC$)) + &
+		TRM$(RIGHT(WORK$, CXPOS% + LEN(GETC$) + 1%))
+	!TEMP$ = TEMP$ + STRING$(XLEN% - LEN(TEMP$), BLANK_CHAR%)
+
+	SMG_STATUS% = SMG$PUT_CHARS &
+	( &
+		XX_VDID,		! Window &
+		TEMP$, &
+		CPOSY,			! Line &
+		CPOSX + CXPOS%		! Column &
+	)
+
+	CXPOS%	= CXPOS% + LEN(GETC$)
+
+	CLEARFLAG% = 0%
+
+	!
+	! Auto-exit
+	!
+	IF (CXPOS% = XLEN%) AND (NOCR% <> 0%)
+	THEN
+		SCOPE::SCOPE_EXIT = 12%
+		GOTO L1140
+	END IF
+
+	GOTO L1100 UNLESS GETCFLAG%
+
+ NotAChar:
+	!
+	! Handle the exit character
+	!
+	CLEARFLAG% = 0%
+	SCOPE::SCOPE_EXIT = GETC%
+
+	SELECT GETC%
+		!
+		! Control/E - end of line
+		!
+		CASE SMG$K_TRM_CTRLE
+			CXPOS% = LEN(TRM$(WORK$))
+			GOTO L1100
+
+		!
+		! Control/H - Front of line
+		!
+		CASE SMG$K_TRM_CTRLH
+			CXPOS% = 0%
+			GOTO L1100
+
+		!
+		! Handle TAB (beep and ignore them)
+		!
+		CASE SMG$K_TRM_CTRLI
+			GOTO L1200
+
+		!
+		! If it was a normal character, handle adding it to string
+		!
+		CASE 0%,12%
+			GOTO L1100 IF (CXPOS% < XLEN%) OR (NOCR% = 0%)
+
+		!
+		! Test for left arrow
+		!
+		CASE SMG$K_TRM_LEFT
+			GOTO L1200 IF CXPOS% < 1%
+			CXPOS% = CXPOS% - 1%
+			GOTO L1100
+
+		!
+		! Test for right arrow
+		!
+		CASE SMG$K_TRM_RIGHT
+			GOTO L1200 IF CXPOS% >= XLEN%
+			CXPOS% = CXPOS% + 1%
+			GOTO L1100
+
+		!
+		! Delete
+		!
+		CASE SMG$K_TRM_DELETE
+			GOTO L1200 IF CXPOS% <= 0%
+			LSET WORK$ = LEFT(WORK$, CXPOS% - 1%) + &
+					RIGHT(WORK$, CXPOS% + 1%)
+			CXPOS% = CXPOS% - 1%
+
+			SMG_STATUS% = SMG$PUT_CHARS &
+			( &
+				XX_VDID,	! Window &
+				TRM$(RIGHT(WORK$, CXPOS% + 1%)) + BLANK_CHAR$, &
+				CPOSY,		! Line &
+				CPOSX + CXPOS%	! Column &
+			)
+			GOTO L1100
+
+		!
+		! Rub Line
+		!
+		CASE SMG$K_TRM_F12, SMG$K_TRM_CTRLU
+			LSET WORK$ = RIGHT(WORK$, CXPOS% + 1%)
+			CXPOS%	= 0%
+			GOTO L1000
+
+		!
+		! Rub Word
+		!
+		CASE SMG$K_TRM_F13
+			JUNK%	= CXPOS% - 1%
+			JUNK%	= JUNK% - 1% &
+				UNTIL INSTR(1%,WORDMARK,MID(WORK$, JUNK%, 1%)) &
+				OR JUNK% <= 0%
+			JUNK%	= 0% IF JUNK% < 0%
+			LSET WORK$ = LEFT(WORK$, JUNK%) + &
+				RIGHT(WORK$, CXPOS% + 1%)
+			CXPOS%	= JUNK%
+			GOTO L1000
+		!
+		! Restore the default
+		!
+		CASE SMG$K_TRM_CTRLR
+			GOTO L500
+
+	END SELECT
+
+ L1140:
+	!
+	! Any other exit sequence must mean that it is time to exit
+	!
+	ENTR_3ENTER = SCOPE::SCOPE_EXIT
+
+	LSET XSTR = WORK$
+
+	SMG_STATUS% = SMG$SET_CURSOR_ABS(XX_VDID, , '1'L)
+
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, '1'L)
+
+	START = CXPOS%
+
+	EXIT FUNCTION
+
+ L1200:	!
+	! Error condition
+	!
+	SMG_STATUS% = SMG$RING_BELL(SCOPE::SMG_KBID)
+
+	GOTO L1000
+
+	END FUNCTION

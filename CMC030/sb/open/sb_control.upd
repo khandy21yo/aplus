@@ -1,0 +1,16 @@
+	!======================================================================
+	! SB_CONTROL file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('SB_CONTROL',SB_CONTROL.DEV$, STAT%)
+
+	SB_CONTROL.NAME$ = SB_CONTROL.DEV$+"SB_CONTROL.CTR"
+
+	OPEN SB_CONTROL.NAME$ FOR INPUT AS FILE SB_CONTROL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_CONTROL, &
+		PRIMARY KEY &
+			SB_CONTROL::SYSTEM, &
+		ACCESS MODIFY, ALLOW NONE
+

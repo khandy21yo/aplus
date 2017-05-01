@@ -1,0 +1,16 @@
+	!======================================================================
+	! PR_UNPN_DESC file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_UNPN_DESC.CH%, STAT%)
+	CALL READ_DEVICE('PR_UNPN_DESC',PR_UNPN_DESC.DEV$, STAT%)
+
+	PR_UNPN_DESC.NAME$ = PR_UNPN_DESC.DEV$+"PR_UNPN_DESC.TBL"
+
+	OPEN PR_UNPN_DESC.NAME$ FOR INPUT AS FILE PR_UNPN_DESC.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_UNPN_DESC, &
+		PRIMARY KEY &
+			PR_UNPN_DESC::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

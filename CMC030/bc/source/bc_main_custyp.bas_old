@@ -1,0 +1,467 @@
+1	%TITLE "Customer Type Definition File Maintainence"
+	%SBTTL "BC_MAIN_CUSTYP"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BC_MAIN_CUSTYP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain AR to GL Table\* option in the BC Master Table
+	!	menu provides the means to access the file where Customer Types are
+	!	determined along with related Accounts Receivable and General
+	!	Ledger revenue account masks. (See Appendix for further information
+	!	on account masking techniques.)
+	!
+	! Index:
+	!	.x Table>Accounts Receivable to General Ledger
+	!	.x Accounts Receivable>To General Ledger Table
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BC_SOURCE:BC_MAIN_CUSTYP/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BC_MAIN_CUSTYP
+	!	$ DELETE BC_MAIN_CUSTYP.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	07/05/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/07/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/15/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTYP.HB"
+	MAP (BC_CUSTYP)		BC_CUSTYP_CDD		BC_CUSTYP
+	MAP (BC_CUSTYP_OLD) BC_CUSTYP_CDD	BC_CUSTYP_OLD, BC_CUSTYP2
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BC_CUSTYP) &
+		BC_CUSTYP.CH%, &
+		BC_CUSTYP.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	ON ERROR GOTO 29000
+
+	%PAGE
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "ARTOGL maintenance"
+		SMG_WINDOW::NHELP = "BC_MAIN_CUSTYP"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 3%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Unit Type"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		!
+		! Load in defaults for chart
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BC_CUSTYP.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if
+			! was that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BC_CUSTYP.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTYP.CRE"
+		BC_CUSTYP.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open
+		! with read access only.
+		!
+		%INCLUDE "SOURCE:[BC.OPEN]BC_CUSTYP.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BC_CUSTYP.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not able to open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BC_CUSTYP.CH%)
+
+		GOTO ExitFunction
+
+790		SMG_WINDOW::CHAN  = BC_CUSTYP.CH%
+		RESET #BC_CUSTYP.CH%
+		GET #BC_CUSTYP.CH%, REGARDLESS
+
+	%PAGE
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!******************************************************************
+
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	6,  1, "(01) Customer Type", &
+			8,  1, "(02) Description", &
+			10,  1, "(03) AR Account", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+20200	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display
+	! data, set defaults, and return the data back according to
+	! MFLAG.
+	!******************************************************************
+
+	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Eloop:		SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!
+	!	^*(01) Customer Type\*
+	!	.p
+	!	The ^*Customer Type\* field is provided to enter a user defined
+	!	number which will identify the type of a particular customer.
+	!	.p
+	!	The field provides two (2) spaces for an alphanumeric entry.
+	!
+	! Index:
+	!	.x Type>Customer
+	!	.x Customer>Type
+	!--
+
+			BC_CUSTYP::CUSTYP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;22", TEMP$, &
+				BC_CUSTYP::CUSTYP, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Description\*
+	!	.p
+	!	The ^*Description\* field provides the means to enter a brief
+	!	description for the customer type entered in field (01).
+	!	.p
+	!	The field will accommodate thirty (30) alphanumeric characters.
+	!
+	! Index:
+	!	.x Description
+	!
+	!--
+
+			BC_CUSTYP::DESCR = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"8;22", TEMP$, &
+				BC_CUSTYP::DESCR, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) AR Account\*
+	!	.p
+	!	The ^*AR Account\* field is used to enter a General Ledger
+	!	account number for Accounts Receivable.
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field will provide a
+	!	list of valid AR account numbers.
+	!
+	! Index:
+	!
+	!--
+
+			BC_CUSTYP::AR_ACCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;22", TEMP$, &
+				BC_CUSTYP::AR_ACCT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					BC_CUSTYP::AR_ACCT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO Eloop
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+		BC_MAIN_CUSTYP = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF BC_CUSTYP::CUSTYP = ""
+			THEN
+				BC_MAIN_CUSTYP = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #BC_CUSTYP.CH%, &
+						KEY#0% EQ BC_CUSTYP::CUSTYP + "", &
+						REGARDLESS
+
+					BC_MAIN_CUSTYP = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 3%
+			BC_MAIN_CUSTYP = FUNC_TESTENTRY( SMG_WINDOW, &
+				BC_CUSTYP::AR_ACCT, &
+				GL_CHART::DESCR, &
+				"BC", MLOOP, "PRG", &
+				"Account", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				GL_CHART::DESCR, 10%, 43%,, SMG$M_BOLD)
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+		TEMP$ = LEFT("Account Mask" + SPACE$(40%), 40%)
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			IF INSTR(1%, BC_CUSTYP::AR_ACCT, "?") = 0%
+			THEN
+				IF MAIN_WINDOW( GL_MAIN_CHART.ID, &
+					"Q0" + BC_CUSTYP::AR_ACCT) = 1%
+				THEN
+					TEMP$ = GL_CHART::DESCR
+				ELSE
+					TEMP$ = STRING$(40%, ASCII("?"))
+				END IF
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				TEMP$, 10%, 43%,, SMG$M_BOLD)
+		END IF
+
+20500	CASE OPT_SETOLD
+		BC_CUSTYP_OLD = BC_CUSTYP
+
+	CASE OPT_RESETOLD
+		BC_CUSTYP = BC_CUSTYP_OLD
+
+	CASE OPT_SETDEFAULT
+		BC_CUSTYP2 = BC_CUSTYP
+
+	CASE OPT_RESETDEFAULT
+		BC_CUSTYP = BC_CUSTYP2
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		CASE 1%
+
+			MVALUE = "Type Description                    " + &
+				"AR Account"
+
+		CASE 2%
+
+			MVALUE = "005,036"
+
+		CASE 3%
+
+			MVALUE = &
+				BC_CUSTYP::CUSTYP + " " + &
+				BC_CUSTYP::DESCR + " " + &
+				BC_CUSTYP::AR_ACCT
+
+		END SELECT
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BC_CUSTYP.CH%, KEY #0% GE BC_CUSTYP::CUSTYP + "", &
+				REGARDLESS
+
+		END SELECT
+
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap Errors
+	!***************************************************************
+	SELECT ERR
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BC_MAIN_CUSTYP = ERR
+		RESUME 770
+
+	CASE 760%
+		BC_MAIN_CUSTYP = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+	%PAGE
+
+32767	END FUNCTION

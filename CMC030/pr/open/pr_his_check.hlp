@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Check History is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__HIS__CHECK.ARC\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Payroll Check History
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__HIS__CHECK.ARC\*
+	!	.p
+	!	Payroll Check History.
+	!
+	! Index:
+	!	.x Payroll Check History
+	!	.x PR_HIS_CHECK
+	!--

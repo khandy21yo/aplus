@@ -1,0 +1,19 @@
+	!======================================================================
+	! UTL_EDI_CODELIST file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_EDI_CODELIST.CH%, STAT%)
+	CALL READ_DEVICE('UTL_EDI_CODELIST',UTL_EDI_CODELIST.DEV$, STAT%)
+
+	UTL_EDI_CODELIST.NAME$ = UTL_EDI_CODELIST.DEV$+"UTL_EDI_CODELIST.TBL"
+
+	OPEN UTL_EDI_CODELIST.NAME$ FOR INPUT AS FILE UTL_EDI_CODELIST.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_EDI_CODELIST, &
+		PRIMARY KEY &
+		( &
+			UTL_EDI_CODELIST::REFERENCE, &
+			UTL_EDI_CODELIST::CODE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

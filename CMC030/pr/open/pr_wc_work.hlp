@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Work File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__WC__WORK.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Work File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__WC__WORK.MAS\*
+	!	.p
+	!	Work File.
+	!
+	! Index:
+	!	.x Work File
+	!	.x PR_WC_WORK
+	!--

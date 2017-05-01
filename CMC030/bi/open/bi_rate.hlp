@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Medical Service Rate is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__RATE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Medical Service Rate
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__RATE.TBL\*
+	!	.p
+	!	Medical Service Rate.
+	!
+	! Index:
+	!	.x Medical Service Rate
+	!	.x BI_RATE
+	!--

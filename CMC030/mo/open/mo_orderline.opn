@@ -1,0 +1,25 @@
+	!======================================================================
+	! MO_ORDERLINE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_ORDERLINE.CH%, STAT%)
+	CALL READ_DEVICE('MO_ORDERLINE',MO_ORDERLINE.DEV$, STAT%)
+
+	MO_ORDERLINE.NAME$ = MO_ORDERLINE.DEV$+"MO_ORDERLINE_"+BATCH_NO$+".JRL"
+
+	OPEN MO_ORDERLINE.NAME$ FOR INPUT AS FILE MO_ORDERLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_ORDERLINE, &
+		PRIMARY KEY &
+		( &
+			MO_ORDERLINE::ORDNUM, &
+			MO_ORDERLINE::LIN &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			MO_ORDERLINE::MAKE, &
+			MO_ORDERLINE::ORDNUM, &
+			MO_ORDERLINE::LIN &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

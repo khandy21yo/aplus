@@ -1,0 +1,16 @@
+AD     Assets Depreciation                   H<HELP<*CMC:AD_SYSTEM.MNU
+AP     Account Payable System                H<HELP<*CMC:AP_SYSTEM.MNU
+AR     Accounts Receivable                   H<HELP<*CMC:AR_SYSTEM.MNU
+BM     Bill of Material System               H<HELP<*CMC:BM_SYSTEM.MNU
+CK     Check Deposit Reconciliation          H<HELP<*CMC:CK_SYSTEM.MNU
+IC     Inventory Control System              H<HELP<*CMC:IC_SYSTEM.MNU
+GL     General Ledger System                 H<HELP<*CMC:GL_SYSTEM.MNU
+EL     Equipment Ledger System               H<HELP<*CMC:EL_SYSTEM.MNU
+JC     Job Costing System                    H<HELP<*CMC:JC_SYSTEM.MNU
+MO     Manufacture Order System              H<HELP<*CMC:MO_SYSTEM.MNU
+OE     Order Entry System                    H<HELP<*CMC:OE_SYSTEM.MNU
+PO     Purchase Order System                 H<HELP<*CMC:PO_SYSTEM.MNU
+PR     Payroll System                        H<HELP<*CMC:PR_LL_SYSTEM.MNU
+SA     Sales Analysis System                 H<HELP<*CMC:SA_SYSTEM.MNU
+PS     Point of Sale System                  H<HELP<*CMC:PS_SYSTEM.MNU
+WP     Work in Process System                H<HELP<*CMC:WP_SYSTEM.MNU

@@ -1,0 +1,31 @@
+	!++
+	! Error:5
+	!	^*The Chart of Accounts is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__CHART.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Chart of Accounts
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__CHART.MAS\*
+	!	.B
+	!	.LM +5
+	!	Chart of Accounts.
+	!	Accounts used throughout the CMC A3 Systems. Definitions and numbers are
+	!	listed.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Chart of Accounts
+	!	.x GL_CHART
+	!
+	!--

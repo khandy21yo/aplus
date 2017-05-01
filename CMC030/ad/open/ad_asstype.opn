@@ -1,0 +1,16 @@
+	!======================================================================
+	! AD_ASSTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_ASSTYPE.CH%, STAT%)
+	CALL READ_DEVICE('AD_ASSTYPE',AD_ASSTYPE.DEV$, STAT%)
+
+	AD_ASSTYPE.NAME$ = AD_ASSTYPE.DEV$+"AD_ASSTYPE.TBL"
+
+	OPEN AD_ASSTYPE.NAME$ FOR INPUT AS FILE AD_ASSTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_ASSTYPE, &
+		PRIMARY KEY &
+			AD_ASSTYPE::ASSET_TYPE, &
+		ACCESS READ, ALLOW MODIFY
+

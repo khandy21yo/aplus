@@ -1,0 +1,719 @@
+1	%TITLE "PW Journal Line Item Maintenance"
+	%SBTTL "PW_MAIN_PWL1"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG PW_MAIN_PWL1(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 2000 BY
+	!
+	! Software Solutions, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions, Inc.
+	!
+	! Software Solutions, Inc. assumes no responsibility for the use
+	! or reliability of its software on equipment which is not
+	! supported by Software Solutions, Inc.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Line__items\* portion of this screen is used to indicate how
+	!	the transaction is to be allocated to various accounts and sub-codes.
+	!	.b
+	!	This portion of the screen will scroll, allowing as many as forty
+	!	(40) line item distributions to be made.
+	!	.lm -5
+	!
+	! Index:
+	!	.x PW Journal>Line Items
+	!	.x Line Items>PW Journal
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS PW_SOURCE:PW_MAIN_PWL1/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP PW_MAIN_PWL1
+	!	$ DELETE PW_MAIN_PWL1.OBJ;*
+	!
+	! Author:
+	!
+	!	01/11/2000 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:AP_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[PW.OPEN]PW_JL.HB"
+	MAP (PW_JL)	PW_JL_CDD		PW_JL
+	MAP (PW_JL_OLD)	PW_JL_CDD		PW_JL_OLD, PW_JL2
+
+	%INCLUDE "SOURCE:[PW.OPEN]PW_JH.HB"
+	MAP (PW_JH)		PW_JH_CDD		PW_JH
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE "SOURCE:[AP.OPEN]AP_VENDOR.HB"
+	MAP (AP_VENDOR)		AP_VENDOR_CDD	AP_VENDOR
+
+	!
+	! Create array to contain pointers and totals
+	!
+	RECORD RARRAY_RECORD
+		RFA	LINRFA		! Rfa pointer for record
+		STRING	JLINE = 4	! Line number
+		REAL	AMOUNT		! Amount for record
+		REAL	QTY		! Quanity for record
+	END RECORD
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (TT_PW_JL1) RARRAY_RECORD RARRAY(300%)
+
+	COM (TT_AR_JL1A) &
+		OPTITLE$ = 20%, &
+		OPTYPE$(5%) = 20%
+
+	COM (CH_PW_JH) &
+		PW_JH.CH%
+
+	COM (CH_PW_JL) &
+		PW_JL.CH%, &
+		PW_JL.READONLY%
+
+	COM (TT_PW_PW) &
+		BATCH_NO$ = 2%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Line items (1)"
+		SMG_WINDOW::NHELP = "PW_MAIN_PWL1"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 8%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 12%
+		SMG_WINDOW::NITEMS= 5%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::TOPLIN = 3%
+		SMG_WINDOW::BOTLIN = 7%
+
+		OPTITLE$ = "TYPE DESCRIPTION"
+		OPTYPE$(0%) = "5"
+		OPTYPE$(1%) = "BR   Broker"
+		OPTYPE$(2%) = "FR   Freight"
+		OPTYPE$(3%) = "OP   Outside Purchase"
+		OPTYPE$(4%) = "BC   Broker credit"
+		OPTYPE$(5%) = "FR   Freight credit"
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF PW_JL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF PW_JL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[PW.OPEN]PW_JL.CRE"
+		PW_JL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[PW.OPEN]PW_JL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		PW_JL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(PW_JL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = PW_JL.CH%
+		RESET #PW_JL.CH%
+		GET #PW_JL.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"(01)   (02)  (03)       (04)          (05)  " + &
+			"                                  ", &
+			1%, 1%, , SMG$M_REVERSE)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"Line   Type  Vendor     Item          Amount" + &
+			"                                  ", &
+			2%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Extra display stuff
+	!
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! Generate totals
+		!
+		AMOUNT = 0.0
+		QTY = 0.0
+
+		FOR I% = 1% TO SMG_WINDOW::TOTREC
+
+			AMOUNT = AMOUNT + RARRAY(I%)::AMOUNT
+			QTY    = QTY    + RARRAY(I%)::QTY
+
+		NEXT I%
+
+		!
+		! Display totals
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"Number of lines" + &
+			FORMAT$(SMG_WINDOW::TOTREC, "###") + &
+			"                                   " + &
+			FORMAT$(QTY, "###,###.###") + &
+			FORMAT$(AMOUNT, " ##,###,###.##"), &
+			SMG_WINDOW::VSIZE, 1%, , SMG$M_REVERSE)
+
+		!
+		! Paint lines on screen
+		!
+		FOR I% = 1% TO 5%
+
+			A% = VAL%(MID("007,013,024,038,063", I% * 4% - 3%, 3%))
+
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_WINDOW::WNUMBER, &
+				1%, A%, SMG_WINDOW::BOTLIN, A%)
+
+		NEXT I%
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		XLINE$ = NUM1$(SMG_WINDOW::CURLIN)
+
+		TEMP1% = SCOPE::SCOPE_EXIT
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Line _#\*
+	!	.b
+	!	.lm +5
+	!	The ^*Account _#\* field allows for entry of the General Ledger
+	!	account number corresponding to a particular line item. The account
+	!	number entered should have been established in the General Ledger
+	!	Chart of Accounts. If the number has not been entered in the Chart
+	!	of Accounts, it must be accomplished before the appropriate distribution
+	!	can be made. (The journal will not post if there is an unidentified
+	!	account number.)
+	!	.b
+	!	Valid General Ledger numbers may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Account>PW Journal
+	!	.x PW Journal>Account
+	!
+	!--
+			PW_JL::JLINE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";3", TEMP$, &
+				PW_JL::JLINE, MFLAG, "'LLL", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	.x Sub Account>PW Journal
+	!	^*(02) Sub Account\*
+	!	.b
+	!	.lm +5
+	!	The ^*Sub Account\* field is provided to enter a user defined code to
+	!	classify the information this line item represents. A Sub Account
+	!	would generally refer to a job or process code.
+	!	.lm -5
+	!
+	! Index:
+	!	.x PW Journal>Sub Account
+	!
+	!--
+			PW_JL::PRTYPE = ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";9", TEMP$, &
+				PW_JL::PRTYPE, MFLAG, &
+				"'L", MVALUE, &
+				OPTYPE$(), OPTITLE$, "005")
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	.x Category>PW Journal
+	!	^*(03) Category\*
+	!	.b
+	!	.lm +5
+	!	The ^*Category\* field is provided to enter a code which identifies
+	!	the category of a particular line item. Utilization of this field
+	!	is at the user's option, depending upon the results desired.
+	!	.b
+	!	If this field is utilized, valid values are:
+	!	.table 3,25
+	!	.te
+	!	^*S\* - Sales
+	!	.te
+	!	^*D\* - Discount
+	!	.te
+	!	^*F\* - Freight
+	!	.te
+	!	^*T\* - Sales Tax
+	!	.te
+	!	^*C\* - Cost of Sales
+	!	.te
+	!	^*I\* - Inventory
+	!	.te
+	!	^*O\* - Other
+	!	.end table
+	!	Valid Category codes may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x PW Journal>Category
+	!	.x PW Journal>Line Item Category>Sales
+	!	.x PW Journal>Line Item Category>Discount
+	!	.x PW Journal>Line Item Category>Freight
+	!	.x PW Journal>Line Item Category>Sales Tax
+	!	.x PW Journal>Line Item Category>Cost of Sales
+	!	.x PW Journal>Line Item Category>Inventory
+	!	.x PW Journal>Line Item Category>Other
+	!
+	!--
+			PW_JL::VENNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";14", TEMP$, &
+				PW_JL::VENNUM, MFLAG, "'LLLLLLLLL", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+
+			CASE SMG$K_TRM_F14
+				PW_JL::VENNUM = AP_VENDOR::VENNUM &
+					IF MAIN_WINDOW(AP_MAIN_VENDOR.ID, "VX") = 1%
+				GOTO E0Loop
+
+			CASE SMG$K_TRM_F17
+				ST% = MAIN_WINDOW(AP_MAIN_VENDOR.ID, &
+					"M0" + PW_JL::VENNUM )
+				GOTO E0Loop
+			END SELECT
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	.x Tax Type>PW Journal
+	!	^*(04) Tax Type\*
+	!	.b
+	!	.lm +5
+	!	The ^*Tax Type\* field refers to the taxability of a sale with
+	!	regard to sales tax.
+	!	.b
+	!	This field is bypassed unless the category (field 03) contains an
+	!	"*S" (Sales).
+	!	.b
+	!	Valid values are:
+	!	.table 3,25
+	!	.te
+	!	^*1\* - Taxable
+	!	.te
+	!	^*2\* - Service
+	!	.te
+	!	^*3\* - Freight
+	!	.te
+	!	^*4\* - Resale
+	!	.te
+	!	^*5\* - Out of state
+	!	.te
+	!	^*6\* - Churches, Schools, and Government
+	!	.end table
+	!	Valid Tax Type codes may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x PW Journal>Tax Type
+	!
+	!--
+			PW_JL::PRONUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";25", TEMP$, &
+				PW_JL::PRONUM, MFLAG, "'LLLLLLLLLLLL", MVALUE)
+
+		CASE 5%
+	!++
+	! Abstract:FLD005
+	!	.x PW Journal>Description
+	!	^*(05) Description\*
+	!	.b
+	!	.lm +5
+	!	The ^*Description\* field provides a means to enter a brief
+	!	description of the line item. Depending upon user requirements,
+	!	this field may be left blank.
+	!	.b
+	!	The field will accommodate twenty-one (21) characters.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Description>PW Journal
+	!
+	!--
+			PW_JL::EXT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";44", TEMP$, &
+				PW_JL::EXT, MFLAG, "######.##", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		PW_MAIN_PWL1 = 0%
+
+
+		SELECT MLOOP
+
+		CASE 2%
+			!
+			! Just to make the form stuff easier, let's stuff
+			! a description of the type into the description
+			! field.
+			!
+			FOR LOOP% = 1% TO VAL%(OPTYPE$(0%))
+
+				IF LEFT(OPTYPE$(LOOP%), 2%) = PW_JL::PRTYPE
+				THEN
+					PW_JL::DESCRIPTION = &
+						RIGHT(OPTYPE$(LOOP%), 6%)
+				END IF
+			NEXT LOOP%
+
+		CASE 3%
+			!
+			! Is the input defined?
+			!
+			PW_MAIN_PWL1 = FUNC_TESTENTRY(SMG_WINDOW, &
+				PW_JL::VENNUM, AP_VENDOR::VENNAM, &
+				"AP", MLOOP, "VENNUM", &
+				"Vendor number", AP_MAIN_VENDOR.ID)
+
+		END SELECT
+
+	!
+	! Set PW_JL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		PW_JL_OLD = PW_JL
+
+	!
+	! Restore PW_JL_OLD value
+	!
+	CASE OPT_RESETOLD
+		PW_JL = PW_JL_OLD
+		PW_JL::ORDNUM = PW_JH::ORDNUM
+		PW_JL::WINDOW = "1"
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		PW_JL2 = PW_JL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		PW_JL = PW_JL2
+		PW_JL::ORDNUM = PW_JH::ORDNUM
+		PW_JL::WINDOW = "1"
+
+		!
+		! Set special default values for the key of a new record
+		! which is the most likely case when this function is to
+		! be called.
+		!
+		IF SMG_WINDOW::TOTREC = 0%
+		THEN
+			PW_JL::JLINE = "0001"
+		ELSE
+			PW_JL::JLINE = &
+				FORMAT$(VAL%(RARRAY(SMG_WINDOW::TOTREC)::JLINE) + 1%, &
+				"<0>###")
+		END IF
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #PW_JL.CH%, &
+				KEY#0% GE PW_JL::ORDNUM + "1", &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle array of records
+	!
+27000	CASE OPT_ARRAY
+
+		!
+		! Select sub-option of array
+		!
+		SELECT MLOOP
+
+		!
+		! Load array with line items
+		!
+		CASE 1%
+
+			!
+			! Empty array
+			!
+			SMG_WINDOW::TOTREC = 0%
+
+27110			!
+			! Search for first record
+			!
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0% GE PW_JH::ORDNUM + "1", &
+				REGARDLESS
+
+27120			!
+			! Get a record
+			!
+			GET #SMG_WINDOW::CHAN
+
+			IF PW_JL::ORDNUM = PW_JH::ORDNUM AND &
+				PW_JL::WINDOW = "1"
+			THEN
+				!
+				! Add information to array
+				!
+				SMG_WINDOW::TOTREC = SMG_WINDOW::TOTREC + 1%
+				RARRAY(SMG_WINDOW::TOTREC)::LINRFA = &
+					GETRFA(SMG_WINDOW::CHAN)
+				RARRAY(SMG_WINDOW::TOTREC)::JLINE = &
+					PW_JL::JLINE
+				RARRAY(SMG_WINDOW::TOTREC)::AMOUNT = &
+					PW_JL::EXT
+				RARRAY(SMG_WINDOW::TOTREC)::QTY = &
+					PW_JL::QTY
+				GOTO 27120
+			END IF
+
+		!
+		! Remove one element of the array
+		!
+		CASE 2%
+			!
+			! Remove item pointed to by Mflag
+			!
+			FOR I% = MFLAG TO SMG_WINDOW::TOTREC - 1%
+				RARRAY(I%) = RARRAY(I% + 1%)
+			NEXT I%
+
+		!
+		! Set array item to current record
+		!
+		CASE 3%
+			RARRAY(MFLAG)::LINRFA = GETRFA(SMG_WINDOW::CHAN)
+			RARRAY(MFLAG)::JLINE = PW_JL::JLINE
+			RARRAY(MFLAG)::AMOUNT = PW_JL::EXT
+			RARRAY(MFLAG)::QTY = PW_JL::QTY
+
+		!
+		! Load in current record, locked
+		!
+		CASE 4%
+27200			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA
+
+		!
+		! Load in current record, unlocked
+		!
+		CASE 5%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA, &
+				REGARDLESS
+
+		!
+		! Change the current record's key to match header.  The
+		! new key is probibly passes through MVALUE, unless some
+		! other means is devised.
+		!
+		CASE 6%
+			PW_JL::ORDNUM = RIGHT(MVALUE, 2%)
+
+		END SELECT
+	END SELECT
+
+28000	EXIT FUNCTION
+
+	%PAGE
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		PW_MAIN_PWL1 = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		PW_MAIN_PWL1 = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	!
+	! Error while loading array
+	!
+	CASE 27110%
+		!
+		! Nothing to load
+		!
+		RESUME 28000
+
+	CASE 27120%
+		!
+		! Read all records
+		!
+		RESUME 28000 IF ERR = 11%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

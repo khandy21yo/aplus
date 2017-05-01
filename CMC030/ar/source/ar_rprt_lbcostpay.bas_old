@@ -1,0 +1,454 @@
+1	%TITLE "AR LB Cost Payment Report"
+	%SBTTL "AR_RPRT_LBCOSTPAY"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1991 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:AR0160
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Cost Payments\* Report option provides a report
+	!	that will print for a given period all Cost Payments received
+	!	from Clients and will show total received
+	!	at the Client/matter level.
+	!	Sort order of the Report will be date Sequence, Client and
+	!	matter sub-sequence.
+	!	The report includes a sub-total for each client with a date and a
+	!	total for the date.  A grand total for the report will also be shown.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Reports>Cost Payments
+	!	.x Cost Payments>Reports
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Author:
+	!
+	!	05/10/91 - Val James Allen
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_RPRT_LBCOSTPAY
+	!	$ LINK/EXE=AR_EXE:*.EXE AR_RPRT_LBCOSTPAY, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE AR_RPRT_LBCOSTPAY.OBJ;*
+	!
+	! Modification history:
+	!
+	!	06/14/93 - Kevin Handy
+	!		Added REGARDLESS to AR_OPEN_DIST.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_REPORTX"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN_DIST"
+	MAP	(AR_OPEN_DIST)	AR_OPEN_DIST_CDD	AR_OPEN_DIST
+
+	%INCLUDE %FROM %CDD "CDD$TOP.LB.LB_MATTER"
+	MAP	(LB_MATTER)	LB_MATTER_CDD	LB_MATTER
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP	(AR_35CUSTOM)	AR_35CUSTOM_CDD	AR_35CUSTOM
+
+
+	MAP	(AR_TEMP)	AR_TEMP.CLIENT$		= 10%,	&
+				AR_TEMP.DATE$		= 8%, &
+				AR_TEMP.MATTER$		= 10%, &
+				AR_TEMP.AMOUNT
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION PRNT_DATE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+
+	!
+
+	CALL ASSG_CHANNEL(AR_TEMP.CH%,STAT%)
+
+ Init:	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	PERIOD$		= EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Period\*
+	!	.b
+	!	.lm +5
+	!	The ^*Period\* field in the Cost Payments Report Setting
+	!	Screens provides the means to enter an accounting period for which
+	!	the report will print.
+	!	.b
+	!	An entry is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Period>Report>Cost Payments
+	!	.x Report>Period>Cost Payments
+	!
+	!--
+
+	CALL  READ_DEVICE("UTL_WORK", UTL_WORK.DEV$, STAT%)
+
+300	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN_DIST.OPN"
+
+
+320	!
+	! Open matter file
+	!
+	%INCLUDE "SOURCE:[LB.OPEN]LB_MATTER.OPN"
+
+
+330	!
+	! Open file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+350	CALL ENTR_3MESSAGE(SCOPE, "Creating temporary file.  Reading work files.", 1%)
+
+	OPEN UTL_WORK.DEV$ + "AR_TEMP.TMP" FOR OUTPUT AS FILE #AR_TEMP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_TEMP, &
+		PRIMARY KEY (AR_TEMP.DATE$, &
+			AR_TEMP.CLIENT$, AR_TEMP.MATTER$) DUPLICATES, &
+		TEMPORARY, &
+		BUFFER 32%, &
+		ACCESS MODIFY, ALLOW NONE
+
+400	!*******************************************************************
+	! Start putting stuff into AR_TEMP file
+	!*******************************************************************
+
+	FIND #AR_OPEN_DIST.CH%, KEY#1% GE PERIOD$, REGARDLESS
+410
+ GetFromHistory:
+	GET #AR_OPEN_DIST.CH%, REGARDLESS
+
+	GOTO ReportTitle IF AR_OPEN_DIST::UPDATED > PERIOD$
+
+	GOTO GetFromHistory IF AR_OPEN_DIST::LTYPE <> "2"
+
+	GOTO GetFromHistory IF AR_OPEN_DIST::TAXTYP <> "C"
+	!
+	! Build Temporary File now
+	!
+
+
+	AR_TEMP.AMOUNT		= AR_OPEN_DIST::AMOUNT
+	AR_TEMP.CLIENT$		= AR_OPEN_DIST::CUSNUM
+	AR_TEMP.DATE$		= AR_OPEN_DIST::POST_DATE
+	AR_TEMP.MATTER$		= AR_OPEN_DIST::SUBACCT
+
+450
+ AddRecord:
+	PUT #AR_TEMP.CH%
+
+	GOTO GetFromHistory
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) =	"LEGAL BILLING AR COST PAYMENT REPORT"
+	TITLE$(2%) =	"For Period " + PERIOD$
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!		 1234567890123456789012345678901234567890
+	TITLE$(4%) =    "Client#    ClientName              " + &
+			"       Matter#    RespStaff  Date           Amount"
+
+	TITLE$(5%) =	"."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	SPECDATE$ = ""
+	CLIENT$	= ""
+	MATTER$ = ""
+
+	RESET #AR_TEMP.CH%, KEY#0%
+
+ GetNextRec:
+17020	GET #AR_TEMP.CH%, REGARDLESS
+
+	IF SPECDATE$ <> AR_TEMP.DATE$
+	THEN
+		GOSUB 18010
+		GOSUB 18020
+		GOSUB 18030
+	END IF
+
+	IF CLIENT$ <> AR_TEMP.CLIENT$
+	THEN
+		GOSUB 18010
+		GOSUB 18020
+	END IF
+
+	IF MATTER$ <> AR_TEMP.MATTER$
+	THEN
+		GOSUB 18010
+	END IF
+
+
+	OVER_TOTAL = OVER_TOTAL + AR_TEMP.AMOUNT
+	DATE_TOTAL = DATE_TOTAL + AR_TEMP.AMOUNT
+	MATTER_TOTAL = MATTER_TOTAL + AR_TEMP.AMOUNT
+	CLIENT_TOTAL = CLIENT_TOTAL + AR_TEMP.AMOUNT
+
+	GOTO GetNextRec
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	!
+	GOSUB 18010
+	GOSUB 18020
+	GOSUB 18030
+
+
+	!
+	! Do grand total here
+	!
+	GOTO Exitprogram IF OVER_TOTAL = 0.0
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+	TEXT$ = SPACE$(62%) + "Grand Total: " + FORMAT$(OVER_TOTAL, "###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+ ExitProgram:
+17510	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+
+
+18010
+	!
+	! Sub-total the matter here
+	!
+	GOTO 18019 IF MATTER$ = ""
+
+	TEXT$ = CLIENT$ + " " + &
+		LEFT$(AR_35CUSTOM::CUSNAM, 30%) + " " + &
+		MATTER$ + " " + &
+		LB_MATTER::RESP_STAFF + " " + &
+		PRNT_DATE(SPECDATE$, 8%) + " " + &
+		FORMAT$(MATTER_TOTAL, "###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+18019
+	MATTER_TOTAL = 0.0
+	MATTER$ = AR_TEMP.MATTER$
+	GOSUB 18200
+
+	RETURN
+
+18020
+	!
+	!Sub-total Client here
+	!
+	GOTO 18029 IF CLIENT$ = ""
+
+	TEXT$ = SPACE$(75%)  + "=========="
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(61%) + "Client Total: " + FORMAT$(CLIENT_TOTAL, "###,###.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(75%)  + "=========="
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+18029
+	CLIENT_TOTAL = 0.0
+
+
+	CLIENT$ = AR_TEMP.CLIENT$
+	GOSUB 18200
+	GOSUB 18210
+
+	RETURN
+
+18030
+	!
+	! Subtotal date here
+	!
+	GOTO 18039 IF SPECDATE$ = ""
+
+	TEXT$ = SPACE$(75%)  + "**********"
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(63%) + "Date Total: " + FORMAT$(DATE_TOTAL, "###,###.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(75%)  + "**********"
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+18039
+	DATE_TOTAL = 0.0
+	SPECDATE$ = AR_TEMP.DATE$
+
+	RETURN
+
+18200
+	!
+	! Get responsible staff here
+	!
+	LB_MATTER::RESP_STAFF = ""
+
+	GET #LB_MATTER.CH%, KEY#0% EQ CLIENT$ + MATTER$, REGARDLESS
+
+ Leaveithere:
+	RETURN
+
+18210
+	AR_35CUSTOM::CUSNAM = STRING$(LEN(AR_35CUSTOM::CUSNAM), ASCII('?') )
+
+	GET #AR_35CUSTOM.CH%, KEY#0% EQ CLIENT$,REGARDLESS
+
+ NewClient:
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+			"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+
+	SELECT ERR
+		CASE 154%	! Locked record
+			SLEEP 1%
+			RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+		CASE 300%
+			FILENAME$ = "AR_OPEN_DIST"
+
+		CASE 320%
+			RESUME 330 IF ERR = 5%
+			FILENAME$ = "LB_MATTER"
+
+		CASE 330%
+			RESUME 350 IF ERR =  5%
+			FILENAME$ = "AR_35CUSTOM"
+
+		CASE 350%
+			FILENAME$ = "AR_TEMP"
+
+		CASE 400%
+			RESUME ExitProgram IF ERR = 155%
+			FILENAME$ = "AR_OPEN_DIST"
+
+		CASE 410%  ! End of file
+			RESUME ReportTitle IF ERR = 11%
+			FILENAME$ = "AR_OPEN_DIST"
+
+		CASE 17020%
+			RESUME ExitTotal IF ERR = 11%
+			FILENAME$ = "AR_TEMP"
+
+		CASE 18200%
+			RESUME Leaveithere IF ERR = 155% OR ERR = 9%
+			FILENAME$ = "LB_MATTER"
+
+		CASE 18210%	! Can't find record
+			RESUME NewClient IF ERR = 155% OR ERR = 9%
+			FILENAME$ = "AR_35CUSTOM"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

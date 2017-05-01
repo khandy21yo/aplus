@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Customer File Extra Information is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BA_CUSTOMEX.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Agency System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Customer File Extra Information
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BA__CUSTOMEX.MAS\*
+	!	.p
+	!	Customer File Extra Information.
+	!	the additional information concerning each customer.
+	!
+	! Index:
+	!	.x Customer File Extra Information
+	!	.x BA_CUSTOMEX
+	!
+	!--

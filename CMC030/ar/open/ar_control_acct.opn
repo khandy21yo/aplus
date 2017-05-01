@@ -1,0 +1,16 @@
+	!======================================================================
+	! AR_CONTROL_ACCT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CONTROL_ACCT.CH%, STAT%)
+	CALL READ_DEVICE('AR_CONTROL_ACCT',AR_CONTROL_ACCT.DEV$, STAT%)
+
+	AR_CONTROL_ACCT.NAME$ = AR_CONTROL_ACCT.DEV$+"AR_CONTROL_ACCT.CTR"
+
+	OPEN AR_CONTROL_ACCT.NAME$ FOR INPUT AS FILE AR_CONTROL_ACCT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CONTROL_ACCT, &
+		PRIMARY KEY &
+			AR_CONTROL_ACCT::ACCT, &
+		ACCESS READ, ALLOW MODIFY
+

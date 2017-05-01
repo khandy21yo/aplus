@@ -1,0 +1,19 @@
+	!======================================================================
+	! UTL_SYSTEM file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_SYSTEM.CH%, STAT%)
+	CALL READ_DEVICE('UTL_SYSTEM',UTL_SYSTEM.DEV$, STAT%)
+
+	UTL_SYSTEM.NAME$ = UTL_SYSTEM.DEV$+"UTL_SYSTEM.TBL"
+
+	OPEN UTL_SYSTEM.NAME$ FOR INPUT AS FILE UTL_SYSTEM.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_SYSTEM, &
+		PRIMARY KEY &
+			UTL_SYSTEM::SYSTEM, &
+		ALTERNATE KEY &
+			UTL_SYSTEM::DESCRIPTION &
+			CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,21 @@
+	!======================================================================
+	! GL_CHARTEX file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_CHARTEX.CH%, STAT%)
+	CALL READ_DEVICE('GL_CHARTEX',GL_CHARTEX.DEV$, STAT%)
+
+	GL_CHARTEX.NAME$ = GL_CHARTEX.DEV$+"GL_CHARTEX.MAS"
+
+	OPEN GL_CHARTEX.NAME$ FOR INPUT AS FILE GL_CHARTEX.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_CHARTEX, &
+		PRIMARY KEY &
+			GL_CHARTEX::ACCOUNT, &
+		ALTERNATE KEY &
+		( &
+			GL_CHARTEX::SYSTEM, &
+			GL_CHARTEX::CATEGORY &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

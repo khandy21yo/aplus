@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Type Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PD__PRODTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*PD\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Product Type Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PD__PRODTYPE.TBL\*
+	!	.p
+	!	Product Type Description.
+	!
+	! Index:
+	!	.x Product Type Description
+	!	.x PD_PRODTYPE
+	!--

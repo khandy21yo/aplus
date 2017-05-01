@@ -1,0 +1,625 @@
+1	%TITLE "Create Journal from Tuition Table"
+	%SBTTL "BT_SPEC_CREATE"
+	%IDENT "V3.6a Calico"
+
+	!
+	!	COPYRIGHT (C) 1988 BY
+	!	Computer Management Center, Inc.
+	!	Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*CREATE\* option is provided to create a Billing Tuition Journal
+	!	from the Tuition Table. If a journal already exists, the system will
+	!	prompt the user to confirm, ^*"Create a new journal? (Yes/No):No\*.
+	!	The default entry is "No", which may be accepted by pressing <Do>.
+	!	If a new journal is to be created the user may type "Y" and press
+	!	<Do>. A screen will be displayed where information concerning a
+	!	new journal may be entered.
+	!
+	! Index:
+	!	.x Create>Journal
+	!	.x Journal>Create Billing
+	!	.x Billing>Journal Create
+	!
+	! Option:
+	!
+	!
+	! Example:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_SPEC_CREATE
+	!	$ LINK/EXEC=BT_EXE:*.EXE BT_SPEC_CREATE, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BT_SPEC_CREATE.OBJ;*
+	!
+	! Author:
+	!
+	!	06/07/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	07/08/88 - Kevin Handy
+	!		Modified layout of tuition file and journal file
+	!		to have child name instead of pointing to the
+	!		employee master file.
+	!
+	!	07/28/88 - Kevin Handy
+	!		Modified to ask for default guardian type.
+	!
+	!	05/24/91 - Kevin Handy
+	!		Modified to close GL_PERIOD file as soon as possible.
+	!
+	!	04/14/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards.
+	!		Add include for BT_WINDOW.INC.
+	!		Lose extra channel on ASSG_FREECHANNEL
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/25/97 - Kevin Handy
+	!		Change 'val' to 'val%'
+	!
+	!	08/12/98 - Kevin Handy
+	!		Use 'FILENAME$' instead of 'SCOPE::PRG_PROGRAM'
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Includes
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BT_WINDOW.INC"
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.HB"
+	MAP (BT_CONTROL)	BT_CONTROL_CDD		BT_CONTROL
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALH.HB"
+	MAP (BT_JOURNALH)	BT_JOURNALH_CDD		BT_JOURNALH
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALL.HB"
+	MAP (BT_JOURNALL)	BT_JOURNALL_CDD		BT_JOURNALL
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_TUITION.HB"
+	MAP (BT_TUITION)	BT_TUITION_CDD		BT_TUITION
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CUSTYP.HB"
+	MAP (BT_CUSTYP)		BT_CUSTYP_CDD		BT_CUSTYP
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_PERIOD.HB"
+	MAP (GL_PERIOD)		GL_PERIOD_CDD		GL_PERIOD
+
+	!
+	! Functions
+	!
+	EXTERNAL LONG	FUNCTION FIND_FILEEXISTS
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilization
+	!*******************************************************************
+
+	ON ERROR GOTO 19000
+
+	CALL READ_INITIALIZE
+
+	!
+	! Look up device
+	!
+	CALL  READ_DEVICE("BT_JOURNALH", BT_JOURNALH.DEV$, STAT%)
+	CALL  READ_DEVICE("BT_JOURNALL", BT_JOURNALL.DEV$, STAT%)
+
+300	!
+	! Paint the background
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		18%, &
+		78%, &
+		SMG_SCREEN_DATA%, &
+		SMG$M_BORDER &
+	)
+
+	SMG_STATUS% = SMG$LABEL_BORDER &
+	( &
+		SMG_SCREEN_DATA%, &
+		"Create Journal from Tuition File " + &
+		TRM$(SCOPE::PRG_COMPANY), &
+		SMG$K_TOP &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		2%, &
+		2% &
+	)
+
+	!
+	! Does billing tuition journal exist
+	!
+	IF FIND_FILEEXISTS(BT_JOURNALH.DEV$ + "BT_JOURNALH.JRL", 0%) = 0%
+	THEN
+		GOTO 305
+	ELSE
+		SCOPE::PRG_ITEM = "CONFIRM"
+	!++
+	! Abstract:CONFIRM
+	!	^*Confirm\*
+	!	.p
+	!	The ^*Confirm\* field provides for user confirmation of the creation of
+	!	a new journal when the journal already exists.
+	!
+	! Index:
+	!	.x Confirm>Create Journal
+	!	.x Create Journal>Confirm
+	!
+	!--
+		INP$ = ENTR_3YESNO(SCOPE, SCOPE::SMG_OPTION, &
+			"", "Journal exists  Create new " + &
+			"journal? Confirm - then press <Do> ", "N", 0%, "", "")
+
+		SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_OPTION, &
+			SPACE$(80%), 1%, 1%)
+
+		IF INP$ <> "Y"
+		THEN
+			CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+		END IF
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+			SPACE$(78%), 4%, 5%)
+	END IF
+
+	!
+	! Remove existing billing tuition journal
+	!
+	KILL BT_JOURNALH.DEV$ + "BT_JOURNALH.JRL" FOR I% = 1% TO 10%
+
+301	KILL BT_JOURNALL.DEV$ + "BT_JOURNALL.JRL" FOR I% = 1% TO 10%
+
+305	!
+	! Open G/L period file
+	!
+	%INCLUDE "SOURCE:[GL.OPEN]GL_PERIOD.OPN"
+
+	GET #GL_PERIOD.CH%, RECORD 1%
+
+	CLOSE #GL_PERIOD.CH%
+	CALL ASSG_FREECHANNEL(GL_PERIOD.CH%)
+
+310	!
+	! Open control file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.OPN"
+
+	GET #BT_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	IF BT_CONTROL::FLAG = "1"
+	THEN
+		CALL HELP_3MESSAGE(SCOPE, "BT Purge in process", &
+			"ERR", "BT_PURGE", "ERROR_PURGE")
+		GOTO ExitProgram
+	END IF
+
+	CUR_PERIOD%	= BT_CONTROL::LASTPERCLOSE + 1%
+	YEAR$		= BT_CONTROL::YEAR
+
+	IF CUR_PERIOD% > GL_PERIOD::FPFY
+	THEN
+		CUR_PERIOD% = 1%
+		YEAR$ = FORMAT$(VAL%(YEAR$) + 1%, "<0>###")
+	END IF
+
+	YYYY_PP$ = YEAR$ + "_" + FORMAT$(CUR_PERIOD%, "<0>#")
+
+320	!
+	! Open control account file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_TUITION.OPN"
+
+330	!
+	! Open reconciliation file (Create it if necessary)
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALH.CRE"
+
+340	!
+	! Open reconciliation file (Create it if necessary)
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALL.CRE"
+
+350	!
+	! Open file with extra customer information
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.OPN"
+
+360	!
+	! Open file with extra customer information
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CUSTYP.OPN"
+
+	%PAGE
+
+700	!******************************************************************
+	! Ask for the Period to be updated.
+	!******************************************************************
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Billing period is " + &
+		FORMAT$(CUR_PERIOD%, "<0>#") + "_" + YEAR$, 3%, 15%)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Date to Create Journal for", 5%, 15%)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Default Guardian type (for Accounting)", 7%, 15%)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Guardian # to be billed", 9%, 15%)
+
+	FOR_DATE$ = DATE_TODAY
+	DEFAULT_TYPE$ = "  "
+
+710	SCOPE::PRG_ITEM = "FLD01DATE"
+	!++
+	! Abstract:FLD01DATE
+	!	^*Tuituion Date\*
+	!	.p
+	!
+	! Index:
+	!	.x Tuituion Date
+	!
+	!--
+
+	FOR_DATE$ = ENTR_3DATE(SCOPE, SMG_SCREEN_DATA%, "5;43", &
+		"Date for Journal ", FOR_DATE$, &
+		0%, "", "")
+
+	SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_OPTION, SPACE$(80%), 1%, 1%)
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	!
+	! Exit keys
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_F8, SMG$K_TRM_CTRLC, &
+		SMG$K_TRM_CTRLZ
+
+		CALL ENTR_3MESSAGE(SCOPE, "Aborting", 1%)
+		GOTO ExitProgram
+
+	!
+	! Up key
+	!
+	CASE SMG$K_TRM_UP
+		GOTO 710
+
+	!
+	! Normal keys
+	!
+	CASE SMG$K_TRM_DO, SMG$K_TRM_CR, SMG$K_TRM_LF, &
+		SMG$K_TRM_CTRLL, SMG$K_TRM_DOWN
+
+	!
+	! Unknown keys
+	!
+	CASE ELSE
+		CALL ENTR_3BADKEY(SCOPE,SCOPE::SCOPE_EXIT)
+		GOTO 710
+	END SELECT
+
+720	SCOPE::PRG_ITEM = "FLD02DEFTYPE"
+	!++
+	! Abstract:FLD02DEFTYPE
+	!	^*Gardian Type\*
+	!	.p
+	!	Enter a gardian type.
+	!
+	! Index:
+	!
+	!--
+	DEFAULT_TYPE$ = ENTR_3STRING(SCOPE, SMG_SCREEN_DATA%, "7;54", &
+		"Default Type ", DEFAULT_TYPE$, &
+		0%, "'E", "")
+
+	SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_OPTION, SPACE$(80%), 1%, 1%)
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	!
+	! Exit Key
+	!
+	CASE SMG$K_TRM_F10, SMG$K_TRM_F8, SMG$K_TRM_CTRLC, &
+		SMG$K_TRM_CTRLZ
+
+		CALL ENTR_3MESSAGE(SCOPE, "Aborting", 1%)
+		GOTO ExitProgram
+
+	!
+	! List Choices
+	!
+	CASE SMG$K_TRM_F14
+		IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+		THEN
+			IF (MAIN_WINDOW(BT_MAIN_CUSTYP.ID, "VX") = 1%)
+			THEN
+				DEFAULT_TYPE$ = BT_CUSTYP::CUSTYP
+			END IF
+			GOTO 720
+		END IF
+
+	!
+	! Up key
+	!
+	CASE SMG$K_TRM_UP
+		GOTO 710
+
+	!
+	! Down key
+	!
+	CASE SMG$K_TRM_DOWN
+		GOTO 720
+
+	!
+	! Normal key
+	!
+	CASE SMG$K_TRM_DO, SMG$K_TRM_CR, SMG$K_TRM_LF, &
+		SMG$K_TRM_CTRLL
+
+	CASE ELSE
+
+		CALL ENTR_3BADKEY(SCOPE,SCOPE::SCOPE_EXIT)
+		GOTO 720
+	END SELECT
+
+	%PAGE
+
+6000	!*******************************************************************
+	! Scan through BT_TUITION file, and add info to BT file.
+	!*******************************************************************
+
+	CALL ENTR_3MESSAGE(SCOPE, "Reading Tuition Table", 1%)
+
+	!
+	! Try pulling up the CONTROLACC record for this account number
+	!
+	RESET #BT_TUITION.CH%, KEY#0%
+
+6020	!
+	! Get the control account record
+	!
+	GET #BT_TUITION.CH%, REGARDLESS
+
+	!
+	! Skip if date out of range
+	!
+	IF (BT_TUITION::FROMDATE > FOR_DATE$) OR &
+		((FOR_DATE$ > BT_TUITION::TODATE) AND &
+		(BT_TUITION::TODATE <> "        "))
+	THEN
+		!
+		! Skip it
+		!
+		GOTO 6020
+	END IF
+
+6030	!
+	! Search for the customer record for this customer
+	!
+	AR_35CUSTOM::TTYPE = DEFAULT_TYPE$
+
+	GET #AR_35CUSTOM.CH%, KEY#0% EQ BT_TUITION::CUSNUM, REGARDLESS
+
+6040	!
+	! Pull in the customer type for this customer (If unable to find,
+	! the customer type is set to the DEFAULT_TYPE$
+	!
+	BT_CUSTYP::AR_ACCT = STRING$(LEN(BT_CUSTYP::AR_ACCT),ASCII("?"))
+	BT_CUSTYP::REV_MASK = STRING$(LEN(BT_CUSTYP::REV_MASK),ASCII("?"))
+	GET #BT_CUSTYP.CH%, KEY #0% EQ AR_35CUSTOM::TTYPE, REGARDLESS
+
+6050	!
+	! See if a header record already exists for this customer
+	!
+	GET #BT_JOURNALH.CH%, KEY #0% EQ BT_TUITION::CUSNUM, REGARDLESS
+
+	GOTO 6200
+
+6060	!
+	! Create a header record
+	!
+	BT_JOURNALH::CUSNUM	= BT_TUITION::CUSNUM
+	BT_JOURNALH::TRADAT	= FOR_DATE$
+	BT_JOURNALH::AR_ACCT	= BT_CUSTYP::AR_ACCT
+	BT_JOURNALH::INVNUM	= ""
+
+	PUT #BT_JOURNALH.CH%
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, BT_JOURNALH::CUSNUM, &
+		9%, 42%)
+
+6200	!
+	! Create line item record
+	!
+	BT_JOURNALL::CUSNUM	= BT_TUITION::CUSNUM
+	BT_JOURNALL::CHILD	= TRM$(BT_TUITION::CHILD) + ", Tuition"
+	BT_JOURNALL::RATE	= BT_TUITION::RATE
+	BT_JOURNALL::ACCT	= BT_TUITION::ACCOUNT
+
+	PUT #BT_JOURNALL.CH%
+
+	!
+	! Now check to see if the diaper rate applies to this kid.
+	!
+	IF BT_TUITION::DIAPER_RATE <> 0
+	THEN
+		BT_JOURNALL::CUSNUM	= BT_TUITION::CUSNUM
+		BT_JOURNALL::CHILD	= TRM$(BT_TUITION::CHILD) + &
+			", Diaper Service"
+		BT_JOURNALL::RATE	= BT_TUITION::DIAPER_RATE
+		BT_JOURNALL::ACCT	= BT_CUSTYP::REV_MASK
+
+		PUT #BT_JOURNALL.CH%
+	END IF
+
+6300	GOTO 6020
+
+	%PAGE
+
+	!*******************************************************************
+	! Exit the program
+	!*******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	!
+	! Handle record loBTs by sleeping for a while, then
+	! trying again.
+	!
+	IF ERR = 154%
+	THEN
+		SLEEP 5%
+		RESUME
+	END IF
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%	! Kill bill header file
+		RESUME 301
+
+	CASE 301%	! Kill bill line file
+		RESUME 305
+
+	CASE 305%
+		FILENAME$ = "GL_PERIOD"
+
+	CASE 310%
+		FILENAME$ = "BT_CONTROL"
+
+	CASE 320%
+		FILENAME$ = "BT_TUITION"
+
+	CASE 330%
+		FILENAME$ = "BT_JOURNALH"
+
+	CASE 340%
+		FILENAME$ = "BT_JOURNALL"
+
+	CASE 350%
+		FILENAME$ = "AR_35CUSTOM"
+
+	CASE 360%
+		FILENAME$ = "BT_CUSTYP"
+
+	!
+	! End of BT_TUITION file
+	!
+	CASE 6000%, 6020%
+		RESUME ExitProgram
+
+	!
+	! No customer record found, fake one
+	!
+	CASE 6030%
+		RESUME 6040
+
+	!
+	! No custyp record found, fake one
+	!
+	CASE 6040%
+		RESUME 6050
+
+	!
+	! No journal header record yet
+	!
+	CASE 6050%
+		RESUME 6060
+
+	!
+	! Duplicate keys, keep only first one
+	!
+	CASE 6200%
+		RESUME 6300 IF ERR = 134%
+		FILENAME$ = "BT_JOURNALL"
+
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	GOTO ExitProgram
+
+19999	END
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:BT_WINDOW.INC"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	EXTERNAL LONG FUNCTION BT_MAIN_CUSTYP
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE BT_MAIN_CUSTYP.ID
+
+		MAINT_GROUP = BT_MAIN_CUSTYP(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

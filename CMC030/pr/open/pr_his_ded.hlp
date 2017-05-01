@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Deduction History is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__HIS__DED.ARC\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Payroll Deduction History
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__HIS__DED.ARC\*
+	!	.p
+	!	Payroll Deduction History.
+	!
+	! Index:
+	!	.x Payroll Deduction History
+	!	.x PR_HIS_DED
+	!--

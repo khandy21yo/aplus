@@ -1,0 +1,233 @@
+1	%TITLE "Examination of Client Number"
+	%SBTTL "BS_EXAM_CLIENT"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BS_EXAM_CLIENT(STRING CLIENT, &
+		BS_CLIENT_CDD BS_CLIENT_EXAM)
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function, given an CLIENT number, will
+	!	return the record from the Billing for services CLIENT file
+	!	associated with this CLIENT number.
+	!
+	! Inputs:
+	!
+	!	CLIENT	is the given CLIENT number
+	!
+	! Outputs:
+	!
+	!	BS_CLIENT	is the record associated with the given
+	!		CLIENT number.
+	!	Returned Value	is CMC$_NORMAL if the search for the
+	!		record was successful, CMC$_UNDEFINED if the
+	!		record wasn't found, or CMC$_UNTERROR if there
+	!		was an error of some sort.
+	!
+	! Compile:
+	!
+	!	$ BAS BS_SOURCE:BS_EXAM_CLIENT
+	!	$ LIB FUNC_LIB:CMCFUN/REP BS_EXAM_CLIENT
+	!	$ DELETE BS_EXAM_CLIENT.OBJ;*
+	!
+	! Author:
+	!
+	!	09/27/89 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include special CMC codes
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[BS.OPEN]BS_CLIENT.HB"
+	MAP	(BS_CLIENT)	BS_CLIENT_CDD	BS_CLIENT
+	COM	(BS_CLIENT_INI)	BS_CLIENT_CDD	BS_CLIENT_INI
+
+	!
+	! Common memory areas
+	!
+	COM	(BS_EXAM_CLIENT.COM)		BS_CLIENT.CH%
+
+	DECLARE LONG EXIT_STATUS
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Set returned initial value (assume failure)
+	!
+	EXIT_STATUS = CMC$_UNDEFINED
+
+	%PAGE
+
+	!
+	! Open the AR CLIENT file if not already open
+	!
+100	IF BS_CLIENT.CH% <= 0%
+	THEN
+		BS_CLIENT_INI::CLIENT = &
+			STRING$(LEN(BS_CLIENT_INI::CLIENT),ASCII("?"))
+		BS_CLIENT_INI::CLIENTNAME = &
+			STRING$(LEN(BS_CLIENT_INI::CLIENTNAME),ASCII("?"))
+		BS_CLIENT_INI::ADD1 = &
+			STRING$(LEN(BS_CLIENT_INI::ADD1),ASCII("?"))
+		BS_CLIENT_INI::ADD2 = &
+			STRING$(LEN(BS_CLIENT_INI::ADD2),ASCII("?"))
+		BS_CLIENT_INI::CITY = &
+			STRING$(LEN(BS_CLIENT_INI::CITY),ASCII("?"))
+		BS_CLIENT_INI::STATE = &
+			STRING$(LEN(BS_CLIENT_INI::STATE),ASCII("?"))
+		BS_CLIENT_INI::ZIP = &
+			STRING$(LEN(BS_CLIENT_INI::ZIP),ASCII("?"))
+		BS_CLIENT_INI::COUNTRY = &
+			STRING$(LEN(BS_CLIENT_INI::COUNTRY),ASCII("?"))
+		BS_CLIENT_INI::COUNTY = &
+			STRING$(LEN(BS_CLIENT_INI::COUNTY),ASCII("?"))
+		BS_CLIENT_INI::ALPSRT = &
+			STRING$(LEN(BS_CLIENT_INI::ALPSRT),ASCII("?"))
+		BS_CLIENT_INI::PHONE = &
+			STRING$(LEN(BS_CLIENT_INI::PHONE),ASCII("?"))
+		BS_CLIENT_INI::BIRTHDATE = &
+			STRING$(LEN(BS_CLIENT_INI::BIRTHDATE),ASCII("0"))
+		BS_CLIENT_INI::SEX = &
+			STRING$(LEN(BS_CLIENT_INI::SEX),ASCII("?"))
+		BS_CLIENT_INI::ONSETDATE = &
+			STRING$(LEN(BS_CLIENT_INI::ONSETDATE),ASCII("0"))
+		BS_CLIENT_INI::TERMDATE = &
+			STRING$(LEN(BS_CLIENT_INI::TERMDATE),ASCII("0"))
+		BS_CLIENT_INI::SSTATUS = &
+			STRING$(LEN(BS_CLIENT_INI::SSTATUS),ASCII("?"))
+
+		%INCLUDE "SOURCE:[BS.OPEN]BS_CLIENT.OPN"
+	END IF
+
+	!
+	! Get the BS_CLIENT record and set it to be returned to the main program
+	!
+200	BS_CLIENT_EXAM = BS_CLIENT_INI
+	GET #BS_CLIENT.CH%, KEY #0% EQ CLIENT, REGARDLESS
+	BS_CLIENT_EXAM = BS_CLIENT
+
+	!
+	! Reset returned value for success
+	!
+	EXIT_STATUS = CMC$_NORMAL
+
+ ExitFunction:
+	BS_EXAM_CLIENT = EXIT_STATUS
+
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+
+	!
+	! Can't find BS_CLIENT file
+	!
+	CASE 100%
+		RESUME ExitFunction IF ERR = 5%
+		FILENAME$ = "BS_CLIENT"
+
+	!
+	! Undefined CLIENT Number
+	!
+	CASE 200%
+		RESUME ExitFunction IF (ERR = 155%) OR (ERR = 9%)
+		FILENAME$ = "BS_CLIENT"
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+	%PAGE
+
+32767	!******************************************************************
+	! End of function BS_EXAM_CLIENT
+	!******************************************************************
+	END FUNCTION

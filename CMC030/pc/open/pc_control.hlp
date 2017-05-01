@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Price Cost Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PC__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Price Cost Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PC__CONTROL.CTR\*
+	!	.p
+	!	Price Cost Control File.
+	!
+	! Index:
+	!	.x Price Cost Control File
+	!	.x PC_CONTROL
+	!--

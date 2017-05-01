@@ -1,0 +1,16 @@
+	!======================================================================
+	! SA_SALESMAN file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SA_SALESMAN.CH%, STAT%)
+	CALL READ_DEVICE('SA_SALESMAN',SA_SALESMAN.DEV$, STAT%)
+
+	SA_SALESMAN.NAME$ = SA_SALESMAN.DEV$+"SA_SALESMAN.MAS"
+
+	OPEN SA_SALESMAN.NAME$ FOR INPUT AS FILE SA_SALESMAN.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SA_SALESMAN, &
+		PRIMARY KEY &
+			SA_SALESMAN::SALESMAN, &
+		ACCESS READ, ALLOW MODIFY
+

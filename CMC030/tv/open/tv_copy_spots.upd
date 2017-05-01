@@ -1,0 +1,20 @@
+	!======================================================================
+	! TV_COPY_SPOTS file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TV_COPY_SPOTS.CH%, STAT%)
+	CALL READ_DEVICE('TV_COPY_SPOTS',TV_COPY_SPOTS.DEV$, STAT%)
+
+	TV_COPY_SPOTS.NAME$ = TV_COPY_SPOTS.DEV$+"TV_COPY_SPOTS.LED"
+
+	OPEN TV_COPY_SPOTS.NAME$ FOR INPUT AS FILE TV_COPY_SPOTS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TV_COPY_SPOTS, &
+		PRIMARY KEY &
+		( &
+			TV_COPY_SPOTS::FRMNUM, &
+			TV_COPY_SPOTS::SEQNUM, &
+			TV_COPY_SPOTS::SPOT_NUM &
+		)	, &
+		ACCESS MODIFY, ALLOW NONE
+

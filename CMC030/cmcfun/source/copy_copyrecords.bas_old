@@ -1,0 +1,103 @@
+1	%TITLE "Copy file function"
+	%SBTTL "COPY_COPYRECORDS"
+	%IDENT "V3.3"
+
+	FUNCTION INTEGER COPY_COPYRECORDS(SOURCE_FILE$, DEST_FILE$)
+
+	!
+	!	COPYRIGHT (C) 1993 BY
+	!	Computer Management Center, Inc.
+	!	Idaho Falls, Idaho  83402
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function copies one file into a ^*new\* file
+	!	on a record by record basis (restructuring the file).
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	SOURCE_FILE$
+	!		The file to read the records from.
+	!
+	!	DEST_FILE$
+	!		The file to be created.
+	!
+	!	Returned value
+	!		A status of 1 if returned when sucussful, and
+	!		a VMS status code otherwise.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:COPY_COPYRECORDS/NOLINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP COPY_COPYRECORDS
+	!	$ DELETE COPY_COPYRECORDS.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	11/19/93 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION CONV$PASS_FILES
+	EXTERNAL LONG FUNCTION CONV$PASS_OPTIONS
+	EXTERNAL LONG FUNCTION CONV$CONVERT
+
+100	!
+	! Set up file names to be copied
+	!
+	STATUS% = CONV$PASS_FILES(SOURCE_FILE$, DEST_FILE$)
+	IF (STATUS% AND 1%) = 0%
+	THEN
+		COPY_COPYRECORDS = STATUS%
+		EXIT FUNCTION
+	END IF
+
+200	!
+	! Set up convert options (I'm just going to use the defaults)
+	!
+	STATUS% = CONV$PASS_OPTIONS()
+	IF (STATUS% AND 1%) = 0%
+	THEN
+		COPY_COPYRECORDS = STATUS%
+		EXIT FUNCTION
+	END IF
+
+300	!
+	! Do the actual copy
+	!
+	STATUS% = CONV$CONVERT()
+	COPY_COPYRECORDS = STATUS%
+
+	END FUNCTION

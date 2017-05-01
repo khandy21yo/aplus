@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Cash Receipts Journal (Line) is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__CRJL.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Accounts Receivable System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Cash Receipts Journal (Line)
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__CRJL.JRL\*
+	!	.B
+	!	.LM +5
+	!	Cash Receipts Journal (Line).
+	!	.LM -5
+	!
+	! Index:
+	!	.x Cash Receipts Journal (Line)
+	!	.x AR_CRJL
+	!
+	!--

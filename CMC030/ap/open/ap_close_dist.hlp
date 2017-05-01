@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Closed Distribution Information is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__CLOSE__DIST.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by the closing process. Check the report 
+        !       setting	for selected history.
+	!
+	! Index:
+	!	.x Closed Distribution Information
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__CLOSE__DIST.LED\*
+	!	.p
+	!	Closed Distribution Information.
+	!
+	! Index:
+	!	.x Closed Distribution Information
+	!	.x AP_CLOSE_DIST
+	!--

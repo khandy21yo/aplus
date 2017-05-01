@@ -1,0 +1,15 @@
+	!=======================================================================
+	! 3000-3099	PP * Pacific Pride System
+	! This include file is used to DECLARE window numbers for PP system
+	!=======================================================================
+
+	DECLARE LONG CONSTANT PP_MAIN_CONTROL.ID		= 3000%
+	DECLARE LONG CONSTANT PP_MAIN_DISCOUNT.ID		= 3010%
+	DECLARE LONG CONSTANT PP_MAIN_CARD.ID			= 3020%
+	DECLARE LONG CONSTANT PP_MAIN_CARDEXEMPT.ID		= 3030%
+	DECLARE LONG CONSTANT PP_MAIN_SITE.ID			= 3040%
+	DECLARE LONG CONSTANT PP_MAIN_SITE_PRODUCT.ID		= 3050%
+	DECLARE LONG CONSTANT PP_MAIN_DAILY.ID			= 3060%
+	DECLARE LONG CONSTANT PP_MAIN_MONTHLY.ID		= 3070%
+	DECLARE LONG CONSTANT PP_MAIN_TRANTYPE.ID		= 3080%
+

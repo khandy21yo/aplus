@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Tax Package Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TAX__PKG.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Tax Package Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TAX__PKG.TBL\*
+	!	.p
+	!	Payroll Tax Package Table.
+	!
+	! Index:
+	!	.x Payroll Tax Package Table
+	!	.x PR_TAX_PKG
+	!--

@@ -1,0 +1,38 @@
+	!======================================================================
+	! OE_REGLINE file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_REGLINE.CH%, STAT%)
+	CALL READ_DEVICE('OE_REGLINE',OE_REGLINE.DEV$, STAT%)
+
+	OE_REGLINE.NAME$ = OE_REGLINE.DEV$+"OE_REGLINE.HIS"
+
+	OPEN OE_REGLINE.NAME$ FOR INPUT AS FILE OE_REGLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_REGLINE, &
+		PRIMARY KEY &
+		( &
+			OE_REGLINE::ORDNUM, &
+			OE_REGLINE::LIN, &
+			OE_REGLINE::TRANTYPE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			OE_REGLINE::PRODUCT, &
+			OE_REGLINE::ORDNUM, &
+			OE_REGLINE::LIN, &
+			OE_REGLINE::TRANTYPE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OE_REGLINE::BATCH, &
+			OE_REGLINE::ORDNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			OE_REGLINE::REFNUM, &
+			OE_REGLINE::TRANTYPE, &
+			OE_REGLINE::ORDNUM &
+		)	DUPLICATES CHANGES, &
+		
+

@@ -1,0 +1,1114 @@
+1	%TITLE "Journal Order Entry"
+	%SBTTL "MO_MAST_ORDERJOUR"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1990 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Journal Order Entry\* option
+	!	maintains entries for manufacturing orders. Each Journal File is assigned
+	!	a user batch number consisting of two (2) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Manufacturing Order Journal Entry
+	!
+	! Option:
+	!
+	!	MO_MAIN_ORDERJOUR$HELP
+	!	MO_MAIN_ORDERLINE$HELP
+	!	MO_MAIN_ORDERLINEOPT$HELP
+	!	PS_OUTP_TICKET$HELP
+	!	MO_OUTP_JOB$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS MO_SOURCE:MO_MAST_ORDERJOUR/LINE/NOOPT
+	!	$ LINK/EXE=MO_EXE: MO_MAST_ORDERJOUR, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE MO_MAST_ORDERJOUR.OBJ;*
+	!
+	! Author:
+	!
+	!	03/04/91 - Val James Allen
+	!
+	! Modification history:
+	!
+	!	06/08/92 - Dan Perkins
+	!		Use OE_MAIN_ORDERJOUR for header.
+	!
+	!	07/01/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	09/04/92 - Dan Perkins
+	!		Modifications to make _OUTP_ functions work in
+	!		an object library.
+	!
+	!	12/09/92 - Dan Perkins
+	!		Changed code so that we would stay in Orderline
+	!		until F-10 key is pressed, then go back to header
+	!		and fill out second page.
+	!
+	!	01/08/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	02/02/93 - Frank F. Starman
+	!		Use PS_MAIN_TICKETJOUR for header.
+	!
+	!	02/02/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	03/30/93 - Dan Perkins
+	!		Use PS_OUTP_TICKET to print forms.
+	!
+	!	04/05/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/05/93 - Dan Perkins
+	!		Call WP_OUTP_JOB to print WP jobs form.
+	!
+	!	04/11/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	05/04/93 - Dan Perkins
+	!		Pass order_number plus customer_number when calling
+	!		PS_OUTP_TICKET.
+	!
+	!	05/13/93 - Dan Perkins
+	!		Added code to OPT_AFTEROPT to prevent lines from
+	!		being lost when header key is changed.
+	!
+	!	06/11/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	02/24/94 - Kevin Handy
+	!		Modified call to MO_WRIT_ORDER, which creates
+	!		WP information, to use "OE_ORDERJOUR::ORDER"
+	!		instead of "MO_ORDERLINE::ORDER", so it will
+	!		create the correct order.
+	!
+	!	04/14/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!		Fix last parameter to ENTR_3CHOICE.
+	!		Add WP_MAIN_REQLINE.CH to WP_WINDOW.INC.
+	!
+	!	11/13/95 - Kevin Handy
+	!		Modified to open chart of accounts read-only,
+	!		so it doesn't get opened read/write later.
+	!
+	!	07/08/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/25/97 - Kevin Handy
+	!		Change 'val' to 'val%'
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	04/15/99 - Kevin Handy
+	!		Use WHEN ERROR IN
+	!
+	!	06/30/99 - Kevin Handy
+	!		Compile /NOOPT to lose problems on Alpha
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:PS_WINDOW.INC"
+
+	%INCLUDE "SOURCE:[PS.OPEN]PS_CASHREG.HB"
+	MAP (PS_CASHREG)	PS_CASHREG_CDD		PS_CASHREG
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP	(GL_CHART)	GL_CHART_CDD	GL_CHART
+
+	!
+	! This common area must be mapped in both the main program and
+	! in MAINT_GROUP.
+	!
+	COM (BATCH_NO) &
+		BATCH_NO$ = 7%
+
+	COM (CH_GL_CHART) &
+		GL_CHART.CH%, &
+		GL_CHART.READONLY%
+
+	%PAGE
+
+	!
+	! Initialize all the standard stuff through an external call
+	!
+	CALL READ_INITIALIZE
+
+	!
+	! Look up device
+	!
+	CALL READ_DEVICE("OE_ORDERJOUR", OE_ORDERJOUR.DEV$, STAT%)
+
+300	!
+	! Query user for year of file
+	!
+	CALL FIND_FILE(OE_ORDERJOUR.DEV$ + "OE_ORDERJOUR_*_%%.JRL", &
+		OE_ORDERJOUR_FILE$(), 16%, "", "")
+
+	OE_ORDERJOUR_FILE% = VAL%(OE_ORDERJOUR_FILE$(0%))
+
+	IF OE_ORDERJOUR_FILE%
+	THEN
+		FOR LOOP% = 1% TO OE_ORDERJOUR_FILE%
+			OE_ORDERJOUR_FILE$(LOOP%) = &
+				RIGHT(OE_ORDERJOUR_FILE$(LOOP%), 14%)
+		NEXT LOOP%
+
+		TEMP$ = "Order-Invoice Journal Batch"
+
+		X% = ENTR_3CHOICE(SCOPE, "", "", OE_ORDERJOUR_FILE$(), "", &
+			0%, TEMP$, "", 0%)
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(OE_ORDERJOUR_FILE$(X%), -1%)
+			GOTO 400
+		END IF
+	END IF
+
+	SELECT SCOPE::SCOPE_EXIT
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask for batch number
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		20%, &
+		80%, &
+		SMG_SCREEN_DATA% &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SCOPE::SMG_PBID, &
+		1%, &
+		1% &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, &
+		"Register Number:", 10%, 30%)
+
+	!
+	! Assign default register number
+	!
+	REG_NO$ = "????"
+
+310	!
+	! Set up the help message
+	!
+	SCOPE::PRG_ITEM = "FLD01REGNUM"
+
+	!++
+	! Abstract:FLD01REGNUM
+	!--
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 10%, 48%, REG_NO$, -1%, 16%)
+
+	CASE SMG$K_TRM_F14
+		IF MAIN_WINDOW(PS_MAIN_CASHREG.ID, "VX") = 1%
+		THEN
+			REG_NO$ = PS_CASHREG::CASHREG
+		END IF
+		GOTO 310
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+		OPTION$ = "EXIT"
+		GOTO ExitProgram
+
+	END SELECT
+
+	REG_NO$ = EDIT$(REG_NO$, -1%)
+
+	GOTO 310 IF INSTR(1%, REG_NO$, "?")
+
+	V% = MAIN_WINDOW(PS_MAIN_CASHREG.ID, "M0" + REG_NO$)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Batch number:", 11%, 30%)
+
+320	!
+	! Set up the help message
+	!
+	SCOPE::PRG_ITEM = "FLD02BATCH"
+
+	!++
+	! Abstract:FLD02BATCH
+	!--
+
+	!
+	! Assign default batch number
+	!
+	BATCH_NUM$ = "01"
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, &
+		11%, 48%, BATCH_NUM$, -1%, 16%)
+
+	CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+
+		OPTION$ = "EXIT"
+		GOTO ExitProgram
+
+	CASE SMG$K_TRM_UP
+
+		GOTO 310
+
+	END SELECT
+	BATCH_NUM$ = EDIT$(BATCH_NUM$, -1%)
+
+	IF LEN(TRM$(BATCH_NUM$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Please enter the batch number in XX format", 0%)
+		GOTO 320
+	END IF
+
+	BATCH_NO$ = REG_NO$ + "_" + BATCH_NUM$
+
+400	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+760	!
+	! Open chart of accounts read/only
+	!
+	WHEN ERROR IN
+		%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.OPN"
+	USE
+		CONTINUE 800
+	END WHEN
+
+	GL_CHART.READONLY% = -1%
+
+800	!
+
+1000	!******************************************************************
+	! Handle the main file
+	!******************************************************************
+
+	!
+	! Maintain file
+	!
+	V% = MAIN_WINDOW(PS_MAIN_TICKETJOUR.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+ ExitProgram:
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	GOTO ExitProgram
+
+	END
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	COM (BATCH_NO) &
+		BATCH_NO$ = 7%
+
+	COM (FORM_SELECT) FORM_S%
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:PS_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OE_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MO_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:SA_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:SB_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:WP_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[OE.OPEN]OE_ORDERJOUR.HB"
+	MAP (OE_ORDERJOUR)	OE_ORDERJOUR_CDD	OE_ORDERJOUR
+	MAP (OE_ORDERJOUR_OLD)	OE_ORDERJOUR_CDD	OE_ORDERJOUR_OLD
+	MAP (OE_ORDERJOUR_ONE)	OE_ORDERJOUR_CDD	OE_ORDERJOUR_ONE
+
+	%INCLUDE "SOURCE:[MO.OPEN]MO_ORDERLINE.HB"
+	MAP (MO_ORDERLINE)	MO_ORDERLINE_CDD	MO_ORDERLINE
+	MAP (MO_ORDERLINE_OLD)	MO_ORDERLINE_CDD	MO_ORDERLINE_OLD
+	MAP (MO_ORDERLINE_ONE)	MO_ORDERLINE_CDD	MO_ORDERLINE_ONE
+
+	%INCLUDE "SOURCE:[WP.OPEN]WP_ORDERLINE.HB"
+	MAP (WP_ORDERLINE)	WP_ORDERLINE_CDD	WP_ORDERLINE
+	MAP (WP_ORDERLINE_OLD)	WP_ORDERLINE_CDD	WP_ORDERLINE_OLD
+	MAP (WP_ORDERLINE_ONE)	WP_ORDERLINE_CDD	WP_ORDERLINE_ONE
+
+	%INCLUDE "SOURCE:[MO.OPEN]MO_MAKE.HB"
+	COM (MO_MAKE_READ)	MO_MAKE_CDD		MO_MAKE_READ
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+	EXTERNAL LONG FUNCTION GL_MAIN_CHART
+	EXTERNAL LONG FUNCTION MO_MAIN_MAKE
+	EXTERNAL LONG FUNCTION MO_MAIN_MAKE_LINE
+	EXTERNAL LONG FUNCTION MO_MAIN_MAKESIZE
+	EXTERNAL LONG FUNCTION MO_MAIN_MAKETYPE
+	EXTERNAL LONG FUNCTION MO_MAIN_MODEL
+	EXTERNAL LONG FUNCTION MO_MAIN_MODELCODE
+	EXTERNAL LONG FUNCTION MO_MAIN_MODEL_LINE
+	EXTERNAL LONG FUNCTION MO_MAIN_OPTION
+	EXTERNAL LONG FUNCTION MO_MAIN_OPTGROUP
+	EXTERNAL LONG FUNCTION MO_MAIN_ORDERLINE
+	EXTERNAL LONG FUNCTION MO_MAIN_ORDERLINEOPT
+	EXTERNAL LONG FUNCTION MO_WRIT_ORDER
+	EXTERNAL LONG FUNCTION OE_MAIN_CATEGORY
+	EXTERNAL LONG FUNCTION OE_MAIN_CREASON
+	EXTERNAL LONG FUNCTION OE_MAIN_ORDERTYPE
+	EXTERNAL LONG FUNCTION OE_MAIN_SALESTAX
+	EXTERNAL LONG FUNCTION OE_MAIN_SHIPTO
+	EXTERNAL LONG FUNCTION OE_MAIN_REGHEADER
+	EXTERNAL LONG FUNCTION OE_MAIN_REGLINE
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODUCT
+	EXTERNAL LONG FUNCTION PS_MAIN_CASHINOUT
+	EXTERNAL LONG FUNCTION PS_MAIN_CASHREG
+	EXTERNAL LONG FUNCTION PS_MAIN_TICKETJOUR
+	EXTERNAL LONG FUNCTION PS_MAIN_TICKETLINE
+	EXTERNAL LONG FUNCTION PS_OUTP_TICKET
+	EXTERNAL LONG FUNCTION SA_MAIN_SALESMAN
+	EXTERNAL LONG FUNCTION SB_MAIN_SUBACCOUNT
+	EXTERNAL LONG FUNCTION UT_MAIN_CARRIER
+	EXTERNAL LONG FUNCTION UT_MAIN_TERMS
+	EXTERNAL LONG FUNCTION UTL_MAIN_COUNTRY
+	EXTERNAL LONG FUNCTION UTL_MAIN_LOCATION
+	EXTERNAL LONG FUNCTION WP_MAIN_REQLINE
+	EXTERNAL LONG FUNCTION WP_MAIN_JOBLINE
+	EXTERNAL LONG FUNCTION WP_OUTP_JOB
+
+	%PAGE
+
+	SELECT SMG_WINDOW::IDENT
+
+	CASE PS_MAIN_TICKETJOUR.ID
+
+		MAINT_GROUP = PS_MAIN_TICKETJOUR(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_ENTRY
+			OE_ORDERJOUR_ONE = OE_ORDERJOUR
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " lmanU Lpart forM "    + &
+				"cOnf_print pacK_print inv_prinT " + &
+				"wolineS "
+
+		CASE OPT_MOREMENU
+			OE_ORDERJOUR_ONE = OE_ORDERJOUR
+
+			SELECT EDIT$(MVALUE, -1%)
+
+			CASE "LMANU"
+	!++
+	! Abstract:LINE_MANU
+	!--
+				MAINT_GROUP = MAIN_WINDOW( &
+					MO_MAIN_ORDERLINE.ID, "")
+
+			CASE "LPART"
+	!++
+	! Abstract:LINE
+	!--
+				MAINT_GROUP = MAIN_WINDOW( &
+					PS_MAIN_TICKETLINE.ID, "")
+
+			CASE "FORM"
+	!++
+	! Abstract:FORM
+	!--
+			SOPTION$(1%) = "Confirmation"
+			SOPTION$(2%) = "Packing"
+			SOPTION$(3%) = "Invoice"
+			SOPTION$(4%) = "Production"
+
+ SelectSOption:
+			FORM_S% = ENTR_3CHOICE(SCOPE, "", "", SOPTION$(), "", &
+				0%, "Select Option", "", 0%)
+
+			SELECT SCOPE::SCOPE_EXIT
+
+			CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+				GOTO ExitFunction
+
+			END SELECT
+
+			SELECT FORM_S%
+
+			CASE 1%
+				V% = PS_OUTP_TICKET(OE_ORDERJOUR::ORDNUM + &
+					OE_ORDERJOUR::CUSNUM, &
+					BATCH_NO$, 4%)
+
+			CASE 2%
+				V% = PS_OUTP_TICKET(OE_ORDERJOUR::ORDNUM + &
+					OE_ORDERJOUR::CUSNUM, &
+					BATCH_NO$, 2%)
+
+			CASE 3%
+				V% = PS_OUTP_TICKET(OE_ORDERJOUR::ORDNUM + &
+					OE_ORDERJOUR::CUSNUM, &
+					BATCH_NO$, 0%)
+
+			CASE 4%
+				V% = WP_OUTP_JOB(OE_ORDERJOUR::ORDNUM, &
+					BATCH_NO$, 0%)
+
+			CASE ELSE
+				GOTO SelectSOption
+
+			END SELECT
+
+			CASE "INV_PRINT"
+	!++
+	! Abstract:INV_PRINT
+	!--
+				V% = PS_OUTP_TICKET(OE_ORDERJOUR::ORDNUM + &
+					OE_ORDERJOUR::CUSNUM, BATCH_NO$, 1%)
+
+			CASE "PACK_PRINT"
+	!++
+	! Abstract:PACK_PRINT
+	!--
+				V% = PS_OUTP_TICKET(OE_ORDERJOUR::ORDNUM + &
+					OE_ORDERJOUR::CUSNUM, BATCH_NO$, 3%)
+
+			CASE "CONF_PRINT"
+	!++
+	! Abstract:ORD_PRINT
+	!--
+				V% = PS_OUTP_TICKET(OE_ORDERJOUR::ORDNUM + &
+					OE_ORDERJOUR::CUSNUM, BATCH_NO$, 5%)
+
+			CASE "WOLINES"
+	!++
+	! Abstract:WOLINE
+	!--
+				MAINT_GROUP = MAIN_WINDOW(WP_MAIN_JOBLINE.ID, &
+					"")
+
+			END SELECT
+
+		CASE OPT_AFTEROPT
+
+			SELECT MVALUE
+
+			CASE "Add"
+				MAINT_GROUP = MO_WRIT_ORDER( &
+					OE_ORDERJOUR::ORDNUM, BATCH_NO$) &
+					IF OE_ORDERJOUR::REG_FLAG <> "Y"
+			!
+			! Need to remove under old key, and insert under
+			! (possibly) new key
+			!
+			CASE "Change", "Blank", "Initialize"
+				IF OE_ORDERJOUR::ORDNUM <> &
+					OE_ORDERJOUR_OLD::ORDNUM
+				THEN
+					OE_ORDERJOUR_ONE = OE_ORDERJOUR_OLD
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						MO_MAIN_ORDERLINE.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						PS_MAIN_TICKETLINE.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						WP_MAIN_JOBLINE.ID, "C")
+
+				END IF
+
+				!
+				! Check for location change and if so then reset
+				! inventory quantities from old location to new
+				! location.
+				!
+				IF OE_ORDERJOUR::LOCATION <> &
+					OE_ORDERJOUR_OLD::LOCATION
+				THEN
+					OE_ORDERJOUR_ONE = OE_ORDERJOUR_OLD
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						MO_MAIN_ORDERLINE.ID, "R")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						PS_MAIN_TICKETLINE.ID, "R")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						WP_MAIN_JOBLINE.ID, "R")
+				END IF
+
+			!
+			! Erase records in subwindow
+			!
+			CASE "Erase"
+				OE_ORDERJOUR_ONE = OE_ORDERJOUR
+				MAINT_GROUP = MAIN_WINDOW( &
+					MO_MAIN_ORDERLINE.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW( &
+					PS_MAIN_TICKETLINE.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW( &
+					WP_MAIN_JOBLINE.ID, "E")
+
+			END SELECT
+
+		CASE OPT_TESTENTRY
+
+			SELECT MLOOP
+
+			CASE 9%
+				IF MVALUE = "ADD"
+				THEN
+					OE_ORDERJOUR_ONE = OE_ORDERJOUR
+					V% = MAIN_WINDOW(MO_MAIN_ORDERLINE.ID, &
+						"A")
+					OE_ORDERJOUR = OE_ORDERJOUR_ONE
+
+				END IF
+
+			END SELECT
+
+		END SELECT
+
+	CASE MO_MAIN_ORDERLINE.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = OE_ORDERJOUR_ONE::ORDNUM
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = OE_ORDERJOUR::ORDNUM
+
+			CASE ELSE
+				MVALUE = OE_ORDERJOUR_ONE::ORDNUM
+
+			END SELECT
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " Options "
+
+		CASE OPT_MOREMENU
+			MO_ORDERLINE_ONE = MO_ORDERLINE
+
+			SELECT EDIT$(MVALUE, -1%)
+
+			!
+			! Options
+			!
+			CASE "OPTIONS"
+	!++
+	! Abstract:OPTIONS
+	!--
+				MAINT_GROUP = MAIN_WINDOW( &
+					MO_MAIN_ORDERLINEOPT.ID, "")
+
+			END SELECT
+
+		CASE OPT_AFTEROPT
+
+			SELECT MVALUE
+
+			!
+			! Need to remove under old key, and insert under
+			! (possibly) new key
+			!
+			CASE "Add"
+				MO_ORDERLINE_ONE = MO_ORDERLINE
+
+				MAINT_GROUP = MAIN_WINDOW( &
+					MO_MAIN_ORDERLINEOPT.ID, "A")
+
+				MO_ORDERLINE = MO_ORDERLINE_ONE
+
+			CASE "Change", "Blank", "Initialize"
+				IF MO_ORDERLINE::ORDNUM <> &
+					MO_ORDERLINE_OLD::ORDNUM
+				THEN
+					MO_ORDERLINE_ONE = MO_ORDERLINE_OLD
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						MO_MAIN_ORDERLINEOPT.ID, "C")
+				END IF
+
+				!
+				! Check for location change and if so then reset
+				! inventory quantities from old location to new
+				! location.
+				!
+				IF OE_ORDERJOUR::LOCATION <> &
+					OE_ORDERJOUR_OLD::LOCATION
+				THEN
+					MO_ORDERLINE_ONE = MO_ORDERLINE_OLD
+					OE_ORDERJOUR_ONE = OE_ORDERJOUR_OLD
+					MAINT_GROUP = MAIN_WINDOW( &
+						MO_MAIN_ORDERLINEOPT.ID, "R")
+				END IF
+
+				MAINT_GROUP = MO_WRIT_ORDER( &
+					MO_ORDERLINE::ORDNUM, BATCH_NO$) &
+					IF OE_ORDERJOUR::REG_FLAG <> "Y"
+
+			CASE "Erase"
+				MO_ORDERLINE_ONE = MO_ORDERLINE
+				MAINT_GROUP = MAIN_WINDOW( &
+					MO_MAIN_ORDERLINEOPT.ID, "E")
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = MO_MAIN_ORDERLINE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE WP_MAIN_JOBLINE.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = CONV_STRING( &
+				OE_ORDERJOUR_ONE::ORDNUM, CMC$_LEFT)
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = CONV_STRING( &
+					OE_ORDERJOUR::ORDNUM, CMC$_LEFT)
+
+			CASE ELSE
+				MVALUE = CONV_STRING( &
+					OE_ORDERJOUR_ONE::ORDNUM, CMC$_LEFT)
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = WP_MAIN_JOBLINE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " reQ "
+
+		CASE OPT_MOREMENU
+			WP_ORDERLINE_ONE = WP_ORDERLINE
+
+			SELECT EDIT$(MVALUE, -1%)
+
+			!
+			! Line
+			!
+			CASE "REQ"
+	!++
+	! Abstract:REQ
+	!--
+				MAINT_GROUP = MAIN_WINDOW( &
+					WP_MAIN_REQLINE.ID, "")
+
+			END SELECT
+
+		CASE OPT_AFTEROPT
+
+			SELECT MVALUE
+
+			!
+			! Add records in subwindow
+			!
+			CASE "Add"
+				WP_ORDERLINE_ONE = WP_ORDERLINE
+				MAINT_GROUP = MAIN_WINDOW( &
+					WP_MAIN_REQLINE.ID, "A")
+
+			!
+			! Need to remove under old key, and insert under
+			! (possibly) new key
+			!
+			CASE "Change", "Blank", "Initialize"
+				WP_ORDERLINE_ONE = WP_ORDERLINE_OLD
+
+				IF OE_ORDERJOUR::ORDNUM <> &
+					OE_ORDERJOUR_OLD::ORDNUM
+				THEN
+					MAINT_GROUP = MAIN_WINDOW( &
+						WP_MAIN_REQLINE.ID, "C")
+				END IF
+
+				!
+				! Check for location change and if so then reset
+				! inventory quantities from old location to new
+				! location.
+				!
+				IF OE_ORDERJOUR::LOCATION <> &
+					OE_ORDERJOUR_OLD::LOCATION
+				THEN
+					WP_ORDERLINE_ONE = WP_ORDERLINE_OLD
+					OE_ORDERJOUR_ONE = OE_ORDERJOUR_OLD
+					MAINT_GROUP = MAIN_WINDOW( &
+						WP_MAIN_REQLINE.ID, "R")
+				END IF
+
+			!
+			! Erase records in subwindow
+			!
+			CASE "Erase"
+				MAINT_GROUP = MAIN_WINDOW( &
+					WP_MAIN_REQLINE.ID, "E")
+
+			END SELECT
+
+		END SELECT
+
+	CASE MO_MAIN_ORDERLINEOPT.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = MO_ORDERLINE_ONE::ORDNUM + &
+				MO_ORDERLINE_ONE::LIN + &
+				MO_ORDERLINE_ONE::MAKE + &
+				MO_ORDERLINE_ONE::MODELCODE
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = MO_ORDERLINE::ORDNUM + &
+					MO_ORDERLINE::LIN + &
+					MO_ORDERLINE::MAKE + &
+					MO_ORDERLINE::MODELCODE
+
+			CASE ELSE
+				MVALUE = MO_ORDERLINE_ONE::ORDNUM + &
+					MO_ORDERLINE_ONE::LIN + &
+					MO_ORDERLINE_ONE::MAKE + &
+					MO_ORDERLINE_ONE::MODELCODE
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = MO_MAIN_ORDERLINEOPT(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MAKE.ID
+
+		MAINT_GROUP = MO_MAIN_MAKE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MAKE_LINE.ID
+
+			SELECT MOPTION
+
+			CASE OPT_SUBWIND
+
+				SELECT MLOOP
+
+				CASE 6%
+					MVALUE = MO_ORDERLINE::MAKE + &
+						MO_MAKE_READ::YEAR + &
+						MO_ORDERLINE::MTYPE + &
+						MO_ORDERLINE::MSIZE
+
+				CASE ELSE
+					MVALUE = MO_ORDERLINE::MAKE + &
+						MO_MAKE_READ::YEAR + &
+						MO_ORDERLINE::MTYPE + &
+						MO_ORDERLINE::MSIZE
+				END SELECT
+
+			END SELECT
+
+		MAINT_GROUP = MO_MAIN_MAKE_LINE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MODEL.ID
+
+		MAINT_GROUP = MO_MAIN_MODEL(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MODEL_LINE.ID
+
+		SELECT MOPTION
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = MO_ORDERLINE::MODELCODE + &
+					MO_ORDERLINE::MSIZE + &
+					MO_MAKE_READ::CLASS
+
+			CASE ELSE
+				MVALUE = MO_ORDERLINE_ONE::MODELCODE + &
+					MO_ORDERLINE_ONE::MSIZE + &
+					MO_MAKE_READ::CLASS
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = MO_MAIN_MODEL_LINE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MAKETYPE.ID
+
+		MAINT_GROUP = MO_MAIN_MAKETYPE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MAKESIZE.ID
+
+		MAINT_GROUP = MO_MAIN_MAKESIZE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_MODELCODE.ID
+
+		MAINT_GROUP = MO_MAIN_MODELCODE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_OPTGROUP.ID
+
+		MAINT_GROUP = MO_MAIN_OPTGROUP(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE MO_MAIN_OPTION.ID
+
+		MAINT_GROUP = MO_MAIN_OPTION(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE PS_MAIN_TICKETLINE.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = OE_ORDERJOUR_ONE::ORDNUM
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = OE_ORDERJOUR::ORDNUM
+
+			CASE ELSE
+				MVALUE = OE_ORDERJOUR_ONE::ORDNUM
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = PS_MAIN_TICKETLINE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_SHIPTO.ID
+
+		MAINT_GROUP = OE_MAIN_SHIPTO(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_ORDERTYPE.ID
+
+		MAINT_GROUP = OE_MAIN_ORDERTYPE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_SALESTAX.ID
+
+		MAINT_GROUP = OE_MAIN_SALESTAX(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_CATEGORY.ID
+
+		MAINT_GROUP = OE_MAIN_CATEGORY(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE AR_MAIN_35CUSTOM.ID
+
+		MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE UT_MAIN_CARRIER.ID
+
+		MAINT_GROUP = UT_MAIN_CARRIER(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE UT_MAIN_TERMS.ID
+
+		MAINT_GROUP = UT_MAIN_TERMS(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_LOCATION.ID
+
+		MAINT_GROUP = UTL_MAIN_LOCATION(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_COUNTRY.ID
+
+		MAINT_GROUP = UTL_MAIN_COUNTRY(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE SA_MAIN_SALESMAN.ID
+
+		MAINT_GROUP = SA_MAIN_SALESMAN(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE SB_MAIN_SUBACCOUNT.ID
+
+		MAINT_GROUP = SB_MAIN_SUBACCOUNT(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE PD_MAIN_PRODUCT.ID
+
+		MAINT_GROUP = PD_MAIN_PRODUCT(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE WP_MAIN_REQLINE.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = CONV_STRING(OE_ORDERJOUR_ONE::ORDNUM, &
+				CMC$_LEFT) + WP_ORDERLINE_ONE::LLINE
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = CONV_STRING(OE_ORDERJOUR::ORDNUM, &
+					CMC$_LEFT) + WP_ORDERLINE::LLINE
+
+			CASE ELSE
+				MVALUE = CONV_STRING(OE_ORDERJOUR_ONE::ORDNUM, &
+					CMC$_LEFT) + WP_ORDERLINE_ONE::LLINE
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = WP_MAIN_REQLINE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+
+	CASE OE_MAIN_REGHEADER.ID
+
+		MAINT_GROUP = OE_MAIN_REGHEADER(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_REGLINE.ID
+
+		MAINT_GROUP = OE_MAIN_REGLINE(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE GL_MAIN_CHART.ID
+
+		MAINT_GROUP = GL_MAIN_CHART(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE PS_MAIN_CASHREG.ID
+
+		MAINT_GROUP = PS_MAIN_CASHREG(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE PS_MAIN_CASHINOUT.ID
+
+		MAINT_GROUP = PS_MAIN_CASHINOUT(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	CASE OE_MAIN_CREASON.ID
+
+		MAINT_GROUP = OE_MAIN_CREASON(SMG_WINDOW, MOPTION, &
+			MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+ ExitFunction:
+	END FUNCTION
+
+30000	!*******************************************************************
+	! HACK to make it possible to store _OUTP_ functions in
+	! object library
+	!*******************************************************************
+
+	SUB FORM_LOADVAR(VARNAME$, REALVALUE, TEXTVALUE$)
+
+	COM (FORM_SELECT) FORM_S%
+
+	SELECT FORM_S%
+
+	CASE 4%
+		CALL WP_OUTP_JOB_LOADVAR(VARNAME$, REALVALUE, &
+			TEXTVALUE$)
+
+	CASE ELSE
+		CALL PS_OUTP_TICKET_LOADVAR(VARNAME$, REALVALUE, &
+			TEXTVALUE$)
+	END SELECT
+
+	END SUB

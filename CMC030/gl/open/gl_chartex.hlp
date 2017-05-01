@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Chart of Accounts System Extras is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__CHARTEX.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Chart of Accounts System Extras
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__CHARTEX.MAS\*
+	!	.B
+	!	.LM +5
+	!	Chart of Accounts System Extras.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Chart of Accounts System Extras
+	!	.x GL_CHARTEX
+	!
+	!--

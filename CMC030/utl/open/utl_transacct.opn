@@ -1,0 +1,20 @@
+	!======================================================================
+	! UTL_TRANSACCT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_TRANSACCT.CH%, STAT%)
+	CALL READ_DEVICE('UTL_TRANSACCT',UTL_TRANSACCT.DEV$, STAT%)
+
+	UTL_TRANSACCT.NAME$ = UTL_TRANSACCT.DEV$+"UTL_TRANSACCT.TBL"
+
+	OPEN UTL_TRANSACCT.NAME$ FOR INPUT AS FILE UTL_TRANSACCT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_TRANSACCT, &
+		PRIMARY KEY &
+		( &
+			UTL_TRANSACCT::TRANSTYPE, &
+			UTL_TRANSACCT::LOCATION, &
+			UTL_TRANSACCT::PRODTYPE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

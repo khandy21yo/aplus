@@ -1,0 +1,143 @@
+1	%TITLE "Read Service Rate"
+	%SBTTL "BS_READ_RATE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION REAL BS_READ_RATE(STRING XPRG, &
+		STRING XUOM, &
+		STRING XDATE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! Computer Management Center assumes no responsibility for the use
+	! or reliability of its software on equipment which is not supported
+	! by Computer Management Center.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function returns Service rate from the rate table
+	!
+	! Input:
+	!
+	!	XPRG is a program number
+	!	XUOM is a time unit of measure number
+	!	XDATE$   is date
+	!
+	! Output:
+	!
+	!	rate
+	!
+	! Example:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BS_SOURCE:BS_READ_RATE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BS_READ_RATE
+	!	$ DELETE BS_READ_RATE.OBJ;*
+	!
+	! Author:
+	!
+	!	09/26/89 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/23/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	COM (READ_BS_RATE) BS_RATE.CH%
+
+	%PAGE
+
+	%INCLUDE "SOURCE:[BS.OPEN]BS_RATE.HB"
+	MAP	(BS_RATE)	BS_RATE_CDD	BS_RATE
+
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION DATE_TODAY
+
+	ON ERROR GOTO 19000
+
+	!
+	! Set initial value
+	!
+	RATE = 0.
+	XDATE = DATE_TODAY IF XDATE=""
+
+1000	IF BS_RATE.CH% <= 0%
+	THEN
+		%INCLUDE "SOURCE:[BS.OPEN]BS_RATE.OPN"
+	END IF
+
+
+2000	FIND #BS_RATE.CH%, KEY#0% EQ XPRG + XUOM, REGARDLESS
+
+ GetNextRec:
+	GET #BS_RATE.CH%, REGARDLESS
+
+	GOTO Rate IF BS_RATE::PRG + BS_RATE::RATEUOM <>  XPRG + XUOM
+	GOTO RATE IF BS_RATE::EFFDATE > XDATE
+
+	RATE = BS_RATE::RATE
+
+	GOTO GetNextRec
+
+ Rate:
+	BS_READ_RATE = RATE
+
+	EXIT FUNCTION
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+	IF ERR=154%
+	THEN
+		SLEEP 1%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+	CASE 1000%
+		RESUME Rate IF ERR = 5%
+
+	CASE 2000%
+		RESUME Rate IF ERR = 9% OR ERR = 155% OR ERR = 11%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+	END FUNCTION

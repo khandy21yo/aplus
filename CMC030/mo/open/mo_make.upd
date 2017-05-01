@@ -1,0 +1,41 @@
+	!======================================================================
+	! MO_MAKE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MAKE.CH%, STAT%)
+	CALL READ_DEVICE('MO_MAKE',MO_MAKE.DEV$, STAT%)
+
+	MO_MAKE.NAME$ = MO_MAKE.DEV$+"MO_MAKE.MAS"
+
+	OPEN MO_MAKE.NAME$ FOR INPUT AS FILE MO_MAKE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MAKE, &
+		PRIMARY KEY &
+		( &
+			MO_MAKE::MAKE, &
+			MO_MAKE::YEAR, &
+			MO_MAKE::MTYPE, &
+			MO_MAKE::MSIZE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			MO_MAKE::YEAR, &
+			MO_MAKE::MAKE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_MAKE::MTYPE, &
+			MO_MAKE::MAKE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_MAKE::MSIZE, &
+			MO_MAKE::MAKE &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_MAKE::CLASS, &
+			MO_MAKE::MAKE &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

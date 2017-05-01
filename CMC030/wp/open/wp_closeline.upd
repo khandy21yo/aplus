@@ -1,0 +1,20 @@
+	!======================================================================
+	! WP_CLOSELINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_CLOSELINE.CH%, STAT%)
+	CALL READ_DEVICE('WP_CLOSELINE',WP_CLOSELINE.DEV$, STAT%)
+
+	WP_CLOSELINE.NAME$ = WP_CLOSELINE.DEV$+"WP_CLOSELINE_"+BATCH_NO$+".JRL"
+
+	OPEN WP_CLOSELINE.NAME$ FOR INPUT AS FILE WP_CLOSELINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_CLOSELINE, &
+		PRIMARY KEY &
+		( &
+			WP_CLOSELINE::JOB, &
+			WP_CLOSELINE::LFLAG, &
+			WP_CLOSELINE::VCLASS &
+		)	DUPLICATES , &
+		ACCESS MODIFY, ALLOW NONE
+

@@ -1,0 +1,24 @@
+	!======================================================================
+	! IC_STOREMAP file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_STOREMAP.CH%, STAT%)
+	CALL READ_DEVICE('IC_STOREMAP',IC_STOREMAP.DEV$, STAT%)
+
+	IC_STOREMAP.NAME$ = IC_STOREMAP.DEV$+"IC_STOREMAP.MAS"
+
+	OPEN IC_STOREMAP.NAME$ FOR INPUT AS FILE IC_STOREMAP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_STOREMAP, &
+		PRIMARY KEY &
+		( &
+			IC_STOREMAP::PRODUCT_NUM, &
+			IC_STOREMAP::LOCATION &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			IC_STOREMAP::LOCATION, &
+			IC_STOREMAP::PRODUCT_NUM &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,709 @@
+1	%TITLE "Sales Journal Line Item Maintenance"
+	%SBTTL "OS_MAIN_JLINE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG OS_MAIN_JLINE(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1999 BY
+	!
+	! Software Solutions Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Software Solutions Inc.
+	!
+	! Software Solutions Inc. assumes no responsibility for the use
+	! or reliability of its software on equipment which is not
+	! supported by Software Solutions Inc.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Line__items\* portion of this screen is used to indicate how
+	!	the transaction is to be allocated to various accounts and sub-codes.
+	!	.b
+	!	This portion of the screen will scroll, allowing as many as forty
+	!	(40) line item distributions to be made.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Line Items
+	!	.x Line Items>Sales Journal
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS OS_SOURCE:OS_MAIN_JLINE/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP OS_MAIN_JLINE
+	!	$ DELETE OS_MAIN_JLINE.OBJ;*
+	!
+	! Author:
+	!
+	!	04/13/99 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OS_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[OS.OPEN]OS_JMAIN.HB"
+	MAP (OS_JMAIN)		OS_JMAIN_CDD		OS_JMAIN
+
+	%INCLUDE "SOURCE:[OS.OPEN]OS_JLINE.HB"
+	MAP (OS_JLINE)		OS_JLINE_CDD		OS_JLINE
+	MAP (OS_JLINE_OLD)	OS_JLINE_CDD		OS_JLINE_OLD, OS_JLINE2
+
+	%INCLUDE "SOURCE:[OS.OPEN]OS_JOURNAL.HB"
+	MAP (OS_JOURNAL)	OS_JOURNAL_CDD		OS_JOURNAL
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[OS.OPEN]OS_BOM_LINE.HB"
+	MAP (OS_BOM_LINE)	OS_BOM_LINE_CDD		OS_BOM_LINE
+
+	!
+	! Create array to contain pointers and totals
+	!
+	RECORD RARRAY_RECORD
+		RFA	LINRFA		! Rfa pointer for record
+		STRING	LLINE = 4	! Line number
+		REAL	QUANTITY	! Amount for record
+	END RECORD
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (TT_OS_JLINE) RARRAY_RECORD RARRAY(300%)
+
+	COM (CH_OS_JOURNAL) &
+		OS_JOURNAL.CH%
+
+	COM (CH_OS_JLINE) &
+		OS_JLINE.CH%, &
+		OS_JLINE.READONLY%
+
+	COM (CH_OS_BOM_LINE) &
+		OS_BOM_LINE.CH%, &
+		OS_BOM_LINE.READONLY%
+
+	COM (TT_OS_JOURNAL) &
+		BATCH_NO$ = 2%
+
+	DECLARE RFA TEMP_RFA
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Components"
+		SMG_WINDOW::NHELP = "OS_MAIN_JLINE"
+		SMG_WINDOW::HSIZE = 68%
+		SMG_WINDOW::VSIZE = 12%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 7%
+		SMG_WINDOW::VPOS  = 7%
+		SMG_WINDOW::NITEMS= 4%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::TOPLIN = 3%
+		SMG_WINDOW::BOTLIN = 11%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF OS_JLINE.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF OS_JLINE.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		WHEN ERROR IN
+			%INCLUDE "SOURCE:[OS.OPEN]OS_JLINE.CRE"
+		USE
+			CONTINUE 760 IF ERR = 10%
+			OS_MAIN_JLINE = ERR
+			CONTINUE 770
+		END WHEN
+
+		OS_JLINE.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		WHEN ERROR IN
+			%INCLUDE "SOURCE:[OS.OPEN]OS_JLINE.OPN"
+		USE
+			OS_MAIN_JLINE = ERR
+			CONTINUE 770
+		END WHEN
+
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		OS_JLINE.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(OS_JLINE.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = OS_JLINE.CH%
+		WHEN ERROR IN
+			RESET #OS_JLINE.CH%
+			FIND #SMG_WINDOW::CHAN, &
+				KEY #0% GE OS_JOURNAL::ORDNUM + &
+				OS_JMAIN::JLINE, &
+				REGARDLESS
+		USE
+			CONTINUE 28500
+		END WHEN
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  (01) (02)     (03)           (04)            " + &
+			"                     ", &
+			1%, 1%, , SMG$M_REVERSE)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"  Line Category Product        Quantty         " + &
+			"                     ", &
+			2%, 1%, , SMG$M_REVERSE)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Extra display stuff
+	!
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		!
+		! Generate totals
+		!
+		QUANTITY = 0.0
+
+		FOR I% = 1% TO SMG_WINDOW::TOTREC
+
+			QUANTITY = QUANTITY + RARRAY(I%)::QUANTITY
+
+		NEXT I%
+
+		!
+		! Display totals
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			"Number of lines" + &
+			FORMAT$(SMG_WINDOW::TOTREC, "###") + &
+			"          " + &
+			FORMAT$(QUANTITY, "######.##") + &
+			SPACE$(31%), &
+			SMG_WINDOW::VSIZE, 1%, , SMG$M_REVERSE)
+
+		!
+		! Paint lines on screen
+		!
+		FOR I% = 1% TO 4%
+
+			A% = VAL%(MID("007,016,031,039", &
+				I% * 4% - 3%, 3%))
+
+			SMG_STATUS% = SMG$DRAW_LINE(SMG_WINDOW::WNUMBER, &
+				1%, A%, SMG_WINDOW::BOTLIN, A%)
+
+		NEXT I%
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		XLINE$ = NUM1$(SMG_WINDOW::CURLIN)
+
+		TEMP1% = SCOPE::SCOPE_EXIT
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Account _#\*
+	!	.b
+	!	.lm +5
+	!	The ^*Account _#\* field allows for entry of the General Ledger
+	!	account number corresponding to a particular line item. The account
+	!	number entered should have been established in the General Ledger
+	!	Chart of Accounts. If the number has not been entered in the Chart
+	!	of Accounts, it must be accomplished before the appropriate distribution
+	!	can be made. (The journal will not post if there is an unidentified
+	!	account number.)
+	!	.b
+	!	Valid General Ledger numbers may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Account>Sales Journal
+	!	.x Sales Journal>Account
+	!
+	!--
+			OS_JLINE::LLINE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";3", TEMP$, &
+				OS_JLINE::LLINE, MFLAG, "'LLL", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	.x Sub Account>Sales Journal
+	!	^*(02) Sub Account\*
+	!	.b
+	!	.lm +5
+	!	The ^*Sub Account\* field is provided to enter a user defined code to
+	!	classify the information this line item represents. A Sub Account
+	!	would generally refer to a job or process code.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Sub Account
+	!
+	!--
+			OS_JLINE::CATEGORY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";8", TEMP$, &
+				OS_JLINE::CATEGORY, MFLAG, &
+				"'LLLLLLL", MVALUE)
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	.x Category>Sales Journal
+	!	^*(03) Category\*
+	!	.b
+	!	.lm +5
+	!	The ^*Category\* field is provided to enter a code which identifies
+	!	the category of a particular line item. Utilization of this field
+	!	is at the user's option, depending upon the results desired.
+	!	.b
+	!	If this field is utilized, valid values are:
+	!	.table 3,25
+	!	.te
+	!	^*S\* - Sales
+	!	.te
+	!	^*D\* - Discount
+	!	.te
+	!	^*F\* - Freight
+	!	.te
+	!	^*T\* - Sales Tax
+	!	.te
+	!	^*C\* - Cost of Sales
+	!	.te
+	!	^*I\* - Inventory
+	!	.te
+	!	^*O\* - Other
+	!	.end table
+	!	Valid Category codes may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Category
+	!	.x Sales Journal>Line Item Category>Sales
+	!	.x Sales Journal>Line Item Category>Discount
+	!	.x Sales Journal>Line Item Category>Freight
+	!	.x Sales Journal>Line Item Category>Sales Tax
+	!	.x Sales Journal>Line Item Category>Cost of Sales
+	!	.x Sales Journal>Line Item Category>Inventory
+	!	.x Sales Journal>Line Item Category>Other
+	!
+	!--
+			OS_JLINE::PRODUCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";17", TEMP$, &
+				OS_JLINE::PRODUCT, MFLAG, "'LLLLLLLLLLLLL", &
+				MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+
+			CASE SMG$K_TRM_F14
+				PD_PRODUCT::PROD_TYPE = "??"
+				IF MAIN_WINDOW(PD_MAIN_PRODUCT.ID, "VX") = 1%
+				THEN
+					OS_JLINE::PRODUCT  = &
+						PD_PRODUCT::PRODUCT_NUM
+				END IF
+				GOTO E0Loop
+
+			CASE SMG$K_TRM_F17
+				IF MAIN_WINDOW(PD_MAIN_PRODUCT.ID, "M0") = 1%
+				THEN
+					OS_JLINE::PRODUCT = &
+						PD_PRODUCT::PRODUCT_NUM
+				END IF
+				GOTO E0Loop
+
+			END SELECT
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	.x Tax Type>Sales Journal
+	!	^*(04) Tax Type\*
+	!	.b
+	!	.lm +5
+	!	The ^*Tax Type\* field refers to the taxability of a sale with
+	!	regard to sales tax.
+	!	.b
+	!	This field is bypassed unless the category (field 03) contains an
+	!	"*S" (Sales).
+	!	.b
+	!	Valid values are:
+	!	.table 3,25
+	!	.te
+	!	^*1\* - Taxable
+	!	.te
+	!	^*2\* - Service
+	!	.te
+	!	^*3\* - Freight
+	!	.te
+	!	^*4\* - Resale
+	!	.te
+	!	^*5\* - Out of state
+	!	.te
+	!	^*6\* - Churches, Schools, and Government
+	!	.end table
+	!	Valid Tax Type codes may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales Journal>Tax Type
+	!
+	!--
+			OS_JLINE::QUANTITY = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				XLINE$ + ";32", TEMP$, &
+				OS_JLINE::QUANTITY, MFLAG, "####.##", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		OS_MAIN_JLINE = 0%
+
+		SELECT MLOOP
+
+		CASE 3%
+			MAINT_GROUP = FUNC_TESTENTRY(SMG_WINDOW, &
+				OS_JLINE::PRODUCT, &
+				PD_PRODUCT::DESCRIPTION, &
+				"IC", 1%, "PROG", &
+				"Product Number", PD_MAIN_PRODUCT.ID)
+
+		END SELECT
+
+	!
+	! Set OS_JLINE_OLD value
+	!
+20500	CASE OPT_SETOLD
+		OS_JLINE_OLD = OS_JLINE
+
+	!
+	! Restore OS_JLINE_OLD value
+	!
+	CASE OPT_RESETOLD
+		OS_JLINE = OS_JLINE_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		OS_JLINE2 = OS_JLINE
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		OS_JLINE = OS_JLINE2
+
+		!
+		! Set special default values for the key of a new record
+		! which is the most likely case when this function is to
+		! be called.
+		!
+		OS_JLINE::ORDNUM = OS_JOURNAL::ORDNUM
+		OS_JLINE::JLINE = OS_JMAIN::JLINE
+
+		IF SMG_WINDOW::TOTREC = 0%
+		THEN
+			OS_JLINE::LLINE = "0001"
+		ELSE
+			OS_JLINE::LLINE = &
+				FORMAT$(VAL%(RARRAY(SMG_WINDOW::TOTREC)::LLINE) + 1%, &
+				"<0>###")
+		END IF
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #OS_JLINE.CH%, &
+				KEY#0% GE OS_JLINE::ORDNUM + OS_JMAIN::JLINE, &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle array of records
+	!
+27000	CASE OPT_ARRAY
+
+		!
+		! Select sub-option of array
+		!
+		SELECT MLOOP
+
+		!
+		! Load array with line items
+		!
+		CASE 1%
+
+			!
+			! Empty array
+			!
+			SMG_WINDOW::TOTREC = 0%
+
+27110			!
+			! Search for first record
+			!
+			WHEN ERROR IN
+				FIND #SMG_WINDOW::CHAN, &
+					KEY #0% GE OS_JOURNAL::ORDNUM + &
+					OS_JMAIN::JLINE, &
+					REGARDLESS
+			USE
+				CONTINUE 28000
+			END WHEN
+
+27120			!
+			! Get a record
+			!
+			WHEN ERROR IN
+				GET #SMG_WINDOW::CHAN
+			USE
+				CONTINUE 28000 IF ERR = 11%
+			END WHEN
+
+			IF OS_JLINE::ORDNUM = OS_JOURNAL::ORDNUM AND &
+				OS_JLINE::JLINE = OS_JMAIN::JLINE
+			THEN
+				!
+				! Add information to array
+				!
+				SMG_WINDOW::TOTREC = SMG_WINDOW::TOTREC + 1%
+				RARRAY(SMG_WINDOW::TOTREC)::LINRFA = &
+					GETRFA(SMG_WINDOW::CHAN)
+				RARRAY(SMG_WINDOW::TOTREC)::LLINE = &
+					OS_JLINE::LLINE
+				RARRAY(SMG_WINDOW::TOTREC)::QUANTITY = &
+					OS_JLINE::QUANTITY
+				GOTO 27120
+			END IF
+
+		!
+		! Remove one element of the array
+		!
+		CASE 2%
+			!
+			! Remove item pointed to by Mflag
+			!
+			FOR I% = MFLAG TO SMG_WINDOW::TOTREC - 1%
+				RARRAY(I%) = RARRAY(I% + 1%)
+			NEXT I%
+
+		!
+		! Set array item to current record
+		!
+		CASE 3%
+			RARRAY(MFLAG)::LINRFA = GETRFA(SMG_WINDOW::CHAN)
+			RARRAY(MFLAG)::LLINE = OS_JLINE::LLINE
+			RARRAY(MFLAG)::QUANTITY = OS_JLINE::QUANTITY
+
+		!
+		! Load in current record, locked
+		!
+		CASE 4%
+27200			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA
+
+		!
+		! Load in current record, unlocked
+		!
+		CASE 5%
+			GET #SMG_WINDOW::CHAN, RFA RARRAY(MFLAG)::LINRFA, &
+				REGARDLESS
+
+		!
+		! Change the current record's key to match header.  The
+		! new key is probibly passes through MVALUE, unless some
+		! other means is devised.
+		!
+		CASE 6%
+			OS_JLINE::ORDNUM = RIGHT(MVALUE, 2%)
+
+		END SELECT
+	END SELECT
+
+28000	EXIT FUNCTION
+
+	%PAGE
+
+28500	!*******************************************************************
+	! Subroutine to load in a set of default values when there is'nt
+	! any for the current jmain record.
+	!*******************************************************************
+
+	!
+	! Look for first item
+	!
+	WHEN ERROR IN
+		GET #OS_BOM_LINE.CH%, &
+			KEY #0% EQ OS_JMAIN::PRODUCT, &
+			REGARDLESS
+	USE
+		CONTINUE 28590
+	END WHEN
+
+	LOOP% = 0%
+
+	WHILE OS_JMAIN::PRODUCT = OS_BOM_LINE::PRODUCT
+
+		LOOP% = LOOP% + 1%
+		OS_JLINE::ORDNUM = OS_JMAIN::ORDNUM
+		OS_JLINE::JLINE = OS_JMAIN::JLINE
+		OS_JLINE::LLINE = FORMAT$(LOOP%, "<0>###")
+		OS_JLINE::CATEGORY = OS_BOM_LINE::CATEGORY
+		OS_JLINE::PRODUCT = ""
+		OS_JLINE::QUANTITY = OS_BOM_LINE::QUANTITY
+		OS_JLINE::PRICE = 0.0
+
+		WHEN ERROR IN
+			PUT #OS_JLINE.CH%
+
+			GET #OS_BOM_LINE.CH%
+		USE
+			CONTINUE 28590
+		END WHEN
+	NEXT
+
+28590	GOTO 32767
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	!
+	! Unrecognized error, send back to caller
+	!
+	ON ERROR GO BACK
+
+32767	END FUNCTION

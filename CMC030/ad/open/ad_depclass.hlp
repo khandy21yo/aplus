@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Depreciation Class Definition Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__DEPCLASS.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Depreciation Class Definition Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__DEPCLASS.TBL\*
+	!	.p
+	!	Depreciation Class Definition Table.
+	!
+	! Index:
+	!	.x Depreciation Class Definition Table
+	!	.x AD_DEPCLASS
+	!--

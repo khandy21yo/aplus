@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Tax Register is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__REG__TAXWH.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Payroll Tax Register
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__REG__TAXWH.LED\*
+	!	.p
+	!	Payroll Tax Register.
+	!
+	! Index:
+	!	.x Payroll Tax Register
+	!	.x PR_REG_TAXWH
+	!--

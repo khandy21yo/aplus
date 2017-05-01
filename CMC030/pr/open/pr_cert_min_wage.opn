@@ -1,0 +1,16 @@
+	!======================================================================
+	! PR_CERT_MIN_WAGE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_CERT_MIN_WAGE.CH%, STAT%)
+	CALL READ_DEVICE('PR_CERT_MIN_WAGE',PR_CERT_MIN_WAGE.DEV$, STAT%)
+
+	PR_CERT_MIN_WAGE.NAME$ = PR_CERT_MIN_WAGE.DEV$+"PR_CERT_MIN_WAGE.TBL"
+
+	OPEN PR_CERT_MIN_WAGE.NAME$ FOR INPUT AS FILE PR_CERT_MIN_WAGE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_CERT_MIN_WAGE, &
+		PRIMARY KEY &
+			PR_CERT_MIN_WAGE::EFF_DATE, &
+		ACCESS READ, ALLOW MODIFY
+

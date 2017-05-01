@@ -1,0 +1,251 @@
+1	%TITLE "BT System Posting Function"
+	%SBTTL "BT_TRAN_POST"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BT_TRAN_POST( LONG OPT, &
+		LONG SUBOPT, &
+		STRING BATCH_NUMBER, &
+		STRING TITLE(), &
+		UTL_REPORTX_CDD UTL_REPORTX, &
+		STRING GLPERIOD)
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	! Index:
+	!	BT>POST
+	!	POST>BT
+	!
+	! Option:
+	!
+	!
+	! Inputs:
+	!
+	!	OPT
+	!		is the variable which decides what this
+	!		function will be doing each time it is run.
+	!		(i.e. OPT = OPT_CONFIRM is a signal to confirm
+	!		the post process with the user)
+	!
+	!	SUBOPT
+	!
+	!	BATCH_NUMBER
+	!
+	!	TITLE()
+	!		is the array holding the titles and headings
+	!		which will be printed on the final transmittal.
+	!
+	!	UTL_REPORTX
+	!		is a data structure used by all functions
+	!		and subprograms involved in printing reports and
+	!		posting transmittals.
+	!
+	!	GLPERIOD
+	!		contains the Year and Period (in YYYYPP
+	!		form) of the GL Year/Period Ledger.
+	!
+	! Outputs:
+	!
+	!	Returned Value	is CMC$_NORMAL when whatever this function
+	!		is doing has been done correctly, CMC$_WARNING when
+	!		there are easily (?) solved problems, or some other
+	!		value if REALLY bizarre things are going on.
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_TRAN_POST
+	!	$ LIB FUNC_LIB:CMCFUN/REP BT_TRAN_POST
+	!	$ DELETE BT_TRAN_POST.OBJ;*
+	!
+	! Author:
+	!
+	!	07/12/89 - Aaron Redd
+	!
+	! Modification History:
+	!
+	!	05/24/91 - Kevin Handy
+	!		Modified to close GL_PERIOD file as soon as possible.
+	!
+	!	04/12/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards.
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include special CMC code file
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions and MAPs/DECLAREs
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.HB"
+	MAP	(BT_CONTROL)	BT_CONTROL_CDD		BT_CONTROL
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_PERIOD.HB"
+	MAP	(GL_PERIOD)	GL_PERIOD_CDD		GL_PERIOD
+
+	!
+	! Declare variables and/or constants
+	!
+	DECLARE LONG EXIT_STATUS
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Assume success
+	!
+	EXIT_STATUS = CMC$_NORMAL
+
+	SELECT OPT
+
+	CASE OPT_POSTFILE
+
+		!
+		! Get BT_CONTROL information
+		!
+100		%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.MOD"
+		GET #BT_CONTROL.CH%, RECORD 1%
+
+		!
+		! Get GL_PERIOD information
+		!
+200		%INCLUDE "SOURCE:[GL.OPEN]GL_PERIOD.MOD"
+		GET #GL_PERIOD.CH%, RECORD 1%, REGARDLESS
+		CLOSE #GL_PERIOD.CH%
+		CALL ASSG_FREECHANNEL(GL_PERIOD.CH%)
+
+		IF (GL_PERIOD::FPFY = BT_CONTROL::LASTPERCLOSE)
+		THEN
+			BT_CONTROL::LASTPERCLOSE = 1%
+			BT_CONTROL::YEAR = &
+				FORMAT$(VAL%(BT_CONTROL::YEAR) + 1%, "<0>###")
+		ELSE
+			BT_CONTROL::LASTPERCLOSE = &
+				BT_CONTROL::LASTPERCLOSE + 1%
+		END IF
+
+300		UPDATE #BT_CONTROL.CH%
+
+	CASE ELSE
+		!
+		! Undefined option
+		!
+400		EXIT_STATUS = CMC$_NOOPTION
+
+	END SELECT
+
+ ExitFunction:
+	BT_TRAN_POST = EXIT_STATUS
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_PRINTMESS(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR), &
+		UTL_REPORTX, TITLE(), 0%)
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+	!
+	! Cannot open BT Control file
+	!
+	CASE 100%
+		FILENAME$ = "BT_CONTROL"
+
+	!
+	! Cannot open GL Control file
+	!
+	CASE 200%
+		FILENAME$ = "GL_PERIOD"
+
+	!
+	! Cannot update BT Control file
+	!
+	CASE 300%
+		FILENAME$ = "BT_CONTROL"
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+	%PAGE
+
+32000	!******************************************************************
+	! End of function BT_TRAN_POST
+	!******************************************************************
+	END FUNCTION

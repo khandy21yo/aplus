@@ -1,0 +1,38 @@
+	!======================================================================
+	! AR_OPEN file (create, open read/write purge)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_OPEN.CH_NEW%, STAT%)
+	CALL READ_DEVICE('AR_OPEN',AR_OPEN.DEV$, STAT%)
+
+	AR_OPEN.NAME_NEW$ = AR_OPEN.DEV$+"AR_OPEN.LED_NEW"
+
+	OPEN AR_OPEN.NAME_NEW$ FOR OUTPUT AS FILE AR_OPEN.CH_NEW%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_OPEN, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			AR_OPEN::CUSNUM, &
+			AR_OPEN::INVNUM, &
+			AR_OPEN::TRATYP &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			AR_OPEN::BATCH, &
+			AR_OPEN::CUSNUM &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AR_OPEN::SALNUM, &
+			AR_OPEN::CUSNUM, &
+			AR_OPEN::INVNUM, &
+			AR_OPEN::TRATYP &
+		)	DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AR_OPEN::INVNUM, &
+			AR_OPEN::CUSNUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

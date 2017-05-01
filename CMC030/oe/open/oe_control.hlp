@@ -1,0 +1,49 @@
+	!======================================================================
+	! OE_CONTROL file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_CONTROL.CH%, STAT%)
+	CALL READ_DEVICE('OE_CONTROL',OE_CONTROL.DEV$, STAT%)
+
+	OE_CONTROL.NAME$ = OE_CONTROL.DEV$+"OE_CONTROL.CTR"
+
+	OPEN OE_CONTROL.NAME$ FOR INPUT AS FILE OE_CONTROL.CH%, &
+		ORGANIZATION RELATIVE FIXED, &
+		MAP OE_CONTROL, &
+		
+
+	!++
+	! Abstract:FILE
+	!	^*OE__CONTROL.CTR\*
+	!	.B
+	!	.LM +5
+	!	Sales Order Controlling File.
+	!	
+	!	
+	!	
+	!	
+	!	.LM -5
+	!
+	! Index:
+	!	.x Sales Order Controlling File
+	!	.x OE_CONTROL
+	!
+	!--
+	!++
+	! Error:5
+	!	^*The Sales Order Controlling File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controlling file in the ^*Order Entry System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run the process again.
+	!
+	! Index:
+	!	.x Sales Order Controlling File
+	!
+	!--

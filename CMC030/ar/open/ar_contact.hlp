@@ -1,0 +1,30 @@
+	!++
+	! Error:5
+	!	^*The Contact Files is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__CONTACT.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Receivable System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Contact Files
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__CONTACT.MAS\*
+	!	.B
+	!	.LM +5
+	!	Contact Files.
+	!	to contact for any questions for each customer.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Contact Files
+	!	.x AR_CONTACT
+	!
+	!--

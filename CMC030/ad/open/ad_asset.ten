@@ -1,0 +1,35 @@
+	!======================================================================
+	! AD_ASSET file (open temporary file)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_ASSET.CH%, STAT%)
+	CALL READ_DEVICE('AD_ASSET',AD_ASSET.DEV$, STAT%)
+
+	AD_ASSET.NAME$ = AD_ASSET.DEV$+"AD_ASSET.MAS"
+
+	OPEN AD_ASSET.NAME$ FOR OUTPUT AS FILE AD_ASSET.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_ASSET, &
+		PRIMARY KEY &
+			AD_ASSET::ASSET_NUM, &
+		ALTERNATE KEY &
+		( &
+			AD_ASSET::ASSET_TYPE, &
+			AD_ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_ASSET::SERVDATE, &
+			AD_ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			AD_ASSET::LOCATION, &
+			AD_ASSET::DEPT_NUM, &
+			AD_ASSET::ASSET_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+			AD_ASSET::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

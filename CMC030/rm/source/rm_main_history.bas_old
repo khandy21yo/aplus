@@ -1,0 +1,703 @@
+1	%TITLE "Half Hour Sales and Labor"
+	%SBTTL "RM_MAIN_HISTORY"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_MAIN_HISTORY(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Half Hour Sales and Labor\*  program maintains the actual restaurant
+	!	sales and labor file.
+	!
+	! Index:
+	!	.x Half Hour Sales and Labor
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_MAIN_HISTORY/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_MAIN_HISTORY
+	!	$ DELETE RM_MAIN_HISTORY.OBJ;*
+	!
+	! Author:
+	!
+	!	09/25/87 - David Lundgren
+	!
+	! Modification history:
+	!
+	!	05/18/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	05/07/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	06/12/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	06/11/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	06/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:RM_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.HB"
+	MAP (RM_HISTORY)	RM_HISTORY_CDD		RM_HISTORY
+	MAP (RM_HISTORY_OLD) RM_HISTORY_CDD RM_HISTORY_OLD, RM_HISTORY2
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP (UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_RM_HISTORY) &
+		RM_HISTORY.CH%, &
+		RM_HISTORY.READONLY%, &
+		HALF.HOURS%
+
+	COM (TT_RM_HISTORY) &
+		DAY.WEEK$(7%) = 9%, &
+		PAGETITLE$ = 30%, &
+		PAGETYPE$(5%) = 30%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+	EXTERNAL LONG    FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Restaurant sales and labor "
+		SMG_WINDOW::NHELP = "RM_MAIN_HISTORY"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 54%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Page"
+			SMG_WINDOW::KFIELD(0%, 0%) = 3%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+			SMG_WINDOW::KFIELD(0%, 3%) = 3%
+		SMG_WINDOW::KNAME(1%) = "Store_num"
+			SMG_WINDOW::KFIELD(1%, 0%) = 2%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+			SMG_WINDOW::KFIELD(1%, 2%) = 3%
+
+		PAGETITLE$ = "Item Description"
+		PAGETYPE$(0%) = "5"
+		PAGETYPE$(1%) = "01   Projected sales"
+		PAGETYPE$(2%) = "02   Actual sales"
+		PAGETYPE$(3%) = "03   Projected direct labor"
+		PAGETYPE$(4%) = "04   Actual direct labor"
+		PAGETYPE$(5%) = "05   Actual indirect labor"
+
+		DAY.WEEK$(1%) = "Monday   "
+		DAY.WEEK$(2%) = "Tuesday  "
+		DAY.WEEK$(3%) = "Wednesday"
+		DAY.WEEK$(4%) = "Thursday "
+		DAY.WEEK$(5%) = "Friday   "
+		DAY.WEEK$(6%) = "Saturday "
+		DAY.WEEK$(7%) = "Sunday   "
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF RM_HISTORY.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF RM_HISTORY.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.CRE"
+		RM_HISTORY.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		RM_HISTORY.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(RM_HISTORY.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = RM_HISTORY.CH%
+		RESET #RM_HISTORY.CH%
+		GET #RM_HISTORY.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  5, "(01) Item", &
+			3,  5, "(02) Store #", &
+			4,  5, "(03) Date", &
+			5,  5, "(04) From", &
+			5, 32, "(05) To", &
+			5, 61, "(06) Rate", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ ReEnter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Item\*
+	!	.p
+	!	The ^*Item\* field provides the mean to enter the item for which the history
+	!	will be completed.  A valid item must be entered and only the following are
+	!	valid:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	01 - Projected Sales
+	!	.le
+	!	02 - Actual Sales
+	!	.le
+	!	03 - Projected Direct Labor
+	!	.le
+	!	04 - Actual Direct Labor
+	!	.le
+	!	05 - Actual Indirect Labor
+	!	.els
+	!	.lm -10
+	!	.p
+	!	By pressing the ^*<List Choices>\* key, a list of valid items will be listed.
+	!
+	! Index:
+	!	.x Item
+	!
+	!--
+			RM_HISTORY::CATEGORY= EDIT$(ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;20", TEMP$, RM_HISTORY::CATEGORY, &
+				MFLAG, "'E", MVALUE, PAGETYPE$(), &
+				PAGETITLE$, "005" ), -1%)
+
+			SELECT RM_HISTORY::CATEGORY
+
+			CASE "01","02"
+				RM_HISTORY::REC_TYPE = "0"
+
+			CASE "03","04"
+				RM_HISTORY::REC_TYPE = "1"
+			END SELECT
+
+	CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) Store Number\*
+	!	.p
+	!	The ^*Store Number\* field contains the identification number of the location
+	!	for which the history is being completed. By pressing ^*<List Choices>\* in
+	!	this field a list of valid numbers will be displayed.
+	!
+	! Index:
+	!	.x Store Number
+	!	.x Number>Store
+	!
+	!--
+			RM_HISTORY::LOCATION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "3;20", TEMP$, &
+				RM_HISTORY::LOCATION, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(UTL_MAIN_LOCATION.ID, "V0") = 1%
+				THEN
+				RM_HISTORY::LOCATION = &
+						UTL_LOCATION::LOCATION
+				END IF
+				GOTO Reenter
+			END IF
+
+		CASE 3%
+
+			RM_HISTORY::ACTION_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, "4;20", TEMP$, &
+				RM_HISTORY::ACTION_DATE, MFLAG, &
+				"'E", MVALUE)
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	^*(04) From\*
+	!	.p
+	!	The value entered in the ^*From\* field causes the report to begin with the
+	!	selected time.
+	!
+	! Index:
+	!	.x From
+	!
+	!--
+			RM_HISTORY::TIME_FROM = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, "5;20", TEMP$, &
+				RM_HISTORY::TIME_FROM, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 5%
+	!++
+	! Abstract:FLD005
+	!	^*(05) To\*
+	!	.p
+	!	The value entered in the ^*To\* field causes the report to end with the
+	!	selected time.
+	!
+	! Index:
+	!	.x To
+	!
+	!--
+			RM_HISTORY::TIME_TO = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, "5;44", TEMP$, &
+				RM_HISTORY::TIME_TO, &
+				MFLAG, "'E", MVALUE)
+
+			HALF.HOURS% = 0%
+			IF EDIT$(RM_HISTORY::TIME_TO,-1%)<>""
+			THEN
+				DIFFTIM$ = TIME_ADD(RM_HISTORY::TIME_TO,"-", &
+					PRNT_TIME(RM_HISTORY::TIME_FROM,1%))
+				HOURS%   = VAL%(LEFT(DIFFTIM$,2%))
+				MINUT%   = VAL%(MID(DIFFTIM$,4%,2%))
+				HALF.HOURS% = 2% * HOURS% + SGN(MINUT%) + &
+					INT(MINUT%/31%)
+			END IF
+
+		CASE 6%
+	!++
+	! Abstract:FLD006
+	!	^*(06) Rate\*
+	!	.p
+	!	The ^*Rate\* field contains the average hourly rate which is payed to the
+	!	employees for selected locations.
+	!
+	! Index:
+	!	.x Rate
+	!
+	!--
+
+			RM_HISTORY::RATE = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, "5;71", TEMP$, &
+				RM_HISTORY::RATE, MFLAG, "##.##", MVALUE)
+
+		CASE 7% TO 54%
+
+			SCOPE::PRG_ITEM = "FLD007QTF"
+
+	!++
+	! Abstract:FLD007QTF
+	!	^*(07) - (54) Quantity per Time Frame\*
+	!	.p
+	!	The ^*Quantity per Time Frame\* contains the number sold within the specified
+	!	half hour time period.
+	!
+	! Index:
+	!	.x Quantity per Time Frame
+	!
+	!--
+
+			COL% = INT((MLOOP-7%)/12%)
+
+			IF MLOOP < HALF.HOURS%+7%
+			THEN
+				TIM$ = TIME_ADD(RM_HISTORY::TIME_FROM,"+", &
+					FORMAT$(30%*(MLOOP-6%),":####:"))
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				FORMAT$(MLOOP,"(<0>#) "+LEFT(TIM$,5%)), &
+				MLOOP-12%*COL%,5%+18%*COL%)
+
+				SELECT RM_HISTORY::REC_TYPE
+
+				CASE "0"
+					RM_HISTORY::AMOUNT_QTY(MLOOP-7%) = &
+						ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+						NUM1$(MLOOP-12%*COL%)+";"+ &
+						NUM1$(17%+18%*COL%), TEMP$, &
+						1.0 * RM_HISTORY::AMOUNT_QTY(MLOOP-7%), MFLAG, &
+						"#,###", MVALUE)
+
+				CASE ELSE
+					RM_HISTORY::AMOUNT_QTY(MLOOP-7%) = &
+						ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+						NUM1$(MLOOP-12%*COL%)+";"+ &
+						NUM1$(16%+18%*COL%), TEMP$, &
+						0.01 * RM_HISTORY::AMOUNT_QTY(MLOOP-7%), MFLAG, &
+						"###.##", MVALUE) * 100%
+				END SELECT
+
+			ELSE
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					SPACE$(17%), &
+					MLOOP-12%*COL%,5%+18%*COL%)
+					RM_HISTORY::AMOUNT_QTY(MLOOP-7%) = 0%
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		RM_MAIN_HISTORY = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				RIGHT(PAGETYPE$(VAL%(RM_HISTORY::CATEGORY)) + &
+				SPACE$(30%), 3%), 1%, 23%, , SMG$M_REVERSE)
+
+		CASE 2%
+			!
+			! Is the input defined?
+			!
+			RM_MAIN_HISTORY = FUNC_TESTENTRY( SMG_WINDOW, &
+				RM_HISTORY::LOCATION, &
+				UTL_LOCATION::LOCNAME, &
+				"RM", MLOOP, "PRG", &
+				"Location", UTL_MAIN_LOCATION.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				UTL_LOCATION::LOCNAME,3%,32%, ,SMG$M_BOLD)
+
+		CASE 3%
+			IF RM_HISTORY::ACTION_DATE = ""
+			THEN
+				RM_MAIN_HISTORY = 1%
+			ELSE
+				WEEK.DAY$ = &
+					DAY.WEEK$(DATE_DAYOFWEEK(DATE_DAYCODE(RM_HISTORY::ACTION_DATE)))
+
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					WEEK.DAY$, 4%, 32%, ,SMG$M_BOLD)
+
+				IF (MVALUE = "ADD")
+				THEN
+					CATEGORY$ = RM_HISTORY::CATEGORY
+					GET #RM_HISTORY.CH%, &
+						KEY#1% EQ RM_HISTORY::LOCATION + &
+						RM_HISTORY::ACTION_DATE, &
+						REGARDLESS
+
+					RM_HISTORY::CATEGORY = CATEGORY$
+					RM_HISTORY::AMOUNT_QTY(I%) = 0. &
+						FOR I%=0% TO 47%
+
+					GET #RM_HISTORY.CH%, &
+						KEY#0% EQ RM_HISTORY::CATEGORY + &
+						RM_HISTORY::LOCATION + RM_HISTORY::ACTION_DATE, &
+						REGARDLESS
+
+					RM_MAIN_HISTORY = 2%
+					CALL ENTR_3MESSAGE(SCOPE, "Record Already Exists", 1%)
+
+				END IF
+
+			END IF
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			RIGHT(PAGETYPE$(VAL%(RM_HISTORY::CATEGORY)) + &
+			SPACE$(30%), 3%), 1%, 23%, , SMG$M_REVERSE)
+
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			DISPLAYNAME$ = STRING$(40%,63%)
+			DISPLAYNAME$ = UTL_LOCATION::LOCNAME &
+				IF MAIN_WINDOW(UTL_MAIN_LOCATION.ID,"Q0"+RM_HISTORY::LOCATION) = 1%
+			!
+			! Display name (ALSO IN TESTENTRY)
+			!
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				DISPLAYNAME$,3%,32%, ,SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			WEEK.DAY$ = STRING$(9%,63%)
+			WEEK.DAY$ = &
+				DAY.WEEK$(DATE_DAYOFWEEK(DATE_DAYCODE(RM_HISTORY::ACTION_DATE))) &
+				IF EDIT$(RM_HISTORY::ACTION_DATE,-1%)<>""
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				WEEK.DAY$,4%,32%, ,SMG$M_BOLD)
+		END IF
+
+	!
+	! Set RM_HISTORY_OLD value
+	!
+20500	CASE OPT_SETOLD
+		RM_HISTORY_OLD = RM_HISTORY
+
+	!
+	! Restore RM_HISTORY_OLD value
+	!
+	CASE OPT_RESETOLD
+		RM_HISTORY = RM_HISTORY_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		RM_HISTORY2 = RM_HISTORY
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		RM_HISTORY = RM_HISTORY2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Page                      Store Date"+ &
+				"       From  To     Rate"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "028,034,045,051,057"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	^*(03) Date\*
+	!	.p
+	!	Contained in the ^*Date\* field is the date for which the report is being
+	!	completed.  The format for entry is MMDDYY or MMDDYYYY.
+	!
+	! Index:
+	!	.x Date
+	!
+	!--
+			MVALUE = PAGETYPE$(VAL%(RM_HISTORY::CATEGORY)) + " " + &
+				RM_HISTORY::LOCATION + "  " + &
+				PRNT_DATE (RM_HISTORY::ACTION_DATE,8%) + " " + &
+				LEFT$(PRNT_TIME (RM_HISTORY::TIME_FROM,1%),5%) &
+						+ " " + &
+				LEFT$(PRNT_TIME (RM_HISTORY::TIME_TO,1%),5%) &
+						+ " " + &
+				FORMAT$(RM_HISTORY::RATE,"##.##")
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #RM_HISTORY.CH%, &
+				KEY#0% GE RM_HISTORY::CATEGORY + &
+				RM_HISTORY::LOCATION + &
+				RM_HISTORY::ACTION_DATE, &
+				REGARDLESS
+
+		CASE 1%
+			FIND #RM_HISTORY.CH%, &
+				KEY#1% GE RM_HISTORY::LOCATION + &
+				RM_HISTORY::ACTION_DATE, &
+				REGARDLESS
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		RM_MAIN_HISTORY = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		RM_MAIN_HISTORY = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

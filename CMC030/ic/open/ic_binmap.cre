@@ -1,0 +1,30 @@
+	!======================================================================
+	! IC_BINMAP file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(IC_BINMAP.CH%, STAT%)
+	CALL READ_DEVICE('IC_BINMAP',IC_BINMAP.DEV$, STAT%)
+	CALL READ_PROTECTION('IC_BINMAP',IC_BINMAP.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(IC_BINMAP.PRO$, STAT%)
+
+	IC_BINMAP.NAME$ = IC_BINMAP.DEV$+"IC_BINMAP.MAS"
+
+	OPEN IC_BINMAP.NAME$ AS FILE IC_BINMAP.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP IC_BINMAP, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			IC_BINMAP::PRODUCT, &
+			IC_BINMAP::LOCATION &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			IC_BINMAP::LOCATION, &
+			IC_BINMAP::PRODUCT &
+		)	CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,451 @@
+1	%TITLE "BT Control File Maintenance"
+	%SBTTL "BT_MAIN_CONTROL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BT_MAIN_CONTROL(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain BT Control Record\* option provides the means to
+	!	define the last billing period, the accounting year, the last invoice
+	!	number, and a purge flag field.
+	!
+	! Index:
+	!	.x Control>Maintain Record
+	!	.x Maintain>Control Record
+	!
+	! Option:
+	!
+	!
+	! Author:
+	!
+	!	11/30/88 - J. Shad Rydalch
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_MAIN_CONTROL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BT_MAIN_CONTROL
+	!	$ DELETE BT_MAIN_CONTROL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	03/24/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/17/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.HB"
+	MAP (BT_CONTROL)	BT_CONTROL_CDD	BT_CONTROL
+	MAP (FOO_BBT_BLAH)	BT_CONTROL_CDD	BT_CONTROL_OLD, BT_CONTROL2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BT_CONTROL) &
+		BT_CONTROL.CH%, &
+		BT_CONTROL.READONLY%
+
+	COM (TT_BT_CONTROL) &
+		CLOSETITLE$ = 20%, &
+		CLOSETYPE$(4%) = 20%
+
+	!
+	!Declare data types
+	!
+	DECLARE LONG XPOS, YPOS
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+
+	CASE OPT_INIT
+
+	!******************************************************************
+	! Set up information
+	!******************************************************************
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "Billing Tuition Control File Maintenance"
+		SMG_WINDOW::NHELP = "BT_MAIN_CONTROL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 4%
+		SMG_WINDOW::FLAGS = 128%	! Relative file
+
+		SMG_WINDOW::NKEYS = 0%
+
+		!
+		! Closing type
+		!
+		CLOSETITLE$ = "Type   Description"
+		CLOSETYPE$(0%) = "3"
+		CLOSETYPE$(1%) = "0    No status"
+		CLOSETYPE$(2%) = "1    Closing"
+		CLOSETYPE$(3%) = "2    Resetting"
+		CLOSETYPE$(4%) = "3    Purging"
+
+700		!
+		! Declare channels
+		!
+		IF BT_CONTROL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BT_CONTROL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.CRE"
+		BT_CONTROL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BT_CONTROL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BT_CONTROL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BT_CONTROL.CH%
+		GOSUB 28000
+
+	!
+	! Select function
+	!
+	CASE OPT_OPTLIST
+		MVALUE = "Change Blank Help eXit"
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information
+	! on the screen.  It must first clear any junk on the screen,
+	! and then write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	5, 1, "(01) Last Period", &
+			7, 1, "(02) Year", &
+			9, 1, "(03) Last Invoice", &
+			11, 1, "(04) Purge Flag", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS, YPOS, XSTR$
+		I%=0%
+		WHILE (XPOS <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS, YPOS) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+			READ XPOS, YPOS, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+20200	CASE OPT_ENTRY
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Reenter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Last Period\*
+	!	.p
+	!	The ^*Last Period\* field in the Billing Tuition Control file provides
+	!	the means, when initializing the system, to enter the accounting period
+	!	number which represents the accounting period when the tuition billings
+	!	were last made immediately preceding the period when the system is
+	!	initialized.
+	!	.p
+	!	After initialization procedures, this field will automatically
+	!	be incremented each period. Manual intervention should never be
+	!	necessary.
+	!
+	! Index:
+	!	.x Last Period
+	!
+	!--
+			BT_CONTROL::LASTPERCLOSE = &
+				ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;19", TEMP$, &
+				BT_CONTROL::LASTPERCLOSE * 1.0, &
+				MFLAG, "##", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) Year\*
+	!	.p
+	!	The ^*Year\* field in the Billing Tuition Control file provides the
+	!	means, when initializing the system, to enter the appropriate
+	!	fiscal year associated with the accounting period entered in field
+	!	(01).
+	!	.p
+	!	After the system is initialized, the contents of this field are
+	!	automatically maintained. Subsequent manual intervention should
+	!	never be necessary.
+	!
+	! Index:
+	!	.x Fiscal Year
+	!	.x Year>Fiscal
+	!
+	!--
+			BT_CONTROL::YEAR = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;19", TEMP$, &
+				BT_CONTROL::YEAR, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	^*(03) Last Invoice\*
+	!	.p
+	!	The ^*Last Invoice\* field in the Billing Tuition Control file
+	!	provides the means, when initializing the system, to enter the
+	!	number of the last tuition invoice which has been printed.
+	!	.p
+	!	Subsequent to initialization procedures, the contents of this
+	!	field are automatically maintained. Manual intervention should be
+	!	necessary only when commencing a new series of invoices if the first
+	!	number of the new series is not contiguous to the last number of the
+	!	old series.
+	!
+	! Index:
+	!	.x Last Invoice
+	!
+	!--
+			BT_CONTROL::INV_NUM = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;19", TEMP$, &
+				BT_CONTROL::INV_NUM, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	^*(04) Purge Flag\*
+	!	.p
+	!	The ^*Purge Flag\* field is always system generated.
+	!	.p
+	!	Valid flags are:
+	!	.b
+	!	.lm +10
+	!	.list 0
+	!	.le
+	!	0 = No Status
+	!	.le
+	!	1 = Closing
+	!	.le
+	!	2 = Resetting
+	!	.le
+	!	3 = Purging
+	!	.els
+	!	.lm -10
+	!	.p
+	!	.note
+	!	There is never any need to initialize or change a value
+	!	in this field.
+	!	.en
+	!
+	! Index:
+	!	.x Purge Flag
+	!	.x Flag>Purge
+	!
+	!--
+			BT_CONTROL::FLAG = EDIT$(ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;19", TEMP$, BT_CONTROL::FLAG, &
+				MFLAG, "'", MVALUE, CLOSETYPE$(), &
+				CLOSETITLE$, "005" ), -1%)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+	!
+	! Set BT_CONTROL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BT_CONTROL_OLD = BT_CONTROL
+
+	!
+	! Restore BT_CONTROL_OLD value
+	!
+	CASE OPT_RESETOLD
+		BT_CONTROL = BT_CONTROL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BT_CONTROL2 = BT_CONTROL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BT_CONTROL = BT_CONTROL2
+
+	END SELECT
+
+	EXIT FUNCTION
+
+28000	!
+	! Get period record
+	!
+	GET #BT_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	GOTO 28040
+
+28030	!
+	! Load in defaults for period file
+	!
+	BT_CONTROL::LASTPERCLOSE = 0%
+	BT_CONTROL::YEAR = ""
+	BT_CONTROL::INV_NUM = "1"
+
+	PUT #BT_CONTROL.CH%, RECORD 1%
+
+28040	RETURN
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BT_MAIN_CONTROL = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BT_MAIN_CONTROL = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Record not found
+	!
+	CASE 28000%
+		RESUME 28030
+
+	!
+	! Record not found
+	!
+	CASE 28030%
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to add period record",0%)
+
+		RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

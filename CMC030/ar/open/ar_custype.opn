@@ -1,0 +1,16 @@
+	!======================================================================
+	! AR_CUSTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_CUSTYPE.CH%, STAT%)
+	CALL READ_DEVICE('AR_CUSTYPE',AR_CUSTYPE.DEV$, STAT%)
+
+	AR_CUSTYPE.NAME$ = AR_CUSTYPE.DEV$+"AR_CUSTYPE.TBL"
+
+	OPEN AR_CUSTYPE.NAME$ FOR INPUT AS FILE AR_CUSTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_CUSTYPE, &
+		PRIMARY KEY &
+			AR_CUSTYPE::CUSTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

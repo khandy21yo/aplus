@@ -1,0 +1,579 @@
+1	%TITLE "Product Master Files Maintenance"
+	%SBTTL "BM_MAST_PRODUCT"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Product Master Files Maintenance\* option provides the means to enter
+	!	and maintain the master files from the Bill of Materials system.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Product Master Files Maintenance
+	!	.x Maintenance>Product Master Files
+	!
+	! Option:
+	!	PD_MAIN_PRODUCT$HELP
+	!	PC_MAIN_COST$HELP
+	!	BM_MAIN_STRUCTURE$HELP
+	!	BM_MAIN_STRUCTURESCAN$HELP
+	!
+	! Compile:
+	!
+	!	$ BAS BM_SOURCE:BM_MAST_PRODUCT/NOLINE
+	!	$ LINK/EXE=BM_EXE: BM_MAST_PRODUCT,-
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BM_MAST_PRODUCT.OBJ;*
+	!
+	! Author:
+	!
+	!	10/09/88 - Frank F. Starman
+	!
+	!
+	! Modification History:
+	!
+	!	02/25/92 - Kevin Handy
+	!		Added Modification history section.
+	!
+	!	02/25/92 - Kevin Handy
+	!		Removed references to PD_MAIN_PACK, which Frank
+	!		deleted, but never removed references to it so that
+	!		programs couldn't compile.
+	!
+	!	06/23/92 - Dan Perkins
+	!		Added labor screen to program (BM_MAIN_PRODOPER).
+	!
+	!	12/01/92 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	12/19/92 - Frank F. Starman
+	!		Added subs option.
+	!
+	!	04/07/94 - Kevin Handy
+	!		Opened BM_RELATION at this level so that we will
+	!		always have write access, even if they call update
+	!		before adding material. (LL)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	06/13/95 - Kevin Handy
+	!		Changed "copY_Lab" to "calcY_lab", so that it
+	!		makes more sense.
+	!
+	!	10/17/96 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	08/28/97 - Kevin Handy
+	!		Lose undcessary external definitions
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	05/25/2000 - Kevin Handy
+	!		Added code to maintain 'price'
+	!		so that all tables are updated on a part# change.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+
+	!
+	! Map files
+	!
+	%INCLUDE "SOURCE:[BM.OPEN]BM_RELATION.HB"
+	MAP (BM_RELATION)	BM_RELATION_CDD		BM_RELATION
+
+	!
+	! Common areas
+	!
+	COM (CH_BM_RELATION) &
+		BM_RELATION.CH%, &
+		BM_RELATION.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION MAIN_WINDOW
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilize maintainence
+	!*******************************************************************
+
+	CALL READ_INITIALIZE
+
+	!*******************************************************************
+	! Open up any files that may get opened wrong otherwise
+	!*******************************************************************
+300	%INCLUDE "SOURCE:[BM.OPEN]BM_RELATION.CRE"
+	BM_RELATION.READONLY% = 0%
+
+	!*******************************************************************
+	! Handle main program
+	!*******************************************************************
+
+	V% = MAIN_WINDOW(PD_MAIN_PRODUCT.ID, "")
+
+	!******************************************************************
+	! End of the program
+	!******************************************************************
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+19990	END
+
+
+
+20000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:IC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:BM_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OE_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PO_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:UTL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+	MAP (PD_PRODUCT_OLD)	PD_PRODUCT_CDD		PD_PRODUCT_OLD
+	MAP (PD_PRODUCT_ONE)	PD_PRODUCT_CDD		PD_PRODUCT_ONE
+
+	EXTERNAL LONG FUNCTION MAIN_WINDOW
+	EXTERNAL LONG FUNCTION LIBR_EXTRACTVAR
+	EXTERNAL LONG FUNCTION LIBR_INSERTTEXT
+	EXTERNAL LONG FUNCTION LIBR_DELETE
+
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODUCT
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODTYPE
+	EXTERNAL LONG FUNCTION PD_MAIN_CATEGORY
+	EXTERNAL LONG FUNCTION PD_MAIN_LABEL
+	EXTERNAL LONG FUNCTION PD_MAIN_SUBSTITUTE
+	EXTERNAL LONG FUNCTION PO_MAIN_PRODCROSS
+
+	EXTERNAL LONG FUNCTION BM_MAIN_STRUCTURE
+	EXTERNAL LONG FUNCTION BM_MAIN_STRUCTURESCAN
+	EXTERNAL LONG FUNCTION BM_MAIN_PRODOPER
+	EXTERNAL LONG FUNCTION BM_WRIT_COPYPROD
+	EXTERNAL LONG FUNCTION BM_WRIT_SUBS
+	EXTERNAL LONG FUNCTION BM_WRIT_COPYLABOR
+	EXTERNAL LONG FUNCTION BM_WRIT_COST
+
+	EXTERNAL LONG FUNCTION IC_MAIN_BINMAP
+
+	EXTERNAL LONG FUNCTION OE_MAIN_PROMO
+
+	EXTERNAL LONG FUNCTION PR_MAIN_OPER
+
+	EXTERNAL LONG FUNCTION PC_MAIN_COST
+	EXTERNAL LONG FUNCTION PC_MAIN_PRICE
+
+	EXTERNAL LONG FUNCTION UTL_MAIN_PACKMAT
+	EXTERNAL LONG FUNCTION UTL_MAIN_PACKFORM
+	EXTERNAL LONG FUNCTION UTL_MAIN_LOCATION
+	EXTERNAL LONG FUNCTION UTL_MAIN_MEASURE
+
+	%PAGE
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+	CASE PD_MAIN_PRODUCT.ID
+
+		MAINT_GROUP = PD_MAIN_PRODUCT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_OPTLIST
+
+			MVALUE = MVALUE + &
+				" cosT Mat Lab coPy_mat " + &
+				"calcY_lab Sub Upd notes"
+
+		CASE OPT_MOREMENU
+			PD_PRODUCT_ONE = PD_PRODUCT
+
+			SELECT EDIT$(MVALUE, -1%)
+
+			!
+			! Componets
+			!
+			CASE "MAT"
+				MAINT_GROUP = MAIN_WINDOW(BM_MAIN_STRUCTURE.ID, "")
+
+			!
+			! Labor
+			!
+			CASE "LAB"
+				MAINT_GROUP = MAIN_WINDOW(BM_MAIN_PRODOPER.ID, "")
+
+			!
+			! Copy
+			!
+			CASE "COPY_MAT"
+				PD_PRODUCT_ONE = PD_PRODUCT
+				V% = BM_WRIT_COPYPROD(PD_PRODUCT_ONE::PRODUCT_NUM)
+				PD_PRODUCT = PD_PRODUCT_ONE
+
+			!
+			! Sub
+			!
+			CASE "SUB"
+				PD_PRODUCT_ONE = PD_PRODUCT
+				V% = BM_WRIT_SUBS(PD_PRODUCT_ONE::PRODUCT_NUM)
+				PD_PRODUCT = PD_PRODUCT_ONE
+
+			!
+			! Copy Labor
+			!
+			CASE "CALCY_LAB"
+				PD_PRODUCT_ONE = PD_PRODUCT
+				V% = BM_WRIT_COPYLABOR(PD_PRODUCT_ONE::PRODUCT_NUM)
+				PD_PRODUCT = PD_PRODUCT_ONE
+
+			!
+			! Cost
+			!
+			CASE "COST"
+				MAINT_GROUP = MAIN_WINDOW(PC_MAIN_COST.ID, "")
+
+
+			CASE "UPD"
+				PD_PRODUCT_ONE = PD_PRODUCT
+				MAIN_GROUP = BM_WRIT_COST(PD_PRODUCT::PRODUCT_NUM)
+				PD_PRODUCT = PD_PRODUCT_ONE
+
+			!
+			! Display notes
+			!
+			CASE "NOTES"
+				CALL READ_DEVICE("BM_RELATION", &
+					BM_RELATION.DEV$,STAT%)
+
+				ST% = LIBR_EXTRACTVAR( &
+					TRM$(BM_RELATION.DEV$) + &
+					"BM_RELATION", &
+					LAST_NOTE$, &
+					TRM$(PD_PRODUCT::PRODUCT_NUM))
+
+				LAST_NOTE$ = ENTR_NOTE(SMG_WINDOW::WNUMBER, &
+					"8;1", TEMP$, &
+					LAST_NOTE$, 64%, "11;78", MVALUE)
+
+				ST% = LIBR_INSERTTEXT( &
+					TRM$(BM_RELATION.DEV$) + &
+					"BM_RELATION", &
+					LAST_NOTE$, &
+					TRM$(PD_PRODUCT::PRODUCT_NUM))
+
+			!
+			! Cycle Map
+			!
+			CASE "CYCLE"
+				MAINT_GROUP = &
+					MAIN_WINDOW(IC_MAIN_BINMAP.ID,"")
+
+			END SELECT
+
+			PD_PRODUCT = PD_PRODUCT_ONE
+
+		CASE OPT_AFTEROPT
+
+			SELECT MVALUE
+
+			!
+			! Need to remove under old key, and insert under
+			! (possibly) new key
+			!
+			CASE "Change", "Blank", "Initialize"
+				IF (PD_PRODUCT_OLD::PRODUCT_NUM <> PD_PRODUCT::PRODUCT_NUM)
+				THEN
+					PD_PRODUCT_ONE = PD_PRODUCT_OLD
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						PC_MAIN_COST.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						PC_MAIN_PRICE.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						BM_MAIN_STRUCTURE.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						BM_MAIN_PRODOPER.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						IC_MAIN_BINMAP.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						OE_MAIN_PRODPROMO.ID, "C")
+
+					MAINT_GROUP = MAIN_JOURNAL( &
+						PD_MAIN_SUBSTITUTE.ID, "C")
+
+					MAINT_GROUP = MAIN_WINDOW( &
+						PO_MAIN_PRODCROSS.ID, "C")
+
+					CALL READ_DEVICE("BM_RELATION", &
+						BM_RELATION.DEV$, STAT%)
+
+					ST% = LIBR_EXTRACTVAR( &
+						TRM$(BM_RELATION.DEV$) + &
+						"BM_RELATION", &
+						LAST_NOTE$, &
+						TRM$(PD_PRODUCT_OLD::PRODUCT_NUM))
+
+					ST% = LIBR_DELETE( &
+						TRM$(BM_RELATION.DEV$) + &
+						"BM_RELATION", &
+						TRM$(PD_PRODUCT_OLD::PRODUCT_NUM))
+
+					ST% = LIBR_INSERTTEXT( &
+						TRM$(BM_RELATION.DEV$) + "BM_RELATION", &
+						LAST_NOTE$, &
+						TRM$(PD_PRODUCT::PRODUCT_NUM))
+				END IF
+
+			!
+			! Need to remove text
+			!
+			CASE "Erase"
+				PD_PRODUCT_ONE = PD_PRODUCT
+				MAINT_GROUP = MAIN_WINDOW(PC_MAIN_COST.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW(PC_MAIN_PRICE.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW(BM_MAIN_STRUCTURE.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW(BM_MAIN_PRODOPER.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW(IC_MAIN_BINMAP.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW(OE_MAIN_PRODPROMO.ID, "E")
+				MAINT_GROUP = MAIN_JOURNAL(PD_MAIN_SUBSTITUTE.ID, "E")
+				MAINT_GROUP = MAIN_WINDOW(PO_MAIN_PRODCROSS.ID, "E")
+
+				ST% = LIBR_DELETE( &
+					TRM$(BM_RELATION.DEV$) + &
+					"BM_RELATION", &
+					TRM$(PD_PRODUCT::PRODUCT_NUM))
+
+			END SELECT
+
+		END SELECT
+
+	CASE PD_MAIN_PRODTYPE.ID
+
+		MAINT_GROUP = PD_MAIN_PRODTYPE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+ !	CASE PD_MAIN_PACK.ID
+ !		MAINT_GROUP = PD_MAIN_PACK(SMG_WINDOW, &
+ !				MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_PACKMAT.ID
+
+		MAINT_GROUP = UTL_MAIN_PACKMAT(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_PACKFORM.ID
+
+		MAINT_GROUP = UTL_MAIN_PACKFORM(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PD_MAIN_CATEGORY.ID
+
+		MAINT_GROUP = PD_MAIN_CATEGORY(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PD_MAIN_LABEL.ID
+
+		MAINT_GROUP = PD_MAIN_LABEL(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_LOCATION.ID
+
+		MAINT_GROUP = UTL_MAIN_LOCATION(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE UTL_MAIN_MEASURE.ID
+
+		MAINT_GROUP = UTL_MAIN_MEASURE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PC_MAIN_COST.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = PD_PRODUCT::PRODUCT_NUM
+
+			CASE ELSE
+				MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = PC_MAIN_COST(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BM_MAIN_STRUCTURE.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = PD_PRODUCT::PRODUCT_NUM
+
+			CASE ELSE
+				MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = BM_MAIN_STRUCTURE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+		SELECT MOPTION
+
+		CASE OPT_OPTLIST
+			MVALUE = MVALUE + " Labor recOrd"
+
+		CASE OPT_MOREMENU
+
+			SELECT EDIT$(MVALUE, -1%)
+
+			!
+			! Labor
+			!
+			CASE "LABOR"
+				MAINT_GROUP = MAIN_WINDOW(BM_MAIN_PRODOPER.ID, "")
+
+			CASE "RECORD"
+				MAINT_GROUP = 16% OR MAIN_WINDOW(BM_MAIN_STRUCTURESCAN.ID, "")
+
+			END SELECT
+
+		END SELECT
+
+	CASE BM_MAIN_PRODOPER.ID
+
+		SELECT MOPTION
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+		CASE OPT_SUBWIND
+
+			SELECT MLOOP
+
+			CASE 6%
+				MVALUE = PD_PRODUCT::PRODUCT_NUM
+
+			CASE ELSE
+				MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+			END SELECT
+
+		END SELECT
+
+		MAINT_GROUP = BM_MAIN_PRODOPER(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE BM_MAIN_STRUCTURESCAN.ID
+
+		MAINT_GROUP = BM_MAIN_STRUCTURESCAN(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PR_MAIN_OPER.ID
+
+		MAINT_GROUP = PR_MAIN_OPER(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PC_MAIN_PRICE.ID
+
+		MAINT_GROUP = PC_MAIN_PRICE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PD_MAIN_SUBSTITUTE.ID
+		MAINT_GROUP = PD_MAIN_SUBSTITUTE(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	CASE PO_MAIN_PRODCROSS.ID
+
+		CASE OPT_RESETDEFAULT
+			MVALUE = PD_PRODUCT_ONE::PRODUCT_NUM
+
+	CASE OE_MAIN_PROMO.ID
+
+		MAINT_GROUP = OE_MAIN_PROMO(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+
+	CASE IC_MAIN_BINMAP.ID
+
+		MAINT_GROUP = IC_MAIN_BINMAP(SMG_WINDOW, &
+			MOPTION, MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

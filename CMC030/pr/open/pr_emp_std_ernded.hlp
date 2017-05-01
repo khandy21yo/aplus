@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Employee Standard ERNDED File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__EMP__STD__ERNDED.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Payroll Employee Standard ERNDED File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__EMP__STD__ERNDED.MAS\*
+	!	.p
+	!	Payroll Employee Standard ERNDED File.
+	!
+	! Index:
+	!	.x Payroll Employee Standard ERNDED File
+	!	.x PR_EMP_STD_ERNDED
+	!--

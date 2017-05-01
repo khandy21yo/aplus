@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Overhead Description File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__OVERHEAD__DESC.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Overhead Description File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__OVERHEAD__DESC.TBL\*
+	!	.p
+	!	Payroll Overhead Description File.
+	!
+	! Index:
+	!	.x Payroll Overhead Description File
+	!	.x PR_OVERHEAD_DESC
+	!--

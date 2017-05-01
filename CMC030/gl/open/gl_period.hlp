@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The General Ledger Period File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__PERIOD.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controlling file in the ^*General Ledger System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x General Ledger Period File
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__PERIOD.CTR\*
+	!	.p
+	!	General Ledger Period File.
+	!
+	! Index:
+	!	.x General Ledger Period File
+	!	.x GL_PERIOD
+	!--

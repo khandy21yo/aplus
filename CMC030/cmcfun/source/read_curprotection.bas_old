@@ -1,0 +1,145 @@
+1	%TITLE "Get Current Protection Code"
+	%SBTTL "READ_CURPROTECTION"
+	%IDENT "V3.3"
+
+	SUB READ_CURPROTECTION(PROTECT$,STATUS%)
+
+	!
+	!		COPYRIGHT (C) 1986 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	It receives the current protection codes from the program.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	This function returns the current value of the protection code.
+	!
+	! Example:
+	!
+	!	PROT$ = READ_CURPROTECTION
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:READ_CURPROTECTION/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP READ_CURPROTECTION
+	!	$ DELETE READ_CURPROTECTION.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	11/20/86 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	STAT$
+	!		A string used to parse various sections.
+	!
+	!	STAT%
+	!		An integer used to parse various sections.
+	!
+	!--
+	%PAGE
+
+
+	!
+	! Initilize vars (NOTE: Uses long instead of word FOR A REASON|||)
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG FUNCTION SYS$SETDFPROT
+
+	%PAGE
+
+	!
+	! Get integer value of protection codes
+	!
+	SYS_STATUS% = SYS$SETDFPROT(, GETVALUE% BY REF)
+	STATUS% = 0%
+
+	IF (SYS_STATUS% AND 1%) = 0%
+	THEN
+		STATUS% = SYS_STATUS%
+		EXIT SUB
+	END IF
+
+	!
+	! Parse SYSTEM section
+	!
+	STAT$ = "S:"
+	STAT% = GETVALUE% AND 15%
+	GOSUB ParseUnit
+
+	!
+	! Parse OWNER section
+	!
+	STAT$ = STAT$ + ",O:"
+	STAT% = (GETVALUE% / 16%) AND 15%
+	GOSUB ParseUnit
+
+	!
+	! Parse GROUP section
+	!
+	STAT$ = STAT$ + ",G:"
+	STAT% = (GETVALUE% / 256%) AND 15%
+	GOSUB ParseUnit
+
+	!
+	! Parse WORLD section
+	!
+	STAT$ = STAT$ + ",W:"
+	STAT% = (GETVALUE% / 4096%) AND 15%
+	GOSUB ParseUnit
+
+	!
+	! Set up return value and exit
+	!
+	PROTECT$ = STAT$
+	EXIT SUB
+
+	!
+	! Parse one small unit of the protection code
+	!
+ ParseUnit:
+	STAT$ = STAT$ + "R" UNLESS STAT% AND 1%
+	STAT$ = STAT$ + "W" UNLESS STAT% AND 2%
+	STAT$ = STAT$ + "E" UNLESS STAT% AND 4%
+	STAT$ = STAT$ + "D" UNLESS STAT% AND 8%
+
+	RETURN
+
+	END SUB

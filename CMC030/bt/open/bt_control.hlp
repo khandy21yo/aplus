@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Billing Tuition Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BT__CONTROL.CTR\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the controling file in the ^*Billing Tuition System\* going
+	!	under UTILTY and initialize system controlling fields.
+	!	Run process again.
+	!
+	! Index:
+	!	.x Billing Tuition Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BT__CONTROL.CTR\*
+	!	.p
+	!	Billing Tuition Control File.
+	!
+	! Index:
+	!	.x Billing Tuition Control File
+	!	.x BT_CONTROL
+	!--

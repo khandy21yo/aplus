@@ -1,0 +1,26 @@
+	!======================================================================
+	! BS_RATE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BS_RATE.CH%, STAT%)
+	CALL READ_DEVICE('BS_RATE',BS_RATE.DEV$, STAT%)
+	CALL READ_PROTECTION('BS_RATE',BS_RATE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(BS_RATE.PRO$, STAT%)
+
+	BS_RATE.NAME$ = BS_RATE.DEV$+"BS_RATE.TBL"
+
+	OPEN BS_RATE.NAME$ AS FILE BS_RATE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BS_RATE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			BS_RATE::PRG, &
+			BS_RATE::RATEUOM, &
+			BS_RATE::EFFDATE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Patient File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__PATIENT.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Patient File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__PATIENT.MAS\*
+	!	.p
+	!	Patient File.
+	!	each patient.
+	!
+	! Index:
+	!	.x Patient File
+	!	.x BI_PATIENT
+	!
+	!--

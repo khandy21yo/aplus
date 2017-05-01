@@ -1,0 +1,25 @@
+	!======================================================================
+	! AR_SERCHG file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_SERCHG.CH%, STAT%)
+	CALL READ_DEVICE('AR_SERCHG',AR_SERCHG.DEV$, STAT%)
+	CALL READ_PROTECTION('AR_SERCHG',AR_SERCHG.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(AR_SERCHG.PRO$, STAT%)
+
+	AR_SERCHG.NAME$ = AR_SERCHG.DEV$+"AR_SERCHG.TBL"
+
+	OPEN AR_SERCHG.NAME$ AS FILE AR_SERCHG.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_SERCHG, &
+		PRIMARY KEY &
+		( &
+			AR_SERCHG::COUNTRY, &
+			AR_SERCHG::STATE, &
+			AR_SERCHG::ACCT &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,19 @@
+	!======================================================================
+	! TK_ALIAS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_ALIAS.CH%, STAT%)
+	CALL READ_DEVICE('TK_ALIAS',TK_ALIAS.DEV$, STAT%)
+
+	TK_ALIAS.NAME$ = "REF:TK_ALIAS.MAS"
+
+	OPEN TK_ALIAS.NAME$ FOR INPUT AS FILE TK_ALIAS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_ALIAS, &
+		PRIMARY KEY &
+			TK_ALIAS::ALIAS, &
+		ALTERNATE KEY &
+			TK_ALIAS::PROGRAMMER &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

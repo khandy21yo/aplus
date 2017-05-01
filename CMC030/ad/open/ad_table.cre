@@ -1,0 +1,25 @@
+	!======================================================================
+	! AD_TABLE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_TABLE.CH%, STAT%)
+	CALL READ_DEVICE('AD_TABLE',AD_TABLE.DEV$, STAT%)
+	CALL READ_PROTECTION('AD_TABLE',AD_TABLE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(AD_TABLE.PRO$, STAT%)
+
+	AD_TABLE.NAME$ = AD_TABLE.DEV$+"AD_TABLE.TBL"
+
+	OPEN AD_TABLE.NAME$ AS FILE AD_TABLE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_TABLE, &
+		PRIMARY KEY &
+		( &
+			AD_TABLE::OPTTABLE, &
+			AD_TABLE::YEARS, &
+			AD_TABLE::EFFDATE &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

@@ -1,0 +1,25 @@
+	!++
+	! Error:5
+	!	^*The Service Charge Definition is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AR__SERCHG.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Accounts Receivable System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Service Charge Definition
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AR__SERCHG.TBL\*
+	!	- Service Charge Definition.
+	!
+	! Index:
+	!	.x Service Charge Definition
+	!	.x AR_SERCHG
+	!--

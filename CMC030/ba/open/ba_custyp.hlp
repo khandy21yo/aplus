@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Customer Type Definitions is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BA_CUSTYP.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Agency System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Customer Type Definitions
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BA__CUSTYP.TBL\*
+	!	.p
+	!	Customer Type Definitions.
+	!
+	! Index:
+	!	.x Customer Type Definitions
+	!	.x BA_CUSTYP
+	!--

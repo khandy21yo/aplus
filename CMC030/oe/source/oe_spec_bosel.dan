@@ -1,0 +1,2231 @@
+1	%TITLE "Load Selected Backorders"
+	%SBTTL "OE_SPEC_BOSEL"
+	%IDENT "V3.3"
+
+	!
+	! COPYRIGHT (C) 1991 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a committment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Load Selected Backorders\* option provides a means of selecting
+	!	backordered items for which packing lists or shipping documents will be
+	!	printed. Selections may be made by selecting specific customers, specific
+	!	products or a combination of the two. Unwanted orders or line items within
+	!	an order may be deleted prior to printing the packing lists by utilizing
+	!	the maintenance routine.
+	!	.b
+	!	Selecting backorders with this option is a more time effective method of
+	!	making the selections. However, if the user wished to select specific orders,
+	!	the Shipping Journal option could be utilized. In either event, a shipping
+	!	journal is created with this process.
+	!	.b
+	!	When the shipping data is recorded, the user may wish to edit the same batch
+	!	number that was created with the Load Selected Backorders or Shipping Journal
+	!	options, otherwise it would be necessary to delete the batch.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Load Backorders
+	!	.x Backorders>Load
+	!
+	! Option:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC 4.4
+	!
+	! Compile:
+	!
+	!	$ BAS OE_SOURCE:OE_SPEC_BOSEL/LINE
+	!	$ LINK/EXECUTABLE=OE_EXE:*.EXE OE_SPEC_BOSEL, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE OE_SPEC_BOSEL.OBJ;*
+	!
+	! Author:
+	!
+	!	07/16/91 - Val James Allen
+	!
+	! Modification history:
+	!
+	!	07/01/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	07/02/92 - Frank F. Starman
+	!		Rewrite program
+	!
+	!	08/12/92 - Frank F. Starman
+	!		Added option select by order.
+	!
+	!	08/20/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	09/21/92 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	10/12/92 - Dan Perkins
+	!		Added MISCACCT field to OE_INVJOUR record.
+	!
+	!	10/26/92 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	02/02/93 - Frank F. Starman
+	!		Load to OE_ORDERJOUR and OE_ORDERLINE
+	!
+	!	02/26/93 - Kevin Handy
+	!		Clead up (Check)
+	!
+	!	03/31/93 - Dan Perkins
+	!		Added code to load material from MO system.
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MO_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OE_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PS_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.SMG.SMG_SCROLL"
+	DECLARE SMG_SCROLL_CDD SMG_SCROLL
+
+	!
+	! Define maps
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP(AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+	DECLARE			AR_35CUSTOM_CDD		AR_35CUSTOM_EXAM
+
+	%INCLUDE %FROM %CDD "CDD$TOP.OE.OE_ORDERJOUR"
+	MAP (OE_ORDERJOUR)	OE_ORDERJOUR_CDD	OE_ORDERJOUR
+
+	%INCLUDE %FROM %CDD "CDD$TOP.OE.OE_REGHEADER"
+	MAP (OE_REGHEADER)	OE_REGHEADER_CDD	OE_REGHEADER
+	DECLARE			OE_REGHEADER_CDD	OE_REGHEADER_READ
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_REGLINE"
+	MAP (MO_REGLINE)	MO_REGLINE_CDD		MO_REGLINE
+	DECLARE			MO_REGLINE_CDD		MO_REGLINE_READ
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_ORDERLINE"
+	MAP (MO_ORDERLINE)	MO_ORDERLINE_CDD	MO_ORDERLINE
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_REGLINEOPT"
+	MAP (MO_REGLINEOPT)	MO_REGLINEOPT_CDD	MO_REGLINEOPT
+	DECLARE			MO_REGLINEOPT_CDD	MO_REGLINEOPT_READ
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_ORDERLINEOPT"
+	MAP (MO_ORDERLINEOPT)	MO_ORDERLINEOPT_CDD	MO_ORDERLINEOPT
+
+	%INCLUDE %FROM %CDD "CDD$TOP.OE.OE_REGLINE"
+	MAP (OE_REGLINE)	OE_REGLINE_CDD		OE_REGLINE
+	DECLARE			OE_REGLINE_CDD		OE_REGLINE_READ
+
+	%INCLUDE %FROM %CDD "CDD$TOP.OE.OE_ORDERLINE"
+	MAP (OE_ORDERLINE)	OE_ORDERLINE_CDD	OE_ORDERLINE
+
+	%INCLUDE %FROM %CDD "CDD$TOP.MO.MO_MAKE"
+	MAP (MO_MAKE)		MO_MAKE_CDD		MO_MAKE
+
+	%INCLUDE %FROM %CDD "CDD$TOP.PD.PD_PRODUCT"
+	MAP (PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE %FROM %CDD "CDD$TOP.UTL.UTL_PROFILE"
+	MAP (UTL_PROFILE)	UTL_PROFILE_CDD		UTL_PROFILE
+
+	%INCLUDE %FROM %CDD "CDD$TOP.PS.PS_CASHREG"
+	MAP (PS_CASHREG)	PS_CASHREG_CDD		PS_CASHREG
+
+	DIM SELECT_LIST$(1000%)
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING  FUNCTION ENTR_3STRING
+	EXTERNAL STRING  FUNCTION ENTR_3YESNO
+	EXTERNAL STRING  FUNCTION DATE_TODAY
+	EXTERNAL STRING  FUNCTION CONV_STRING
+	EXTERNAL STRING  FUNCTION PRNT_DATE
+	EXTERNAL STRING  FUNCTION ENTR_3OPTION
+
+	EXTERNAL INTEGER FUNCTION ENTR_3CHOICE
+
+	EXTERNAL REAL    FUNCTION ENTR_3NUMBER
+	EXTERNAL REAL    FUNCTION FUNC_ROUND
+
+	EXTERNAL LONG    FUNCTION DSPL_SCROLL
+	EXTERNAL LONG    FUNCTION ENTR_3ENTER
+	EXTERNAL LONG    FUNCTION AR_MAIN_CUSTOM
+	EXTERNAL LONG    FUNCTION AR_EXAM_CUSTOM
+	EXTERNAL LONG    FUNCTION PD_MAIN_PRODUCT
+	EXTERNAL LONG    FUNCTION MAIN_WINDOW
+	EXTERNAL LONG	 FUNCTION MAINT_GROUP
+	EXTERNAL LONG    FUNCTION IC_WRIT_35BALANCE
+	EXTERNAL LONG    FUNCTION IC_READ_35BALANCE
+	EXTERNAL LONG    FUNCTION IC_DSPL_35BALANCE
+	EXTERNAL LONG    FUNCTION MO_READ_REGLINE
+	EXTERNAL LONG    FUNCTION MO_READ_REGLINEOPT
+	EXTERNAL LONG    FUNCTION OE_READ_REGHEADER
+	EXTERNAL LONG    FUNCTION OE_READ_REGLINE
+
+	COM (CH_OE_REGHEADER)	OE_REGHEADER.CH%
+	COM (CH_MO_REGLINE)	MO_REGLINE.CH%
+	COM (CH_MO_REGLINEOPT)	MO_REGLINEOPT.CH%
+	COM (CH_OE_REGLINE)	OE_REGLINE.CH%
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+	! Initialize all the standard stuff through an external call
+	!
+	CALL READ_INITIALIZE
+
+	!
+	! Look up device
+	!
+	CALL  READ_DEVICE("OE_ORDERJOUR", OE_ORDERJOUR.DEV$, STAT%)
+
+100	!
+	! Query user for year of file
+	!
+	CALL FIND_FILE( OE_ORDERJOUR.DEV$ + "OE_ORDERJOUR_*_%%.JRL", OE_ORDERJOUR_FILE$(), &
+		'16'L,'','')
+
+	OE_ORDERJOUR_FILE% = VAL(OE_ORDERJOUR_FILE$(0%))
+
+	IF OE_ORDERJOUR_FILE%
+	THEN
+		OE_ORDERJOUR_FILE$(LOOP%) = &
+			RIGHT(OE_ORDERJOUR_FILE$(LOOP%), 14%) &
+				FOR LOOP% = 1% TO OE_ORDERJOUR_FILE%
+
+		TEMP$ = "Fill Orders Batch"
+
+		X% = ENTR_3CHOICE(SCOPE, '', '', OE_ORDERJOUR_FILE$(), "", &
+			'0'L, TEMP$, '', '' )
+
+		IF X% > 0%
+		THEN
+			BATCH_NO$ = EDIT$(OE_ORDERJOUR_FILE$(X%),-1%)
+			GOTO 200
+
+		END IF
+	END IF
+
+	SELECT SCOPE.EXIT%
+		CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+			GOTO ExitProgram
+
+	END SELECT
+
+	!
+	! Ask for year
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		'20'L, &
+		'80'L, &
+		SMG_SCREEN_DATA% &
+	)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%, &
+		SMG_PBID, &
+		'1'L, &
+		'1'L &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Register Number:", '10'L, '30'L)
+
+	!
+	! Assign default register number
+	!
+	REG_NO$ = "????"
+
+110	!
+	! Set up the help message
+	!
+	PRG_ITEM = "FLD01REGNUM"
+
+	!++
+	! Abstract:FLD01REGNUM
+	!--
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 10%, 48%, REG_NO$, -1%, 16%)
+
+		CASE SMG$K_TRM_F14
+			IF MAIN_WINDOW(PS_MAIN_CASHREG.ID, "VX") = 1%
+			THEN
+				REG_NO$ = PS_CASHREG::CASHREG
+				END IF
+			GOTO 310
+
+		CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+			OPTION$	= 'EXIT'
+			GOTO ExitProgram
+
+	END SELECT
+
+	REG_NO$ = EDIT$(REG_NO$, -1%)
+
+	GOTO 110 IF INSTR(1%, REG_NO$,"?")
+
+	V% = MAIN_WINDOW(PS_MAIN_CASHREG.ID, "M0" + REG_NO$)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SCREEN_DATA%, "Batch number:", '11'L, '30'L)
+
+120	!
+	! Set up the help message
+	!
+	PRG_ITEM = "FLD02BATCH"
+
+	!++
+	! Abstract:FLD02BATCH
+	!--
+
+	!
+	! Assign default batch number
+	!
+	BATCH_NUM$ = "01"
+
+	SELECT ENTR_3ENTER(SCOPE, SMG_SCREEN_DATA%, 11%, 48%, BATCH_NUM$, -1%, 16%)
+
+		CASE 3%, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ	! Exit key ?
+			OPTION$	= 'EXIT'
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 110
+
+	END SELECT
+
+	BATCH_NUM$ = EDIT$(BATCH_NUM$, -1%)
+
+	IF LEN(TRM$(BATCH_NUM$)) <> 2%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Please enter the batch number in XX format", 0%)
+		GOTO 320
+	END IF
+
+	BATCH_NO$ = REG_NO$ + "_" + BATCH_NUM$
+
+	V% = MAIN_WINDOW(PS_MAIN_CASHINOUT.ID, "M")
+
+200	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SCREEN_DATA%)
+
+	!***************************************************************
+	! Open all of the files
+	!***************************************************************
+
+	!
+	! Open register header file
+	!
+310	%INCLUDE "SOURCE:[OE.OPEN]OE_REGHEADER.CRE"
+
+	!
+	! Open MO Regline file
+	!
+320	%INCLUDE "SOURCE:[MO.OPEN]MO_REGLINE.CRE"
+
+	!
+	! Open MO ReglineOpt file
+	!
+330	%INCLUDE "SOURCE:[MO.OPEN]MO_REGLINEOPT.CRE"
+
+	!
+	! Open register line file
+	!
+340	%INCLUDE "SOURCE:[OE.OPEN]OE_REGLINE.CRE"
+
+	!
+	! Open the Invoice header file
+	!
+360	%INCLUDE "SOURCE:[OE.OPEN]OE_ORDERJOUR.CRE"
+
+	!
+	! Open the MO Orderline file
+	!
+370	%INCLUDE "SOURCE:[MO.OPEN]MO_ORDERLINE.CRE"
+
+	!
+	!Open the MO OrderlineOpt file
+	!
+380	%INCLUDE "SOURCE:[MO.OPEN]MO_ORDERLINEOPT.CRE"
+
+	!
+	! Open the invoice line file
+	!
+390	%INCLUDE "SOURCE:[OE.OPEN]OE_ORDERLINE.CRE"
+
+	!
+	! Open the profile file
+	!
+400	%INCLUDE "SOURCE:[UTL.OPEN]UTL_PROFILE.OPN"
+
+	GET #UTL_PROFILE.CH%, RECORD 1%, REGARDLESS
+
+	CLOSE #UTL_PROFILE.CH%
+	CALL ASSG_FREECHANNEL(UTL_PROFILE.CH%)
+
+	!*******************************************************************
+	! Select which orders/lines are to be printed
+	!*******************************************************************
+
+	!
+	! Create the data display
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		'18'L,			! 20 Rows &
+		'78'L,			! 80 Columns &
+		SMG_SCREEN_DATA%,	! Identifier &
+		SMG$M_BORDER		! Put a border around it &
+	)
+
+	CALL LIB$SIGNAL(SMG_STATUS%) IF (SMG_STATUS% AND 1%) = 0%
+
+	SMG_STATUS% = SMG$LABEL_BORDER(SMG_SCREEN_DATA%, &
+		'Fill Orders Batch No ' + BATCH_NO$)
+
+	!
+	! Paste the data display
+	!
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SCREEN_DATA%,	! Data pasteboard &
+		SMG_PBID,		! Pasetboard &
+		'2'L,			! Row to start in &
+		'2'L,			! Column to start in &
+					! Don't need top-disp &
+	)
+
+	!
+	! Define scrolling region
+	!
+	SMG_SCROLL::WINDOW	= SMG_SCREEN_DATA%
+	SMG_SCROLL::TOP_ARRAY	= 1%
+	SMG_SCROLL::BOT_ARRAY	= 1%
+	SMG_SCROLL::SCROLL_TOP	= 2%
+	SMG_SCROLL::SCROLL_BOT	= 17%
+	SMG_SCROLL::BEG_ELEMENT	= 1%
+	SMG_SCROLL::END_ELEMENT	= 1%
+	SMG_SCROLL::TOP_LINE	= 1%
+	SMG_SCROLL::CUR_LINE	= 1%
+	SMG_SCROLL::CUR_W_ROW	= 1%
+	SMG_SCROLL::CUR_W_COL	= 1%
+	SMG_SCROLL::FIND_LINE	= 1%
+	SMG_SCROLL::SMG_FLAG	= 0%
+	SMG_SCROLL::PROMPT	= "->"
+	SMG_SCROLL::VIDEO_SET	= SMG$M_REVERSE
+	SMG_SCROLL::VIDEO_COMP	= 0%
+	SMG_SCROLL::CHARSET	= 0%
+	SMG_SCROLL::DRAW_COLS	= ""
+
+	TOTAL_SELECTED% = 0%
+	SMG_SCROLL::CUR_LINE = 1%
+
+	!
+	! Initial paint on screen
+	!
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_SCREEN_DATA%)
+
+	V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_SCREEN_DATA%, &
+		'  Description    ReqDate     Qty  DocNumber  Line Customer#  CustomerName          ' , &
+		1%, 1%,, SMG$M_REVERSE )
+
+ Menu:
+	PRG_ITEM = ""
+	OPTLIST$ = 'Prod_s Cust_s Doc_s Make_s Qty_change Sort Remove Load clEar Help eXit'
+	GOSUB StatusLine
+
+	OPT$ = ENTR_3OPTION(SCOPE, "COMMAND", OPTLIST$, OPT%, 0%)
+
+	SELECT SCOPE.EXIT%
+
+		CASE SMG$K_TRM_CTRLC
+			GOTO Menu
+
+		!
+		! Next Screen, Downarrow, etc.
+		!
+		CASE	SMG$K_TRM_DOWN,	SMG$K_TRM_NEXT_SCREEN,	SMG$K_TRM_F19, &
+			SMG$K_TRM_UP,	SMG$K_TRM_PREV_SCREEN,	SMG$K_TRM_F18 &
+
+			V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SCOPE.EXIT%, "")
+			GOTO Menu
+
+		!
+		! Exit
+		!
+		CASE SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO ExitProgram
+
+		!
+		! Good keys
+		!
+		CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+		!
+		! Bad Keys
+		!
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO Menu
+
+	END SELECT
+
+	SELECT OPT$
+
+		CASE 'X'
+			GOTO ExitProgram
+
+
+		CASE "R"
+
+	!++
+	! Abstract:REMOVE
+	!	^*Remove\*
+	!	.b
+	!	.lm +5
+	!	The ^*Remove\* function in the COMMAND menu of the backorder
+	!	fill select screen provides the means to remove one line entry
+	!	from the select window. After the remove
+	!	function has been accessed, place the arrow beside the line to
+	!	be removed and press ^*_<Do_>\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Remove>Function
+	!
+	!--
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_OPTION, SPACE$(80%), '1'L, '1'L)
+
+ MoveEnter:
+			TEMP$ = "Position the arrow on the line to remove - Then press <DO> "
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_OPTION, TEMP$, '1'L, '1'L)
+
+			JUNK$ = ""
+
+			SELECT ENTR_3ENTER(SCOPE, SMG_OPTION, 1%, LEN(TEMP$), JUNK$, -1%, 4096%)
+
+				CASE SMG$K_TRM_CTRLC
+					GOTO Menu
+
+				CASE	SMG$K_TRM_DOWN,	SMG$K_TRM_NEXT_SCREEN,	SMG$K_TRM_F19, &
+					SMG$K_TRM_UP,	SMG$K_TRM_PREV_SCREEN,	SMG$K_TRM_F18 &
+
+					V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SCOPE.EXIT%, "")
+					GOSUB StatusLine
+					GOTO MoveEnter
+
+				!
+				! Exit
+				!
+				CASE SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO Menu
+
+				!
+				! Good keys
+				!
+				CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+				!
+				! Bad Keys
+				!
+				CASE ELSE
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					GOTO MoveEnter
+
+			END SELECT
+
+			!
+			! Remove from the list
+			!
+			SELECT_LIST$(LOOP%) = SELECT_LIST$(LOOP% + 1%) &
+				FOR LOOP% = SMG_SCROLL::CUR_LINE TO SMG_SCROLL::BOT_ARRAY - 1%
+
+			SELECT_LIST$(TOTAL_SELECTED%) = " "
+
+			!
+			! Repaint screen
+			!
+			V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+
+			!
+			! subtract from counter
+			!
+			TOTAL_SELECTED% = TOTAL_SELECTED% - 1%
+
+			SMG_SCROLL::BOT_ARRAY,	SMG_SCROLL::END_ELEMENT	= TOTAL_SELECTED%
+
+
+		CASE "Q"
+
+	!++
+	! Abstract:QTYCHANGE
+	!	^*Quantity Change\*
+	!	.b
+	!	.lm +5
+	!	The ^*Remove\* function in the COMMAND menu of the backorder
+	!	fill select screen provides the means to remove one line entry
+	!	from the select window. After the remove
+	!	function has been accessed, place the arrow beside the line to
+	!	be removed and press ^*_<Do_>\*.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Remove>Function
+	!
+	!--
+			QTY = VAL(MID(SELECT_LIST$(SMG_SCROLL::CUR_LINE), 25%, 6%))
+ QtyEnter:
+			QTY = ENTR_3NUMBER(SCOPE, SMG_SCREEN_DATA%, "", "New Quantity ", &
+				QTY, 0%, "######", "")
+
+			SELECT SCOPE.EXIT%
+
+				!
+				! Exit
+				!
+				CASE SMG$K_TRM_CTRLC, SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO Menu
+
+				CASE	SMG$K_TRM_DOWN,	SMG$K_TRM_NEXT_SCREEN,	SMG$K_TRM_F19, &
+					SMG$K_TRM_UP,	SMG$K_TRM_PREV_SCREEN,	SMG$K_TRM_F18 &
+
+				!
+				! Good keys
+				!
+				CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+					IF SMG_SCROLL::END_ELEMENT <> SMG_SCROLL::CUR_LINE
+					THEN
+						SCOPE.EXIT% = SMG$K_TRM_DOWN
+					ELSE
+						SCOPE.EXIT% = SMG$K_TRM_F19
+					END IF
+
+				!
+				! Bad Keys
+				!
+				CASE ELSE
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					GOTO QtyEnter
+
+			END SELECT
+
+			!
+			! Change on the list
+			!
+			SELECT_LIST$(SMG_SCROLL::CUR_LINE) = &
+				LEFT(SELECT_LIST$(SMG_SCROLL::CUR_LINE), 24%) + &
+				FORMAT$(QTY,"######") + &
+				RIGHT(SELECT_LIST$(SMG_SCROLL::CUR_LINE), 31%)
+
+			!
+			! Repaint screen
+			!
+			V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SCOPE.EXIT%, "")
+
+			QTY = VAL(MID(SELECT_LIST$(SMG_SCROLL::CUR_LINE), 25%, 6%))
+			GOSUB StatusLine
+			GOTO QtyEnter
+
+
+		CASE "P"
+
+	!++
+	! Abstract:PRODUCT_SELECT
+	!	^*Product__select\*
+	!	.b
+	!	.lm +5
+	!	The ^*Product__select\* function in the COMMAND menu
+	!	provides the means to select all orders which contain
+	!	backorders of the entered product and schedule them for
+	!	the load. Any order/line that is not to be released should
+	!	be removed prior to the load function.
+	!	..lm -5
+	!
+	! Index:
+	!	.x Product_Select>Function
+	!
+	!--
+			PRODUCT$ = &
+				STRING$(LEN(PD_PRODUCT::PRODUCT_NUM), ASCII(" "))
+
+ ProdEnter:
+			PRODUCT$ = ENTR_3STRING(SCOPE, SMG_SCREEN_DATA%, "", "Product to select ", &
+				PRODUCT$, 0%, "'E", "")
+
+			SELECT SCOPE.EXIT%
+
+				!
+				! Exit
+				!
+				CASE SMG$K_TRM_CTRLC, SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO Menu
+
+				CASE SMG$K_TRM_F17
+
+					V% = IC_DSPL_35BALANCE(PRODUCT$, &
+						UTL_PROFILE::DEFLOCATION, &
+						AVAILABLE,"14;10", 0%)
+
+					GOTO ProdEnter
+
+				!
+				! List choices
+				!
+				CASE SMG$K_TRM_F14
+					IF MAIN_WINDOW(PD_MAIN_PRODUCT.ID, "VX") = 1%
+					THEN
+						PRODUCT$ = PD_PRODUCT::PRODUCT_NUM
+					END IF
+					GOTO ProdEnter
+
+				!
+				! Good keys
+				!
+				CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+				!
+				! Bad Keys
+				!
+				CASE ELSE
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					GOTO ProdEnter
+
+			END SELECT
+
+			GOTO Menu IF EDIT$(PRODUCT$, -1%) = ""
+
+			!
+			! Start look up in Order file
+			!
+500			FIND #OE_REGLINE.CH%, KEY#1% EQ PRODUCT$, REGARDLESS
+
+			ORDER$ = ""
+			LINE$  = ""
+
+520			GET #OE_REGLINE.CH%, REGARDLESS
+
+			GOTO Menu IF OE_REGLINE::PRODUCT <> PRODUCT$
+
+			GOTO 520 IF OE_REGLINE::ORDNUM + OE_REGLINE::LIN = &
+				ORDER$ + LINE$
+
+			ORDER$ = OE_REGLINE::ORDNUM
+			LINE$  = OE_REGLINE::LIN
+
+			V% = OE_READ_REGLINE(OE_REGLINE::ORDNUM, &
+				OE_REGLINE::LIN, "EQ", &
+				OE_REGLINE_READ, QTY() )
+
+			GOTO 520 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 520 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(ORDER$, CMC$_LEFT) + &
+					" " + LINE$
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 520 IF OE_READ_REGHEADER(OE_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORNAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				OE_REGLINE_READ::PRODUCT                        + " "  + &
+				PRNT_DATE(OE_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				OE_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"O"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 520
+
+		CASE "C"
+
+	!++
+	! Abstract:CUSTOMER_SELECT
+	!	^*Customer__select\*
+	!	.b
+	!	.lm +5
+	!	The ^*Customer__select\* function in the COMMAND menu
+	!	provides the means to select a Customer number to be
+	!	loaded if there are any backorders for this customer.
+	!	All backordered lines will be selected.
+	!	Any lines that are not to be loaded should be removed.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Customer select>Function
+	!
+	!--
+
+			CLIENT_NUM$ =  &
+				STRING$(LEN(AR_35CUSTOM::CUSNUM), ASCII(" "))
+
+ CustEnter:
+			CLIENT_NUM$ = ENTR_3STRING(SCOPE, SMG_SCREEN_DATA%, "", &
+				"Customer# to select ", &
+				CLIENT_NUM$, 0%, "'E", "")
+
+			SELECT SCOPE.EXIT%
+
+				CASE SMG$K_TRM_CTRLC
+					GOTO Menu
+
+				!
+				! Exit
+				!
+				CASE SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO Menu
+
+				CASE SMG$K_TRM_F14
+					IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX") = 1%
+					THEN
+						CLIENT_NUM$ = AR_35CUSTOM::CUSNUM
+						GOTO CustEnter
+					END IF
+
+				!
+				! Good keys
+				!
+				CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+				!
+				! Bad Keys
+				!
+				CASE ELSE
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					GOTO CustEnter
+
+			END SELECT
+
+			GOTO Menu IF EDIT$(CLIENT_NUM$, -1%) = ""
+
+600			FIND #OE_REGHEADER.CH%, KEY #3% GE CLIENT_NUM$, REGARDLESS
+
+620			GET #OE_REGHEADER.CH%, REGARDLESS
+
+			GOTO Menu IF OE_REGHEADER::CUSNUM <> CLIENT_NUM$
+
+			!
+			! Check MO_ORDERLINE
+			!
+			LINE$ = "    "
+
+630			IF MO_READ_REGLINE(OE_REGHEADER::ORDNUM, LINE$, "GT", &
+				MO_REGLINE_READ, QTY() ) <> CMC$_NORMAL
+			THEN
+				LINE$ = "    "
+				GOTO 650
+			END IF
+
+			LINE$ = MO_REGLINE_READ::LIN
+
+			GOTO 630 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 630 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(MO_REGLINE_READ::ORDNUM, CMC$_LEFT) + &
+					" " + MO_REGLINE_READ::LIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 630 IF OE_READ_REGHEADER(MO_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				MO_REGLINE_READ::MAKE + &
+				MO_REGLINE_READ::MODELCODE                      + " "  + &
+				PRNT_DATE(MO_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(MO_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				MO_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"M"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			!
+			! Check MO_ORDERLINEOPT
+			!
+			OPTLINE$ = "    "
+
+640			GOTO 630 IF MO_READ_REGLINEOPT(OE_REGHEADER::ORDNUM, &
+				MO_REGLINE_READ::LIN, OPTLINE$, "GT", &
+				MO_REGLINEOPT_READ, QTY() ) <> CMC$_NORMAL
+
+			OPTLINE$ = MO_REGLINEOPT_READ::LIN
+
+			GOTO 640 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 640 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) + &
+					MID(SELECT_LIST$(LOOP%), 86%, 5%) = &
+					CONV_STRING(MO_REGLINEOPT_READ::ORDNUM, CMC$_LEFT) + &
+					" " + MO_REGLINEOPT_READ::LIN + &
+					" " + MO_REGLINEOPT_READ::OPTLIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 640 IF OE_READ_REGHEADER(MO_REGLINEOPT_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				LEFT(MO_REGLINEOPT_READ::OPTDESCR, 14%)            + " "  + &
+				PRNT_DATE(MO_REGLINEOPT_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                         + "  " + &
+				CONV_STRING(MO_REGLINEOPT_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				MO_REGLINEOPT_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                          + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)               + " "  + &
+				OE_REGHEADER_READ::LOCATION                        + " "  + &
+				MO_REGLINEOPT_READ::OPTLIN                         + " "  + &
+				"T"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 640
+
+650			GOTO 620  IF OE_READ_REGLINE(OE_REGLINE::ORDNUM, &
+				LINE$, "GT", &
+				OE_REGLINE_READ, QTY() ) <> CMC$_NORMAL
+
+			LINE$ = OE_REGLINE_READ::LIN
+
+			GOTO 650 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 650 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + &
+					" " + OE_REGLINE_READ::LIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 650 IF OE_READ_REGHEADER(OE_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				OE_REGLINE_READ::PRODUCT                        + " "  + &
+				PRNT_DATE(OE_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				OE_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"O"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 650
+
+
+		CASE "D"
+
+	!++
+	! Abstract:DOCUMENT_SELECT
+	!	^*Document__select\*
+	!	.b
+	!	.lm +5
+	!	The ^*Document__select\* function in the COMMAND menu
+	!	provides the means to select a Document number to be
+	!	loaded if there are any open orders for this document.
+	!	All open lines will be selected.
+	!	Any lines that are not to be loaded should be removed.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Document select>Function
+	!
+	!--
+
+			DOC_NUM$ =  &
+				STRING$(LEN(OE_REGHEADER::ORDNUM), ASCII(" "))
+
+ DocEnter:
+			DOC_NUM$ = ENTR_3STRING(SCOPE, SMG_SCREEN_DATA%, "", &
+				"Document# to select ", &
+				DOC_NUM$, 2%, "~R 'E", "")
+
+			SELECT SCOPE.EXIT%
+
+				CASE SMG$K_TRM_CTRLC
+					GOTO Menu
+
+				!
+				! Exit
+				!
+				CASE SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO Menu
+
+				CASE SMG$K_TRM_F14
+					IF MAIN_WINDOW(OE_MAIN_REGHEADER.ID, "VX") = 1%
+					THEN
+						DOC_NUM$ = OE_REGHEADER::ORDNUM
+						GOTO DocEnter
+					END IF
+
+				!
+				! Good keys
+				!
+				CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+				!
+				! Bad Keys
+				!
+				CASE ELSE
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					GOTO DocEnter
+
+			END SELECT
+
+			GOTO Menu IF EDIT$(DOC_NUM$, -1%) = ""
+
+			!
+			! Check MO_ORDERLINE
+			!
+			LINE$ = "    "
+
+730			IF MO_READ_REGLINE(DOC_NUM$, LINE$, "GT", &
+				MO_REGLINE_READ, QTY() ) <> CMC$_NORMAL
+			THEN
+				LINE$ = "    "
+				GOTO 750
+			END IF
+
+			LINE$ = MO_REGLINE_READ::LIN
+
+			GOTO 730 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 730 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(MO_REGLINE_READ::ORDNUM, CMC$_LEFT) + &
+					" " + MO_REGLINE_READ::LIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 730 IF OE_READ_REGHEADER(MO_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				MO_REGLINE_READ::MAKE + &
+				MO_REGLINE_READ::MODELCODE                      + " "  + &
+				PRNT_DATE(MO_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(MO_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				MO_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"M"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			!
+			! Check MO_ORDERLINEOPT
+			!
+			OPTLINE$ = "    "
+
+740			GOTO 730 IF MO_READ_REGLINEOPT(DOC_NUM$, &
+				MO_REGLINE_READ::LIN, OPTLINE$, "GT", &
+				MO_REGLINEOPT_READ, QTY() ) <> CMC$_NORMAL
+
+			OPTLINE$ = MO_REGLINEOPT_READ::LIN
+
+			GOTO 740 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 740 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) + &
+					MID(SELECT_LIST$(LOOP%), 86%, 5%) = &
+					CONV_STRING(MO_REGLINEOPT_READ::ORDNUM, CMC$_LEFT) + &
+					" " + MO_REGLINEOPT_READ::LIN + &
+					" " + MO_REGLINEOPT_READ::OPTLIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 740 IF OE_READ_REGHEADER(MO_REGLINEOPT_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				LEFT(MO_REGLINEOPT_READ::OPTDESCR, 14%)            + " "  + &
+				PRNT_DATE(MO_REGLINEOPT_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                         + "  " + &
+				CONV_STRING(MO_REGLINEOPT_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				MO_REGLINEOPT_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                          + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)               + " "  + &
+				OE_REGHEADER_READ::LOCATION                        + " "  + &
+				MO_REGLINEOPT_READ::OPTLIN                         + " "  + &
+				"T"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 740
+
+750			GOTO Menu IF OE_READ_REGLINE(DOC_NUM$, &
+				LINE$, "GT", &
+				OE_REGLINE_READ, QTY() ) <> CMC$_NORMAL
+
+			LINE$ = OE_REGLINE_READ::LIN
+
+			GOTO 750 IF QTY(0%) <= 0.0
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 750 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + &
+					" " + OE_REGLINE_READ::LIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 750 IF OE_READ_REGHEADER(OE_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				OE_REGLINE_READ::PRODUCT                        + " "  + &
+				PRNT_DATE(OE_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				OE_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"O"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 750
+
+
+		CASE "T"
+
+	!++
+	! Abstract:PARTIAL
+	!	^*Partial\*
+	!	.b
+	!	.lm +5
+	!	The ^*Partial\* shipment function in the COMMAND menu
+	!	provides the means to select a Documents to be
+	!	loaded if there are any previously shipped item open orders for this document.
+	!	All open lines will be selected.
+	!	Any lines that are not to be loaded should be removed.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Partial select>Function
+	!
+	!--
+800			RESET #OE_REGHEADER.CH%
+
+820			GET #OE_REGHEADER.CH%, REGARDLESS
+
+			GOTO 820 IF OE_REGHEADER::ASTATUS = "C"
+
+			LINE$ = "    "
+			PICK_FLAG% = 0%
+			SHIP_FLAG% = 0%
+
+850			GOTO 820 IF OE_READ_REGLINE(OE_REGHEADER::ORDNUM, &
+				LINE$, "GT", &
+				OE_REGLINE_READ, QTY() ) <> CMC$_NORMAL
+
+			LINE$ = OE_REGLINE_READ::LIN
+
+			GOTO 850 IF QTY(0%) <= 0.0
+
+			SHIP_FLAG% = SHIP_FLAG% + 1% IF QTY(2%) <> 0.0
+			GOTO 850 IF SHIP_FLAG% <= 1%
+			PICK_FLAG% = PICK_FLAG% + 1%
+			GOTO 850 IF PICK_FLAG% <= 1%
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 850 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + &
+					" " + OE_REGLINE_READ::LIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 850 IF OE_READ_REGHEADER(OE_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				OE_REGLINE_READ::PRODUCT                        + " "  + &
+				PRNT_DATE(OE_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(OE_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				OE_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"O"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 850 IF PICK_FLAG% = 1%
+			GOTO Menu
+
+
+		CASE "M"
+
+	!++
+	! Abstract:MAKE_SELECT
+	!	^*Make__select\*
+	!	.b
+	!	.lm +5
+	!	The ^*Make__select\* function in the COMMAND menu
+	!	provides the means to select a Make number to be
+	!	loaded if there are any open orders for this make.
+	!	All open lines will be selected.
+	!	Any lines that are not to be loaded should be removed.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Make select>Function
+	!
+	!--
+			MAKE$ = STRING$(LEN(MO_MAKE::MAKE), ASCII(" "))
+
+ MakeEnter:
+			MAKE$ = ENTR_3STRING(SCOPE, SMG_SCREEN_DATA%, "", &
+				"Make to select ", MAKE$, 0%, "'E", "")
+
+			SELECT SCOPE.EXIT%
+
+				!
+				! Exit
+				!
+				CASE SMG$K_TRM_CTRLC,SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+					GOTO Menu
+
+				!
+				! List choices
+				!
+				CASE SMG$K_TRM_F14
+					IF MAIN_WINDOW(MO_MAIN_MAKE.ID, "VX") = 1%
+					THEN
+						MAKE$ = MO_MAKE::MAKE
+					END IF
+					GOTO MakeEnter
+
+				!
+				! Good keys
+				!
+				CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+				!
+				! Bad Keys
+				!
+				CASE ELSE
+					CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+					GOTO MakeEnter
+
+			END SELECT
+
+			GOTO Menu IF EDIT$(MAKE$, -1%) = ""
+
+			!
+			! Start look up in MO REGLINE file
+			!
+900			FIND #MO_REGLINE.CH%, KEY#3% EQ MAKE$, REGARDLESS
+
+			YEAR$      = ""
+			MTYPE$     = ""
+			MSIZE$     = ""
+			MODELCODE$ = ""
+			ORDER$     = ""
+			LINE$      = ""
+
+920			GET #MO_REGLINE.CH%, REGARDLESS
+
+			GOTO Menu IF MO_REGLINE::MAKE <> MAKE$
+
+			GOTO 920 IF MO_REGLINE::YEAR + &
+				MO_REGLINE::MTYPE + MO_REGLINE::MSIZE + &
+				MO_REGLINE::MODELCODE + MO_REGLINE::ORDNUM + &
+				MO_REGLINE::LIN = YEAR$ + MTYPE$ + &
+				MSIZE$ + MODELCODE$ + ORDER$ + LINE$
+
+			YEAR$      = MO_REGLINE::YEAR
+			MTYPE$     = MO_REGLINE::MTYPE
+			MSIZE$     = MO_REGLINE::MSIZE
+			MODELCODE$ = MO_REGLINE::MODELCODE
+			ORDER$     = MO_REGLINE::ORDNUM
+			LINE$      = MO_REGLINE::LIN
+
+			!
+			! Check MO_ORDERLINE
+			!
+930			V% = MO_READ_REGLINE(MO_REGLINE::ORDNUM, &
+				MO_REGLINE::LIN, "EQ", &
+				MO_REGLINE_READ, QTY() )
+
+			GOTO 920 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				GOTO 920 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) = &
+					CONV_STRING(MO_REGLINE_READ::ORDNUM, CMC$_LEFT) + &
+					" " + MO_REGLINE_READ::LIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 920 IF OE_READ_REGHEADER(MO_REGLINE_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				MO_REGLINE_READ::MAKE + &
+				MO_REGLINE_READ::MODELCODE                      + " "  + &
+				PRNT_DATE(MO_REGLINE_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                      + "  " + &
+				CONV_STRING(MO_REGLINE_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				MO_REGLINE_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                       + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)            + " "  + &
+				OE_REGHEADER_READ::LOCATION                     + " "  + &
+				"    "                                          + " "  + &
+				"M"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			!
+			! Check MO_ORDERLINEOPT
+			!
+			OPTLINE$ = "    "
+
+940			GOTO 920 IF MO_READ_REGLINEOPT(OE_REGHEADER::ORDNUM, &
+				MO_REGLINE_READ::LIN, OPTLINE$, "GT", &
+				MO_REGLINEOPT_READ, QTY() ) <> CMC$_NORMAL
+
+			OPTLINE$ = MO_REGLINEOPT_READ::LIN
+
+			GOTO 940 IF QTY(0%) <= 0.0			
+
+			!
+			! See if this line is already in the array
+			!
+			FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+					GOTO 940 IF MID(SELECT_LIST$(LOOP%), 33%, 15%) + &
+					MID(SELECT_LIST$(LOOP%), 86%, 5%) = &
+					CONV_STRING(MO_REGLINEOPT_READ::ORDNUM, CMC$_LEFT) + &
+					" " + MO_REGLINEOPT_READ::LIN + &
+					" " + MO_REGLINEOPT::OPTLIN
+	
+			NEXT LOOP%
+
+			TOTAL_SELECTED% = TOTAL_SELECTED% + 1%
+
+			SMG_SCROLL::FIND_LINE, SMG_SCROLL::BOT_ARRAY, &
+				SMG_SCROLL::END_ELEMENT, SMG_SCROLL::CUR_LINE = TOTAL_SELECTED%
+
+			!
+			! Get Header Info
+			!
+			GOTO 940 IF OE_READ_REGHEADER(MO_REGLINEOPT_READ::ORDNUM, &
+				OE_REGHEADER_READ) <> CMC$_NORMAL
+
+			!
+			! Get Customer info
+			!
+			V% = AR_EXAM_CUSTOM(OE_REGHEADER_READ::CUSNUM, &
+				AR_35CUSTOM_EXAM)
+
+			!
+			! Set selected item into an array
+			!
+			SELECT_LIST$(TOTAL_SELECTED%) =  &
+				LEFT(MO_REGLINEOPT_READ::OPTDESCR, 14%)            + " "  + &
+				PRNT_DATE(MO_REGLINEOPT_READ::TDATE, 6%)           + " "  + &
+				FORMAT$(QTY(0%), "######")                         + "  " + &
+				CONV_STRING(MO_REGLINEOPT_READ::ORDNUM, CMC$_LEFT) + " "  + &
+				MO_REGLINEOPT_READ::LIN                            + " "  + &
+				OE_REGHEADER_READ::CUSNUM                          + " "  + &
+				LEFT$(AR_35CUSTOM_EXAM::CUSNAM, 20%)               + " "  + &
+				OE_REGHEADER_READ::LOCATION                        + " "  + &
+				MO_REGLINEOPT_READ::OPTLIN                         + " "  + &
+				"T"
+
+			IF TOTAL_SELECTED% > SMG_SCROLL::SCROLL_BOT
+			THEN
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SMG$K_TRM_DOWN, "")
+			ELSE
+				V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), 0%, "PAINT")
+			END IF
+
+			SORT_FLAG% = 0%
+
+			GOTO 940
+
+
+		CASE "E"
+
+	!++
+	! Abstract:CLEAR
+	!	^*Clear\*
+	!	.b
+	!	.lm +5
+	!	The ^*Clear\* function in the COMMAND menu of the billing
+	!	statement screen provides the means to clear all matters that
+	!	have been selected to be billed. After this command has been
+	!	completed the billing select screen will display an empty screen.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Clear>Function
+	!
+	!--
+			JUNK$ = ENTR_3YESNO(SCOPE, SMG_OPTION, "", &
+				"Confirm Clear then press <Do> ", &
+				"N", 0%, "'E", "")
+
+			IF EDIT$(JUNK$, -1%) = "Y"
+			THEN
+				SELECT_LIST$(LOOP%) = "" &
+					FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+				IF TOTAL_SELECTED% > 0%
+				THEN
+					V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), &
+						SCOPE.EXIT%, "PAINT")
+				END IF
+
+				SMG_SCROLL::BOT_ARRAY, SMG_SCROLL::END_ELEMENT	= 0%
+				SMG_SCROLL::CUR_LINE = 1%
+
+				TOTAL_SELECTED% = 0%
+			END IF
+
+
+		CASE "H"
+			CALL HELP_3MESSAGE(SCOPE, "", PRG_IDENT, PRG_PROGRAM, "HELP")
+
+
+		CASE "L"
+
+	!++
+	! Abstract:LOAD
+	!	^*Load\*
+	!	.b
+	!	.lm +5
+	!	The ^*Load\* function in the COMMAND menu
+	!	provides the means to create shipping journal records
+	!	based on the backorder items selected.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+			IF TOTAL_SELECTED%
+			THEN
+				CALL ENTR_3MESSAGE(SCOPE, "Loading Records in the Journal", 16%+1%)
+				GOSUB 1000
+				GOTO ExitProgram
+			ELSE
+				CALL ENTR_3MESSAGE(SCOPE, "No Records Selected to print", 0%)
+			END IF
+
+
+		CASE "S"
+
+	!++
+	! Abstract:SORT
+	!	^*Sort\*
+	!	.b
+	!	.lm +5
+	!	The ^*Sort\* function provides the means to sort selected
+	!	lines by product and requested date.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sort>Function
+	!
+	!--
+		CALL ENTR_3MESSAGE(SCOPE, "", 1%+16%)
+
+		!
+		! Sort array
+		!
+		FOR LOOP.A% = 1% TO TOTAL_SELECTED%
+
+			FOR LOOP.B% = LOOP.A% + 1% TO TOTAL_SELECTED%
+
+				IF SELECT_LIST$(LOOP.B%) < SELECT_LIST$(LOOP.A%)
+				THEN
+					TEMP$ = SELECT_LIST$(LOOP.A%)
+					SELECT_LIST$(LOOP.A%) = SELECT_LIST$(LOOP.B%)
+					SELECT_LIST$(LOOP.B%) = TEMP$
+				END IF
+
+			NEXT LOOP.B%
+
+		NEXT LOOP.A%
+
+		V% = DSPL_SCROLL(SMG_SCROLL, SELECT_LIST$(), SCOPE.EXIT%, "PAINT")
+		CALL ENTR_3MESSAGE(SCOPE, "", 1%)
+		SORT_FLAG% = -1%
+
+	END SELECT
+
+	GOTO Menu
+
+1000	!**********************************************************************
+	!* Here's where we do our thing and load the suckers up
+	!**********************************************************************
+
+	FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+		ORDER$   = CONV_STRING(MID(SELECT_LIST$(LOOP%), 33%, 10%), &
+			CMC$_RIGHT)
+
+		LINE$    = MID(SELECT_LIST$(LOOP%), 44%, 4%)
+		SHPQTY   = VAL(MID(SELECT_LIST$(LOOP%), 25%, 6%))
+		OPTLINE$ = MID(SELECT_LIST$(LOOP%), 86%, 4%)
+		SFLAG$   = RIGHT(SELECT_LIST$(LOOP%), 91%)
+
+		!
+		! See if the Journal record already exists
+		!
+1010		GET #OE_ORDERJOUR.CH%, KEY#0% EQ ORDER$
+
+		GOTO LoadLines
+
+		!
+		! Build the ORDERJOUR record
+		!
+1020		IF OE_READ_REGHEADER(ORDER$, OE_REGHEADER_READ) = CMC$_NORMAL
+		THEN
+			OE_ORDERJOUR::ORDNUM    = ORDER$
+			OE_ORDERJOUR::ORDDATE   = OE_REGHEADER_READ::ORDDATE
+			OE_ORDERJOUR::ORDTYPE   = OE_REGHEADER_READ::ORDTYPE
+			OE_ORDERJOUR::ORDCAT    = OE_REGHEADER_READ::ORDCAT
+			OE_ORDERJOUR::CUSNUM    = OE_REGHEADER_READ::CUSNUM
+			OE_ORDERJOUR::SHIPDATE  = DATE_TODAY
+			OE_ORDERJOUR::SHIPNAM   = OE_REGHEADER_READ::SHIPNAM
+			OE_ORDERJOUR::SHIPLIN   = OE_REGHEADER_READ::SHIPLIN
+			OE_ORDERJOUR::ADD1      = OE_REGHEADER_READ::ADD1
+			OE_ORDERJOUR::ADD2      = OE_REGHEADER_READ::ADD2
+			OE_ORDERJOUR::ADD3      = OE_REGHEADER_READ::ADD3
+			OE_ORDERJOUR::CITY      = OE_REGHEADER_READ::CITY
+			OE_ORDERJOUR::STATE     = OE_REGHEADER_READ::STATE
+			OE_ORDERJOUR::ZIP       = OE_REGHEADER_READ::ZIP
+			OE_ORDERJOUR::COUNTRY   = OE_REGHEADER_READ::COUNTRY
+			OE_ORDERJOUR::CUSTPO    = OE_REGHEADER_READ::CUSTPO
+			OE_ORDERJOUR::LOCATION  = OE_REGHEADER_READ::LOCATION
+			OE_ORDERJOUR::COMMAMT   = OE_REGHEADER_READ::COMMAMT
+			OE_ORDERJOUR::COMMPERC  = 0.0
+			OE_ORDERJOUR::SALESMAN  = OE_REGHEADER_READ::SALESMAN
+			OE_ORDERJOUR::SALCOMM   = OE_REGHEADER_READ::SALCOMM
+			OE_ORDERJOUR::AMTPAID   = OE_REGHEADER_READ::AMTPAID
+			OE_ORDERJOUR::CHECK     = ""
+			OE_ORDERJOUR::TRANDATE  = DATE_TODAY
+			OE_ORDERJOUR::TRANTIME  = ""
+			OE_ORDERJOUR::TAXCODE   = OE_REGHEADER_READ::TAXCODE
+			OE_ORDERJOUR::TAXFLAG   = OE_REGHEADER_READ::TAXFLAG
+			OE_ORDERJOUR::TERMS     = OE_REGHEADER_READ::TERMS
+			OE_ORDERJOUR::HANDLING  = 0.0
+			OE_ORDERJOUR::MISC      = 0.0
+			OE_ORDERJOUR::DISC      = 0.0
+			OE_ORDERJOUR::MISCACCT  = ""
+			OE_ORDERJOUR::CREASON   = ""
+			OE_ORDERJOUR::FREIGHT   = 0.0
+			OE_ORDERJOUR::SALESTAX  = 0.0
+			OE_ORDERJOUR::OPERATOR  = ""
+			OE_ORDERJOUR::NOTES(0%) = OE_REGHEADER_READ::NOTES(0%)
+			OE_ORDERJOUR::NOTES(1%) = OE_REGHEADER_READ::NOTES(1%)
+			OE_ORDERJOUR::NOTES(2%) = OE_REGHEADER_READ::NOTES(2%)
+			OE_ORDERJOUR::INVNUM    = ""
+			OE_ORDERJOUR::SHIPVIA   = OE_REGHEADER_READ::SHIPVIA
+			OE_ORDERJOUR::PAYMNT    = 1%
+			OE_ORDERJOUR::REG_FLAG  = "Y"
+
+			PUT #OE_ORDERJOUR.CH%
+
+		END IF	
+
+ LoadLines:
+		SELECT SFLAG$
+
+		CASE "M"
+
+			!
+			! See if the MO_ORDERLINE record already exists
+			!
+1100			GET #MO_ORDERLINE.CH%, KEY#0% EQ ORDER$ + LINE$
+
+			GOTO ExitLoadLines
+
+			!
+			! Build the MO_ORDERLINE record
+			!
+1120			IF MO_READ_REGLINE(ORDER$, LINE$, "EQ", &
+				MO_REGLINE_READ, QTY() ) = CMC$_NORMAL
+			THEN
+				!
+				! Calculate remaining on-order for new or current line
+				!
+				ALLOCATE_QTY = QTY(1%) - (QTY(2%) + QTY(3%))
+				BACK_QTY     = FUNC_ROUND(ALLOCATE_QTY - SHPQTY, 3%) 
+				BACK_QTY     = 0.0 IF BACK_QTY < 0.0
+
+				MO_ORDERLINE::ORDNUM 	= ORDER$
+				MO_ORDERLINE::LIN 	= LINE$
+				MO_ORDERLINE::MAKE	= MO_REGLINE_READ::MAKE
+				MO_ORDERLINE::YEAR	= MO_REGLINE_READ::YEAR
+				MO_ORDERLINE::MTYPE	= MO_REGLINE_READ::MTYPE
+				MO_ORDERLINE::MSIZE	= MO_REGLINE_READ::MSIZE
+				MO_ORDERLINE::MODELCODE	= MO_REGLINE_READ::MODELCODE
+				MO_ORDERLINE::PRODUCT	= MO_REGLINE_READ::PRODUCT
+				MO_ORDERLINE::ORDQTY	= ALLOCATE_QTY
+				MO_ORDERLINE::SHPQTY 	= SHPQTY
+				MO_ORDERLINE::BCKQTY	= BACK_QTY
+				MO_ORDERLINE::PRICE 	= MO_REGLINE_READ::PRICE
+				MO_ORDERLINE::COST 	= MO_REGLINE_READ::COST
+				MO_ORDERLINE::REQDATE	= MO_REGLINE_READ::TDATE
+				MO_ORDERLINE::DISCOUNT 	= MO_REGLINE_READ::DISCOUNT
+				MO_ORDERLINE::NOTES(0%) = MO_REGLINE_READ::NOTES(0%)
+				MO_ORDERLINE::NOTES(1%) = MO_REGLINE_READ::NOTES(1%)
+
+				PUT #MO_ORDERLINE.CH%
+
+				IF TRM$(MO_ORDERLINE::PRODUCT) <> ""
+				THEN
+					V% = IC_WRIT_35BALANCE (MO_ORDERLINE::PRODUCT, &
+						OE_ORDERJOUR::LOCATION, "SO", &
+						ALLOCATE_QTY)
+
+					V% = IC_WRIT_35BALANCE (MO_ORDERLINE::PRODUCT, &
+						OE_ORDERJOUR::LOCATION, "SA", &
+						-MO_ORDERLINE::SHPQTY)
+				END IF
+			END IF
+
+		CASE "T"
+
+			!
+			! See if the MO_ORDERLINEOPT record already exists
+			!
+1200			GET #MO_ORDERLINEOPT.CH%, KEY#0% EQ ORDER$ + &
+				LINE$ + OPTLINE$
+
+			GOTO ExitLoadLines
+
+			!
+			! Build the MO_ORDERLINEOPT record
+			!
+1220			IF MO_READ_REGLINEOPT(ORDER$, LINE$, OPTLINE$, "EQ", &
+				MO_REGLINE_READ, QTY() ) = CMC$_NORMAL
+			THEN
+				!
+				! Calculate remaining on-order for new or current line
+				!
+				ALLOCATE_QTY = QTY(1%) - (QTY(2%) + QTY(3%))
+				BACK_QTY     = FUNC_ROUND(ALLOCATE_QTY - SHPQTY, 3%) 
+				BACK_QTY     = 0.0 IF BACK_QTY < 0.0
+
+				MO_ORDERLINEOPT::ORDNUM 	= ORDER$
+				MO_ORDERLINEOPT::LIN 		= LINE$
+				MO_ORDERLINEOPT::OPTGROUP	= MO_REGLINEOPT_READ::OPTGROUP
+				MO_ORDERLINEOPT::OPTN		= MO_REGLINEOPT_READ::OPTN
+				MO_ORDERLINEOPT::PRODUCT	= MO_REGLINEOPT_READ::PRODUCT
+				MO_ORDERLINEOPT::OPTDESCR	= MO_REGLINEOPT_READ::OPTDESCR
+				MO_ORDERLINEOPT::LINOPT		= MO_REGLINEOPT_READ::OPTLIN
+				MO_ORDERLINEOPT::ORDQTY		= ALLOCATE_QTY
+				MO_ORDERLINEOPT::SHPQTY 	= SHPQTY
+				MO_ORDERLINEOPT::BCKQTY		= BACK_QTY
+				MO_ORDERLINEOPT::PRICE 		= MO_REGLINEOPT_READ::PRICE
+				MO_ORDERLINEOPT::COST 		= MO_REGLINEOPT_READ::COST
+
+				PUT #MO_ORDERLINEOPT.CH%
+
+				IF TRM$(MO_ORDERLINEOPT::PRODUCT) <> ""
+				THEN
+					V% = IC_WRIT_35BALANCE (MO_ORDERLINEOPT::PRODUCT, &
+						OE_ORDERJOUR::LOCATION, "SO", &
+						ALLOCATE_QTY)
+
+					V% = IC_WRIT_35BALANCE (MO_ORDERLINEOPT::PRODUCT, &
+						OE_ORDERJOUR::LOCATION, "SA", &
+						-MO_ORDERLINEOPT::SHPQTY)
+				END IF
+			END IF
+
+		CASE "O"
+
+			!
+			! See if the OE_ORDERLINE record already exists
+			!
+1300			GET #OE_ORDERLINE.CH%, KEY#0% EQ ORDER$ + LINE$
+
+			GOTO ExitLoadLines
+
+1320			IF OE_READ_REGLINE(ORDER$, LINE$, "EQ", &
+				OE_REGLINE_READ, QTY() ) = CMC$_NORMAL
+			THEN
+				!
+				! Calculate remaining on-order for new or current line
+				!
+				ALLOCATE_QTY = QTY(1%) - (QTY(2%) + QTY(3%))
+				BACK_QTY     = FUNC_ROUND(ALLOCATE_QTY - SHPQTY, 3%) 
+				BACK_QTY     = 0.0 IF BACK_QTY < 0.0
+
+				OE_ORDERLINE::ORDNUM 	= ORDER$
+				OE_ORDERLINE::LIN 	= LINE$
+				OE_ORDERLINE::PRODUCT	= OE_REGLINE_READ::PRODUCT
+				OE_ORDERLINE::ORDQTY	= ALLOCATE_QTY
+				OE_ORDERLINE::SHPQTY 	= SHPQTY
+				OE_ORDERLINE::BCKQTY	= BACK_QTY
+				OE_ORDERLINE::PRICE 	= OE_REGLINE_READ::PRICE
+				OE_ORDERLINE::DISCOUNT 	= OE_REGLINE_READ::DISCOUNT
+				OE_ORDERLINE::REQDATE	= OE_REGLINE_READ::TDATE
+				OE_ORDERLINE::COST 	= OE_REGLINE_READ::COST
+				OE_ORDERLINE::PROMO	= OE_REGLINE_READ::PROMO
+				OE_ORDERLINE::MISCH	= OE_REGLINE_READ::MISCH
+				OE_ORDERLINE::NOTES(0%) = OE_REGLINE_READ::NOTES(0%)
+				OE_ORDERLINE::NOTES(1%) = OE_REGLINE_READ::NOTES(1%)
+
+				PUT #OE_ORDERLINE.CH%
+
+				V% = IC_WRIT_35BALANCE (OE_ORDERLINE::PRODUCT, &
+					OE_ORDERJOUR::LOCATION, "SO", &
+					ALLOCATE_QTY)
+
+				V% = IC_WRIT_35BALANCE (OE_ORDERLINE::PRODUCT, &
+					OE_ORDERJOUR::LOCATION, "SA", &
+					-OE_ORDERLINE::SHPQTY)
+			END IF
+
+		END SELECT
+
+ ExitLoadLines:
+	NEXT LOOP%
+
+	RETURN
+
+ ExitProgram:
+4010	!******************************************************************
+	! Exit the program
+	!******************************************************************
+
+	!
+	! Exit to next program or menu
+	!
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+ StatusLine:
+	IF TOTAL_SELECTED%
+	THEN
+		PRODUCT$  = LEFT(SELECT_LIST$(SMG_SCROLL::CUR_LINE), 14%)
+		LOCATION$ = MID(SELECT_LIST$(SMG_SCROLL::CUR_LINE), 81%, 4%)
+
+		V% = IC_READ_35BALANCE(PRODUCT$, LOCATION$, XBALANCE(,))
+
+		ONHAND = XBALANCE(1%,1%) + XBALANCE(1%,2%) + XBALANCE(1%,3%)
+	ELSE
+		PRODUCT$ = STRING$(LEN(PD_PRODUCT::PRODUCT_NUM), ASCII(" "))
+		LOCATION$ = STRING$(LEN(OE_REGHEADER::LOCATION), ASCII(" "))
+		ONHAND = 0.0
+	END IF
+
+	LINE_QTY = 0.0
+
+	FOR LOOP% = 1% TO TOTAL_SELECTED%
+
+		IF LEFT(SELECT_LIST$(LOOP%), 14%) = PRODUCT$ AND &
+			MID(SELECT_LIST$(LOOP%), 81%, 4%) = LOCATION$
+		THEN
+			LINE_QTY = LINE_QTY + VAL(MID(SELECT_LIST$(LOOP%), 25%, 6%))
+
+		ELSE
+			GOTO PrintLine IF SORT_FLAG% = -1% AND &
+				LEFT(SELECT_LIST$(LOOP%), 14%) > PRODUCT$
+		END IF
+
+	NEXT LOOP%
+
+ PrintLine:
+	SMG_STATUS% = SMG$PUT_CHARS( SMG_SCREEN_DATA%, &
+		'  ' + PRODUCT$ + '          ' + FORMAT$(LINE_QTY,"######") + &
+		'     QtyOnhand '+ FORMAT$(ONHAND,"######") + &
+		'       Location  ' + LOCATION$ + '            ', &
+		18%, 1%,, SMG$M_REVERSE )
+
+	RETURN
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	!
+	! Handle record locked errors
+	!
+	IF ERR = 154%
+	THEN
+		SLEEP 5%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+		CASE 310%
+			FILENAME$ = "OE_REGHEADER"
+
+		CASE 320%
+			FILENAME$ = "MO_REGLINE"
+
+		CASE 330%
+			FILENAME$ = "MO_REGLINEOPT"
+
+		CASE 340%
+			FILENAME$ = "OE_REGLINE"
+
+		CASE 360%
+			FILENAME$ = "OE_ORDERJOUR"
+
+		CASE 370%
+			FILENAME$ = "MO_ORDERLINE"
+
+		CASE 380%
+			FILENAME$ = "MO_ORDERLINEOPT"
+
+		CASE 390%
+			FILENAME$ = "OE_ORDERLINE"
+
+		CASE 400%
+			FILENAME$ = "UTL_PROFILE"
+
+		CASE 500%
+			RESUME Menu IF ERR = 155%
+			FILENAME$ = "OE_REGLINE"
+
+		CASE 520%
+			RESUME Menu IF ERR = 11%
+			FILENAME$ = "OE_REGLINE"
+
+		CASE 600%
+			RESUME Menu IF ERR = 155%
+			FILENAME$ = "OE_REGHEADER"
+
+		CASE 620%
+			RESUME Menu IF ERR = 11%
+			FILENAME$ = "OE_REGHEADER"
+
+		CASE 800%
+			FILENAME$ = "OE_REGHEADER"
+
+		CASE 820%
+			RESUME Menu IF ERR = 11%
+			FILENAME$ = "OE_REGHEADER"
+
+		CASE 900%
+			RESUME Menu IF ERR = 155%
+			FILENAME$ = "MO_REGLINE"
+
+		CASE 920%
+			RESUME Menu IF ERR = 11%
+			FILENAME$ = "MO_REGLINE"
+
+		CASE 1010%
+			RESUME 1020 IF ERR = 155%
+			FILENAME$ = "OE_ORDERJOUR"
+
+		CASE 1020%
+			FILENAME$ = "OE_ORDERJOUR"
+
+		CASE 1100%
+			RESUME 1120 IF ERR = 155%
+			FILENAME$ = "MO_ORDERLINE"
+
+		CASE 1120%
+			FILENAME$ = "MO_ORDERLINE"
+
+		CASE 1200%
+			RESUME 1220 IF ERR = 155%
+			FILENAME$ = "MO_ORDERLINEOPT"
+
+		CASE 1220%
+			FILENAME$ = "MO_ORDERLINEOPT"
+
+		CASE 1300%
+			RESUME 1320 IF ERR = 155%
+			FILENAME$ = "OE_ORDERLINE"
+
+		CASE 1320%
+			FILENAME$ = "OE_ORDERLINE"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME 19990
+
+19990	!
+	! This moved from inside error to outside so that errors occuring
+	! at lower levels could be trapped.  Basic will not allow any
+	! error to occur inside of an error no matter if it is in a
+	! different module.
+	!
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	GOTO ExitProgram
+	END
+
+21000	FUNCTION LONG MAINT_GROUP(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MO_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:OE_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PD_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:PS_WINDOW.INC"
+	
+	EXTERNAL LONG FUNCTION AR_MAIN_35CUSTOM
+	EXTERNAL LONG FUNCTION MO_MAIN_MAKE
+	EXTERNAL LONG FUNCTION OE_MAIN_REGHEADER
+	EXTERNAL LONG FUNCTION PD_MAIN_PRODUCT
+	EXTERNAL LONG FUNCTION PS_MAIN_CASHREG
+	EXTERNAL LONG FUNCTION PS_MAIN_CASHINOUT
+
+	!
+	! Process the proper window
+	!
+	SELECT SMG_WINDOW::IDENT
+
+		CASE AR_MAIN_35CUSTOM.ID
+
+			MAINT_GROUP = AR_MAIN_35CUSTOM(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE MO_MAIN_MAKE.ID
+
+			MAINT_GROUP = MO_MAIN_MAKE(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE OE_MAIN_REGHEADER.ID
+
+			MAINT_GROUP = OE_MAIN_REGHEADER(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE PD_MAIN_PRODUCT.ID
+
+			MAINT_GROUP = PD_MAIN_PRODUCT(SMG_WINDOW, &
+				MOPTION, MLOOP, MFLAG, MVALUE)
+
+		CASE PS_MAIN_CASHREG.ID
+
+			MAINT_GROUP = PS_MAIN_CASHREG(SMG_WINDOW, MOPTION, &
+				MLOOP, MFLAG, MVALUE)
+
+		CASE PS_MAIN_CASHINOUT.ID
+
+			MAINT_GROUP = PS_MAIN_CASHINOUT(SMG_WINDOW, MOPTION, &
+				MLOOP, MFLAG, MVALUE)
+
+	END SELECT
+
+32767	END FUNCTION

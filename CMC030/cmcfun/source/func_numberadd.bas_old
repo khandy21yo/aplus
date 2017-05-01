@@ -1,0 +1,204 @@
+1	%TITLE "Alphnumeric Add Function"
+	%SBTTL "FUNC_NUMBERADD"
+	%IDENT "V3.3"
+
+	FUNCTION LONG FUNC_NUMBERADD( STRING THE_NUMBER, LONG THE_AMOUNT)
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will take the given string,
+	!	search for a set of numeric characters in it, add
+	!	the given amount to this set of numbers, and replace
+	!	it in the string.  This will be used in programs where a
+	!	number needs to be incremented/decremented -- invoice numbers,
+	!	WIP numbers, transaction numbers, check numbers, etc.
+	!
+	! Parameters:
+	!
+	!	THE_NUMBER
+	!		When the function is first called, THE_NUMBER
+	!		contains the value of the number needing to
+	!		be incremented.  When control is returned to
+	!		the main program, THE_NUMBER (or rather, the
+	!		variable used in the function call) will
+	!		contain the value of the number after it has
+	!		been incremented.
+	!
+	!	THE_AMOUNT
+	!		This is the amount that will be added to
+	!		THE_NUMBER.
+	!
+	!	Returned value
+	!		The end status of the function::
+	!			-1% = success
+	!			 0% = error no number in THE_NUMBER to add to
+	!			 1% = error THE_NUMBER went negitive
+	!				and was wrapped around.
+	! ******WARNING******************WARNING* THIS MAY CAUSE BAD PROBLEMS
+	!				SO CHECK FOR IT IN CALLING PROGRAM.
+	!
+	! Environment:
+	!
+	!	VAX-II  VMS V4.4  BASIC V2.3
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:FUNC_NUMBERADD/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP FUNC_NUMBERADD
+	!	$ DELETE FUNC_NUMBERADD.OBJ;*
+	!
+	! Author:
+	!
+	!	12/15/88 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	STATS%
+	!		Stores the End Status value
+	!	NUMSTART%
+	!		Stores the starting position of the numbers in
+	!		THE_NUMBER
+	!	NUMEND%
+	!		Stores the ending position of the numbers in
+	!		THE_NUMBER
+	!	NUMBR
+	!		Temporarily stores the numeric value of the numbers
+	!	LENTH%
+	!		Stores the length of the number portion of the string
+	!
+	!--
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%PAGE
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION STR$FIND_FIRST_IN_SET
+	EXTERNAL LONG	FUNCTION STR$FIND_FIRST_NOT_IN_SET
+
+	%PAGE
+
+	STATS% = -1%	! Success
+
+	!
+	! Find the end of the string of numbers
+	!
+	NUMEND%	= LEN(THE_NUMBER)
+
+	NUMEND% = NUMEND% - 1% WHILE (0% <= NUMEND%) AND &
+		(STR$FIND_FIRST_IN_SET(RIGHT(THE_NUMBER, NUMEND%), &
+		"1234567890") = 0%)
+
+	!
+	! If there were numbers found, then go on.  Else, just go to the end.
+	!
+	IF NUMEND% > 0%
+	THEN
+
+		!
+		! Find the beginning of the string of numbers
+		!
+		NUMSTART% = NUMEND%
+
+		NUMSTART% = NUMSTART% - 1% WHILE (0% <= NUMSTART%) AND &
+			(STR$FIND_FIRST_NOT_IN_SET(SEG$(THE_NUMBER, &
+			NUMSTART%, NUMEND%), "1234567890") = 0%)
+
+		NUMSTART% = NUMSTART% + 1%
+
+		!
+		! Get the $ version of the number out
+		!
+		NUMBR$ = SEG$(THE_NUMBER, NUMSTART%, NUMEND%)
+
+		LENTH% = LEN(NUMBR$)
+
+		!
+		! Doctor THE_AMOUNT so it is no bigger than the number
+		!	of digits in THE_NUMBER will allow.
+		!
+		AA$ = NUM1$(ABS(THE_AMOUNT))
+		T_A% = VAL%( RIGHT( AA$, LEN( AA$ ) - LENTH% + 1%) )
+		T_A% = -T_A% IF THE_AMOUNT < 0.
+
+		!
+		! Add the amount to it
+		!
+		NUMBR = VAL(NUMBR$) + T_A%
+
+		!
+		! Check for going negitive and wrap it around
+		!
+		IF NUMBR < 0%
+		THEN
+			STATS% = 1%	! New number was less than zero
+
+			NUMBR = (10.0 ** LENTH%) + NUMBR
+		END IF
+
+		!
+		! Make the number a $ again
+		!
+		NUMBR$ = NUM1$(NUMBR)
+
+		!
+		! Pad the left side with zero's
+		!
+		NUMBR$ = STRING$(LENTH% - LEN(NUMBR$), ASCII("0")) + NUMBR$
+
+		!
+		! Make sure the number is the same length going out as coming in
+		!
+		NUMBR$ = RIGHT( NUMBR$, LEN(NUMBR$) - LENTH% + 1% )
+
+		!
+		! And put it back into THE_NUMBER
+		!
+		THE_NUMBER = LEFT(THE_NUMBER, NUMSTART% - 1%) + &
+			NUMBR$ + RIGHT(THE_NUMBER, NUMEND% + 1%)
+
+	ELSE
+
+		!
+		! Reset the status
+		!
+		STATS% = 0%	! Failure - no number to add to
+
+	END IF
+
+	FUNC_NUMBERADD = STATS%
+
+	END FUNCTION

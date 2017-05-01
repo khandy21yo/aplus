@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Union Pension Definition File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__UNPN__DEF.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Union Pension Definition File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__UNPN__DEF.TBL\*
+	!	.p
+	!	Payroll Union Pension Definition File.
+	!
+	! Index:
+	!	.x Payroll Union Pension Definition File
+	!	.x PR_UNPN_DEF
+	!--

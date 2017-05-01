@@ -1,0 +1,37 @@
+
+	From	To	Length	Code	Descr
+	----	---	------	----	------------------------------
+	1	2	2		Record code 'T3'
+	3	5	3		Selling franchise
+	6	8	3		Site Code
+	9	9	1		Site Type
+	10	10	1		Filler
+	11	15	5		Sales Tax Amount per Unit
+	16	21	6		Date Captured
+	22	25	4		Time Captured
+	26	31	6		Network ICB Date (YYMMDD)
+	32	35	4		Posting Batch Number
+	36	36	1		Transaction Source
+	37	37	1		Edit Action
+	38	45	8		Selling Price
+	46	53	8		Transfer Cost
+	54	54	1		Trans Code ('T')
+	55	55	1		Trans Type
+	56	58	3		Julian Day
+	59	62	4		Time
+	63	63	1		Reader Station
+	64	70	7		Card Number
+	71	77	7		Vehicle Number
+	78	80	3		Buying (card owning) Franchise
+	81	86	6		Identity
+	87	95	9		Miscellaneous Keyboard
+	96	101	6		Odometer
+	102	105	4		Transaction Number
+	106	107	2		Pump Number
+	108	109	2		Product Number
+	110	112	3		Product Sub-Number
+	113	120	8		Quanity
+	121	121	1		Transaction Sequence Number
+	122	127	6		Transaction Date, gregorian (YMD)
+	128	128	1		Unit of measure
+

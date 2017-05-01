@@ -1,0 +1,19 @@
+	!======================================================================
+	! AR_LBCRJL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AR_LBCRJL.CH%, STAT%)
+	CALL READ_DEVICE('AR_LBCRJL',AR_LBCRJL.DEV$, STAT%)
+
+	AR_LBCRJL.NAME$ = AR_LBCRJL.DEV$+"AR_LBCRJL_"+BATCH_NO$+".JRL"
+
+	OPEN AR_LBCRJL.NAME$ FOR INPUT AS FILE AR_LBCRJL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AR_LBCRJL, &
+		PRIMARY KEY &
+		( &
+			AR_LBCRJL::RECNUM, &
+			AR_LBCRJL::LLINE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

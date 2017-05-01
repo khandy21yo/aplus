@@ -1,0 +1,292 @@
+1	%TITLE "Set Restaurant Post Journal"
+	%SBTTL "RM_FUNC_JOURRESET"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_FUNC_JOURRESET
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function converts restaurant product journal to be
+	!	ready post using recipe ingredients (if necessary)
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_FUNC_JOURRESET/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_FUNC_JOURRESET
+	!	$ DELETE RM_FUNC_JOURRESET.OBJ;*
+	!
+	! Author:
+	!
+	!	11/17/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	04/29/95 - Kevin Handy
+	!		Change SMG_SHRINK to SMG_SHRINK%.
+	!
+	!	10/28/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	06/11/99 - Kevin Handy
+	!		Lose HelpError (Dead Code)
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.HB"
+	MAP (RM_JOURNAL)	RM_JOURNAL_CDD	RM_JOURNAL
+	MAP (RM_JOURNAL_INIT)	RM_JOURNAL_CDD	RM_JOURNAL_INIT
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.HB"
+	MAP (RM_JOURPOST)	RM_JOURPOST_CDD	RM_JOURPOST
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.HB"
+	MAP (RM_JOURPROD)	RM_JOURPROD_CDD	RM_JOURPROD
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (BATCH_RM_JOURNAL) &
+		BATCH_NO$ = 2%
+	COM (CH_RM_JOURPOST) &
+		RM_JOURPOST.CH%, &
+		RM_JOURPOST.READONLY%
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+	RM_FUNC_JOURRESET = 0%
+	RM_JOURNAL_INIT = RM_JOURNAL
+
+300	!
+	! Open main file (existing) for modification
+	!
+	CLOSE RM_JOURPOST.CH%
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.UPD"
+
+	SCOPE::PRG_ITEM = "CONFIRM"
+
+	INP$ = ENTR_3YESNO(SCOPE, SCOPE::SMG_OPTION, "", &
+		"Post file exist. Confirm shrinkage - then press <Do> ", &
+		"N", 0%, "", "")
+
+	IF INP$ <> "Y"
+	THEN
+		RM_FUNC_JOURRESET = 1%
+		GOTO ExitFunction
+	END IF
+
+500	!
+	! Paint the background
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		6%, &
+		40%, &
+		SMG_SHRINK%, &
+		SMG$M_BORDER &
+	)
+
+	SMG_STATUS% = SMG$LABEL_BORDER &
+	( &
+		SMG_SHRINK%, &
+		"Shrinkage Batch No. "+BATCH_NO$, &
+		SMG$K_TOP &
+	)
+
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_SHRINK%, &
+		SCOPE::SMG_PBID, &
+		12%, &
+		5% &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SHRINK%, "Location# ", 2%, 5%)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_SHRINK%, "Trans Type ", 3%, 5%)
+
+	%PAGE
+
+1000	!******************************************************************
+	! Shrinkage
+	!******************************************************************
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	!
+	! Display message
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Shrinkage  ... ",1%+16%)
+
+	!
+	! Look up device
+	!
+	CALL  READ_DEVICE("RM_JOURPROD", RM_JOURPROD.DEV$, STAT%)
+
+	KILL RM_JOURPROD.DEV$ + "RM_JOURPROD_" + BATCH_NO$ + ".JRL" &
+		FOR I% = 1% TO 10%
+
+1010	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.CRE"
+
+	RESET #RM_JOURPOST.CH%
+
+1020	!
+	! Main loop starts here
+	!
+	!
+	! Get next record
+	!
+	GET #RM_JOURPOST.CH%,REGARDLESS
+
+	IF RM_JOURPOST::LOCATION + RM_JOURPOST::TRANSTYPE <> &
+		TEST.LOCATION$+TEST.TRANSTYPE$ OR TEST.LOCATION$=""
+	THEN
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_SHRINK%, &
+			RM_JOURPOST::LOCATION, 2%, 18%)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_SHRINK%, &
+			RM_JOURPOST::TRANSTYPE, 3%, 18%)
+	END IF
+
+	TEST.LOCATION$ = RM_JOURPOST::LOCATION
+	TEST.TRANSTYPE$ = RM_JOURPOST::TRANSTYPE
+
+1040	GOTO 1020 IF RM_JOURPOST::SEQNUM = "0000"
+
+	INDEX% = DATE_DAYCODE(RM_JOURPOST::ACTDATE) - &
+		DATE_DAYCODE(RM_JOURPOST::STARTDATE)
+	GOTO 1020 IF INDEX% < 0% OR INDEX% > 6%
+
+	GET #RM_JOURPROD.CH%, KEY#0% EQ RM_JOURPOST::LOCATION + &
+		RM_JOURPOST::STARTDATE + &
+		RM_JOURPOST::TRANSTYPE + &
+		RM_JOURPOST::SEQNUM
+
+	RM_JOURPROD::QUANTITY(INDEX%)   = RM_JOURPOST::QUANTITY
+
+	UPDATE #RM_JOURPROD.CH%
+	GOTO 1020
+
+ AddRec:
+	RM_JOURPROD::LOCATION   = RM_JOURPOST::LOCATION
+	RM_JOURPROD::STARTDATE  = RM_JOURPOST::STARTDATE
+	RM_JOURPROD::TRANSTYPE  = RM_JOURPOST::TRANSTYPE
+	RM_JOURPROD::SEQNUM	= RM_JOURPOST::SEQNUM
+	RM_JOURPROD::PRODUCT    = RM_JOURPOST::PRODUCT
+	RM_JOURPROD::PRICE      = RM_JOURPOST::PRICE
+
+	RM_JOURPROD::QUANTITY(I%) = 0. FOR I%=0% TO 6%
+	RM_JOURPROD::QUANTITY(INDEX%)   = RM_JOURPOST::QUANTITY
+
+	PUT #RM_JOURPROD.CH%
+	GOTO 1020
+
+1500	CLOSE RM_JOURPOST.CH%
+	CLOSE RM_JOURPROD.CH%
+
+	KILL RM_JOURPOST.DEV$ + "RM_JOURPOST_" + BATCH_NO$ + ".JRL" &
+		FOR I% = 1% TO 10%
+
+ EndKill:
+	CALL ENTR_3MESSAGE(SCOPE, "Shrinkage completed ", 1%)
+
+ ExitFunction:
+	RM_JOURNAL = RM_JOURNAL_INIT
+	CALL ASSG_FREECHANNEL(RM_JOURPOST.CH%)
+	CALL ASSG_FREECHANNEL(RM_JOURPROD.CH%)
+	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_SHRINK%)
+
+	EXIT FUNCTION
+
+	%PAGE
+
+ ! HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+ !	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+ !		"E", ERN$, FILENAME$, NUM1$(ERR))
+ !	RM_FUNC_JOURRESET = 1%
+ !	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		RESUME ExitFunction IF ERR = 5%
+		FILENAME$ = "RM_JOURPOST"
+
+	CASE 1000% ! Kill RM_JOURPROD
+		RESUME 1010
+
+	CASE 1010%
+		FILENAME$ = "RM_JOURPROD"
+
+	CASE 1020% ! End of the file
+		RESUME 1500 IF ERR = 11%
+
+	CASE 1040%
+		RESUME AddRec IF ERR = 155%
+
+	CASE 1500%
+		RESUME EndKill
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

@@ -1,0 +1,532 @@
+1	%TITLE "Print Billing Insurance"
+	%SBTTL "BI_RPRT_BILL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BI001
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Print Journal\* option provides the means to print
+	!	a report which will contain the following information:
+	!	.lm +10
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Patient Number
+	!	.le
+	!	Insured Number
+	!	.le
+	!	Stationman
+	!	.le
+	!	Invoice Number
+	!	.le
+	!	Invoice Date
+	!	.le
+	!	Service Date
+	!	.le
+	!	Current Procedural Terminology
+	!	.le
+	!	Description
+	!	.le
+	!	Diagnosis
+	!	.le
+	!	Time
+	!	.le
+	!	Multiply
+	!	.le
+	!	Amount
+	!	.le
+	!	Invoice Total
+	!	.els
+	!	.lm -10
+	!
+	! Index:
+	!	.x Print>Journal
+	!	.x Journal>Print
+	!	.x Report>Print Journal
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Author:
+	!
+	!	11/10/88 - J. Shad Rydalch
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_RPRT_BILL
+	!	$ LINK/EXE=BI_EXE: BI_RPRT_BILL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BI_RPRT_BILL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	08/11/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/10/91 - Craig Tanner
+	!		Modified to do Debit/Credit page(s) using
+	!		GL_OUTP_ACCTSUM.
+	!
+	!	03/17/92 - Dan Perkins
+	!		Allow processing of batches.
+	!
+	!	03/22/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of a
+	!		change in that function.
+	!
+	!	03/18/93 - Kevin Handy
+	!		Added parameter to GL_OUTP_ACCTSUM for units.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/30/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	10/15/98 - Kevin Handy
+	!		Lose excessive %PAGE's
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLH.HB"
+	MAP (BI_BILLH)		BI_BILLH_CDD		BI_BILLH
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLL.HB"
+	MAP (BI_BILLL)		BI_BILLL_CDD		BI_BILLL
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CONTROL.HB"
+	MAP (BI_CONTROL)	BI_CONTROL_CDD		BI_CONTROL
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPT.HB"
+	DECLARE			BI_CPT_CDD		BI_CPT_EXAM
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.HB"
+	DECLARE			BI_CPTTYPE_CDD		BI_CPTTYPE_EXAM
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.HB"
+	MAP (BI_INSURED)	BI_INSURED_CDD		BI_INSURED
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_PATIENT.HB"
+	MAP (BI_PATIENT)	BI_PATIENT_CDD		BI_PATIENT
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION BI_EXAM_CPT
+	EXTERNAL LONG	FUNCTION BI_READ_CPTTYPE
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Patient _#\*
+	!	.p
+	!	The value entered in the ^*From Patient _#\* field causes the
+	!	report to begin with the  selected insured number.
+	!	.p
+	!	A blank field causes the report to begin with the first
+	!	insured number in the file.
+	!
+	! Index:
+	!	.x From Patient Number
+	!	.x Patient Number>From
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Patient Number\*
+	!	.p
+	!	The value entered in the ^*To Patient Number\* field causes the
+	!	report to end with the  selected insured number.
+	!	.p
+	!	A blank field causes the report to end with the last
+	!	insured number in the file.
+	!
+	! Index:
+	!	.x To Patient Number
+	!	.x Number>To Patient
+	!	.x To>Patient>Number
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* setting enables the user to print a report
+	!	including selected items only by using the wildcarding techniques.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(3%), 132%)
+
+	!++
+	! Abstract:FLD04
+	!	^* (04) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* field provides the means to enter a
+	!	particular batch to be printed.
+	!	.p
+	!	Only one batch at a time may be printed.
+	!	.p
+	!	An entry is required in this field.
+	!
+	! Index:
+	!	.x Batch Number>Purchase Order Journal
+	!	.x Purchase Order Journal>Batch Number
+	!
+	! Datatype:TEXT
+	! Size:2
+	!--
+
+	%PAGE
+
+300	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLH.OPN"
+
+	!
+	! Open Insurance Billing Journal line item file
+	!
+310	%INCLUDE "SOURCE:[BI.OPEN]BI_BILLL.OPN"
+
+	!
+	! Open BI Insurance file
+	!
+320	%INCLUDE "SOURCE:[BI.OPEN]BI_INSURED.OPN"
+
+	!
+	! Open the BI Patient file
+	!
+330	%INCLUDE "SOURCE:[BI.OPEN]BI_PATIENT.OPN"
+
+	!
+	! Open the BI Controlling file
+	!
+340	%INCLUDE "SOURCE:[BI.OPEN]BI_CONTROL.OPN"
+	GET #BI_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "BILLING  INSURANCE  JOURNAL"
+	TITLE$(2%) = "BATCH No. " + BATCH_NO$
+	TITLE$(3%) = "Billing Insurance System"
+	TITLE$(4%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(5%) = "InsuredNum  Patient     Stationman  InvoiceNum  " + &
+		"InvoiceDate"
+
+	TITLE$(6%) = "          ServiceDate  CPT    Description      " + &
+		"                         Diagnosis   Time  Mult    Amount"
+
+	TITLE$(7%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #BI_BILLH.CH%
+	ELSE
+		FIND #BI_BILLH.CH%, KEY #0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #BI_BILLH.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO ExitTotal IF &
+		(BI_BILLH::INSURED > TO.ITEM$) AND &
+		(TO.ITEM$ <> "")
+
+	GOTO GetNextRec IF &
+		(COMP_STRING(EDIT$(BI_BILLH::INSURED,-1%), WLDCRD$) = 0%) AND &
+		(WLDCRD$ <> "")
+
+	!
+	! Print out one line of header
+	!
+	TEXT$ = BI_BILLH::INSURED + "  "   + &
+		BI_BILLH::PATIENT + "  "   + &
+		BI_BILLH::STATIONMAN + "  "   + &
+		BI_BILLH::INVNUM + "    " + &
+		PRNT_DATE(BI_BILLH::INVDATE,8%)
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	LINE_KEY$ = BI_BILLH::PATIENT + BI_BILLH::INSURED
+
+	!
+	! Start on the line items
+	!
+17200	FIND #BI_BILLL.CH%, KEY #0% EQ LINE_KEY$, REGARDLESS
+
+	!
+	! Get the (next) line item
+	!
+17300	GET #BI_BILLL.CH%, REGARDLESS
+
+	!
+	! Get out of the subloop if new key
+	!
+	GOTO 17350 IF &
+		((BI_BILLL::PATIENT+BI_BILLL::INSURED) <> LINE_KEY$)
+
+	!
+	! Print out one line of the lines under the current header
+	!
+	TEXT$ = "          "				+ &
+		PRNT_DATE(BI_BILLL::SERVDATE, 8%)	+ "   "   + &
+		BI_BILLL::CPT				+ "  "    + &
+		BI_BILLL::DESCRIPTION			+ "  "    + &
+		BI_BILLL::DIAGNOSIS			+ "     " + &
+		FORMAT$(BI_BILLL::LENTH, "##.##")	+ "    "  + &
+		FORMAT$(BI_BILLL::MULTIPLIER, "##")	+ "  "    + &
+		FORMAT$(BI_BILLL::AMOUNT, "#,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TOTAL_PATIENT = TOTAL_PATIENT + BI_BILLL::AMOUNT
+	TOTAL_ALL = TOTAL_ALL + BI_BILLL::AMOUNT
+
+	!
+	! Get CPT description
+	!
+	STAT% = BI_EXAM_CPT(BI_BILLL::CPT, BI_CPT_EXAM)
+	GOTO ExitProgram IF (STAT% = CMC$_UNTERROR)
+	GOTO ChkStat IF (STAT% = CMC$_UNDEFINED)
+
+	!
+	! Read CPT Type description and account
+	!
+	STAT% = BI_READ_CPTTYPE(BI_CPT_EXAM::CPTTYPE, BI_CPTTYPE_EXAM)
+	GOTO ExitProgram IF (STAT% = CMC$_UNTERROR)
+
+ ChkStat:
+	IF (STAT% = CMC$_UNDEFINED)
+	THEN
+		BI_CPTTYPE_EXAM::ACCOUNT = STRING$(18%, ASCII("?"))
+	END IF
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BI_CPTTYPE_EXAM::ACCOUNT, &
+		0.0, -BI_BILLL::AMOUNT, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Try for next line
+	!
+	GOTO 17300
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	!
+17350	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, BI_CONTROL::ACCOUNT, &
+		0.0, TOTAL_PATIENT, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+
+	TEXT1$ ="           Invoice Total"
+	TEXT$ = TEXT1$+SPACE$(LEN(TEXT$)-LEN(TEXT1$)-8%)+ &
+		FORMAT$(TOTAL_PATIENT, "#,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, -1%)
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 1%)
+
+	PRINT.TOTAL% = -1%
+	TOTAL_PATIENT = 0.
+
+	!
+	! Go back to get the next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	IF PRINT.TOTAL%
+	THEN
+		TEXT1$ = "Total"
+		TEXT$ = TEXT1$+SPACE$(LEN(TEXT$)-LEN(TEXT1$)-9%)+ &
+			FORMAT$(TOTAL_ALL, "##,###.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	END IF
+
+	!
+	! Print out the Debit/Credit information
+	!
+	V% = GL_OUTP_ACCTSUM(OPT_SUMMARY, "", 0.0, 0.0, 0.0, TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "BI_BILLH"
+
+	CASE 310%
+		FILENAME$ = "BI_BILLL"
+
+	CASE 320%
+		FILENAME$ = "BI_INSURED"
+
+	CASE 330%
+		FILENAME$ = "BI_PATIENT"
+
+	CASE 340%
+		FILENAME$ = "BI_CONTROL"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "BI_BILLH"
+
+	CASE 17200%
+		RESUME GetNextRec IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "BI_BILLL"
+
+	CASE 17300%
+		RESUME 17350 IF ERR = 11%
+		FILENAME$ = "BI_BILLL"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

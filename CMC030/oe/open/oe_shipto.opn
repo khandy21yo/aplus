@@ -1,0 +1,19 @@
+	!======================================================================
+	! OE_SHIPTO file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_SHIPTO.CH%, STAT%)
+	CALL READ_DEVICE('OE_SHIPTO',OE_SHIPTO.DEV$, STAT%)
+
+	OE_SHIPTO.NAME$ = OE_SHIPTO.DEV$+"OE_SHIPTO.MAS"
+
+	OPEN OE_SHIPTO.NAME$ FOR INPUT AS FILE OE_SHIPTO.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_SHIPTO, &
+		PRIMARY KEY &
+		( &
+			OE_SHIPTO::CUSNUM, &
+			OE_SHIPTO::LINES &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

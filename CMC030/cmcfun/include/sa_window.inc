@@ -1,0 +1,15 @@
+	!=======================================================================
+	! 6300-6399	SA * Sales Analysis System
+	! This include file is used to DECLARE window numbers for SA system
+	!=======================================================================
+
+	DECLARE LONG CONSTANT SA_MAIN_BALANCE.ID		= 6330%
+	DECLARE LONG CONSTANT SA_MAIN_TYPE.ID			= 6335%
+	DECLARE LONG CONSTANT SA_MAIN_CLASS.ID			= 6340%
+	DECLARE LONG CONSTANT SA_MAIN_SALESMAN.ID		= 6350%
+	DECLARE LONG CONSTANT SA_MAIN_COMMACCT.ID		= 6355%
+	DECLARE LONG CONSTANT SA_MAIN_SALCUST.ID		= 6360%
+	DECLARE LONG CONSTANT SA_MAIN_CONTROL.ID		= 6365%
+	DECLARE LONG CONSTANT SA_MAIN_ACCOUNT.ID		= 6367%
+	DECLARE LONG CONSTANT SA_MAIN_SALEGROUP.ID		= 6370%
+

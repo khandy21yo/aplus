@@ -1,0 +1,16 @@
+	!======================================================================
+	! AD_CONVENTION file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_CONVENTION.CH%, STAT%)
+	CALL READ_DEVICE('AD_CONVENTION',AD_CONVENTION.DEV$, STAT%)
+
+	AD_CONVENTION.NAME$ = AD_CONVENTION.DEV$+"AD_CONVENTION.TBL"
+
+	OPEN AD_CONVENTION.NAME$ FOR INPUT AS FILE AD_CONVENTION.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_CONVENTION, &
+		PRIMARY KEY &
+			AD_CONVENTION::CONVENTION, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Inventory Adjustment Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*IC__JOURADJUST.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Inventory Control System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Inventory Adjustment Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*IC__JOURADJUST.JRL\*
+	!	- Inventory Adjustment Journal
+	!
+	! Index:
+	!	.x Inventory Adjustment Journal
+	!	.x IC_JOURADJUST
+	!
+	!--

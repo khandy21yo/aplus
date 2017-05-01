@@ -1,0 +1,28 @@
+	!======================================================================
+	! TK_MODDATE file (open temporary file)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_MODDATE.CH%, STAT%)
+	CALL READ_DEVICE('TK_MODDATE',TK_MODDATE.DEV$, STAT%)
+
+	TK_MODDATE.NAME$ = TK_MODDATE.DEV$+"TK_MODDATE.TBL"
+
+	OPEN TK_MODDATE.NAME$ FOR OUTPUT AS FILE TK_MODDATE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_MODDATE, &
+		PRIMARY KEY &
+		( &
+			TK_MODDATE::PROG_EDITOR, &
+			TK_MODDATE::DATE, &
+			TK_MODDATE::PROG_NAME, &
+			TK_MODDATE::XX_FIELD &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			TK_MODDATE::PROG_NAME, &
+			TK_MODDATE::PROG_EDITOR, &
+			TK_MODDATE::DATE, &
+			TK_MODDATE::XX_FIELD &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

@@ -1,0 +1,16 @@
+	!======================================================================
+	! UTL_PACKFORM file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_PACKFORM.CH%, STAT%)
+	CALL READ_DEVICE('UTL_PACKFORM',UTL_PACKFORM.DEV$, STAT%)
+
+	UTL_PACKFORM.NAME$ = UTL_PACKFORM.DEV$+"UTL_PACKFORM.TBL"
+
+	OPEN UTL_PACKFORM.NAME$ FOR INPUT AS FILE UTL_PACKFORM.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_PACKFORM, &
+		PRIMARY KEY &
+			UTL_PACKFORM::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

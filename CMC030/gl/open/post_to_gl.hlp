@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Batch Control File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*POST__TO__GL.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Batch Control File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*POST__TO__GL.LED\*
+	!	.p
+	!	Batch Control File.
+	!
+	! Index:
+	!	.x Batch Control File
+	!	.x POST_TO_GL
+	!--

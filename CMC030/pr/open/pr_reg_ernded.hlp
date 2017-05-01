@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Earnings and Deduction Register is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__REG__ERNDED.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Payroll Earnings and Deduction Register
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__REG__ERNDED.LED\*
+	!	.p
+	!	Payroll Earnings and Deduction Register.
+	!
+	! Index:
+	!	.x Payroll Earnings and Deduction Register
+	!	.x PR_REG_ERNDED
+	!--

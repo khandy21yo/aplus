@@ -1,0 +1,21 @@
+	!======================================================================
+	! AD_METHOD file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_METHOD.CH%, STAT%)
+	CALL READ_DEVICE('AD_METHOD',AD_METHOD.DEV$, STAT%)
+
+	AD_METHOD.NAME$ = AD_METHOD.DEV$+"AD_METHOD.TBL"
+
+	OPEN AD_METHOD.NAME$ FOR INPUT AS FILE AD_METHOD.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_METHOD, &
+		PRIMARY KEY &
+			AD_METHOD::DEP_METHOD, &
+		ALTERNATE KEY &
+		( &
+			AD_METHOD::CALCULATION, &
+			AD_METHOD::DEP_METHOD &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,27 @@
+	!======================================================================
+	! MO_MODEL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MODEL.CH%, STAT%)
+	CALL READ_DEVICE('MO_MODEL',MO_MODEL.DEV$, STAT%)
+
+	MO_MODEL.NAME$ = MO_MODEL.DEV$+"MO_MODEL.MAS"
+
+	OPEN MO_MODEL.NAME$ FOR INPUT AS FILE MO_MODEL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MODEL, &
+		PRIMARY KEY &
+		( &
+			MO_MODEL::MODELCODE, &
+			MO_MODEL::MSIZE, &
+			MO_MODEL::CLASS &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			MO_MODEL::PRODUCT, &
+			MO_MODEL::MODELCODE, &
+			MO_MODEL::MSIZE, &
+			MO_MODEL::CLASS &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

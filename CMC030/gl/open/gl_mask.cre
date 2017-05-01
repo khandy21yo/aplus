@@ -1,0 +1,21 @@
+	!======================================================================
+	! GL_MASK file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(GL_MASK.CH%, STAT%)
+	CALL READ_DEVICE('GL_MASK',GL_MASK.DEV$, STAT%)
+	CALL READ_PROTECTION('GL_MASK',GL_MASK.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(GL_MASK.PRO$, STAT%)
+
+	GL_MASK.NAME$ = GL_MASK.DEV$+"GL_MASK.TBL"
+
+	OPEN GL_MASK.NAME$ AS FILE GL_MASK.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP GL_MASK, &
+		PRIMARY KEY &
+			GL_MASK::ACCT_MASK, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

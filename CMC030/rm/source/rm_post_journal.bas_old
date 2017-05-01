@@ -1,0 +1,968 @@
+1	%TITLE "Restaurant Journal Post"
+	%SBTTL "RM_POST_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM013
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Restaurant Journal Post\*  program posts the Restaurant Management
+	!	Journal into the Restaurant Transaction Ledger, with
+	!	options to post also to the Inventory Control Transaction
+	!	Ledger and/or the General Ledger period file, as needed.
+	!	Further, this program has provisions for restarting
+	!	after a crashed post.
+	!
+	! Index:
+	!	.x Journal Post
+	!	.x Post>Journal
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_POST_JOURNAL
+	!	$ LINK/EXE=RM_EXE: RM_POST_JOURNAL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_POST_JOURNAL.OBJ;*
+	!
+	! Author:
+	!
+	!	11/17/1987 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	03/04/88 - Frank F. Starman
+	!		Modified so that the post to the RM Transaction file works.
+	!
+	!	03/03/92 - Kevin Handy
+	!		Changed "CMC$WARNING" to "CMC$_WARNING".
+	!
+	!	06/08/92 - Dan Perkins
+	!		Kill Journal files before completing posting, if
+	!		posting gets that far.
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include constants and and some functions
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Include map statements
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.HB"
+	MAP	(RM_JOURNAL)		RM_JOURNAL_CDD		RM_JOURNAL
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.HB"
+	MAP	(RM_JOURPOST)		RM_JOURPOST_CDD		RM_JOURPOST
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.HB"
+	MAP	(RM_JOURPROD)		RM_JOURPROD_CDD		RM_JOURPROD
+
+	!
+	! CDD Inclusions
+	!
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.HB"
+	%INCLUDE "SOURCE:[IC.OPEN]IC_TRANSACTION.HB"
+	%INCLUDE "SOURCE:[PD.OPEN]PD_ACCOUNT.HB"
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+
+	!
+	! Declare internal variables
+	!
+	DECLARE GL_CHART_CDD		GL_CHART_EXAM
+	DECLARE	GL_YYYY_PP_CDD		GL_YYYY_PP
+	DECLARE	IC_TRANSACTION_CDD	IC_TRANSACTION
+	DECLARE PD_ACCOUNT_CDD		PD_ACCOUNT_EXAM
+	DECLARE PD_PRODUCT_CDD		PD_PRODUCT_EXAM
+	DECLARE	RM_TRANSACTION_CDD	RM_TRANSACTION
+	DECLARE UTL_LOCATION_CDD	UTL_LOCATION_EXAM
+	DECLARE UTL_REPORTX_CDD		UTL_REPORTX
+	DECLARE UTL_TRANSTYPE_CDD	UTL_TRANSTYPE_EXAM
+
+	DECLARE LONG	EXIT_STATUS
+	DECLARE LONG	CHECK_PERIOD
+	DECLARE LONG	INTR_STATUS
+	DECLARE LONG	PRNT_SUMMARY
+
+	DECLARE REAL	DCOEFF
+	DECLARE REAL	STDCOST
+
+	DECLARE STRING	TEXT
+	DECLARE STRING	TITLE(10%)
+	DECLARE STRING	BATCH_NUMBER
+	DECLARE STRING	ICPERIOD
+	DECLARE STRING	GLPERIOD
+	DECLARE STRING	IC.INTER.PERIOD
+	DECLARE STRING	GL.INTER.PERIOD
+	DECLARE STRING	CHECK_DATE
+	DECLARE STRING	POSTDATE
+	DECLARE STRING	POSTTIME
+
+	!
+	! External functions
+	!
+	EXTERNAL	LONG	FUNCTION GL_TRAN_POSTGL
+	EXTERNAL	LONG	FUNCTION IC_TRAN_POST
+	EXTERNAL	LONG	FUNCTION RM_TRAN_POST
+
+	EXTERNAL	LONG	FUNCTION ASSG_POSTBATCH
+	EXTERNAL	LONG	FUNCTION GL_EXAM_CHART
+	EXTERNAL	LONG	FUNCTION OUTP_UNDEFCODES
+	EXTERNAL	LONG	FUNCTION PD_EXAM_PRODUCT
+	EXTERNAL	LONG	FUNCTION PD_READ_ACCOUNT
+	EXTERNAL	LONG	FUNCTION UTL_EXAM_LOCATION
+	EXTERNAL	LONG	FUNCTION UTL_EXAM_TRANSTYPE
+	EXTERNAL	REAL	FUNCTION PC_READ_COST
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+ Init:	!==============================================================
+	! OPEN THE PRINT CONTROL FILE
+	!==============================================================
+
+	!
+	! Set user defined fields
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	BATCH_NO$ = TRM$(UTL_REPORTX::OPTDEF(0%))
+	ICPERIOD = EDIT$(UTL_REPORTX::OPTDEF(1%), -1%)
+	GLPERIOD = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	CHECK_DATE = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+
+	CHECK_PERIOD = SUBOPT_NOOPT
+	CHECK_PERIOD = SUBOPT_CHECK IF (CHECK_DATE = "Y")
+
+	!
+	! Title
+	!
+	TITLE(1%) = "RESTAURANT  JOURNAL  POSTING  PROTOCOL"
+	TITLE(2%) = "Restaurant Management System"
+	TITLE(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE(4%) = "."
+
+300	!
+	! Open RM product transaction entry journal file
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.OPN"
+
+	TEXT = SPACE$(18%) + "Must expand first the product journal file" + &
+		" and then POST"
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT, 0%)
+	GOTO ExitProgram
+
+310	!
+	! Open RM Journal file
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.UPD"
+
+320	!
+	! Open RM post journal file
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.UPD"
+
+	%PAGE
+
+	!******************************************************************
+	! Check if process has been interrupted
+	!******************************************************************
+	!
+	! Open up batch control file and check if interrupted
+	!
+	INTR_STATUS = ASSG_POSTBATCH(OPT_RESTART, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "RM_JOURNAL", BATCH_NO$, &
+		IC.INTER.PERIOD, GL.INTER.PERIOD)
+
+	SELECT INTR_STATUS
+	!
+	! Success
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Process was interrupted
+	!
+	CASE CMC$_WARNING
+		GOTO Aborted IF RM_TRAN_POST(OPT_RESTART, &
+			BATCH_NUMBER, TITLE(), &
+			UTL_REPORTX, "") <> CMC$_NORMAL
+
+		IF IC.INTER.PERIOD <> ""
+		THEN
+			GOTO Aborted IF IC_TRAN_POST(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), &
+				UTL_REPORTX, "", &
+				IC.INTER.PERIOD) <> CMC$_NORMAL
+		END IF
+
+		IF GL.INTER.PERIOD <> ""
+		THEN
+			GOTO Aborted IF GL_TRAN_POSTGL(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), &
+				UTL_REPORTX, "", "", &
+				GL.INTER.PERIOD) <> CMC$_NORMAL
+		END IF
+
+	!
+	! Other things going wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+ AssignBatch:
+	!******************************************************************
+	! Assign batch number and open control files
+	!******************************************************************
+	!
+	! Open up batch control file and get a batch number
+	!
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ASSIGN, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "RM_JOURNAL", BATCH_NO$, &
+		ICPERIOD, GLPERIOD) <> CMC$_NORMAL
+
+	EXIT_STATUS = RM_TRAN_POST(OPT_CHECK, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "")
+
+	SELECT EXIT_STATUS
+	!
+	! Success
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Something else went wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+	END SELECT
+
+	GOTO CheckGL IF (ICPERIOD = "")
+
+	EXIT_STATUS = IC_TRAN_POST(OPT_CHECK, SUBOPT_NOOPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", ICPERIOD)
+
+	SELECT EXIT_STATUS
+	!
+	! Success
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Other things going wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+ CheckGL:
+	GOTO CreateTrans IF (GLPERIOD = "")
+
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_CHECK, SUBOPT_NOOPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD)
+
+	SELECT EXIT_STATUS
+	!
+	! Success
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Other things going wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+	END SELECT
+
+ CreateTrans:
+	!******************************************************************
+	! Create transmittal
+	!******************************************************************
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ADDREC, BATCH_NUMBER, TITLE(), &
+					UTL_REPORTX, "", "", "", "") <> CMC$_NORMAL
+
+	POSTDATE = DATE_TODAY
+	POSTTIME = TIME_NOW
+
+	!
+	! Blank flags
+	!
+	PRODUCT$,LOCATION$,TRANSTYPE$,TRANDATE$,INVACCT$,EXPACCT$ = " "
+
+	!
+	! Start at the beginning of the Journal
+	!
+	RESET #RM_JOURNAL.CH%
+
+ NextRec:
+	!
+	! Get (next) Journal record
+	!
+1000	GET #RM_JOURNAL.CH%
+
+	POST_KEY$ = RM_JOURNAL::LOCATION + RM_JOURNAL::STARTDATE + &
+			RM_JOURNAL::TRANSTYPE
+
+	!
+	! Find the first Post Journal record tied to the Journal entry
+	!
+1005	FIND #RM_JOURPOST.CH%, KEY #0% EQ POST_KEY$
+
+	!
+	! Read in one record from the Post Journal
+	!
+1010	GET #RM_JOURPOST.CH%
+
+	!
+	! Finish up the Journal entry if we're done with Post entries
+	!
+	GOTO NextRec IF &
+		(RM_JOURPOST::LOCATION+RM_JOURPOST::STARTDATE+RM_JOURPOST::TRANSTYPE) <> POST_KEY$
+
+	!
+	! Test product number
+	!
+	EXIT_STATUS = PD_EXAM_PRODUCT(RM_JOURPOST::PRODUCT, PD_PRODUCT_EXAM)
+
+	SELECT EXIT_STATUS
+	CASE CMC$_NORMAL
+		! Code found
+	CASE CMC$_UNDEFINED
+		PRODUCT$ = "*"
+	CASE ELSE
+		GOTO Aborted
+	END SELECT
+
+	!
+	! Test Location number
+	!
+	EXIT_STATUS = UTL_EXAM_LOCATION(RM_JOURPOST::LOCATION, UTL_LOCATION_EXAM)
+
+	SELECT EXIT_STATUS
+	CASE CMC$_NORMAL
+		! Code found
+	CASE CMC$_UNDEFINED
+		LOCATION$ = "*"
+	CASE ELSE
+		GOTO Aborted
+	END SELECT
+
+	!
+	! Test transaction type
+	!
+	EXIT_STATUS = UTL_EXAM_TRANSTYPE(RM_JOURPOST::TTYPE, UTL_TRANSTYPE_EXAM)
+
+	SELECT EXIT_STATUS
+	CASE CMC$_NORMAL
+		! Code found
+		IF UTL_TRANSTYPE_EXAM::TRANSSIGN ="+"
+		THEN
+			DCOEFF = 1.0
+		ELSE
+			DCOEFF = -1.0
+		END IF
+	CASE CMC$_UNDEFINED
+		TRANSTYPE$ = "*"
+		DCOEFF = 0.0
+	CASE ELSE
+		GOTO Aborted
+	END SELECT
+
+	!
+	! Set some variables and check if we should skip the RM post
+	!
+	RM_JOURPOST::QUANTITY = DCOEFF*RM_JOURPOST::QUANTITY
+	STDCOST = PC_READ_COST(RM_JOURPOST::PRODUCT, RM_JOURPOST::LOCATION, &
+		RM_JOURPOST::ACTDATE, "")
+
+	GOTO UpdateToIC IF RM_JOURPOST::SEQNUM = "0000"
+
+	!
+	! Generate a RM transaction ledger record
+	!
+	RM_TRANSACTION::PRODUCT		= RM_JOURPOST::PRODUCT
+	RM_TRANSACTION::LOCATION	= RM_JOURPOST::LOCATION
+	RM_TRANSACTION::TRANSDATE	= RM_JOURPOST::ACTDATE
+	RM_TRANSACTION::STATIONMAN	= RM_JOURNAL::STATIONMAN
+	RM_TRANSACTION::TRANSTYPE	= RM_JOURPOST::TTYPE
+	RM_TRANSACTION::QUANTITY	= RM_JOURPOST::QUANTITY
+	RM_TRANSACTION::PRICE		= &
+		FUNC_ROUND(RM_JOURPOST::PRICE * RM_JOURPOST::QUANTITY,2%)
+	RM_TRANSACTION::COST		= &
+		FUNC_ROUND(STDCOST * RM_JOURPOST::QUANTITY,2%)
+	RM_TRANSACTION::POSTDATE	= POSTDATE
+	RM_TRANSACTION::POSTTIME	= POSTTIME
+	RM_TRANSACTION::BATCH		= BATCH_NUMBER
+
+	!
+	! Put the record in the restaurant transaction file
+	!
+	GOTO Aborted IF RM_TRAN_POST(OPT_ADDREC, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, RM_TRANSACTION) <> CMC$_NORMAL
+
+ UpdateToIC:
+	!
+	! Check if we should post to IC
+	!
+	GOTO UpdateToGL IF ICPERIOD = ""
+
+	!
+	! Generate an IC transaction ledger record
+	!
+	IC_TRANSACTION::PRODUCT		= RM_JOURPOST::PRODUCT
+	IC_TRANSACTION::LOCATION	= RM_JOURPOST::LOCATION
+	IC_TRANSACTION::TRANS_DATE	= RM_JOURPOST::ACTDATE
+	IC_TRANSACTION::PRIMARY_REF	= "RESTJRL"
+	IC_TRANSACTION::CROSS_REF	= ""
+	IC_TRANSACTION::SUBACCOUNT	= ""
+	IC_TRANSACTION::LOT		= ""
+	IC_TRANSACTION::STATIONMAN	= RM_JOURNAL::STATIONMAN
+	IC_TRANSACTION::TYPE_A		= RM_JOURPOST::TTYPE
+	IC_TRANSACTION::QUANTITY_A	= RM_JOURPOST::QUANTITY
+	IC_TRANSACTION::TYPE_B		= ""
+	IC_TRANSACTION::QUANTITY_B	= 0.0
+	IC_TRANSACTION::PRICE		= &
+		FUNC_ROUND(RM_JOURPOST::PRICE * RM_JOURPOST::QUANTITY,2%)
+	IC_TRANSACTION::COST		= &
+		FUNC_ROUND(STDCOST * RM_JOURPOST::QUANTITY,2%)
+	IC_TRANSACTION::TRANSACCT	= RM_JOURNAL::EXPACCOUNT
+	IC_TRANSACTION::POSTDATE	= POSTDATE
+	IC_TRANSACTION::POSTTIME	= POSTTIME
+	IC_TRANSACTION::BATCH		= BATCH_NUMBER
+
+	!
+	! Post to inventory transaction file
+	!
+	EXIT_STATUS = IC_TRAN_POST(OPT_ADDREC, CHECK_PERIOD, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, IC_TRANSACTION, &
+		ICPERIOD )
+
+	!
+	! Was the date out of range?
+	!
+	SELECT EXIT_STATUS
+	!
+	! Date good; continue
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Bad date; set flag and continue
+	!
+	CASE CMC$_DATEOUT
+		TRANDATE$ = "*"
+
+	!
+	! Something else wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+ UpdateToGL:
+	!
+	! Check whether or not to skip the GL post
+	!
+	GOTO GoToNext IF (PD_PRODUCT_EXAM::METHOD <> "STD") OR &
+		(UTL_TRANSTYPE_EXAM::CLASS <> "01") OR &
+		(GLPERIOD = "")
+
+	!
+	! Generate a GL_YYYY_PP record
+	!
+	GL_YYYY_PP::SOURCE	= "RJ"
+	GL_YYYY_PP::REFNO	= ""
+	GL_YYYY_PP::TRANDAT	= RM_JOURPOST::ACTDATE
+	GL_YYYY_PP::XREFNO	= ""
+	GL_YYYY_PP::CKNO	= ""
+	GL_YYYY_PP::TRANKEY	= ""
+	GL_YYYY_PP::SUBACC	= ""
+	GL_YYYY_PP::OPERATION	= ""
+	GL_YYYY_PP::HOURS	= 0.0
+	GL_YYYY_PP::UPDSTA	= ""
+	GL_YYYY_PP::UNITS	= 0.0
+	GL_YYYY_PP::POSDAT	= POSTDATE
+	GL_YYYY_PP::POSTIM	= POSTTIME
+	GL_YYYY_PP::BTHNUM	= BATCH_NUMBER
+
+	!
+	! Is the Expense account number defined?
+	!
+	EXIT_STATUS = GL_EXAM_CHART(RM_JOURNAL::EXPACCOUNT, GL_CHART_EXAM)
+
+	SELECT EXIT_STATUS
+	!
+	! Account number defined
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Number undefined; set flag and continue
+	!
+	CASE CMC$_UNDEFINED
+		EXPACCT$ = "*"
+
+	!
+	! Something else wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! Finish Expense record
+	!
+	GL_YYYY_PP::ACCT	= RM_JOURNAL::EXPACCOUNT
+	GL_YYYY_PP::AMOUNT	= -FUNC_ROUND(STDCOST*RM_JOURPOST::QUANTITY, 2%)
+	GL_YYYY_PP::DESCR	= GL_CHART_EXAM::DESCR
+
+	!
+	! Put the Expense record into the GL file
+	!
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_ADDREC, CHECK_PERIOD, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, GL_YYYY_PP, &
+		GL_CHART_EXAM, GLPERIOD)
+
+	!
+	! Check the date
+	!
+	SELECT EXIT_STATUS
+	!
+	! Good date; continue
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Date out of range; set flag (if not already set) and go on
+	!
+	CASE CMC$_DATEOUT
+		TRANDATE$ = "*"
+
+	!
+	! Other things going on here
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! Get the Inventory Account number
+	!
+	EXIT_STATUS = PD_READ_ACCOUNT(	RM_JOURPOST::LOCATION, &
+		PD_PRODUCT_EXAM::PROD_TYPE, &
+		PD_ACCOUNT_EXAM)
+
+	!
+	! Is the Inventory Account Number defined?
+	!
+	EXIT_STATUS = GL_EXAM_CHART(PD_ACCOUNT_EXAM::INVACCT, GL_CHART_EXAM)
+
+	SELECT EXIT_STATUS
+	!
+	! Account defined
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Number undefined; set flag and continue
+	!
+	CASE CMC$_UNDEFINED
+		INVACCT$ = "*"
+
+	!
+	! Something else has gone wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! Finish the Inventory record
+	!
+	GL_YYYY_PP::AMOUNT	= FUNC_ROUND(STDCOST*RM_JOURPOST::QUANTITY, 2%)
+	GL_YYYY_PP::ACCT	= PD_ACCOUNT_EXAM::INVACCT
+	GL_YYYY_PP::DESCR	= GL_CHART_EXAM::DESCR
+
+	!
+	! Put the Inventory record into the GL file
+	!
+	GOTO Aborted IF GL_TRAN_POSTGL(OPT_ADDREC, SUBOPT_NOOPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, GL_YYYY_PP, &
+		GL_CHART_EXAM, GLPERIOD) <> CMC$_NORMAL
+
+ GoToNext:
+	!
+	! Was anything undefined?
+	!
+	IF INSTR(1%, PRODUCT$+LOCATION$+TRANSTYPE$+ &
+		TRANDATE$+INVACCT$+EXPACCT$, "*")
+	THEN
+		TEXT$ = LOCATION$ + RM_JOURPOST::LOCATION + " " + &
+			TRANDATE$ + PRNT_DATE(RM_JOURPOST::ACTDATE, 8%) + " " + &
+			PRODUCT$ + RM_JOURPOST::PRODUCT + " " + &
+			TRANSTYPE$ + RM_JOURPOST::TTYPE + "        " + &
+			EXPACCT$ + RM_JOURNAL::EXPACCOUNT + " " + &
+			INVACCT$ + GL_YYYY_PP::ACCT + &
+			FORMAT$(RM_JOURPOST::QUANTITY, " ######")
+
+		!
+		! Keep undefined codes
+		!
+		GOTO Aborted IF OUTP_UNDEFCODES(OPT_ADDREC,TITLE(),UTL_REPORTX, &
+			TEXT$) <> CMC$_NORMAL
+
+		!
+		! Blank flags
+		!
+		PRODUCT$,LOCATION$,TRANSTYPE$,TRANDATE$,INVACCT$,EXPACCT$ = " "
+
+	END IF
+
+	GOTO 1010
+
+ Confirm:
+	!******************************************************************
+	! Confirm posting
+	!******************************************************************
+	EXIT_STATUS = OUTP_UNDEFCODES(OPT_CONFIRM, TITLE(), UTL_REPORTX, "")
+
+	IF GLPERIOD <> ""
+	THEN
+		EXIT_STATUS = EXIT_STATUS AND GL_TRAN_POSTGL(OPT_CONFIRM, &
+						SUBOPT_NOOPT, BATCH_NUMBER, &
+						TITLE(), UTL_REPORTX, "", "", GLPERIOD)
+	END IF
+
+	IF ICPERIOD <> ""
+	THEN
+		EXIT_STATUS = EXIT_STATUS AND IC_TRAN_POST(OPT_CONFIRM, &
+						SUBOPT_NOOPT, BATCH_NUMBER, &
+						TITLE(), UTL_REPORTX, "", &
+						ICPERIOD)
+	END IF
+
+	GOTO Aborted IF EXIT_STATUS <> CMC$_NORMAL
+
+	!******************************************************************
+	! Posting
+	!******************************************************************
+	GOTO Interrupt IF RM_TRAN_POST(OPT_POSTFILE, BATCH_NUMBER, TITLE(), &
+						UTL_REPORTX, "") <> CMC$_NORMAL
+
+	IF ICPERIOD <> ""
+	THEN
+		GOTO Interrupt IF IC_TRAN_POST(OPT_POSTFILE, SUBOPT_NOOPT, &
+						BATCH_NUMBER, TITLE(), &
+						UTL_REPORTX, "", ICPERIOD) <> CMC$_NORMAL
+
+	END IF
+
+	IF GLPERIOD<>""
+	THEN
+		GOTO Interrupt IF GL_TRAN_POSTGL(OPT_POSTFILE, SUBOPT_NOOPT, &
+						BATCH_NUMBER, TITLE(), &
+						UTL_REPORTX, "", "", GLPERIOD) <> CMC$_NORMAL
+
+	END IF
+
+1500	!
+	! Remove file
+	!
+	CLOSE RM_JOURNAL.CH%
+
+1510	KILL RM_JOURNAL.DEV$ + "RM_JOURNAL_" + BATCH_NO$ + ".JRL" &
+		FOR I% = 1% TO 10%
+
+1520	!
+	! Remove file
+	!
+	CLOSE RM_JOURPOST.CH%
+
+1530	KILL RM_JOURPOST.DEV$ + "RM_JOURPOST_" + BATCH_NO$ + ".JRL" &
+		FOR I% = 1% TO 10%
+
+ Complete:
+	!******************************************************************
+	! Complete process and delete journal
+	!******************************************************************
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_COMPLETE, BATCH_NUMBER, TITLE(), &
+					UTL_REPORTX, "", "", "", "")
+
+	PRNT_SUMMARY = SUBOPT_FINAL
+
+ ExitProgram:
+	!******************************************************************
+	! Exit normally
+	!******************************************************************
+	IF GLPERIOD <> ""
+	THEN
+		!
+		! Print credit and debit transmittal
+		!
+		EXIT_STATUS = GL_TRAN_POSTGL(OPT_SUMMARY, PRNT_SUMMARY, &
+						BATCH_NUMBER, TITLE(), &
+						UTL_REPORTX, "", "", GLPERIOD)
+	END IF
+
+	!
+	! Print undefined code if any
+	!
+	TEXT$ = " Loc   TransDate   Product#        TransType "+ &
+		" ExpAccountNumber    InvAccountNumber      Qty"
+
+	EXIT_STATUS = OUTP_UNDEFCODES(OPT_SUMMARY, TITLE(), UTL_REPORTX, TEXT$)
+
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Aborted:
+	!******************************************************************
+	! Abort process
+	!******************************************************************
+	IF INTR_STATUS <> CMC$_WARNING
+	THEN
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_ABORT,	BATCH_NUMBER, TITLE(), &
+						UTL_REPORTX, "", "", "", "")
+
+		GOTO ExitProgram
+	END IF
+
+	%PAGE
+
+ Interrupt:
+	!******************************************************************
+	! Interrupt process
+	!******************************************************************
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_INTERRUPT, BATCH_NUMBER, TITLE(), &
+					UTL_REPORTX, "", "", "", "")
+
+	GOTO ExitProgram
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+	!
+	! Unable to open RM_JOURPROD file
+	!
+	CASE 300%
+		RESUME 310 IF (ERR = 5%)
+		FILENAME$ = "RM_JOURPROD"
+
+	!
+	! Unable to open RM_JOURNAL file
+	!
+	CASE 310%
+		FILENAME$ = "RM_JOURNAL"
+
+	!
+	! Unable to open RM_JOURPOST file
+	!
+	CASE 320%
+		FILENAME$ = "RM_JOURPOST"
+
+	!
+	! End of journal file
+	!
+	CASE 1000%
+		RESUME Confirm IF ERR = 11%
+		FILENAME$ = "RM_JOURNAL"
+
+	!
+	! Can't find record
+	!
+	CASE 1005%
+		RESUME NextRec IF ERR = 155%
+		FILENAME$ = "RM_JOURNAL"
+
+	!
+	! End of post journal file
+	!
+	CASE 1010%
+		RESUME NextRec IF ERR = 11%
+
+	!
+	! Kill journal
+	!
+	CASE 1510%
+		RESUME 1520
+
+	!
+	! Kill journal
+	!
+	CASE 1530%
+		RESUME Complete
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+	%PAGE
+
+32767	!******************************************************************
+	! End of posting program RM_POST_JOURNAL
+	!******************************************************************
+	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* field provides the means to enter the batch number
+	!	which will be posted.
+	!
+	! Index:
+	!	.x Batch Number
+	!	.x Number>Batch
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Period to General Ledger\*
+	!	.p
+	!	The ^*Period to General Ledger\* field contains the correct period name in the
+	!	General Ledger system to which the posting will be completed.  This field
+	!	is available because sometimes periods differ between systems.
+	!
+	! Index:
+	!	.x Period to General Ledger
+	!	.x General Ledger>Period to
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) Period to Inventory Control\*
+	!	.p
+	!	The ^*Period to Inventory Control\* field contains the correct period name
+	!	in the Inventory system to which the posting will be completed.  This field
+	!	is available because sometimes periods differ between systems.
+	!
+	! Index:
+	!	.x Period to Inventory Control
+	!	.x To Inventory Control>Period
+	!
+	!--

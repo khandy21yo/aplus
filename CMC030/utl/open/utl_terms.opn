@@ -1,0 +1,19 @@
+	!======================================================================
+	! UTL_TERMS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_TERMS.CH%, STAT%)
+	CALL READ_DEVICE('UTL_TERMS',UTL_TERMS.DEV$, STAT%)
+
+	UTL_TERMS.NAME$ = UTL_TERMS.DEV$+"UTL_TERMS.TBL"
+
+	OPEN UTL_TERMS.NAME$ FOR INPUT AS FILE UTL_TERMS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_TERMS, &
+		PRIMARY KEY &
+			UTL_TERMS::CODE, &
+		ALTERNATE KEY &
+			UTL_TERMS::DESCR &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

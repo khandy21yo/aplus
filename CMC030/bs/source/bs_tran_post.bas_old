@@ -1,0 +1,415 @@
+1	%TITLE "Post to Billing Service Register File"
+	%SBTTL "BS_TRAN_POST"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BS_TRAN_POST(LONG OPT, &
+		STRING BATCH_NUMBER, &
+		STRING TITLE(), &
+		UTL_REPORTX_CDD UTL_REPORTX, &
+		BS_REGISTER_CDD BS_REGISTER_POST, &
+		STRING GLPERIOD)
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! ABSTRACT:HELP
+	!	.p
+	!	This function is used to post to the Billing services
+	!	register file.  It also does the remove
+	!	post if necessary.
+	!
+	! Compile:
+	!
+	!	$ BAS BS_SOURCE:BS_TRAN_POST
+	!	$ LIB FUNC_LIB:CMCFUN/REP BS_TRAN_POST
+	!	$ DELETE BS_TRAN_POST.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	09/27/89 - Frank Starman
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	03/24/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/12/95 - Kevin Handy
+	!		(V3.6)
+	!		Update source to V3.6 standards.
+	!		Change START_DATE to START_DATE$ and END_DATE
+	!		to END_DATE$.
+	!
+	!	09/03/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/23/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	07/30/97 - Kevin Handy
+	!		Change last parameter of READ_PERIOD to integer.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	04/09/99 - Kevin Handy
+	!		Define SCOPE
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[BS.OPEN]BS_REGISTER.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	!
+	! Memory MAPs
+	!
+	MAP (DP_OUTP_XUNSOL) RRR_FLAG%
+	MAP (BS_REGISTER)	BS_REGISTER_CDD	BS_REGISTER
+
+	%INCLUDE "SOURCE:[SB.OPEN]SB_CONTROL.HB"
+	MAP	(SB_CONTROL)	SB_CONTROL_CDD		SB_CONTROL
+
+	!
+	! Common memory areas
+	!
+	COM (BS_TRAN_POST.CH) &
+		SB_CONTROL.CH%, &
+		BS_REGISTER.CH%, &
+		BS_REGISTER.SEQ%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION	ASSG_POSTBATCH
+	EXTERNAL LONG	FUNCTION	OUTP_UNSOLICITED
+
+	!
+	! Declare variables and constants
+	!
+	DECLARE LONG EXIT_STATUS
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Assume success
+	!
+	EXIT_STATUS = CMC$_NORMAL
+
+	!
+	! Set record counter to zero
+	!
+	RECORDS% = 0%
+
+	SELECT OPT
+
+	CASE OPT_RESTART
+		!
+		! Remove batch number
+		!
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_MARKFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"BS_REGISTER.HIS", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Open RM transaction file
+		!
+100		%INCLUDE "SOURCE:[BS.OPEN]BS_REGISTER.CRE"
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_OPENFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Do any records in the file have this batch number?
+		!
+105		FIND #BS_REGISTER.CH%, KEY #1% EQ BATCH_NUMBER
+
+110		!
+		! Check unsolicited input
+		!
+		IF RRR_FLAG%
+		THEN
+			IF OUTP_UNSOLICITED(OPT_REPORT) <> CMC$_NORMAL
+			THEN
+				EXIT_STATUS = CMC$_UNTERROR
+				GOTO ExitFunction
+			END IF
+		END IF
+
+		GET #BS_REGISTER.CH%
+		GOTO 120 IF (BS_REGISTER::BATCH <> BATCH_NUMBER)
+		DELETE #BS_REGISTER.CH%
+		RECORDS% = RECORDS% + 1%
+		GOTO 110
+
+120		CLOSE #BS_REGISTER.CH%
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_CLOSEFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		TEXT$ = FORMAT$(RECORDS%, "         ######## ") + &
+			"Deleted Records"
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+
+	CASE OPT_CHECK
+
+		!
+		! Make sure RM Transaction Ledger is clean
+		!
+200		%INCLUDE "SOURCE:[BS.OPEN]BS_REGISTER.OPN"
+		GET #BS_REGISTER.CH%, KEY #1% EQ BATCH_NUMBER
+
+		!
+		! Error; batch number found
+		!
+		EXIT_STATUS = CMC$_WARNING
+		GOTO ExitFunction
+
+205		!
+		! Open BS Control file
+		!
+		%INCLUDE "SOURCE:[SB.OPEN]SB_CONTROL.CRE"
+		GET #SB_CONTROL.CH%, KEY#0% EQ "BS", REGARDLESS
+
+		TEST.PERIOD$ = SB_CONTROL::PERIOD
+
+		V% = READ_PERIOD("FIND", "GL", &
+			TEST.PERIOD$, PERIOD_DESCR$, STAT$, &
+			START_DATE$, END_DATE$, 1%)
+
+		IF (TEST.PERIOD$ <> GLPERIOD)
+		THEN
+			TEXT$ = SPACE$(18%) + "The updated period must be " + &
+				TEST.PERIOD$
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+			EXIT_STATUS = CMC$_UNTERROR
+			GOTO ExitFunction
+		END IF
+
+		!
+		! Open the temporary sequential file
+		!
+210		CALL ASSG_CHANNEL(BS_REGISTER.SEQ%, STAT%)
+		OPEN "BS_REGISTER.SEQ" AS FILE BS_REGISTER.SEQ%, &
+			ORGANIZATION SEQUENTIAL FIXED, &
+			MAP BS_REGISTER, &
+			TEMPORARY, &
+			ALLOW NONE, &
+			ACCESS MODIFY
+
+	CASE OPT_ADDREC
+		!
+		! Check unsolicited input
+		!
+300		IF RRR_FLAG%
+		THEN
+			IF OUTP_UNSOLICITED(OPT_REPORT) <> CMC$_NORMAL
+			THEN
+				EXIT_STATUS = CMC$_UNTERROR
+				GOTO ExitFunction
+			END IF
+		END IF
+
+		!
+		! Fill posting temp file
+		!
+		BS_REGISTER = BS_REGISTER_POST
+		PUT #BS_REGISTER.SEQ%
+
+	CASE OPT_CONFIRM
+		!
+		! Not used
+		!
+
+	CASE OPT_POSTFILE
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_MARKFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"BS_REGISTER.HIS", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Open RM transaction file
+		!
+400		%INCLUDE "SOURCE:[BS.OPEN]BS_REGISTER.CRE"
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_OPENFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		GOTO ExitFunction IF (1% AND EXIT_STATUS) = 0%
+
+		!
+		! Start at the beginning of the temp file
+		!
+410		RESET #BS_REGISTER.SEQ%
+
+		!
+		! Check unsolicited input
+		!
+420		IF RRR_FLAG%
+		THEN
+			IF OUTP_UNSOLICITED(OPT_REPORT) <> CMC$_NORMAL
+			THEN
+				EXIT_STATUS = CMC$_UNTERROR
+				GOTO ExitFunction
+			END IF
+		END IF
+
+		GET #BS_REGISTER.SEQ%
+		PUT #BS_REGISTER.CH%
+		RECORDS% = RECORDS% + 1%
+		GOTO 420
+
+430		CLOSE BS_REGISTER.CH%
+		CLOSE BS_REGISTER.SEQ%
+
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_CLOSEFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, "", "", "", "")
+
+		TEXT$ = FORMAT$(RECORDS%, "         ########") + &
+			" Posted Records"
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+
+		!
+		! Find and update SA Control file record
+		!
+440		GET #SB_CONTROL.CH%, KEY#0% EQ "BS"
+
+		SB_CONTROL::PERIOD = GLPERIOD
+		UPDATE #SB_CONTROL.CH%
+
+		CLOSE #SB_CONTROL.CH%
+		CALL ASSG_FREECHANNEL(SB_CONTROL.CH%)
+
+	CASE ELSE
+		!
+		! Undefined option
+		!
+		EXIT_STATUS = CMC$_NOOPTION
+
+	END SELECT
+
+ ExitFunction:
+	BS_TRAN_POST = EXIT_STATUS
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_PRINTMESS(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR), &
+		UTL_REPORTX, TITLE(), 0%)
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+	!
+	! Cannot lock file
+	!
+	CASE 138%
+		SLEEP 5%
+		RESUME
+
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 100%
+		FILENAME$ = "BS_REGISTER"
+
+	CASE 105%
+		RESUME 120 IF ERR = 155%
+		FILENAME$ = "BS_REGISTER"
+
+	CASE 110%
+		RESUME 120 IF ERR = 11%
+		FILENAME$ = "BS_REGISTER"
+
+	CASE 200%
+		RESUME 205 IF (ERR = 155%) OR (ERR = 5%)
+		FILENAME$ = "BS_REGISTER"
+
+	CASE 205%
+		FILENAME$ = "SB_CONTROL"
+
+	CASE 210%
+		FILENAME$ = "BS_REGISTER.SEQ"
+
+	CASE 300%
+		FILENAME$ = "BS_REGISTER.SEQ"
+
+	CASE 420%
+		RESUME 430 IF ERR = 11%
+		FILENAME$ = "BS_REGISTER.SEQ"
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+32767	END FUNCTION

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Rate Range is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__RATERANGE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Payroll Rate Range
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__RATERANGE.TBL\*
+	!	.p
+	!	Payroll Rate Range.
+	!
+	! Index:
+	!	.x Payroll Rate Range
+	!	.x PR_RATERANGE
+	!--

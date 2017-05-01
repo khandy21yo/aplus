@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Depreciation Unit Register is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__REGUNIT.HIS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating.  Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Depreciation Unit Register
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__REGUNIT.HIS\*
+	!	.p
+	!	Depreciation Unit Register.
+	!
+	! Index:
+	!	.x Depreciation Unit Register
+	!	.x AD_REGUNIT
+	!--

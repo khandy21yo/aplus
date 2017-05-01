@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Check Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__TRN__CHECK.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Payroll System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Payroll Check Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__TRN__CHECK.JRL\*
+	!	.p
+	!	Payroll Check Journal.
+	!
+	! Index:
+	!	.x Payroll Check Journal
+	!	.x PR_TRN_CHECK
+	!--

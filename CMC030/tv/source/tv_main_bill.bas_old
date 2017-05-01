@@ -1,0 +1,825 @@
+1	%TITLE "TV_MAIN_BILL - TV Bill File Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_BILL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the TV Bill File.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_BILL/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_BILL
+	!	$ DELETE TV_MAIN_BILL.OBJ;*
+	!
+	! Author:
+	!
+	!	02/08/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/09/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:TV_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	!
+	! Maps
+	!
+	MAP (SCHED_DATE) SCHED_DATE$ = 8%
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_BILL"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.HB"
+	MAP (TV_BILL)		TV_BILL_CDD TV_BILL
+	MAP (TV_BILL_OLD)	TV_BILL_CDD TV_BILL_OLD, TV_BILL2
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_SPOTS_FLAG"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SPOTS_FLAG.HB"
+	MAP (TV_SPOTS_FLAG)		TV_SPOTS_FLAG_CDD TV_SPOTS_FLAG
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CART_INVENTORY"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CART_INVENTORY.HB"
+	MAP (TV_CART_INVENTORY)	TV_CART_INVENTORY_CDD	TV_CART_INVENTORY
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_CLASS"
+ !	MAP (TV_LOG_CLASS) TV_LOG_CLASS_CDD TV_LOG_CLASS
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CUSTOM"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)		AR_CUSTOM_CDD	AR_CUSTOM
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.GL.GL_CHART"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD	GL_CHART
+
+	COM (TT_TV_SPOT) &
+		SPOTTITLE$ = 20%, &
+		SPOT$(3%) = 20%
+
+	COM (TT_TV_schtype) &
+		SCHTYPETITLE$ = 20%, &
+		SCHTYPE$(3%) = 20%
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_BILL) &
+		TV_BILL.CH%, &
+		TV_BILL.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING FUNCTION READ_SET
+	EXTERNAL STRING FUNCTION PRNT_TIME
+
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+
+	!
+	! Other declarations
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "TV Billing File Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_BILL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 23%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Customer"
+			SMG_WINDOW::KFIELD(0%, 0%) = 3%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+			SMG_WINDOW::KFIELD(0%, 3%) = 3%
+		SMG_WINDOW::KNAME(1%) = "Order"
+			SMG_WINDOW::KFIELD(1%, 0%) = 4%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+			SMG_WINDOW::KFIELD(1%, 2%) = 3%
+			SMG_WINDOW::KFIELD(1%, 3%) = 5%
+			SMG_WINDOW::KFIELD(1%, 4%) = 6%
+
+		SPOTTITLE$ = "Flag  Description"
+		SPOT$(0%) = "3"
+		SPOT$(1%) = "S - Schedule "
+		SPOT$(2%) = "N - Not Run  "
+		SPOT$(3%) = "R - Run      "
+
+		SCHTYPETITLE$ = "Flag  Description"
+		SCHTYPE$(0%) = "2"
+		SCHTYPE$(1%) = "0 - Commercial"
+		SCHTYPE$(2%) = "3 - Charge"
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_BILL.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_BILL.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.CRE"
+		TV_BILL.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_BILL.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_BILL.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_BILL.CH%
+		RESET #TV_BILL.CH%
+		GET #TV_BILL.CH%, REGARDLESS
+
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Customer", &
+			2,  1, "(02) Order no.", &
+			3,  1, "(03) Sched no.", &
+			4,  1, "(04) Descr/comm", &
+			5,  1, "(05) Sched Date", &
+			6,  1, "(06) Sched Time", &
+			6, 40, "(07) Actual time", &
+			7,  1, "(08) Rate", &
+			7, 40, "(09) Bill amount", &
+			8,  1, "(10) Sch Type", &
+			9,  1, "(11) Run Flag", &
+			10,  1, "(12) Run Code", &
+			11,  1, "(13) Length", &
+			12,  1, "(14) Agency no.", &
+			13,  1, "(15) Cart no.", &
+			14,  1, "(16) Cut no.", &
+			15,  1, "(17) From time slot", &
+			15, 40, "(18) To time slot", &
+			16,  1, "(19) Invoice no.", &
+			16, 40, "(20) Invoice date", &
+			17,  1, "(21) Post date", &
+			17, 40, "(22) Update", &
+			18,  1, "(23) GL Account", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS( &
+				SMG_WINDOW::WNUMBER,XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Eloop:		SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_BILL::CUSNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;22", TEMP$, &
+				TV_BILL::CUSNUM, MFLAG, "'E", MVALUE)
+
+			SELECT SCOPE::SCOPE_EXIT
+			CASE SMG$K_TRM_F14
+				TV_BILL::CUSNUM = AR_CUSTOM::CUSNUM &
+					IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID, "VX") = 1%
+				GOTO ELoop
+
+			CASE SMG$K_TRM_F17
+				ST% = MAIN_WINDOW(TV_MAIN_CUSTOM.ID, &
+					"M0"+TV_BILL::CUSNUM)
+				GOTO ELoop
+
+			END SELECT
+
+
+		CASE 2%
+			TV_BILL::FRMNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"2;22", TEMP$, &
+				TV_BILL::FRMNUM, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+			TV_BILL::SKEDNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;22", TEMP$, &
+				TV_BILL::SKEDNUM, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+			TV_BILL::DESCR = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"4;22", TEMP$, &
+				TV_BILL::DESCR, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+			TV_BILL::SCH_DATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"5;22", TEMP$, &
+				TV_BILL::SCH_DATE, MFLAG, "", MVALUE)
+
+		CASE 6%
+			TV_BILL::SCH_TIME = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;22", TEMP$, &
+				TV_BILL::SCH_TIME, MFLAG, "H", MVALUE)
+
+		CASE 7%
+			TV_BILL::RUN_TIME = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"6;65", TEMP$, &
+				TV_BILL::RUN_TIME, MFLAG, "H", MVALUE)
+
+		CASE 8%
+			TV_BILL::RATE = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;22", TEMP$, &
+				TV_BILL::RATE, MFLAG, "###,###.##", MVALUE)
+
+		CASE 9%
+			TV_BILL::BILL_AMOUNT = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"7;65", TEMP$, &
+				TV_BILL::BILL_AMOUNT, MFLAG, "###,###.##", MVALUE)
+
+		CASE 10%
+			TV_BILL::SCH_TYPE = ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER,"8;22", TEMP$, &
+				TV_BILL::SCH_TYPE, MFLAG, "'", MVALUE, &
+				SCHTYPE$(),SCHTYPETITLE$, "005")
+
+		CASE 11%
+			TV_BILL::SPOTS_FLAG = ENTR_3STRINGLIST(SCOPE, &
+				SMG_WINDOW::WNUMBER,"9;22", TEMP$, &
+				TV_BILL::SPOTS_FLAG, MFLAG, "'", MVALUE, &
+				SPOT$(),SPOTTITLE$, "005")
+
+		CASE 12%
+			TV_BILL::SPOTS_CODE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;22", TEMP$, &
+				TV_BILL::SPOTS_CODE, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_BILL::SPOTS_CODE = TV_SPOTS_FLAG::CODE &
+					IF MAIN_WINDOW(TV_MAIN_SPOTS.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 13%
+			TV_BILL::LENGTH = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;22", TEMP$, &
+				TV_BILL::LENGTH, MFLAG, "H", MVALUE)
+
+		CASE 14%
+			TV_BILL::AGENCY_NUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;22", TEMP$, &
+				TV_BILL::AGENCY_NUM, MFLAG, "'E", MVALUE)
+
+		CASE 15%
+			TV_BILL::CARTNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"13;22", TEMP$, &
+				TV_BILL::CARTNUM, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_BILL::CARTNUM = TV_CART_INVENTORY::CARTNUM &
+					IF MAIN_WINDOW(TV_MAIN_CART.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		CASE 16%
+			TV_BILL::CUTNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"14;22", TEMP$, &
+				TV_BILL::CUTNUM, MFLAG, "'E", MVALUE)
+
+		CASE 17%
+			TV_BILL::FROM_TIME_SLOT = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"15;22", TEMP$, &
+				TV_BILL::FROM_TIME_SLOT, MFLAG, "H", MVALUE)
+
+		CASE 18%
+			TV_BILL::TO_TIME_SLOT = ENTR_3TIME(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"15;65", TEMP$, &
+				TV_BILL::TO_TIME_SLOT, MFLAG, "H", MVALUE)
+
+		CASE 19%
+			TV_BILL::INVNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"16;22", TEMP$, &
+				TV_BILL::INVNUM, MFLAG, "'E", MVALUE)
+
+		CASE 20%
+			TV_BILL::INVDAT = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"16;65", TEMP$, &
+				TV_BILL::INVDAT, MFLAG, "'E", MVALUE)
+
+		CASE 21%
+			TV_BILL::POSTDATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"17;22", TEMP$, &
+				TV_BILL::POSTDATE, MFLAG, "'E", MVALUE)
+
+		CASE 22%
+			TV_BILL::GL_UPDATE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"17;65", TEMP$, &
+				TV_BILL::GL_UPDATE, MFLAG, "'E", MVALUE)
+
+		CASE 23%
+			TV_BILL::GL_ACCT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"18;22", TEMP$, &
+				TV_BILL::GL_ACCT, MFLAG, "'E", MVALUE)
+
+			IF SCOPE::SCOPE_EXIT = SMG$K_TRM_F14
+			THEN
+				TV_BILL::GL_ACCT = GL_CHART::ACCT &
+					IF MAIN_WINDOW(GL_MAIN_CHART.ID, "V0  ") = 1%
+				GOTO ELoop
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+
+		TV_MAIN_BILL = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(40%,63%)
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_BILL::CUSNUM) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "CUSNUM"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "CUSNUM"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_BILL = 1%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_BILL = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= LEFT(AR_CUSTOM::CUSNAM, 40%)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				DISPLAY_DESCR$,1%,36%, , SMG$M_BOLD)
+
+			END IF
+
+		CASE 2%
+			TV_MAIN_BILL = 1% IF TV_BILL::FRMNUM = ""
+
+		CASE 12%
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(30%,63%)
+			IF MAIN_WINDOW(TV_MAIN_SPOTS.ID,"Q0"+TV_BILL::SPOTS_FLAG+ &
+				TV_BILL::SPOTS_CODE) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "SPOCDE"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "SPOCDE"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_BILL = 1%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_BILL = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= TV_SPOTS_FLAG::DESCR
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				DISPLAY_DESCR$, 10%,36%, , SMG$M_BOLD)
+
+		CASE 14%
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(40%,63%)
+			IF MAIN_WINDOW(TV_MAIN_CART.ID,"Q0"+TV_BILL::CARTNUM) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "CARTNO"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "CARTNO"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_BILL = 1%
+					CALL ENTR_3MESSAGE(SCOPE, "Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_BILL = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= TV_CART_INVENTORY::PRONAME
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				DISPLAY_DESCR$, 13%, 36%, , SMG$M_BOLD)
+
+		CASE 23%
+			! Is the input defined?
+			!
+			DISPLAY_DESCR$ = STRING$(40%,63%)
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID, "Q0"+TV_BILL::GL_ACCT) <> 1%
+			THEN
+				!
+				! See if they are allowing undefined inputs
+				!
+				V$ = LEFT(READ_SET(TRM$(SCOPE::PRG_PROGRAM), "ACCT"), 1%)
+				V$ = LEFT(READ_SET("TV_ALLOW", "ACCT"), 1%) &
+					IF V$ = ""
+
+				IF V$ = "N"
+				THEN
+					!
+					! Don't let them get past is we don't allow
+					! them to enter undefined values.
+					!
+					TV_MAIN_BILL = 1%
+					CALL ENTR_3MESSAGE(SCOPE, "Input undefined ", 0%)
+				ELSE
+					!
+					! Verify that they really want to enter an
+					! undefined value.
+					!
+					V$ = ENTR_3YESNO(SCOPE, SMG_WINDOW::WNUMBER, "", &
+						"Input undefined, enter anyway", &
+						"N", 0%, "", "")
+					TV_MAIN_BILL = 1% IF V$ = "N"
+				END IF
+			ELSE
+				DISPLAY_DESCR$= GL_CHART::DESCR
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				DISPLAY_DESCR$, 18%, 42%, , SMG$M_BOLD)
+
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		DISPLAY_DESCR$ = STRING$(40%,63%)
+		DISPLAY_DESCR$ = LEFT(AR_CUSTOM::CUSNAM, 40%) &
+			IF MAIN_WINDOW(TV_MAIN_CUSTOM.ID,"Q0"+TV_BILL::CUSNUM) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$,1%,36%, , SMG$M_BOLD)
+
+		DISPLAY_DESCR$ = STRING$(30%,63%)
+		DISPLAY_DESCR$ = TV_SPOTS_FLAG::DESCR &
+			IF MAIN_WINDOW(TV_MAIN_SPOTS.ID,"Q0"+TV_BILL::SPOTS_FLAG+ &
+				TV_BILL::SPOTS_CODE) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$,10%,36%, , SMG$M_BOLD)
+
+		DISPLAY_DESCR$ = STRING$(40%,63%)
+		DISPLAY_DESCR$ = TV_CART_INVENTORY::PRONAME &
+			IF MAIN_WINDOW(TV_MAIN_CART.ID,"Q0"+TV_BILL::CARTNUM) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$, 13%, 36%, , SMG$M_BOLD)
+
+		DISPLAY_DESCR$ = STRING$(40%,63%)
+		DISPLAY_DESCR$ = GL_CHART::DESCR &
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID,"Q0"+TV_BILL::GL_ACCT) = 1%
+		!
+		! Display name (ALSO IN TESTENTRY)
+		!
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			DISPLAY_DESCR$, 18%, 42%, , SMG$M_BOLD)
+
+	!
+	! Set TV_BILL_OLD value
+	!
+20500	CASE OPT_SETOLD
+
+		TV_BILL_OLD = TV_BILL
+
+	!
+	! Restore TV_BILL_OLD value
+	!
+	CASE OPT_RESETOLD
+
+		TV_BILL = TV_BILL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+
+		TV_BILL2 = TV_BILL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+
+		TV_BILL = TV_BILL2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Customer   Order    Schd " + &
+				"Time     Rate      Flag Code Length"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "013,022,027,036,046,051,056,065"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = TV_BILL::CUSNUM + " " + &
+				TV_BILL::FRMNUM + "  " + &
+				TV_BILL::SKEDNUM + "  " + &
+				PRNT_TIME(TV_BILL::SCH_TIME, 0%) + " " + &
+				FORMAT$(TV_BILL::RATE, "######.##") + "  " + &
+				TV_BILL::SPOTS_FLAG + "    " + &
+				TV_BILL::SPOTS_CODE + "  " + &
+				PRNT_TIME(TV_BILL::LENGTH, 0%) + " " + &
+				TV_BILL::DESCR
+
+		END SELECT
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #TV_BILL.CH%, &
+				KEY#0% GE TV_BILL::CUSNUM + &
+					TV_BILL::FRMNUM + &
+					TV_BILL::SKEDNUM, &
+				REGARDLESS
+
+		CASE 1%
+			FIND #TV_BILL.CH%, &
+				KEY#2% GE TV_BILL::FRMNUM + &
+					TV_BILL::SKEDNUM + &
+					TV_BILL::SCH_DATE + &
+					TV_BILL::SCH_TIME, &
+				REGARDLESS
+
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!
+	! Trap Errors
+	!
+	SELECT ERL
+
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		TV_MAIN_BILL = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		TV_MAIN_BILL = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	END SELECT
+
+	RESUME ExitFunction
+
+32767	END FUNCTION

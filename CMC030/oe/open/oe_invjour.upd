@@ -1,0 +1,16 @@
+	!======================================================================
+	! OE_INVJOUR file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_INVJOUR.CH%, STAT%)
+	CALL READ_DEVICE('OE_INVJOUR',OE_INVJOUR.DEV$, STAT%)
+
+	OE_INVJOUR.NAME$ = OE_INVJOUR.DEV$+"OE_INVJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN OE_INVJOUR.NAME$ FOR INPUT AS FILE OE_INVJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_INVJOUR, &
+		PRIMARY KEY &
+			OE_INVJOUR::ORDNUM, &
+		ACCESS MODIFY, ALLOW NONE
+

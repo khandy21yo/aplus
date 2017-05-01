@@ -1,0 +1,26 @@
+	!======================================================================
+	! OS_JLINE file (create, modify, allow read)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OS_JLINE.CH%, STAT%)
+	CALL READ_DEVICE('OS_JLINE',OS_JLINE.DEV$, STAT%)
+	CALL READ_PROTECTION('OS_JLINE',OS_JLINE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(OS_JLINE.PRO$, STAT%)
+
+	OS_JLINE.NAME$ = OS_JLINE.DEV$+"OS_JLINE_"+BATCH_NO$+".JRL"
+
+	OPEN OS_JLINE.NAME$ AS FILE OS_JLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OS_JLINE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			OS_JLINE::ORDNUM, &
+			OS_JLINE::JLINE, &
+			OS_JLINE::LLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW READ
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

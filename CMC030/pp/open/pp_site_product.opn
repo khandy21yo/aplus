@@ -1,0 +1,21 @@
+	!======================================================================
+	! PP_SITE_PRODUCT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PP_SITE_PRODUCT.CH%, STAT%)
+	CALL READ_DEVICE('PP_SITE_PRODUCT',PP_SITE_PRODUCT.DEV$, STAT%)
+
+	PP_SITE_PRODUCT.NAME$ = PP_SITE_PRODUCT.DEV$+"PP_SITE_PRODUCT.MAS"
+
+	OPEN PP_SITE_PRODUCT.NAME$ FOR INPUT AS FILE PP_SITE_PRODUCT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PP_SITE_PRODUCT, &
+		PRIMARY KEY &
+		( &
+			PP_SITE_PRODUCT::HOST, &
+			PP_SITE_PRODUCT::SITE, &
+			PP_SITE_PRODUCT::STYPE, &
+			PP_SITE_PRODUCT::PRODUCT &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

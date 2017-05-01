@@ -1,0 +1,21 @@
+	!======================================================================
+	! WP_ISSLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_ISSLINE.CH%, STAT%)
+	CALL READ_DEVICE('WP_ISSLINE',WP_ISSLINE.DEV$, STAT%)
+
+	WP_ISSLINE.NAME$ = WP_ISSLINE.DEV$+"WP_ISSLINE_"+BATCH_NO$+".JRL"
+
+	OPEN WP_ISSLINE.NAME$ FOR INPUT AS FILE WP_ISSLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_ISSLINE, &
+		PRIMARY KEY &
+		( &
+			WP_ISSLINE::REQNUM, &
+			WP_ISSLINE::JOB, &
+			WP_ISSLINE::LLINE, &
+			WP_ISSLINE::REQLINE &
+		)	, &
+		ACCESS MODIFY, ALLOW NONE
+

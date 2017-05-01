@@ -1,0 +1,22 @@
+	!======================================================================
+	! EL_TYPE file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(EL_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('EL_TYPE',EL_TYPE.DEV$, STAT%)
+	CALL READ_PROTECTION('EL_TYPE',EL_TYPE.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(EL_TYPE.PRO$, STAT%)
+
+	EL_TYPE.NAME$ = EL_TYPE.DEV$+"EL_TYPE.TBL"
+
+	OPEN EL_TYPE.NAME$ AS FILE EL_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP EL_TYPE, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			EL_TYPE::TTYPE, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

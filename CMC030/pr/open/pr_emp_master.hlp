@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Employee Master File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__EMP__MASTER.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Employee Master File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__EMP__MASTER.MAS\*
+	!	.p
+	!	Employee Master File.
+	!
+	! Index:
+	!	.x Employee Master File
+	!	.x PR_EMP_MASTER
+	!--

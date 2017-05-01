@@ -1,0 +1,16 @@
+	!======================================================================
+	! BI_PATIENTEX file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_PATIENTEX.CH%, STAT%)
+	CALL READ_DEVICE('BI_PATIENTEX',BI_PATIENTEX.DEV$, STAT%)
+
+	BI_PATIENTEX.NAME$ = BI_PATIENTEX.DEV$+"BI_PATIENTEX.MAS"
+
+	OPEN BI_PATIENTEX.NAME$ FOR INPUT AS FILE BI_PATIENTEX.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_PATIENTEX, &
+		PRIMARY KEY &
+			BI_PATIENTEX::CUSNUM, &
+		ACCESS READ, ALLOW MODIFY
+

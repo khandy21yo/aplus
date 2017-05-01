@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Category Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PD__CATEGORY.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*PD\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Product Category Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PD__CATEGORY.TBL\*
+	!	.p
+	!	Product Category Description.
+	!
+	! Index:
+	!	.x Product Category Description
+	!	.x PD_CATEGORY
+	!--

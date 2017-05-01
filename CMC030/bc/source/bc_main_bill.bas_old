@@ -1,0 +1,920 @@
+1	%TITLE "BC Bill Header Maintenance"
+	%SBTTL "BC_MAIN_BILL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BC_MAIN_BILL(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Billing Journal\* option provides the means
+	!	to access a maintenance screen where customer order information
+	!	is entered and maintained. The screen also contains a function in
+	!	the Command Menu, Line__Items, where Customer billing information
+	!	may be entered.
+	!
+	! Index:
+	!	.x Maintain>Billing Journal
+	!	.x Billing Journal>Maintenance
+	!	.x Customer Billing Journal>Maintain
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BC_SOURCE:BC_MAIN_BILL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BC_MAIN_BILL
+	!	$ DELETE BC_MAIN_BILL.OBJ;*
+	!
+	! Author:
+	!
+	!	07/06/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	05/07/92 - Dan Perkins
+	!		Use FUNC_TESTENTRY to test input.
+	!
+	!	06/16/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	03/01/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/15/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:BC_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! CDD inclusions and MAPs
+	!
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_CONTROL.HB"
+	MAP (BC_CONTROL)	BC_CONTROL_CDD		BC_CONTROL
+
+	%INCLUDE "SOURCE:[BC.OPEN]BC_BILLH.HB"
+	MAP (BC_BILLH)		BC_BILLH_CDD		BC_BILLH
+	MAP (BC_BILLH_OLD)	BC_BILLH_CDD		BC_BILLH_OLD, BC_BILLH2
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	MAP (AR_35CUSTOM)	AR_35CUSTOM_CDD		AR_35CUSTOM
+
+	!
+	! Common areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BC_BILLH) &
+		BC_BILLH.CH%, &
+		BC_BILLH.READONLY%, &
+		BATCH_NO$ = 2%
+
+	COM (CH_BC_BILLL) &
+		BC_BILLL.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION MAIN_JOURNAL
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	!
+	! Declare some variables
+	!
+	DECLARE RFA TEMP_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!******************************************************************
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!******************************************************************
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "BC Journal Maintenance"
+		SMG_WINDOW::NHELP = "BC_MAIN_BILL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 10%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Order-number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BC_BILLH.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BC_BILLH.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BC.OPEN]BC_BILLH.CRE"
+		BC_BILLH.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BC.OPEN]BC_BILLH.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BC_BILLH.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BC_BILLH.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BC_BILLH.CH%
+		RESET #BC_BILLH.CH%
+		GET #BC_BILLH.CH%, REGARDLESS
+
+	!
+	! Modify the menu
+	!
+	CASE OPT_OPTLIST
+		MVALUE = MVALUE + " Line_items"
+
+	!
+	! Optional menu items
+	!
+5000	CASE OPT_MOREMENU
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Line option
+		!
+		CASE "Line_items"
+	!++
+	! Abstract:LINE_ITEMS
+	!	^*Line Items\*
+	!	.p
+	!	The ^*Line Items\* field in the COMMAND menu provides the means to enter
+	!	and maintain the specific items by line. Information may be entered and
+	!	maintained from this location.
+	!
+	! Index:
+	!	.x Line Items
+	!
+	!--
+			!
+			! Make sure there is a header
+			!
+			TEMP_RFA = GETRFA(BC_BILLH.CH%)
+
+			BC_MAIN_BILL = MAIN_JOURNAL(BC_MAIN_BILL_LINE.ID, "")
+
+		END SELECT
+
+20100	!******************************************************************
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+	!******************************************************************
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	1,  1, "(01) Order", &
+			3,  1, "(02) Cust #", &
+			4,  6, "Name", &
+			5,  6, "Add 1", &
+			6,  6, "Add 2", &
+			7,  6, "City", &
+			3, 40, "(03) Ship to", &
+			4, 45, "Name", &
+			5, 45, "Add 1", &
+			6, 45, "Add 2", &
+			7, 45, "City", &
+			10,  1, "(04) Salesman", &
+			11,  1, "(05) Ord Date", &
+			12,  1, "(06) Ship Via", &
+			13,  1, "(07) Terms", &
+			15,  1, "(08) AR Account", &
+			16,  1, "(09) Invoice", &
+			17,  1, "(10) Reference #", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!******************************************************************
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!******************************************************************
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ E0Loop:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Order Number\*
+	!	.p
+	!	The ^*Order Number\* field is provided to enter an identification
+	!	number which will be used to reference this particular order.
+	!	.p
+	!	The field may contain eight (8) alphanumeric characters.
+	!
+	! Index:
+	!	.x Order Number
+	!
+	!--
+			BC_BILLH::ORDER = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"1;15", TEMP$, &
+				BC_BILLH::ORDER, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) Customer _#\*
+	!	.p
+	!	The ^*Customer _#\* field provides the means to enter the Customer _#
+	!	corresponding to a particular transaction.
+	!	.p
+	!	If the ^*Customer _#\* entered is a valid number which has been
+	!	established in the Maintain Customer Billing Journal option, the
+	!	Customer's address information will automatically be entered.
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field will provide a list
+	!	of valid Customer _#'s.
+	!
+	! Index:
+	!	.x Customer #
+	!
+	!--
+			BC_BILLH::CUSNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;15", TEMP$, &
+				BC_BILLH::CUSNUM, MFLAG, &
+				"'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(BC_MAIN_CUSTOM.ID, "VX  ") = 1%)
+				THEN
+					BC_BILLH::CUSNUM = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO E0Loop
+			END IF
+
+		CASE 3%
+	!++
+	! Abstract:FLD003
+	!	^*(03) Ship to _#\*
+	!	.p
+	!	The ^*Ship to _#\* field provides for entry of the customer
+	!	_# identifying to who/where this particular order is to be
+	!	shipped.
+	!	.p
+	!	If the ^*Ship to _#\* entered is a valid customer number which
+	!	has been established in the Billing Customer Journal Maintenance
+	!	screen, the Customer's shipping address information will automatically
+	!	be entered.
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field will provide a list
+	!	of valid Customer _#'s.
+	!
+	! Index:
+	!	.x Ship to #
+	!
+	!--
+			BC_BILLH::SHPNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"3;54", TEMP$, &
+				BC_BILLH::SHPNUM, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(BC_MAIN_CUSTOM.ID, "VX  ") = 1%)
+				THEN
+					BC_BILLH::SHPNUM = &
+						AR_35CUSTOM::CUSNUM
+				END IF
+				GOTO E0Loop
+			END IF
+
+		CASE 4%
+	!++
+	! Abstract:FLD004
+	!	^*(04) Salesman\*
+	!	.p
+	!	The ^*Salesman\* field contains the code
+	!	for the Salesman responsible for this particular order.
+	!	.p
+	!	The field will accommodate up to ten (10) alphanumeric
+	!	characters.
+	!
+	! Index:
+	!	.x Salesman
+	!
+	!--
+			BC_BILLH::SALEMAN = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"10;15", TEMP$, &
+				BC_BILLH::SALEMAN, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+	!++
+	! Abstract:FLD005
+	!	^*(05) Order Date\*
+	!	.p
+	!	The ^*Order Date\* field provides the means to enter the date
+	!	of this particular customer order.
+	!	.p
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x Order Date
+	!
+	!--
+			BC_BILLH::ORDERDATE = ENTR_3DATE(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"11;15", TEMP$, &
+				BC_BILLH::ORDERDATE, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+	!++
+	! Abstract:FLD006
+	!	^*(06) Ship Via\*
+	!	.p
+	!	The ^*Ship Via\* field contains the method of
+	!	shipment.
+	!	.p
+	!	The field may contain twenty (20) alphanumeric characters.
+	!
+	! Index:
+	!	.x Ship Via
+	!
+	!--
+			BC_BILLH::SHPVIA = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"12;15", TEMP$, &
+				BC_BILLH::SHPVIA, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+	!++
+	! Abstract:FLD007
+	!	^*(07) Terms\*
+	!	.p
+	!	The ^*Terms\* field provides the means to enter the payment terms
+	!	for this particular order, such as, Net 10.
+	!	.p
+	!	The field will accommodate sixteen (16) alphanumeric characters.
+	!
+	! Index:
+	!	.x Terms
+	!
+	!--
+			BC_BILLH::TERMS = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"13;15", TEMP$, &
+				BC_BILLH::TERMS, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+	!++
+	! Abstract:FLD008
+	!	^*(08) Account _#\*
+	!	.p
+	!	The ^*Account _#\* field is to be entered with the Accounts
+	!	Receivable account number which corresponds to this order.
+	!	.p
+	!	Pressing ^*<List Choices>\* at this field will provide a list
+	!	of valid Account Receivable account numbers.
+	!
+	! Index:
+	!	.x AR Account #
+	!
+	!--
+			BC_BILLH::ACCOUNT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"15;18", TEMP$, &
+				BC_BILLH::ACCOUNT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					BC_BILLH::ACCOUNT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO E0Loop
+			END IF
+
+		CASE 9%
+	!++
+	! Abstract:FLD009
+	!	^*(09) Invoice\*
+	!	.p
+	!	The ^*Invoice\* field refers to the number
+	!	or reference for this particular order which will be printed
+	!	on the customers billing and also entered in the Accounts Receivable
+	!	System.  If an Invoice number is not entered in this field,
+	!	the system will automatically assign an invoice number at the
+	!	time an invoice is printed.
+	!	.p
+	!	The field will accommodate eight (08) alphanumeric characters.
+	!
+	! Index:
+	!	.x Invoice #
+	!
+	!--
+			BC_BILLH::INVNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"16;18", TEMP$, &
+				BC_BILLH::INVNUM, MFLAG, "'E", MVALUE)
+
+		CASE 10%
+	!++
+	! Abstract:FLD010
+	!	^*(10) Reference #\*
+	!	.p
+	!	The ^*Reference Number\* field provides the means to
+	!	enter the number of the customers purchase order.
+	!	.p
+	!	The field will accommodate ten (10) alphanumeric characters.
+	!
+	! Index:
+	!	.x Reference Number
+	!
+	!--
+			BC_BILLH::REFNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, &
+				"17;18", TEMP$, &
+				BC_BILLH::REFNUM, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BC_MAIN_BILL = 0%
+
+		SELECT MLOOP
+
+		CASE 2%
+			!
+			! Is the input defined?
+			!
+			AR_35CUSTOM::CUSNAM = "????????????????????"
+			AR_35CUSTOM::ADD1   = "????????????????????"
+			AR_35CUSTOM::ADD2   = "????????????????????"
+			AR_35CUSTOM::CITY   = "????????????????????"
+			AR_35CUSTOM::STATE  = "??"
+			AR_35CUSTOM::ZIP    = "????????????????????"
+
+			BC_MAIN_BILL = FUNC_TESTENTRY( SMG_WINDOW, &
+				BC_BILLH::CUSNUM, &
+				AR_35CUSTOM::CUSNAM, &
+				"BC", MLOOP, "PRG", &
+				"Customer number", BC_MAIN_CUSTOM.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 28%), &
+				4%, 15%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 28%), &
+				5%, 15%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 28%), &
+				6%, 15%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + SPACE$(23%), 23%), &
+				7%, 15%, , SMG$M_BOLD)
+
+		CASE 3%
+			!
+			! Is the input defined?
+			!
+			AR_35CUSTOM::CUSNAM = "????????????????????"
+			AR_35CUSTOM::ADD1   = "????????????????????"
+			AR_35CUSTOM::ADD2   = "????????????????????"
+			AR_35CUSTOM::CITY   = "????????????????????"
+			AR_35CUSTOM::STATE  = "??"
+			AR_35CUSTOM::ZIP    = "????????????????????"
+
+			BC_MAIN_BILL = FUNC_TESTENTRY( SMG_WINDOW, &
+				BC_BILLH::SHPNUM, &
+				AR_35CUSTOM::CUSNAM, &
+				"BC", MLOOP, "PRG", &
+				"Customer number", BC_MAIN_CUSTOM.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				4%, 54%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				5%, 54%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 30%), &
+				6%, 54%, , SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + SPACE$(23%), 23%), &
+				7%, 54%, , SMG$M_BOLD)
+
+		CASE 8%
+			!
+			! Is the input defined?
+			!
+			BC_MAIN_BILL = FUNC_TESTENTRY( SMG_WINDOW, &
+				BC_BILLH::ACCOUNT, &
+				GL_CHART::DESCR, &
+				"BC", MLOOP, "PRG", &
+				"Account number", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR, 30%), &
+				15%, 40%, , SMG$M_BOLD)
+
+		END SELECT
+
+	!
+	! Display additional information
+	!
+	CASE OPT_DISPLAY
+
+		BC_MAIN_BILL = 0%
+
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			!
+			! Is the input defined?
+			!
+			IF MAIN_WINDOW(BC_MAIN_CUSTOM.ID, &
+				"Q0" + BC_BILLH::CUSNUM) <> 1%
+			THEN
+				AR_35CUSTOM::CUSNAM = "????????????????????"
+				AR_35CUSTOM::ADD1 = "????????????????????"
+				AR_35CUSTOM::ADD2 = "????????????????????"
+				AR_35CUSTOM::CITY = "????????????????????"
+				AR_35CUSTOM::STATE = "??"
+				AR_35CUSTOM::ZIP = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 28%), &
+				4%, 15%, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 28%), &
+				5%, 15%, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 28%), &
+				6%, 15%, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+					AR_35CUSTOM::STATE + " " + &
+					AR_35CUSTOM::ZIP + SPACE$(23%), 23%), &
+				7%, 15%, , SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			!
+			! Is the input defined?
+			!
+			IF MAIN_WINDOW(BC_MAIN_CUSTOM.ID, &
+				"Q0" + BC_BILLH::SHPNUM) <> 1%
+			THEN
+				AR_35CUSTOM::CUSNAM = "????????????????????"
+				AR_35CUSTOM::ADD1 = "????????????????????"
+				AR_35CUSTOM::ADD2 = "????????????????????"
+				AR_35CUSTOM::CITY = "????????????????????"
+				AR_35CUSTOM::STATE = "??"
+				AR_35CUSTOM::ZIP = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				4%, 54%, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD1, 30%), &
+				5%, 54%, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::ADD2, 30%), &
+				6%, 54%, , SMG$M_BOLD)
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(TRM$(AR_35CUSTOM::CITY) + ", " + &
+				AR_35CUSTOM::STATE + " " + &
+				AR_35CUSTOM::ZIP + SPACE$(23%), 23%), &
+				7%, 54%, , SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(8%) AND 2%) = 0%
+		THEN
+			!
+			! Is the input defined?
+			!
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID, &
+				"Q0" + BC_BILLH::ACCOUNT) <> 1%
+			THEN
+				GL_CHART::DESCR = "????????????????????"
+			END IF
+
+			!
+			! Print chart description
+			!
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR,30%), &
+				15%, 40%, , SMG$M_BOLD)
+		END IF
+
+	!
+	! Set BC_BILLH_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BC_BILLH_OLD = BC_BILLH
+
+	!
+	! Restore BC_BILLH_OLD value
+	!
+	CASE OPT_RESETOLD
+		BC_BILLH = BC_BILLH_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BC_BILLH2 = BC_BILLH
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BC_BILLH = BC_BILLH2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Order     Customer"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "011"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = BC_BILLH::ORDER + " " + &
+				BC_BILLH::CUSNUM
+
+		END SELECT
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BC_BILLH.CH%, &
+				KEY#0% GE BC_BILLH::ORDER + "", &
+				REGARDLESS
+		END SELECT
+
+	!
+	! Handle finishing various options specially
+	!
+	CASE OPT_AFTEROPT
+
+		SELECT SCOPE::PRG_ITEM
+
+		!
+		! Add records
+		!
+		CASE "Add"
+			!
+			! Add line items also
+			!
+			BC_MAIN_BILL = MAIN_JOURNAL(BC_MAIN_BILL_LINE.ID, "A")
+
+		!
+		! Change records
+		!
+		CASE "Change"
+			!
+			! Change line items to match new header
+			! if the key was changed.
+			!
+			! The original record must be the one in the
+			! MAP for this to be able to work.  The new
+			! key is passed through the QUERY$ variable.
+			!
+			IF BC_BILLH_OLD::ORDER <> BC_BILLH::ORDER
+			THEN
+				TEMP$ = BC_BILLH::ORDER + ""
+				BC_BILLH = BC_BILLH_OLD
+				BC_MAIN_BILL = &
+					MAIN_JOURNAL(BC_MAIN_BILL_LINE.ID, &
+					"C" + TEMP$)
+			END IF
+
+		!
+		! Erase record
+		!
+		CASE "Erase"
+			!
+			! Erase any line items under the header
+			!
+			BC_MAIN_BILL = MAIN_JOURNAL(BC_MAIN_BILL_LINE.ID, "E")
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BC_MAIN_BILL = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		BC_MAIN_BILL = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	!
+	! Header does not exist for line
+	!
+	CASE BC_MAIN_CUSTOM.ID
+		RESUME 29900
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+29900	!
+	! Handle no header for Line function here
+	!
+	CALL ENTR_3MESSAGE(SCOPE, &
+		"Sorry, but there is no current header item", 0%)
+	GOTO 32767
+
+32767	END FUNCTION

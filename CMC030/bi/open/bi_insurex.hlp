@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Insurance Carrier Extra File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__INSUREX.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Insurance Carrier Extra File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__INSUREX.MAS\*
+	!	.p
+	!	Insurance Carrier Extra File.
+	!	additional information about the patient's insurance carrier which is not
+	!	necessarily needed.
+	!
+	! Index:
+	!	.x Insurance Carrier Extra File
+	!	.x BI_INSUREX
+	!
+	!--

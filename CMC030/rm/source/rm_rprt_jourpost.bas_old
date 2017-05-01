@@ -1,0 +1,597 @@
+1	%TITLE "Restaurant Expanded Transaction Journal"
+	%SBTTL "RM_RPRT_JOURPOST"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM014
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Restaurant Expanded Transaction Journal\* program prints out a list of
+	!	the Restaurant expanded transaction journal file.  Contained in this list are
+	!	the following fields:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Description
+	!	.le
+	!	Type
+	!	.le
+	!	Category
+	!	.le
+	!	Unit of Measure
+	!	.le
+	!	Transaction Type
+	!	.le
+	!	Quantity
+	!	.le
+	!	Extended Cost
+	!	.le
+	!	Extended Price
+	!	.els
+	!
+	! Index:
+	!	.x Expanded Transaction Journal>Print
+	!	.x Print>Expanded Transaction Journal
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_JOURPOST/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_JOURPOST, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_JOURPOST.OBJ;*
+	!
+	! Author:
+	!
+	!	11/20/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	08/14/89 - Aaron Redd
+	!		Added Debit/Credit page(s) to end of report.
+	!
+	!	06/17/91 - Craig Tanner
+	!		Modified to use GL_OUTP_ACCTSUM to do last page.
+	!
+	!	03/13/92 - Kevin Handy
+	!		Unwound error trapping (check)
+	!
+	!	10/23/92 - Dan Perkins
+	!		Added arguement to GL_OUTP_ACCTSUM because of a change
+	!		in that function.
+	!
+	!	03/18/93 - Kevin Handy
+	!		Added parameter to GL_OUTP_ACCTSUM for units.
+	!
+	!	04/28/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	06/11/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	10/15/98 - Kevin Handy
+	!		Lose excessive %PAGE's
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! CDD inclusions and related memory allocations
+	!
+	%INCLUDE "SOURCE:[PD.OPEN]PD_ACCOUNT.HB"
+	DECLARE			PD_ACCOUNT_CDD		PD_ACCOUNT_EXAM
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)	PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.HB"
+	MAP	(RM_JOURNAL)	RM_JOURNAL_CDD		RM_JOURNAL
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.HB"
+	MAP	(RM_JOURPOST)	RM_JOURPOST_CDD		RM_JOURPOST
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP	(UTL_TRANSTYPE)	UTL_TRANSTYPE_CDD	UTL_TRANSTYPE
+
+	!
+	! Declare some variables
+	!
+	DECLARE	REAL	COST, EXTENDED.COST, EXTENDED.PRICE
+	DECLARE	REAL	TOTAL1(200%),TOTAL2(200%)
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION GL_OUTP_ACCTSUM
+	EXTERNAL LONG	FUNCTION PD_READ_ACCOUNT
+	EXTERNAL REAL	FUNCTION PC_READ_COST
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+ Initialize:
+	!
+	! Initialize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	LOCA.WILD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	TYPE.WILD$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+	BATCH_NO$ = EDIT$(UTL_REPORTX::OPTDEF(4%), 132%)
+	FROM.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+	TO.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(6%), 132%))
+
+300	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+310	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.OPN"
+
+320	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+330	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.OPN"
+
+340	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.OPN"
+
+ ReportTitle:
+	TITLE$(1%) = "RESTAURANT  EXPANDED  TRANSACTION  JOURNAL " + &
+		" BATCH No. " + BATCH_NO$
+	TITLE$(3%) = ""
+
+	TITLE$(4%) = "Product #      Description                  " + &
+		"            Type Category UOM TransType   Quantity  " + &
+		" ExtendedCost   ExtendedPrice"
+	TITLE$(5%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+	RESET #UTL_LOCATION.CH%
+
+ GetNextLocation:
+	GET #UTL_LOCATION.CH%, REGARDLESS
+
+	GOTO GetNextLocation IF &
+		(LOCA.WILD$ <> "") AND &
+		(COMP_STRING(EDIT$(UTL_LOCATION::LOCATION, -1%), LOCA.WILD$) = 0%)
+
+17010	IF FROM.DATE$ = ""
+	THEN
+		RESET #RM_JOURPOST.CH%, KEY #1%
+	ELSE
+		FIND #RM_JOURPOST.CH%, KEY #1% GE &
+			(UTL_LOCATION::LOCATION + FROM.DATE$), REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Get next record
+	!
+	GET #RM_JOURPOST.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO GetNextLocation IF &
+		(UTL_LOCATION::LOCATION <> RM_JOURPOST::LOCATION)
+
+	GOTO GetNextLocation IF &
+		(RM_JOURPOST::ACTDATE > TO.DATE$) AND &
+		(TO.DATE$ <> "")
+
+	GOTO GetNextRec IF &
+		(TYPE.WILD$ <> "") AND &
+		(COMP_STRING(EDIT$(RM_JOURPOST::TTYPE, -1%), TYPE.WILD$) = 0%)
+
+17200	!
+	! Find information related to the Product Number
+	!
+	PD_PRODUCT::DESCRIPTION	= STRING$(LEN(PD_PRODUCT::DESCRIPTION), ASCII("?"))
+	PD_PRODUCT::PROD_TYPE	= STRING$(LEN(PD_PRODUCT::PROD_TYPE), ASCII("?"))
+	PD_PRODUCT::CATEGORY	= STRING$(LEN(PD_PRODUCT::CATEGORY), ASCII("?"))
+	PD_PRODUCT::UOM		= STRING$(LEN(PD_PRODUCT::UOM), ASCII("?"))
+
+	GET #PD_PRODUCT.CH%, KEY#0% EQ RM_JOURPOST::PRODUCT, REGARDLESS
+
+ ReadCost:
+	!
+	! Read cost, and set extended price and cost values
+	!
+	COST = PC_READ_COST(RM_JOURPOST::PRODUCT, UTL_LOCATION::LOCATION, &
+		RM_JOURPOST::ACTDATE,"")
+
+	EXTENDED.COST = FUNC_ROUND(COST * RM_JOURPOST::QUANTITY,2%)
+	EXTENDED.PRICE = RM_JOURPOST::PRICE * RM_JOURPOST::QUANTITY
+
+17300	!
+	! Print out one line
+	!
+	TEXT.LIN$ = &
+		RM_JOURPOST::PRODUCT + " " + &
+		PD_PRODUCT::DESCRIPTION + " " + &
+		PD_PRODUCT::PROD_TYPE + "   " + &
+		PD_PRODUCT::CATEGORY + "     " + &
+		PD_PRODUCT::UOM + "  " + &
+		RM_JOURPOST::TTYPE + "       " + &
+		FORMAT$(RM_JOURPOST::QUANTITY, "###,###.###") + "   " + &
+		FORMAT$(EXTENDED.COST, "#,###,###.##") + "    " + &
+		FORMAT$(EXTENDED.PRICE, "#,###,###.##")
+
+	LIN% = 0%
+
+	IF LAST.LOCATION$+TEST.DATE$ <> UTL_LOCATION::LOCATION+RM_JOURPOST::ACTDATE
+	THEN
+		IF PRINT.FLAG%
+		THEN
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+			FOR I% = 1% TO TYPE.LOOP%
+				!
+				! Read description
+				!
+				GOSUB 18100
+
+				TEXT$ = SPACE$(74%)+TTYPE$(I%)+" "+ &
+					UTL_TRANSTYPE::DESCRIPTION+ &
+					FORMAT$(TOTAL1(I%),"#,###,###.##")+ &
+					FORMAT$(TOTAL2(I%), "    #,###,###.##")
+
+				CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+			NEXT I%
+
+			LIN% = 999%
+		END IF
+
+		TYPE.LOOP% = 0%
+		LAST.LOCATION$ = UTL_LOCATION::LOCATION
+		TEST.DATE$ = RM_JOURPOST::ACTDATE
+
+		!
+		! Print on a new page, as the value of ACTDATE or LOCATION
+		!	has changed
+		!
+		TITLE$(2%) = "FOR LOCATION " + TRM$(UTL_LOCATION::LOCATION) + &
+			" " + TRM$(UTL_LOCATION::LOCNAME) + " ON " + &
+			PRNT_DATE(RM_JOURPOST::ACTDATE, 8%)
+	ELSE
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%) &
+			IF (TEST.TYPE$ <> RM_JOURPOST::TTYPE)
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT.LIN$, LIN%)
+	PRINT.FLAG% = -1%
+
+	TEST.TYPE$ = RM_JOURPOST::TTYPE
+
+	!
+	! Get the Inventory account number
+	!
+	ST% = PD_READ_ACCOUNT(UTL_LOCATION::LOCATION, &
+		PD_PRODUCT::PROD_TYPE, PD_ACCOUNT_EXAM)
+	GOTO ExitProgram IF (ST% = CMC$_UNTERROR)
+
+	!
+	! Get the Expense Account number
+	!
+17310	GET #RM_JOURNAL.CH%, &
+		KEY #0% EQ (RM_JOURPOST::LOCATION+RM_JOURPOST::STARTDATE+RM_JOURPOST::TRANSTYPE), &
+		REGARDLESS
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	! (Expense record)
+	!
+17320	ACCT_NUM$ = RM_JOURNAL::EXPACCOUNT
+	ACCT_NUM$ = "??????????????????" IF (TRM$(ACCT_NUM$) = "")
+
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, ACCT_NUM$, &
+		0.0, -EXTENDED.COST, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Put the Debit/Credit information into the temporary file
+	! (Inventory record)
+	!
+	ACCT_NUM$ = PD_ACCOUNT_EXAM::INVACCT
+	ACCT_NUM$ = "??????????????????" IF (TRM$(ACCT_NUM$) = "")
+
+	GOTO ExitProgram IF GL_OUTP_ACCTSUM (OPT_ADDREC, ACCT_NUM$, &
+		0.0, EXTENDED.COST, 0.0, TITLE$(), UTL_REPORTX) <> CMC$_NORMAL
+
+	!
+	! Create totals
+	!
+	GOTO AddTotal IF &
+		(TTYPE$(I%) = RM_JOURPOST::TTYPE) FOR I% = 1% to TYPE.LOOP%
+
+	TYPE.LOOP%,I% = TYPE.LOOP% + 1%
+	TTYPE$(TYPE.LOOP%) = RM_JOURPOST::TTYPE
+	TOTAL1(TYPE.LOOP%) = 0.
+	TOTAL2(TYPE.LOOP%) = 0.
+
+ AddTotal:
+	TOTAL1(I%) = TOTAL1(I%) + EXTENDED.COST
+	TOTAL2(I%) = TOTAL2(I%) + EXTENDED.PRICE
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+	IF PRINT.FLAG%
+	THEN
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		FOR I% = 1% TO TYPE.LOOP%
+			!
+			! Read description
+			!
+			GOSUB 18100
+			TEXT$ = SPACE$(74%) + &
+				TTYPE$(I%) + " " + &
+				UTL_TRANSTYPE::DESCRIPTION + &
+				FORMAT$(TOTAL1(I%),"#,###,###.##") + "    " + &
+				FORMAT$(TOTAL2(I%),"#,###,###.##")
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), &
+					TEXT$, 0%)
+		NEXT I%
+	END IF
+
+	!
+	! Print out the Debit/Credit information
+	!
+	V% = GL_OUTP_ACCTSUM(OPT_SUMMARY, "", 0.0, 0.0, 0.0, &
+		TITLE$(), UTL_REPORTX)
+
+	%PAGE
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+	!
+	! Find description for the Transaction Type
+	!
+18100	UTL_TRANSTYPE::DESCRIPTION = &
+		STRING$(LEN(UTL_TRANSTYPE::DESCRIPTION),ASCII("?"))
+	GET #UTL_TRANSTYPE.CH%, KEY#0% EQ TTYPE$(I%), REGARDLESS
+
+ Ret18100:
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+	SELECT ERR
+	!
+	! Locked block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	!
+	! Problems opening PD_PRODUCT file
+	!
+	CASE 300%
+		RESUME 310 IF ERR = 5%
+		FILENAME$ = "PD_PRODUCT"
+
+	!
+	! Problems opening RM_JOURPOST file
+	!
+	CASE 310%
+		FILENAME$ = "RM_JOURPOST"
+
+	!
+	! Problems opening UTL_LOCATION file
+	!
+	CASE 320%
+		FILENAME$ = "UTL_LOCATION"
+
+	!
+	! Problems opening UTL_TRANSTYPE file
+	!
+	CASE 330%
+		RESUME ReportTitle IF ERR = 5%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	!
+	! End of UTL_LOCATION file
+	!
+	CASE 17000%
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "UTL_LOCATION"
+
+	!
+	CASE 17010%
+		RESUME ExitTotal IF ERR = 155%
+		FILENAME$ = "RM_JOURPOST"
+
+	!
+	! End of RM_JOURPOST file
+	!
+	CASE 17020%
+		RESUME GetNextLocation IF ERR = 11%
+		FILENAME$ = "RM_JOURPOST"
+
+	!
+	! Undefined Product Number
+	!
+	CASE 17200%
+		RESUME ReadCost IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "PD_PRODUCT"
+
+	!
+	! Undefined Trans type
+	!
+	CASE 18100%
+		RESUME Ret18100 IF ERR = 155% OR ERR = 9%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	CASE 340%
+		FILENAME$ = "RM_JOURNAL"
+
+	CASE 17310%
+		RESUME 17320 IF (ERR = 155%)
+		FILENAME$ = "RM_JOURNAL"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Locations\*
+	!	.p
+	!	The ^*Locations\* field provides the means to enter  the locations which
+	!	will be printed on the report.  Wildcarding techniques may be used in this
+	!	field.
+	!
+	! Index:
+	!	.x Locations
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD04
+	!	^*(04) Transaction Type\*
+	!	.p
+	!	The ^*Transaction Type\* field contains the transactions which will be printed
+	!	on the report. The Wildcarding techniques may be used in this field.
+	!
+	! Index:
+	!	.x Transaction Type
+	!	.x Type>Transaction
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Batch Number\*
+	!	.p
+	!	The ^*Batch Number\* field contains the number of the batch for which the
+	!	report will be printed. This field must be entered and accommodates two
+	!	characters.
+	!
+	! Index:
+	!	.x Batch Number
+	!	.x Number>Batch
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD06
+	!	^*(06) From Date\*
+	!	.p
+	!	The ^*From Date\* field provides the means to enter the date from which the
+	!	report will start printing.  The format for entry is MMDDYYYY.
+	!
+	! Index:
+	!	.x From Date
+	!	.x Date>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD07
+	!	^*(07) To Date\*
+	!	.p
+	!	The ^*To Date\* field provides the means to enter the date to which the
+	!	report will print. This date is the ending date of the report.  The format
+	!	for entry is MMDDYYYY.
+	!
+	! Index:
+	!	.x To Date
+	!	.x Date>To
+	!
+	!--

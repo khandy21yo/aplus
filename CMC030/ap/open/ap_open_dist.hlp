@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Accounts Payable Open Distribution is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AP__OPEN__DIST.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by posting. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Accounts Payable Open Distribution
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AP__OPEN__DIST.LED\*
+	!	.b
+	!	.lm +5
+	!	Accounts Payable Open Distribution.
+	!
+	! Index:
+	!	.x Accounts Payable Open Distribution
+	!	.x AP_OPEN_DIST
+	!
+	!--

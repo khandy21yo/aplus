@@ -1,0 +1,203 @@
+1	%TITLE "Format a Date String into a Normal Looking Date"
+	%SBTTL "DATE_STOREDATE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING DATE_STOREDATE(XDEFLT$)
+
+	!
+	!		COPYRIGHT (C) 1985 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function mangles a users input, and comes up with
+	!	a usable date formatted in YYYYMMDD format. It can
+	!	handle conditions as the following:
+	!	.table 3,25
+	!	.te
+	!	MMDD MM/DD MM.DD
+	!	.te
+	!	M/DD M.DD
+	!	.te
+	!	MMDDYY MM/DD/YY MM.DD.YY
+	!	.te
+	!	M/DD/YY M.DD.YY
+	!	.te
+	!	MM/D/YY MM.D.YY
+	!	.te
+	!	M/D/YY M.D.YY
+	!	.te
+	!	MMDDYYYY MM/DD/YYYY MM.DD.YYYY
+	!	.te
+	!	M/DD/YYYY M.DD.YYYY
+	!	.te
+	!	MM/D/YYYY MM.D.YYYY
+	!	.te
+	!	M/D/YYYY M.D.YYYY
+	!	.end table
+	!	If it returns a date with a length other than 8
+	!	then it couldn't handle it properly.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	XDEFLT$
+	!		The passed string the user enters to change the date
+	!		format into YYYYMMDD format.
+	!
+	!
+	!	Returned value
+	!		A date string that is more normal looking.
+	!
+	! Example:
+	!
+	!	DAY$ = DATE_STOREDATE("01121988")
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:DATE_STOREDATE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP DATE_STOREDATE
+	!	$ DELETE DATE_STOREDATE.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	11/26/85 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	12/04/85 - Kevin Handy
+	!		Modified to handle M/D/ type dates.
+	!
+	!	09/24/91 - Frank F. Starman
+	!		Return spaces if input is //.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	GETS$
+	!		A string that changes the date format.
+	!
+	!	SMG_STATUS%
+	!		A variable used to tell the status.
+	!
+	!	CENTIS$
+	!		A string used to change the date.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	EXTERNAL	LONG	FUNCTION	LIB$DATE_TIME
+
+	!
+	! Function to replace letters with other letters
+	!
+	DEF FNREP$(ORGIN$, LOKFOR$, REPWIT$)
+ L1000:		I% = INSTR(1%, ORGIN$, LOKFOR$)
+		IF I%
+		THEN
+			ORGIN$ = LEFT(ORGIN$, I% - 1%) + REPWIT$ + &
+				RIGHT(ORGIN$, I% + 1%)
+			GOTO L1000
+		END IF
+
+		FNREP$ = ORGIN$
+	FNEND
+
+	!
+	! Initial Value
+	!
+	GETS$ = TRM$(XDEFLT$)
+
+	SMG_STATUS%	= LIB$DATE_TIME( CENTIS$ )
+	CENTIS$		= MID( CENTIS$, 8%, 2% )
+
+	!
+	! Pad with zeroes if necessary so that it will handle M/D/YYYY type
+	! dates
+	!
+	GETS$ = "0" + GETS$ &
+		IF MID(GETS$, 2%, 1%) = "." OR MID(GETS$, 2%, 1%) = "/"
+
+	GETS$ = LEFT(GETS$, 3%) + "0" + RIGHT(GETS$, 4%) &
+		IF MID(GETS$, 5%, 1%) = "." OR MID(GETS$, 5%, 1%) = "/"
+
+	!
+	! Strip off any fill characters
+	!
+	GETS$ = FNREP$(GETS$, "/", "")
+	GETS$ = FNREP$(GETS$, ".", "")
+
+	!
+	! Change any oh's to Zeroes, L's to 1's
+	!
+	GETS$ = FNREP$(GETS$, "O", "0")
+	GETS$ = FNREP$(GETS$, "L", "1")
+
+	!
+	! Handle string depending on how many characters it has in it
+	!
+ L1200:
+	SELECT LEN(EDIT$(GETS$,-1%))
+
+		!
+		! Null date entered
+		!
+		CASE 0%
+			GETS$ = STRING$(8%,ASCII(" "))
+		!
+		! Must be MMDD
+		!
+		CASE 4%
+			GETS$ = GETS$ + CENTIS$ + RIGHT(DATE$(0%), 8%)
+
+		!
+		! Must be MMDDYY
+		!
+		CASE 6%
+			GETS$ = LEFT(GETS$, 4%) + CENTIS$ + RIGHT(GETS$, 5%)
+
+		!
+		! Otherwise it better be OK as is
+		!
+	END SELECT
+
+	!
+	! Now put the year in front
+	!
+	LSET GETS$ = RIGHT(GETS$, 5%) + LEFT(GETS$, 4%)
+
+	!
+	! Return value
+	!
+	DATE_STOREDATE = GETS$
+
+	END FUNCTION

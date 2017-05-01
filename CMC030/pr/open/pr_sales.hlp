@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Sales File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__SALES.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Payroll System\* going
+	!	under JOURNAL and SALES and run process again.
+	!
+	! Index:
+	!	.x Sales File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__SALES.MAS\*
+	!	.p
+	!	Sales File.
+	!
+	! Index:
+	!	.x Sales File
+	!	.x PR_SALES
+	!--

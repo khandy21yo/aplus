@@ -1,0 +1,22 @@
+	!======================================================================
+	! OE_CREDITLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_CREDITLINE.CH%, STAT%)
+	CALL READ_DEVICE('OE_CREDITLINE',OE_CREDITLINE.DEV$, STAT%)
+
+	OE_CREDITLINE.NAME$ = OE_CREDITLINE.DEV$+"OE_CREDITLINE_"+BATCH_NO$+".JRL"
+
+	OPEN OE_CREDITLINE.NAME$ FOR INPUT AS FILE OE_CREDITLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_CREDITLINE, &
+		PRIMARY KEY &
+			OE_CREDITLINE::MEMONUM &
+			DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			OE_CREDITLINE::PRODUCT, &
+			OE_CREDITLINE::MEMONUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

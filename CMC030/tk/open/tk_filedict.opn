@@ -1,0 +1,22 @@
+	!======================================================================
+	! TK_FILEDICT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_FILEDICT.CH%, STAT%)
+	CALL READ_DEVICE('TK_FILEDICT',TK_FILEDICT.DEV$, STAT%)
+
+	TK_FILEDICT.DEV$ = "CMC:" 
+	TK_FILEDICT.NAME$ = TK_FILEDICT.DEV$+"TK_FILEDICT.MAS"
+
+	OPEN TK_FILEDICT.NAME$ FOR INPUT AS FILE TK_FILEDICT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_FILEDICT, &
+		PRIMARY KEY &
+			TK_FILEDICT::FILENAME, &
+		ALTERNATE KEY &
+		( &
+			TK_FILEDICT::SYSTEM, &
+			TK_FILEDICT::FILENAME &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

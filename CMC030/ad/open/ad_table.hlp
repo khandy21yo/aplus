@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Optional Depreciation Tables is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__TABLE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Optional Depreciation Tables
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__TABLE.TBL\*
+	!	.p
+	!	Optional Depreciation Tables.
+	!
+	! Index:
+	!	.x Optional Depreciation Tables
+	!	.x AD_TABLE
+	!--

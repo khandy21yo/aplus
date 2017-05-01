@@ -1,0 +1,34 @@
+	!======================================================================
+	! PD_PRODUCT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PD_PRODUCT.CH%, STAT%)
+	CALL READ_DEVICE('PD_PRODUCT',PD_PRODUCT.DEV$, STAT%)
+
+	PD_PRODUCT.NAME$ = PD_PRODUCT.DEV$+"PD_PRODUCT.MAS"
+
+	OPEN PD_PRODUCT.NAME$ FOR INPUT AS FILE PD_PRODUCT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PD_PRODUCT, &
+		PRIMARY KEY &
+			PD_PRODUCT::PRODUCT_NUM, &
+		ALTERNATE KEY &
+		( &
+			PD_PRODUCT::PROD_TYPE, &
+			PD_PRODUCT::PRODUCT_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			PD_PRODUCT::CATEGORY, &
+			PD_PRODUCT::PRODUCT_NUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+			PD_PRODUCT::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+		( &
+			PD_PRODUCT::SECONDARY_CODE, &
+			PD_PRODUCT::PRODUCT_NUM &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

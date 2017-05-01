@@ -1,0 +1,136 @@
+1	%TITLE "Print a Phone Number as (Xxx)Xxx-xxxx"
+	%SBTTL "PRNT_PHONE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING PRNT_PHONE( PHONE$, FLAG% )
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This function formats a phone number.
+	!	It expects the phone number to be in 1234567890 (10 char.)
+	!	string form.
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	PHONE$
+	!		The passed phone number the user wants formatted.
+	!
+	!	FLAG%
+	!		Flag passed that tells the function the way the user
+	!		wants the phone formatted.
+	!
+	!	.table
+	!		FLAG%		MEANING
+	!		0%		(123)456-7890
+	!		1%		123-456-7890
+	!	.endtable
+	!
+	!	This function returns a phone number in a specified format.
+	!
+	! Example:
+	!
+	!	PHONE$ = PRNT_PHONE("2085226729", 0%)
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:PRNT_PHONE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP PRNT_PHONE
+	!	$ DELETE PRNT_PHONE.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	5/15/87	B. Craig Larsen
+	!
+	! MODIFICATION HISTORY:
+	!
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TFONE$
+	!		This is a string that holds the original phone number.
+	!
+	!	FONE$
+	!		This is a string that breaks up the original number.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	TFONE$	= EDIT$( PHONE$, 2%+4%+256% )
+	SELECT LEN(TFONE$)
+		CASE	7% TO 10%	! (123)456-7890
+			IF FLAG% AND 1%
+			THEN
+				FONE$  = FORMAT$(LEFT(TFONE$, LEN(TFONE$)-7%), &
+				"'RR") + '-' + &
+				MID(TFONE$, LEN(TFONE$)-6%, 3%) + '-' + &
+				RIGHT(TFONE$, LEN(TFONE$)-3%)
+			ELSE
+				FONE$  = '(' + FORMAT$( LEFT(TFONE$, &
+				LEN(TFONE$)-7%), "'RR") + ')' + &
+				MID( TFONE$, LEN(TFONE$)-6%, 3% ) + '-' + &
+				RIGHT( TFONE$, LEN(TFONE$)-3% )
+			END IF
+
+		CASE	5% TO 6%	! 456-7890
+			IF FLAG% AND 1%
+			THEN
+				FONE$  = '   -' + FORMAT$(LEFT(TFONE$, &
+					LEN(TFONE$)-4%), "'RR") + &
+					'-' + RIGHT(TFONE$, LEN(TFONE$)-3%)
+			ELSE
+				FONE$  = '(   )' + FORMAT$(LEFT(TFONE$, &
+					LEN(TFONE$)-4%), "'RR") + &
+					'-' + RIGHT(TFONE$, LEN(TFONE$)-3%)
+			END IF
+
+		CASE ELSE
+			IF ( FLAG% AND 1% )
+			THEN
+				FONE$  = '   -   -' + &
+					FORMAT$( TFONE$, "'RRR" )
+			ELSE
+				FONE$  = '(   )   -' + &
+					FORMAT$( TFONE$, "'RRR" )
+			END IF
+
+	END SELECT
+
+	PRNT_PHONE = FONE$ + SPACE$( 13% - LEN( FONE$ ) )
+
+	END FUNCTION

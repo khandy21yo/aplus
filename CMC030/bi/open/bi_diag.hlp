@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Diagnosis Code Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__DIAG.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Diagnosis Code Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__DIAG.TBL\*
+	!	.p
+	!	Diagnosis Code Description.
+	!
+	! Index:
+	!	.x Diagnosis Code Description
+	!	.x BI_DIAG
+	!--

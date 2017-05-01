@@ -1,0 +1,16 @@
+	!======================================================================
+	! SB_TYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_TYPE.CH%, STAT%)
+	CALL READ_DEVICE('SB_TYPE',SB_TYPE.DEV$, STAT%)
+
+	SB_TYPE.NAME$ = SB_TYPE.DEV$+"SB_TYPE.TBL"
+
+	OPEN SB_TYPE.NAME$ FOR INPUT AS FILE SB_TYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_TYPE, &
+		PRIMARY KEY &
+			SB_TYPE::TTYPE, &
+		ACCESS READ, ALLOW MODIFY
+

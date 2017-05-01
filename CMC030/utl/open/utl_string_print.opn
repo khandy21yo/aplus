@@ -1,0 +1,20 @@
+	!======================================================================
+	! UTL_STRING_PRINT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UTL_STRING_PRINT.CH%, STAT%)
+	CALL READ_DEVICE('UTL_STRING_PRINT',UTL_STRING_PRINT.DEV$, STAT%)
+
+	UTL_STRING_PRINT.NAME$ = UTL_STRING_PRINT.DEV$+"UTL_STRING_PRINT.TBL"
+
+	OPEN UTL_STRING_PRINT.NAME$ FOR INPUT AS FILE UTL_STRING_PRINT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UTL_STRING_PRINT, &
+		PRIMARY KEY &
+		( &
+			UTL_STRING_PRINT::SYSTEM, &
+			UTL_STRING_PRINT::GROUPING, &
+			UTL_STRING_PRINT::REPSEQ &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Payroll Quarterly Tax Register is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*PR__REG__3TAXWH.LED\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	This file is created by updating. Check the report settings 
+	!	for selected history.
+	!
+	! Index:
+	!	.x Payroll Quarterly Tax Register
+	!--
+	!++
+	! Abstract:FILE
+	!	^*PR__REG__3TAXWH.LED\*
+	!	.p
+	!	Payroll Quarterly Tax Register.
+	!
+	! Index:
+	!	.x Payroll Quarterly Tax Register
+	!	.x PR_REG_3TAXWH
+	!--

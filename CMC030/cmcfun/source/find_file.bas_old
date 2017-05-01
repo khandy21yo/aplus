@@ -1,0 +1,226 @@
+1	%TITLE "Subroutine to Search for a Group of Files"
+	%SBTTL "FIND_FILE"
+	%IDENT "V3.3"
+
+	SUB FIND_FILE( STRING WILDF, STRING ALIST(), LONG FLAG, STRING PREFIX, &
+		STRING SUFFIX )
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	This subroutine will locate files of the requested group
+	!	(wildcards allowed). It will put the info on each file in
+	!	string form in the array ALIST(). The number of items found
+	!	will be in ALIST(0%). LPREF is the length of the prefix of
+	!	the filename and LSUFF is the length of the suffix of the
+	!	filename. If LPREF and/or LSUFF are greater than 0% and FLAGs
+	!	are set to match the length of LPREF and/or LSUFF.
+	!	.b
+	!	FLAG RESULT
+	!	========================================================
+	!	.table 3,25
+	!	.te
+	!	0%	Full file specification(FSCN$_FILESPEC)
+	!	.te
+	!	1%	Node name; includes two colons and the access control string(if specified).
+	!	.te
+	!	2%	Device name; includes colon.
+	!	.te
+	!	4%	Root directory; includes colon.
+	!	.te
+	!	8%	Directory name; includes brackets (or angle brackets).
+	!	.te
+	!	16%	File name; includes quotation marks (if any).
+	!	.te
+	!	32%	File type; includes period.
+	!	.te
+	!	64%	Version number; includes semicolon (or period).
+	!	.end table
+	!	ALIST() is an array(no matter the size) passed in as follows:
+	!	CALL FIND_FILE("[*]*.*;*", A$(), 0%)
+	!	.lm -5
+	!
+	! Index:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:FIND_FILE/LINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP FIND_FILE
+	!	$ DELETE FIND_FILE.OBJ;*
+	!
+	! Author:
+	!
+	!	01/15/87 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!	12/28/89 - Kevin Handy
+	!		Modified for sharable library.
+	!
+	!	07/16/91 - Kevin Handy
+	!		Unwound EXTERNAL definitions.
+	!
+	!	03/14/92 - Kevin Handy
+	!		Clean up vars (checkvar)
+	!
+	!	07/23/93 - Kevin Handy
+	!		Replaced switch statement with if statement.
+	!		Changed while in removing prefix/suffix to if.
+	!		Lost variable K% which tracked FCOUNT%.
+	!		Removed TEMP_PREFIX and TEMP_SUFFIX stuff.
+	!--
+
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	SYS_STATUS
+	!		Long variable used to tell status of file.
+	!
+	!	CONTEXT
+	!		Long variable used to tell context of file.
+	!
+	!	FFLAG
+	!		Long variable that acts as a flag for the file.
+	!
+	!--
+	%PAGE
+
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	ON ERROR GOTO 19000
+
+	EXTERNAL LONG FUNCTION LIB$FIND_FILE
+	EXTERNAL LONG FUNCTION LIB$FIND_FILE_END
+	EXTERNAL LONG FUNCTION SYS$FILESCAN
+
+	DECLARE LONG SYS_STATUS, CONTEXT, FFLAG
+
+	RECORD NAME_RECORD
+		STRING NAME_BUFFER = 255%
+	END RECORD
+	DECLARE NAME_RECORD NAME_BUFFER
+
+	RECORD	ITEMLST
+		VARIANT
+			CASE
+				WORD	BUFLEN
+				WORD	CODE
+				LONG	BUFADR
+			CASE
+				LONG	ENDLIST
+		END VARIANT
+	END RECORD ITEMLST
+
+	DECLARE	ITEMLST	XX(8%)
+
+	IF ( FLAG = 0% ) OR ( FLAG = 128% )
+	THEN
+		XX(0%)::CODE	= 1%
+		XX(1%)::ENDLIST	= 0%
+	ELSE
+		FCOUNT% = 0%
+		FOR I% = 0% TO 6%
+			IF ( FLAG AND 2%^I% ) <> 0%
+			THEN
+				XX( FCOUNT% )::CODE = I% + 2%
+				FCOUNT% = FCOUNT% + 1%
+			END IF
+		NEXT I%
+		XX( FCOUNT% )::ENDLIST	= 0%
+	END IF
+
+	FILE.NAME$ = EDIT$(WILDF, 4%+8%+128%)
+
+	ALIST%, CONTEXT	= 0%
+	ALIST(0%)	= NUM1$(0%)
+
+200	!
+	! Look up one file
+	!
+	SYS_STATUS = LIB$FIND_FILE( FILE.NAME$, NAME_BUFFER::NAME_BUFFER, CONTEXT )
+	GOTO ExitProgram IF (SYS_STATUS AND 1%) = 0%
+
+	SYS_STATUS	= SYS$FILESCAN( NAME_BUFFER::NAME_BUFFER, XX() BY REF, FFLAG )
+
+	WILD.FILE$	= ''
+	WILD.FILE$	= WILD.FILE$ + MID( NAME_BUFFER::NAME_BUFFER, &
+		( XX(I%)::BUFADR - LOC( NAME_BUFFER::NAME_BUFFER ) + '1'L ), XX(I%)::BUFLEN ) &
+			FOR I%=0% TO FCOUNT%
+
+	!
+	! Add file to list
+	!
+	IF WILD.FILE$ <> ''
+	THEN
+		!
+		! Reduce file to wildcards if requested
+		!
+		IF PREFIX$ <> ''
+		THEN
+			IF PREFIX$ = LEFT(WILD.FILE$, LEN(PREFIX$))
+			THEN
+				WILD.FILE$ = RIGHT(WILD.FILE$,LEN(PREFIX$)+1%)
+			END IF
+		END IF
+
+		IF SUFFIX$ <> ''
+		THEN
+			TEMP% = LEN(WILD.FILE$) - (LEN(SUFFIX$) - 1%)
+			IF SUFFIX$ = RIGHT(WILD.FILE$, TEMP%)
+			THEN
+				WILD.FILE$ = LEFT(WILD.FILE$,TEMP%-1%)
+			END IF
+		END IF
+
+		ALIST%		= ALIST% + 1%
+		ALIST(ALIST%)	= WILD.FILE$ + ''
+		ALIST(0%)	= NUM1$(ALIST%)
+	END IF
+
+	!
+	! Set up for next file
+	!
+	GOTO 200
+
+ ExitProgram:
+	SYS_STATUS = LIB$FIND_FILE_END( CONTEXT )
+
+	EXIT SUB
+
+19000	!======================================================================
+	! Error Trapping
+	!======================================================================
+	SELECT ERL
+		CASE 200%	! Subscript out of range
+			RESUME ExitProgram IF ERR = 55%
+	END SELECT
+
+32767	END SUB

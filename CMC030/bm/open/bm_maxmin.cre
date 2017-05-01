@@ -1,0 +1,30 @@
+	!======================================================================
+	! BM_MAXMIN file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BM_MAXMIN.CH%, STAT%)
+	CALL READ_DEVICE('BM_MAXMIN',BM_MAXMIN.DEV$, STAT%)
+	CALL READ_PROTECTION('BM_MAXMIN',BM_MAXMIN.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(BM_MAXMIN.PRO$, STAT%)
+
+	BM_MAXMIN.NAME$ = BM_MAXMIN.DEV$+"BM_MAXMIN.TBL"
+
+	OPEN BM_MAXMIN.NAME$ AS FILE BM_MAXMIN.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BM_MAXMIN, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+		( &
+			BM_MAXMIN::PRODUCT, &
+			BM_MAXMIN::MGROUP &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			BM_MAXMIN::MGROUP, &
+			BM_MAXMIN::PRODUCT &
+		)	, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

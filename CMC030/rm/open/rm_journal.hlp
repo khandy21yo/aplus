@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Restaurant Journal is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*RM__JOURNAL.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Restaurant Management System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Restaurant Journal
+	!--
+	!++
+	! Abstract:FILE
+	!	^*RM__JOURNAL.JRL\*
+	!	.p
+	!	Restaurant Journal.
+	!
+	! Index:
+	!	.x Restaurant Journal
+	!	.x RM_JOURNAL
+	!--

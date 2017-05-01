@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Chart of Account Category Description is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__CATEGORY.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Chart of Account Category Description
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__CATEGORY.TBL\*
+	!	.B
+	!	.LM +5
+	!	Chart of Account Category Description.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Chart of Account Category Description
+	!	.x GL_CATEGORY
+	!
+	!--

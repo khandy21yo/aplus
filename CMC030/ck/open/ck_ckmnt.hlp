@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Check Maintenance is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*CK__CKMNT.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Ck/Dep Reconciliation System\* by
+	!	reading the General Ledger Data.
+	!
+	! Index:
+	!	.x Check Maintenance
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*CK__CKMNT.MAS\*
+	!	.p
+	!	Check Maintenance.
+	!
+	! Index:
+	!	.x Check Maintenance
+	!	.x CK_CKMNT
+	!
+	!--

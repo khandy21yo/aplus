@@ -1,0 +1,19 @@
+	!======================================================================
+	! AD_CLASS file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_CLASS.CH%, STAT%)
+	CALL READ_DEVICE('AD_CLASS',AD_CLASS.DEV$, STAT%)
+
+	AD_CLASS.NAME$ = AD_CLASS.DEV$+"AD_CLASS.TBL"
+
+	OPEN AD_CLASS.NAME$ FOR INPUT AS FILE AD_CLASS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_CLASS, &
+		PRIMARY KEY &
+			AD_CLASS::ASSCLASS, &
+		ALTERNATE KEY &
+			AD_CLASS::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

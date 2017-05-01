@@ -1,0 +1,11 @@
+$set file collision update
+set file collision overwrite
+rem set file collision overwrite
+set file type text
+rem set file type text
+fast
+rem fast
+#
+rem cd [cmc030]
+cd ~/cmc030
+get /recursive *

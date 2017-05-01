@@ -1,0 +1,752 @@
+1	%TITLE "TV_POST_SPOTS - TV Traffic Spots Post Program"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program posts the daily spots files into the
+	!	billing Register, and has provisions for restarting
+	!	after a crashed post.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_POST_SPOTS
+	!	$ LINK/EXECUTABLE=TV_EXE: TV_POST_SPOTS, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_POST_SPOTS.OBJ;*
+	!
+	! Author:
+	!
+	!	02/22/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	MAP (UTL_REPORTX)	UTL_REPORTX_CDD	UTL_REPORTX
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP (TV_LOGSPOTS)	TV_LOGSPOTS_CDD		TV_LOGSPOTS
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.HB"
+	MAP (TV_BILL)		TV_BILL_CDD		TV_BILL
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.HB"
+	MAP (TV_CONTROL)	TV_CONTROL_CDD		TV_CONTROL
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP	(AR_CUSTOM)	AR_CUSTOM_CDD		AR_CUSTOM
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CHARGE.HB"
+	MAP (TV_COMMER_CHARGE)	TV_COMMER_CHARGE_CDD	TV_COMMER_CHARGE
+	DIM TV_COMMER_CHARGE_CDD	TOTAL_CHARGES(100%)
+
+	%INCLUDE "SOURCE:[SMG.OPEN]SMG_SCROLL.HB"
+	DECLARE SMG_SCROLL_CDD	SMG_SCROLL
+
+	MAP (DP_OUTP_XUNSOL)	RRR_FLAG%
+
+	!
+	! External functions
+	!
+	EXTERNAL REAL	FUNCTION FUNC_ROUND
+	EXTERNAL STRING	FUNCTION READ_SYSPN
+	EXTERNAL STRING FUNCTION DATE_STOREDATE
+	EXTERNAL LONG	OUTP_XUNSOL ! (It's really an AST routine)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	SCOPE::PRG_PROGRAM = READ_SYSPN
+
+	!
+	! Define channels
+	!
+	CALL ASSG_CHANNEL(UTL_BATCH.CH%, STAT%)
+
+ Init:	!==============================================================
+	! OPEN THE PRINT CONTROL FILE
+	!==============================================================
+
+	!
+	! Set user defined fields
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	SCHED_DATE$ = DATE_STOREDATE(UTL_REPORTX::OPTDEF(0%))
+
+	!
+	! Set up journal device name for creation of temp batch file
+	!
+	JOUR_DEV_NAME$ = "TV_BILL_JOUR"
+
+300	!
+	! Get TV_COMER_CHARGE file open
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CHARGE.MOD"
+
+305	!
+	! Get TV_CONTROL file info
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.OPN"
+	GET #TV_CONTROL.CH%, RECORD 1%
+	CLOSE TV_CONTROL.CH%
+
+310	!
+	! Open journal header file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.UPD"
+
+350	!
+	! Open TV_BILL file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.CRE"
+
+360	!
+	! Open AR_CUSTOM file
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.OPN"
+
+	%PAGE
+
+370	!
+
+3000	!
+	! Open up batch control file and get a batch number
+	!
+	CALL ASSG_BATCH(UTL_BATCH.CH%, &
+		JOUR_DEV_NAME$, &
+		"Initilize", &
+		BATCH.NUMBER$, &
+		"Batch number " + BATCH_NO$, &
+		"Purchase Journal Post", &
+		"A", &
+		YYYY_PP$, &
+		"", &
+		EXIT_STATUS%)
+
+	IF ( EXIT_STATUS% AND 2% )
+	THEN
+		CALL HELP_3MESSAGE(SCOPE, "Batch Number Missing", &
+			"ERR", "UTL_BATCH", &
+			"ERROR_MISBAT")
+		GOTO Aborted1
+	END IF
+
+	IF ( EXIT_STATUS% AND 4% )
+	THEN
+		GOTO Aborted1
+	END IF
+
+	!
+	! Initilize for both passes
+	!
+	TOTAL.TRIAL%, POST_STATUS% = 0%
+
+	!
+	! DO BOTH PASSES
+	!
+	FOR PASS% = 1% TO 5%
+
+		SELECT PASS%
+			CASE 1%
+				!
+				! Post Process was interrupted
+				!
+				IF EXIT_STATUS% = 1%
+				THEN
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Process was interrupted.  Restarting",1%)
+
+					!
+					! Call the TV post function for register
+					! and remove partial post
+					!
+					CALL POST_TO_TVBILL( PASS%, POST_STATUS%, &
+						"TV_BILL", BATCH.NUMBER$, UTL_BATCH.CH%, &
+						TV_BILL.CH%, AR_CUSTOM.CH% )
+
+					GOTO Aborted1 IF ( POST_STATUS% AND 4%)
+				END IF
+
+				GOTO 3090
+
+			CASE 2%
+				!
+				! Create transmittal
+				!
+				CALL ENTR_3MESSAGE(SCOPE, &
+					"Creating posting transmittals", 1%)
+
+				!
+				! Set up to trap interrupt
+				!
+				SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID, &
+						OUTP_XUNSOL, SCOPE::SMG_KBID)
+
+				RRR_FLAG% = 0%
+
+				RESET #TV_LOGSPOTS.CH%
+				RESET #TV_COMMER_CHARGE.CH%
+
+			CASE 3%
+				!
+				! Call the post function to Display transmittal
+				!
+				GOTO 3090
+
+			CASE 4%
+				!
+				! Post to gl and TV
+				!
+				CALL ENTR_3MESSAGE(SCOPE, "Posting to BILL. . .", 1%)
+
+				!
+				! Set up to trap interrupt
+				!
+				SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID, &
+						OUTP_XUNSOL, SCOPE::SMG_KBID)
+
+				RRR_FLAG% = 0%
+
+				RESET #TV_LOGSPOTS.CH%
+				RESET #TV_COMMER_CHARGE.CH%
+
+			CASE 5%
+				!
+				! Print transmittal and remove batch
+				!
+				!
+				! Now, handle the finish up of the pass
+				!
+				TITLE$(1%) = "Purchase Journal Transmital" + &
+					" - batch #" + BATCH.NUMBER$
+				TITLE$(2%) = "posted to " + YYYY_PP$
+				TITLE$(3%) = ""
+
+				!
+				! Complete process and remove batch control
+				!
+				CALL ASSG_BATCH(UTL_BATCH.CH%, &
+					JOUR_DEV_NAME$, &
+					"Finished", &
+					BATCH.NUMBER$, &
+					"Batch number " + BATCH_NO$, &
+					"Purchase Journal Post", &
+					"X", &
+					YYYY_PP$, &
+					"", &
+					EXIT_STATUS%)
+
+				IF EXIT_STATUS%
+				THEN
+					CALL HELP_3MESSAGE(SCOPE, &
+						"Fatal error! PARTIAL POSTING Done only!", &
+						"ERR", SCOPE::PRG_PROGRAM, "INTERRUPT")
+					UTL_REPORTX::STAT = -1%
+					GOTO ExitProgram
+				END IF
+
+				GOTO 3090
+
+		END SELECT
+
+3002		!
+		! Load in first records
+		!
+		TV_COMMER_CHARGE.END% = 0%
+		GET #TV_LOGSPOTS.CH%
+
+3004		TV_LOGSPOTS.END% = 0%
+		GET #TV_LOGSPOTS.CH%
+
+3010		!
+		! Handle any special junk in RRR_FLAG%
+		!
+		SELECT RRR_FLAG%
+
+			!
+			! Repaint screen
+			!
+			CASE SMG$K_TRM_F11, SMG$K_TRM_CTRLW
+				SMG_STATUS% = SMG$REPAINT_SCREEN(SCOPE::SMG_PBID)
+				SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, 1%)
+
+			!
+			! Help
+			!
+			CASE SMG$K_TRM_HELP
+				SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, 1%)
+				CALL HELP_3MESSAGE(SCOPE, SCOPE::PRG_COMPANY, &
+					SCOPE::PRG_IDENT, SCOPE::PRG_PROGRAM, SCOPE::PRG_ITEM)
+				SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, 1%)
+
+			!
+			! Interupt
+			!
+			CASE SMG$K_TRM_F6, SMG$K_TRM_F20
+				SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID)
+
+				CALL MENU_3INTERRUPT(SCOPE)
+
+				SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID, &
+					OUTP_XUNSOL, SCOPE::SMG_KBID)
+
+			!
+			! Exit Not allowed
+			!
+
+		END SELECT
+
+		RRR_FLAG% = 0%
+
+		!
+		! Figure if we want to do charges or spots
+		!
+		IF (TV_COMMER_CHARGE::FRMNUM <= TV_LOGSPOTS::FRMNUM) AND &
+			(TV_COMMER_CHARGE.END% = 0%)
+		THEN
+			!
+			! We want to do the charges
+			!
+			THIS_GROUP$ = TV_COMMER_CHARGE::FRMNUM + ""
+			CALL ENTR_3MESSAGE(SCOPE, "C " + THIS_GROUP$, 1%)
+
+			GOSUB DoCharges
+			GOTO 3010
+		END IF
+
+		IF (TV_LOGSPOTS.END% = 0%)
+		THEN
+			!
+			! We want to do the spots
+			!
+			TOTAL_CHARGES% = 0% &
+				IF THIS_GROUP$ <> TV_LOGSPOTS::FRMNUM
+
+			THIS_GROUP$ = TV_LOGSPOTS::FRMNUM + ""
+			CALL ENTR_3MESSAGE(SCOPE, "S " + THIS_GROUP$, 1%)
+
+			GOSUB DoSpots
+			GOTO 3010
+		END IF
+
+		!
+		! If we get here, there are no more records to process,
+		! so we must be done.
+		!
+
+3090		!
+		! Disable unsolicited input
+		!
+		SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID)
+
+	NEXT PASS%
+
+3100	!
+	! Remove file
+	!
+	CLOSE TV_LOGSPOTS.CH%
+
+	NAME TV_LOGSPOTS.NAME$ AS &
+		TV_LOGSPOTS.DEV$ + "TV_LOGSPOTS_" + SCHED_DATE$ + ".LED-CLOSED"
+	NAME TV_LOG_BREAK.NAME$ AS &
+		TV_LOG_BREAK.DEV$ + "TV_LOG_BREAK_" + SCHED_DATE$ + ".LED-CLOSED"
+	NAME TV_LOG_PROGRAM.NAME$ AS &
+		TV_LOG_PROGRAM.DEV$ + "TV_LOG_PROGRAM" + SCHED_DATE$ + ".LED-CLOSED"
+
+3110	SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID)
+
+	IF UTL_REPORTX::PRINTTO <> 1%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, "Process complete ", 4%)
+		UTL_REPORTX::STAT = -1%
+	END IF
+
+	GOTO ExitProgram
+
+	%PAGE
+
+ DoSpots:
+3200	!*******************************************************************
+	! Post the spots to the billing file, as necessary.
+	!*******************************************************************
+
+	!
+	! Skip the record unless it should pass through.
+	!
+	GOTO 3290 IF THIS_GROUP$ <> TV_LOGSPOTS::FRMNUM
+	GOTO 3280 UNLESS TV_LOGSPOTS::SCH_TYPE = "0"
+
+3210	!
+	! Get the vendor master record.
+	!
+	AR_CUSTOM::CUSNAM = STRING$(40%, ASCII( "?" ))
+	GET #AR_CUSTOM.CH%, KEY#0 EQ TV_LOGSPOTS::CUSNUM, REGARDLESS
+
+3250	!
+	! Generate a TV record to pass through to the post function
+	!
+	TV_BILL::FRMNUM		= TV_LOGSPOTS::FRMNUM
+	TV_BILL::SKEDNUM	= TV_LOGSPOTS::SKEDNUM
+	TV_BILL::SCH_DATE	= SCHED_DATE$
+	TV_BILL::SCH_TIME	= TV_LOGSPOTS::SCH_TIME
+	TV_BILL::SCH_TYPE	= TV_LOGSPOTS::SCH_TYPE
+	TV_BILL::SPOTS_FLAG	= TV_LOGSPOTS::SPOTS_FLAG
+	TV_BILL::SPOTS_CODE	= TV_LOGSPOTS::SPOTS_CODE
+	TV_BILL::LENGTH		= TV_LOGSPOTS::LENGTH
+	TV_BILL::AGENCY_NUM	= TV_LOGSPOTS::AGENCY_NUM
+	TV_BILL::CARTNUM	= TV_LOGSPOTS::CARTNUM
+	TV_BILL::CUTNUM		= TV_LOGSPOTS::CUTNUM
+	TV_BILL::FROM_TIME_SLOT	= TV_LOGSPOTS::FROM_TIME_SLOT
+	TV_BILL::TO_TIME_SLOT	= TV_LOGSPOTS::TO_TIME_SLOT
+	TV_BILL::INVNUM		= ""
+	TV_BILL::INVDAT		= ""
+	TV_BILL::POSTDATE	= ""
+	TV_BILL::RUN_TIME	= TV_LOGSPOTS::RUN_TIME
+	TV_BILL::CLASS		= TV_LOGSPOTS::CLASS
+	TV_BILL::CONFLICT	= TV_LOGSPOTS::CONFLICT
+	TV_BILL::DESCR		= TV_LOGSPOTS::DESCR
+	TV_BILL::GL_UPDATE	= ""
+	TV_BILL::GL_BATCH	= BATCH.NUMBER$
+
+3260	!
+	! Post information for the COOPS defined in the charges
+	! records for this order.
+	!
+	TOTAL_AMOUNT = TV_LOGSPOTS::RATE
+
+	FOR LOOP% = 1% TO TOTAL_CHARGES%
+
+		THIS_AMOUNT = FUNC_ROUND(TV_LOGSPOTS::RATE * &
+			TOTAL_CHARGES(LOOP%)::AMOUNT / 100, 2%)
+		TOTAL_AMOUNT = TOTAL_AMOUNT - THIS_AMOUNT
+
+		TV_BILL::CUSNUM		= TOTAL_CHARGES(LOOP%)::COOP
+		TV_BILL::RATE		= THIS_AMOUNT
+		TV_BILL::GL_ACCT	= TOTAL_CHARGES(LOOP%)::ACCTNO
+		IF TV_BILL::SPOTS_FLAG = "N"
+		THEN
+			TV_BILL::BILL_AMOUNT	= THIS_AMOUNT
+		END IF
+
+		CALL POST_TO_TVBILL( PASS%, POST_STATUS%, &
+			"TV_BILL", BATCH.NUMBER$, UTL_BATCH.CH%, TV_BILL.CH%, &
+			AR_CUSTOM.CH% )
+
+		GOTO Aborted1 IF ( POST_STATUS% AND 4% ) AND PASS% = 4%
+		GOTO Aborted IF ( POST_STATUS% AND 4% )
+	NEXT LOOP%
+
+	!
+	! If any is left over from the COOP business, then
+	! make the customer pay the rest (or get a negitive
+	! amount if over 100% has been paid so that the
+	! total billing will balance)
+	!
+	IF TOTAL_AMOUNT <> 0.0
+	THEN
+		TV_BILL::CUSNUM		= TV_LOGSPOTS::CUSNUM
+		TV_BILL::RATE		= TOTAL_AMOUNT
+		TV_BILL::GL_ACCT	= ""
+		IF TV_BILL::SPOTS_FLAG = "N"
+		THEN
+			TV_BILL::BILL_AMOUNT	= TOTAL_AMOUNT
+		END IF
+
+		CALL POST_TO_TVBILL( PASS%, POST_STATUS%, &
+			"TV_BILL", BATCH.NUMBER$, UTL_BATCH.CH%, TV_BILL.CH%, &
+			AR_CUSTOM.CH% )
+
+		GOTO Aborted1 IF ( POST_STATUS% AND 4% ) AND PASS% = 4%
+		GOTO Aborted IF ( POST_STATUS% AND 4% )
+	END IF
+
+3280	GET #TV_LOGSPOTS.CH%
+
+	GOTO 3200
+
+3290	RETURN
+
+	%PAGE
+
+ DoCharges:
+3400	!*******************************************************************
+	! Handle charges
+	!*******************************************************************
+
+	TOTAL_CHARGES% = 0%
+
+3410	!
+	! Handle the charges
+	!
+	GOTO 3490 IF THIS_GROUP$ <> TV_COMMER_CHARGE::FRMNUM
+
+	!
+	! If this is a COOP, then stash this away for future use
+	! in distributing the spots.
+	!
+	IF TV_COMMER_CHARGE::BILL_TYPE = "2"
+	THEN
+		TOTAL_CHARGES% = TOTAL_CHARGES% + 1%
+		TOTAL_CHARGES(TOTAL_CHARGES%) = TV_COMMER_CHARGE
+		GOTO 3480
+	END IF
+
+	!
+	! Skip if charge not for this date
+	!
+	GOTO 3480 IF TV_COMMER_CHARGE::BILL_DATE <> SCHED_DATE$
+
+	!
+	! Generate a TV record to pass through to the post function
+	!
+	TV_BILL::CUSNUM		= TV_COMMER_CHARGE::COOP
+	TV_BILL::FRMNUM		= TV_COMMER_CHARGE::FRMNUM
+	TV_BILL::SKEDNUM	= ""
+	TV_BILL::SCH_DATE	= SCHED_DATE$
+	TV_BILL::SCH_TIME	= ""
+	TV_BILL::RATE		= TV_COMMER_CHARGE::AMOUNT
+	TV_BILL::SCH_TYPE	= "3"
+	TV_BILL::SPOTS_FLAG	= ""
+	TV_BILL::SPOTS_CODE	= ""
+	TV_BILL::LENGTH		= ""
+	TV_BILL::AGENCY_NUM	= ""
+	TV_BILL::CARTNUM	= ""
+	TV_BILL::CUTNUM		= ""
+	TV_BILL::FROM_TIME_SLOT	= ""
+	TV_BILL::TO_TIME_SLOT	= ""
+	TV_BILL::INVNUM		= ""
+	TV_BILL::INVDAT		= ""
+	TV_BILL::POSTDATE	= ""
+	TV_BILL::RUN_TIME	= ""
+	TV_BILL::CLASS		= ""
+	TV_BILL::CONFLICT	= ""
+	TV_BILL::DESCR		= TV_COMMER_CHARGE::DESCR
+	TV_BILL::GL_ACCT	= TV_COMMER_CHARGE::ACCTNO
+	TV_BILL::GL_UPDATE	= ""
+	TV_BILL::GL_BATCH	= BATCH.NUMBER$
+	TV_BILL::BILL_AMOUNT	= TV_COMMER_CHARGE::AMOUNT
+
+3480	!
+	! Get the next charge
+	!
+	GET #TV_COMMER_CHARGE.CH%
+
+	GOTO 3410
+
+3490	!
+	! Exit charges
+	!
+	RETURN
+
+	%PAGE
+
+ ExitProgram:
+10000	!******************************************************************
+	! Exit normally
+	!******************************************************************
+
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%Page
+
+ Aborted:
+10100	!******************************************************************
+	! Abort
+	!******************************************************************
+
+	CALL ASSG_BATCH(UTL_BATCH.CH%, &
+			JOUR_DEV_NAME$, &
+			"Finish/Abort", &
+			BATCH.NUMBER$, &
+			"Batch number " + BATCH_NO$, &
+			"Purchase Journal Post", &
+			"X", &
+			YYYY_PP$, &
+			"", &
+			EXIT_STATUS%)
+
+ Aborted1:
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + ERT$(ERR), &
+		"ERR", PROGRAM$, "ERROR" + NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+
+	SCOPE::PRG_IDENT = "ERR"
+	SCOPE::PRG_ITEM = "INTERRUPT"
+	SCOPE::PRG_PROGRAM = "POST"
+
+	SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID)
+
+	CALL ENTR_3MESSAGE(SCOPE, &
+		"Posting has been interrupted.  Correct error and restart",0%)
+
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	!
+	! Locked block
+	!
+	IF ERR = 154%
+	THEN
+		SLEEP 1%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+		!
+		! Unable to open GL_PERIOD definitions
+		!
+		CASE 300%
+			PROGRAM$ = "TV_COMMER_CHARGE"
+			RESUME HelpError
+
+		!
+		! Unable to open TV_CONTROL definitions
+		!
+		CASE 305%
+			PROGRAM$ = "TV_CONTROL"
+			RESUME HelpError
+
+		!
+		! Unable to open journal header file
+		!
+		CASE 310%
+			PROGRAM$ = "TV_LOGSPOTS"
+			RESUME HelpError
+
+		!
+		! Unable to open TV_BILL file
+		!
+		CASE 350%
+			PROGRAM$ = "TV_BILL"
+			RESUME HelpError
+
+		!
+		! Unable to open "AR_CUSTOM" file
+		!
+		CASE 360%
+			PROGRAM$ = "AR_CUSTOM"
+			RESUME 370
+
+		!
+		! No records in CHARGES file
+		!
+		CASE 3002%
+			TV_COMMER_CHARGE.END% = -1%
+			RESUME 3004
+
+		!
+		! No records in SPOTS file
+		!
+		CASE 3004%
+			TV_LOGSPOTS.END% = -1%
+			RESUME 3010
+
+		!
+		! Error in rename
+		!
+		CASE 3100%
+			RESUME 3110
+		!
+		! Error in AR_CUSTOM file
+		!
+		CASE 3210%
+			RESUME 3250
+
+		!
+		! End of spots file
+		!
+		CASE 3280%
+			TV_LOGSPOTS.END% = -1%
+			RESUME 3290
+
+		!
+		! End of CHARGES file
+		!
+		CASE 3480%
+			TV_COMMER_CHARGE.END% = -1%
+			RESUME 3490
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	PROGRAM$ = SCOPE::PRG_PROGRAM
+	RESUME HelpError
+
+32767	END

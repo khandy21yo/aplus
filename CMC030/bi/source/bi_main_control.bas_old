@@ -1,0 +1,395 @@
+1	%TITLE "BI Control File Maintenance"
+	%SBTTL "BI_MAIN_CONTROL"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_CONTROL(CDD_WINDOW_CDD SMG_WINDOW, LONG MOPTION, &
+		LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987,1988 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Controlling File\* option provides for the definition of the last
+	!	invoice number printed and the Accounts Receivable Account number during
+	!	the initialization of the system.
+	!
+	! Index:
+	!	.x Controlling File>Utility
+	!	.x Utility>Controlling File
+	!
+	! Option:
+	!
+	!
+	! Author:
+	!
+	!	11/28/88 - J. Shad Rydalch
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_CONTROL/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP BI_MAIN_CONTROL
+	!	$ DELETE BI_MAIN_CONTROL.OBJ;*
+	!
+	! Modification history:
+	!
+	!	03/01/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CONTROL.HB"
+	MAP (BI_CONTROL)	BI_CONTROL_CDD		BI_CONTROL
+	MAP (FOO_BBI_BLAH)	BI_CONTROL_CDD		BI_CONTROL_OLD, BI_CONTROL2
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	!
+	! This common area must be mapped in both the main program and
+	! in MAINT_GROUP.
+	!
+	COM (CH_BI_CONTROL) BI_CONTROL.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG		FUNCTION FUNC_TESTENTRY
+	EXTERNAL LONG		FUNCTION MAIN_WINDOW
+
+	!
+	! Declare data types
+	!
+	DECLARE LONG XPOS, YPOS
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!******************************************************************
+		! Set up information
+		!******************************************************************
+
+		!
+		! Define window
+		!
+
+		SMG_WINDOW::DESCR = "Billing Insurance Control File"
+		SMG_WINDOW::NHELP = "BI_MAIN_CONTROL"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 2%
+		SMG_WINDOW::FLAGS = 128%	! Relative file
+
+		SMG_WINDOW::NKEYS = 0%
+
+20010		GOTO 20020 IF BI_CONTROL.CH% > 0%
+
+		CALL ASSG_CHANNEL(BI_CONTROL.CH%,STAT%)
+		IF STAT%
+		THEN
+			BI_MAIN_CONTROL = 1%
+			EXIT FUNCTION
+		END IF
+
+		!
+		! Get info required for main file
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW)
+
+		!
+		! Open main file (existing) for modification
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_CONTROL.CRE"
+
+		SMG_WINDOW::CHAN  = BI_CONTROL.CH%
+
+20020		GOSUB 28000
+
+	!
+	! Handle the option list
+	!
+	CASE OPT_OPTLIST
+		MVALUE = "Change Blank Help eXit"
+
+	!
+	! Display the background
+	!
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	5, 05, "(01) Last Invoice #", &
+			6, 05, "(02) AR Account #", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS, YPOS, XSTR$
+		I%=0%
+		WHILE (XPOS <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS, YPOS) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+			READ XPOS, YPOS, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+20200	CASE OPT_ENTRY
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+ Reenter:	SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Last Invoice\*
+	!	.p
+	!	The ^*Last Invoice\* field in the Billing Insurance control file
+	!	provides the means, when initializing the system, to enter the
+	!	number of the last insurance billing invoice which has been printed.
+	!	.p
+	!	Subsequent to initialization procedures, the contents of this field
+	!	are automatically maintained.  Manual intervention should be necessary
+	!	only when commencing a new series of invoices if the first number of
+	!	the new series is not contiguous to the last number of the old series.
+	!
+	! Index:
+	!	.X Control File>Last Invoice
+	!	.x Last Invoice>Control File
+	!
+	!--
+			BI_CONTROL::INVOICE = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;25", TEMP$, BI_CONTROL::INVOICE, &
+				MFLAG, "'E", MVALUE)
+
+		CASE 2%
+	!++
+	! Abstract:FLD002
+	!	^*(02) AR Account _#\*
+	!	.p
+	!	The ^*AR Account _#\* field in the Billing Insurance control
+	!	file provides the means to enter the General Ledger Accounts
+	!	Receivable control account number which will be debited when
+	!	insurance carriers are billed.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at this
+	!	field will cause a list of account numbers to be displayed.
+	!
+	! Index:
+	!	.x Controlling File>AR Account _#
+	!
+	!--
+			BI_CONTROL::ACCOUNT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;25", TEMP$, BI_CONTROL::ACCOUNT, &
+				MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(GL_MAIN_CHART.ID, "VX") = 1%
+				THEN
+					BI_CONTROL::ACCOUNT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO Reenter
+			END IF
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+		BI_MAIN_CONTROL = 0%
+
+		SELECT MLOOP
+
+		CASE 3%
+			IF BI_CONTROL::ACCOUNT <> ""
+			THEN
+				!
+				! Is the table defined?
+				!
+				BI_MAIN_CONTROL = FUNC_TESTENTRY(SMG_WINDOW, &
+					BI_CONTROL::ACCOUNT, &
+					GL_CHART::DESCR, &
+					"BI", MLOOP, "ACCT", &
+					"Account Number", GL_MAIN_CHART.ID)
+
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					GL_CHART::DESCR,7%,28%, ,SMG$M_BOLD)
+
+			END IF
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(2%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID,"Q0"+BI_CONTROL::ACCOUNT) <> 1%
+			THEN
+				GL_CHART::DESCR = &
+				STRING$(LEN(GL_CHART::DESCR),ASCII("?"))
+			END IF
+			!
+			! Display name (ALSO IN TESTENTRY)
+			!
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				GL_CHART::DESCR,7%,28%, ,SMG$M_BOLD)
+		END IF
+
+	!
+	! Set BI_CONTROL_OLD value
+	!
+20500	CASE OPT_SETOLD
+		BI_CONTROL_OLD = BI_CONTROL
+
+	!
+	! Restore BI_CONTROL_OLD value
+	!
+	CASE OPT_RESETOLD
+		BI_CONTROL = BI_CONTROL_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+		BI_CONTROL2 = BI_CONTROL
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+		BI_CONTROL = BI_CONTROL2
+
+	END SELECT
+
+	EXIT FUNCTION
+
+28000	!
+	! Get period record
+	!
+	GET #BI_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+	GOTO 28040
+
+28030	!
+	! Load in defaults for period file
+	!
+	BI_CONTROL::INVOICE = "0"
+	BI_CONTROL::ACCOUNT = &
+		STRING$(LEN(BI_CONTROL::ACCOUNT),ASCII("?"))
+
+	PUT #BI_CONTROL.CH%, RECORD 1%
+
+28040	RETURN
+
+29000	!***************************************************************
+	! Trap errors
+	!***************************************************************
+	SELECT ERL
+	!
+	! Record not found
+	!
+	CASE 28000%
+		RESUME 28030
+
+	!
+	! Record not found
+	!
+	CASE 28030%
+		CALL ENTR_3MESSAGE(SCOPE, "Unable to add period record",0%)
+
+		RESUME 32767
+
+	!
+	! Record does not already exist
+	!
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

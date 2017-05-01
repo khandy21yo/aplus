@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Cost Recovery Ceiling Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CEILING.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Cost Recovery Ceiling Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CEILING.TBL\*
+	!	.p
+	!	Cost Recovery Ceiling Table.
+	!
+	! Index:
+	!	.x Cost Recovery Ceiling Table
+	!	.x AD_CEILING
+	!--

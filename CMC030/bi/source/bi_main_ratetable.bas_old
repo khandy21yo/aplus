@@ -1,0 +1,304 @@
+1	%TITLE "CPT Time Rate Table"
+	%SBTTL "BI_MAIN_RATETABLE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_RATETABLE(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	!
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Time Rate Table\* provides the means to maintains the Current Procedural
+	!	Terminology Time Rate Table.
+	!
+	! Index:
+	!	.x Table>CPT Rate
+	!	.x Time>Rate Table
+	!	.x Rate Table>Time
+	!	.x Rate>Table Code
+	!	.x Table>Function
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_RATETABLE/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN BI_MAIN_RATETABLE
+	!	$ DELETE BI_MAIN_RATETABLE.OBJ;*
+	!
+	! Author:
+	!
+	!	10/27/88 - Frank Starman
+	!
+	! Modification history:
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	06/24/97 - Kevin Handy
+	!		Lose unecessary definitions
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_RATETABLE.HB"
+	MAP (BI_RATETABLE)	BI_RATETABLE_CDD	BI_RATETABLE
+	MAP (BI_RATETABLE2) BI_RATETABLE_CDD BI_RATETABLE_OLD, BI_RATETABLE2
+
+	!
+	! This common area must be mapped in both the main program and
+	! in BI_MAIN_RATETABLE.
+	!
+	COM (CH_BI_RATETABLE) &
+		BI_RATETABLE.CH%
+
+	!
+	! Declare data types
+	!
+	DECLARE LONG XPOS, YPOS
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	CASE OPT_INIT
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "CPT Rate Table"
+		SMG_WINDOW::NHELP = "BI_MAIN_RATETABLE"
+		SMG_WINDOW::CHAN  = BI_RATETABLE.CH%
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 1%
+
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 1%
+		SMG_WINDOW::KNAME(0%) = "Table"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+
+20010		GOTO 20040 IF BI_RATETABLE.CH% > 0%
+
+		CALL READ_DEFAULTS(SMG_WINDOW)
+
+		%INCLUDE "SOURCE:[BI.OPEN]BI_RATETABLE.CRE"
+
+20040		SMG_WINDOW::CHAN  = BI_RATETABLE.CH%
+
+		RESET	#BI_RATETABLE.CH%
+		GET	#BI_RATETABLE.CH%, REGARDLESS
+		UNLOCK	#BI_RATETABLE.CH%
+
+	!
+	! Display the background
+	!
+	CASE OPT_BACKGROUND
+
+		!
+		! Main screen
+		!
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+			DATA	03,  05, "(01) Table Code", &
+				0,  0, ""
+
+			RESTORE
+
+		READ XPOS, YPOS, XSTR$
+		I%=0%
+		WHILE (XPOS <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS, YPOS) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS, YPOS, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+20200	CASE OPT_ENTRY
+		TEMP$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View "
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Reenter:	SELECT MLOOP
+
+		CASE 1%
+	!++
+	! Abstract:FLD001
+	!	^*(01) Table Code\*
+	!	.p
+	!	The ^*Table Code\* field contains the code which identifies the specific
+	!	table thus the corresponding rates.
+	!
+	! Index:
+	!	.x Table Code
+	!
+	!--
+			BI_RATETABLE::RATETABLE  = &
+				ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"03;31", TEMP$, &
+				BI_RATETABLE::RATETABLE, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP$
+
+20300	CASE OPT_TESTENTRY
+
+		BI_MAIN_RATETABLE = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF BI_RATETABLE::RATETABLE = ""
+			THEN
+				BI_MAIN_RATETABLE = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #BI_RATETABLE.CH%, &
+						KEY#0% EQ BI_RATETABLE::RATETABLE + "", &
+						REGARDLESS
+
+					BI_MAIN_RATETABLE = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+
+				END IF
+			END IF
+
+		END SELECT
+
+20500	CASE OPT_SETOLD
+		BI_RATETABLE_OLD = BI_RATETABLE
+
+	CASE OPT_RESETOLD
+		BI_RATETABLE = BI_RATETABLE_OLD
+
+	CASE OPT_SETDEFAULT
+		BI_RATETABLE2 = BI_RATETABLE
+
+	CASE OPT_RESETDEFAULT
+		BI_RATETABLE = BI_RATETABLE2
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+		CASE 1%
+			MVALUE = " Table   "
+
+		CASE 2%
+			MVALUE = "009"
+
+		CASE 3%
+			MVALUE = BI_RATETABLE::RATETABLE
+
+		END SELECT
+
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #BI_RATETABLE.CH%, &
+				KEY#0% GE BI_RATETABLE::RATETABLE + "", &
+				REGARDLESS
+
+		END SELECT
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+	SELECT ERL
+
+	CASE 20040
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION
+	!+-+-+
+	! More Menu optin hidden in MAST
+	!++
+	! Abstract:TABLE
+	!	^*Table\*
+	!	.p
+	!	The ^*Table\* option in the COMMAND menu provides the means to enter the
+	!	time and rate for the specified table number.
+	!
+	! Index:
+	!	.x Table
+	!
+	!--

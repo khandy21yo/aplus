@@ -1,0 +1,452 @@
+1	%TITLE "Set Restaurant Post Journal"
+	%SBTTL "RM_FUNC_JOURSET"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG RM_FUNC_JOURSET
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function converts restaurant product journal to be
+	!	ready post using recipe ingredients (if necessary)
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_FUNC_JOURSET/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP RM_FUNC_JOURSET
+	!	$ DELETE RM_FUNC_JOURSET.OBJ;*
+	!
+	! Author:
+	!
+	!	11/17/87 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	06/30/88 - Frank F. Starman
+	!		Changed the layout
+	!
+	!	04/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 Calico coding standards
+	!
+	!	04/26/95 - Kevin Handy
+	!		Change SMG_EXPAND to SMG_EXPAND%.
+	!
+	!	10/28/96 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	06/11/99 - Kevin Handy
+	!		Lose HelpError (Dead Code)
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURNAL.HB"
+	MAP (RM_JOURNAL)	RM_JOURNAL_CDD	RM_JOURNAL
+	MAP (RM_JOURNAL_INIT)	RM_JOURNAL_CDD	RM_JOURNAL_INIT
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.HB"
+	MAP (RM_JOURPROD)	RM_JOURPROD_CDD	RM_JOURPROD
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.HB"
+	MAP (RM_JOURPOST)	RM_JOURPOST_CDD	RM_JOURPOST
+
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.HB"
+	MAP (RI_RELATION)	RI_RELATION_CDD	RI_RELATION
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.HB"
+	MAP (RM_CONTROL)	RM_CONTROL_CDD	RM_CONTROL
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_RM_JOURPROD) &
+		RM_JOURPROD.CH%, &
+		RM_JOURPROD.READONLY%
+	COM (BATCH_RM_JOURNAL) &
+		BATCH_NO$ = 2%
+
+	RECORD INGREDIENT_RECORD
+		STRING NUMBER   = 14%, &
+		REAL   QUANTITY
+	END RECORD
+
+	DIM INGREDIENT_RECORD	INGREDIENT(1000%,6%)
+	DIM RFA			RFA_LEVEL(500%)
+	DIM REAL		QTY_LEVEL(500%)
+	DIM STRING		TEST_PRODUCT(500%)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+	RM_FUNC_JOURSET = 0%
+	RM_JOURNAL_INIT = RM_JOURNAL
+
+300	!
+	! Open main file (existing) for modification
+	!
+	CLOSE RM_JOURPROD.CH%
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPROD.UPD"
+
+310	!
+	! Open RM control file
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.OPN"
+
+	GET #RM_CONTROL.CH%, RECORD 1%, REGARDLESS
+	CLOSE RM_CONTROL.CH%
+	CALL ASSG_FREECHANNEL(RM_CONTROL.CH%)
+
+320	!
+	! Open Relation file
+	!
+	%INCLUDE "SOURCE:[RI.OPEN]RI_RELATION.OPN"
+
+	!
+	! Paint the background
+	!
+500	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY &
+	( &
+		6%, &
+		40%, &
+		SMG_EXPAND%, &
+		SMG$M_BORDER &
+	)
+
+	SMG_STATUS% = SMG$LABEL_BORDER &
+	( &
+		SMG_EXPAND%, &
+		"Expansion Batch No. "+BATCH_NO$, &
+		SMG$K_TOP &
+	)
+
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_EXPAND%, "Location# ", 2%, 5%)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_EXPAND%, "Date ", 3%, 5%)
+	SMG_STATUS% = SMG$PUT_CHARS(SMG_EXPAND%, "Trans Type ", 4%, 5%)
+
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY &
+	( &
+		SMG_EXPAND%, &
+		SCOPE::SMG_PBID, &
+		12%, &
+		5% &
+	)
+
+	%PAGE
+
+1000	!******************************************************************
+	! Expansion
+	!******************************************************************
+	SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+	!
+	! Display message
+	!
+	CALL ENTR_3MESSAGE(SCOPE, "Expansion... ",1%+16%)
+
+	!
+	! Look up device
+	!
+	CALL  READ_DEVICE("RM_JOURPOST", RM_JOURPOST.DEV$, STAT%)
+
+	KILL RM_JOURPOST.DEV$ + "RM_JOURPOST_" + BATCH_NO$ + ".JRL" &
+		FOR I% = 1% TO 10%
+
+1010	!
+	! Open main file (existing) for modification
+	!
+	%INCLUDE "SOURCE:[RM.OPEN]RM_JOURPOST.CRE"
+
+1015	ITEM_LOOP% = 0%
+
+	RESET #RM_JOURPROD.CH%
+
+1020	!
+	! Main loop starts here
+	!
+	!
+	! Get next record
+	!
+	GET #RM_JOURPROD.CH%,REGARDLESS
+
+	IF TEST_LOC$+TEST_DATE$+TEST_TRANS$ <> RM_JOURPROD::LOCATION+ &
+		RM_JOURPROD::STARTDATE+RM_JOURPROD::TRANSTYPE
+	THEN
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_EXPAND%, &
+			RM_JOURPROD::LOCATION, 2%, 16%)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_EXPAND%, &
+			PRNT_DATE(RM_JOURPROD::STARTDATE,8%), 3%, 16%)
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_EXPAND%, &
+			RM_JOURPROD::TRANSTYPE, 4%, 16%)
+
+		GOSUB 18000 IF TEST_LOC$ <> ""
+	END IF
+
+1030	TEST_LOC$   = RM_JOURPROD::LOCATION
+	TEST_DATE$  = RM_JOURPROD::STARTDATE
+	TEST_TRANS$ = RM_JOURPROD::TRANSTYPE
+
+	FOR LOOP% = 0% TO 6%
+
+		GOTO NextLoop IF RM_JOURPROD::QUANTITY(LOOP%)= 0.
+		GET #RI_RELATION.CH%, KEY#0% EQ RM_JOURPROD::PRODUCT
+		GOSUB 18300
+
+1040
+		ACTUAL.DATE$   = &
+			DATE_INVDCODE(DATE_DAYCODE(RM_JOURNAL::STARTDATE)+LOOP%)
+		!
+		! Add copy from RM_JOURPROD
+		!
+		RM_JOURPOST::LOCATION    = RM_JOURPROD::LOCATION
+		RM_JOURPOST::STARTDATE   = RM_JOURPROD::STARTDATE
+		RM_JOURPOST::TRANSTYPE   = RM_JOURPROD::TRANSTYPE
+		RM_JOURPOST::PRODUCT     = RM_JOURPROD::PRODUCT
+		RM_JOURPOST::ACTDATE     = ACTUAL.DATE$
+		RM_JOURPOST::TTYPE       = RM_JOURPROD::TRANSTYPE
+		RM_JOURPOST::QUANTITY    = RM_JOURPROD::QUANTITY(LOOP%)
+		RM_JOURPOST::PRICE       = RM_JOURPROD::PRICE
+		RM_JOURPOST::SEQNUM      = RM_JOURPROD::SEQNUM
+
+		PUT #RM_JOURPOST.CH%
+
+1050		!
+		! Receive to inventory
+		!
+		RM_JOURPOST::LOCATION    = RM_JOURPROD::LOCATION
+		RM_JOURPOST::STARTDATE   = RM_JOURPROD::STARTDATE
+		RM_JOURPOST::TRANSTYPE   = RM_JOURPROD::TRANSTYPE
+		RM_JOURPOST::PRODUCT     = RM_JOURPROD::PRODUCT
+		RM_JOURPOST::ACTDATE     = ACTUAL.DATE$
+		RM_JOURPOST::TTYPE       = RM_CONTROL::TTREC
+		RM_JOURPOST::QUANTITY    = RM_JOURPROD::QUANTITY(LOOP%)
+		RM_JOURPOST::PRICE       = 0.
+		RM_JOURPOST::SEQNUM      = "0000"
+
+		PUT #RM_JOURPOST.CH%
+
+ NextLoop:
+	NEXT LOOP%
+
+	GOTO 1020
+
+1500	GOSUB 18000
+
+	CLOSE #RM_JOURPOST.CH%
+	CLOSE #RM_JOURPROD.CH%
+	CLOSE #RI_RELATION.CH%
+
+	KILL RM_JOURPROD.DEV$ + "RM_JOURPROD_" + BATCH_NO$ + ".JRL" &
+		FOR I% = 1% TO 10%
+
+ EndKill:
+	CALL ENTR_3MESSAGE(SCOPE, "Expansion completed ", 1%)
+	RM_FUNC_JOURSET = 0%
+
+ ExitFunction:
+	RM_JOURNAL = RM_JOURNAL_INIT
+	CALL ASSG_FREECHANNEL(RM_JOURPROD.CH%)
+	CALL ASSG_FREECHANNEL(RM_JOURPOST.CH%)
+	CALL ASSG_FREECHANNEL(RI_RELATION.CH%)
+	SMG_STATUS% = SMG$DELETE_VIRTUAL_DISPLAY(SMG_EXPAND%)
+
+	EXIT FUNCTION
+
+	%PAGE
+
+18000	!
+	! issue ingredients
+	!
+
+	FOR J%=0% TO 6%
+		ACTUAL.DATE$   = &
+			DATE_INVDCODE(DATE_DAYCODE(RM_JOURNAL::STARTDATE)+J%)
+
+		FOR I% = 1% TO ITEM_LOOP%(J%)
+			RM_JOURPOST::LOCATION   = TEST_LOC$
+			RM_JOURPOST::STARTDATE  = TEST_DATE$
+			RM_JOURPOST::TRANSTYPE  = TEST_TRANS$
+			RM_JOURPOST::PRODUCT    = INGREDIENT(I%,J%)::NUMBER
+			RM_JOURPOST::ACTDATE    = ACTUAL.DATE$
+			RM_JOURPOST::TTYPE      = RM_CONTROL::TTISSUE
+			RM_JOURPOST::QUANTITY   = INGREDIENT(I%,J%)::QUANTITY
+			RM_JOURPOST::PRICE      = 0.
+			RM_JOURPOST::SEQNUM      = "0000"
+
+			PUT #RM_JOURPOST.CH%
+		NEXT I%
+	NEXT J%
+
+	ITEM_LOOP%(J%) = 0% FOR J% = 0% TO 6%
+	RETURN
+
+18300	!
+	! Read recipe ingredients
+	!
+	QTY_LEVEL(0%) = RM_JOURPROD::QUANTITY(LOOP%)
+	LEVEL% = 1%
+
+ GoDownTree:
+	!
+	TEST_PRODUCT(LEVEL%) = RI_RELATION::PRODUCT
+	QTY_LEVEL(LEVEL%) = QTY_LEVEL(LEVEL%-1%) * RI_RELATION::QUANTITY
+	RFA_LEVEL(LEVEL%) = GETRFA(RI_RELATION.CH%)
+
+18320	GET #RI_RELATION.CH%, KEY#0% EQ RI_RELATION::INGREDIENT
+
+	LEVEL% = LEVEL% + 1%
+	GOTO GoDownTree
+
+ GoUpTree:
+	!
+	RETURN IF LEVEL% - 1% = 0%
+
+	LEVEL% = LEVEL% - 1%
+
+18330	GET #RI_RELATION.CH%, RFA RFA_LEVEL(LEVEL%),REGARDLESS
+
+	GET #RI_RELATION.CH%, REGARDLESS
+
+	IF RI_RELATION::PRODUCT <> TEST_PRODUCT(LEVEL%)
+	THEN
+		GOTO GoUpTree
+	ELSE
+		GOTO GoDownTree
+	END IF
+
+
+ ArrayTerm:
+	!
+
+	FOR I%=1% TO ITEM_LOOP%(LOOP%)
+
+		IF RI_RELATION::INGREDIENT = INGREDIENT(I%,LOOP%)::NUMBER
+		THEN
+			INGREDIENT(I%,LOOP%)::QUANTITY = &
+				INGREDIENT(I%,LOOP%)::QUANTITY + &
+				FUNC_ROUND(QTY_LEVEL(LEVEL%),3%)
+			GOTO EndTerm
+		END IF
+
+	NEXT I%
+
+	ITEM_LOOP%(LOOP%) = ITEM_LOOP%(LOOP%) + 1%
+	INGREDIENT(ITEM_LOOP%(LOOP%),LOOP%)::NUMBER = &
+		RI_RELATION::INGREDIENT
+	INGREDIENT(ITEM_LOOP%(LOOP%),LOOP%)::QUANTITY  = &
+		FUNC_ROUND(QTY_LEVEL(LEVEL%),3%)
+
+ EndTerm:
+	GOTO 18330
+
+ ! HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+ !	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+ !		"E", ERN$, FILENAME$, NUM1$(ERR))
+ !	RM_FUNC_JOURSET = 1%
+ !	GOTO ExitFunction
+
+	%Page
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		RESUME ExitFunction IF ERR = 5%
+		FILENAME$ = "RM_JOURPROD"
+
+	CASE 310%
+		FILENAME$ = "RM_CONTROL"
+
+	CASE 320%
+		RESUME 500 IF ERR = 5%
+		FILENAME$ = "RI_RELATION"
+
+	CASE 1000% ! Kill RM_JOURPOST
+		RESUME 1010
+
+	CASE 1010%
+		FILENAME$ = "RM_JOURPOST"
+
+	CASE 1020% ! End of the file
+		IF ERR = 11%
+		THEN
+			RESUME 1500
+		END IF
+
+	CASE 1030% ! Can't find in RI
+		RESUME 1040 IF ERR = 155%
+
+	CASE 1500% ! Kill
+		RESUME EndKill
+
+	CASE 18320	! Can't find ingredient
+		IF ERR = 155%
+		THEN
+			RESUME ArrayTerm
+		END IF
+
+	CASE 18330	! Can't find ingredient
+		IF ERR = 155% OR ERR = 11%
+		THEN
+			RESUME GoUpTree
+		END IF
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

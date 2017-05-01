@@ -1,0 +1,24 @@
+	!======================================================================
+	! AD_UNITS file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_UNITS.CH%, STAT%)
+	CALL READ_DEVICE('AD_UNITS',AD_UNITS.DEV$, STAT%)
+	CALL READ_PROTECTION('AD_UNITS',AD_UNITS.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(AD_UNITS.PRO$, STAT%)
+
+	AD_UNITS.NAME$ = AD_UNITS.DEV$+"AD_UNITS_"+BATCH_NO$+".JRL"
+
+	OPEN AD_UNITS.NAME$ AS FILE AD_UNITS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_UNITS, &
+		PRIMARY KEY &
+		( &
+			AD_UNITS::DEP_OBJECT, &
+			AD_UNITS::ACTION_DATE &
+		)	DUPLICATES , &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

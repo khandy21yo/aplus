@@ -1,0 +1,168 @@
+1	%TITLE "Function to Print Encoded"
+	%SBTTL "PRNT_ENCODED"
+	%IDENT "V3.3"
+
+	FUNCTION LONG SMG_PUT_VIRTUAL_DISPLAY_ENCODED(			&
+		LONG PVDID, LONG FULL_LEN, STRING CODED_TEXT,		&
+		LONG PROW,  LONG PCOL, LONG PWRAP, LONG PCSET, LONG VSET )
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.b
+	!	This is one of Franks functions, and nobody seems to
+	!	know what it really does.
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	PVDID
+	!		Passed variable to update the display.
+	!
+	!	FULL_LEN
+	!		Passed variable to extract parts of the text.
+	!
+	!	CODED_TEXT
+	!		The passed text to be print encoded.
+	!
+	!	PROW
+	!		Used to put characters on the screen.
+	!
+	!	PCOL
+	!		The passed column number.
+	!
+	!	PWRAP
+	!		Used to wrap-around the screen.
+	!
+	!	PCSET
+	!		Used to set the characters.
+	!
+	!	VSET
+	!		Used to position the characters on the screen.
+	!
+	!	Returned value
+	!		This function returns a long value for the print encoded
+	!		text.
+	!
+	! Index:
+	!
+	!	.x Print>Encoded
+	!	.x Encoded>Print
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! COMPILER INSTRUCTIONS:
+	!
+	!	$ BAS FUNC_SOURCE:PRNT_ENCODED/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP PRNT_ENCODED
+	!	$ DELETE PRNT_ENCODED.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	04/15/87 - B. Craig Larsen
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	07/03/89 - Kevin Handy
+	!		Modified to remove MAP's, make function fit
+	!		into sharable library, disable useless error
+	!		trapping.
+	!
+	!	08/05/91 - Kevin Handy
+	!		Trial to see if DEC fixed the function.
+	!		(Nope.  Now it throws '+' in periodically.
+	!		They have also deleted reference to this
+	!		function in their documentation.)
+	!
+	!	08/12/91 - Kevin Handy
+	!		Plus signs (see 08/05/91) were actually
+	!		something Frank threw into DSPL_SCROLL and never
+	!		told anybody, however the SMG$ version of this
+	!		function causes "memory management violation"
+	!		anyway.
+	!--
+	%PAGE
+
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:SMG_EXTERNALS.COM"
+
+ !	EXTERNAL LONG FUNCTION SMG$PUT_VIRTUAL_DISPLAY_ENCODED
+ !
+ !	SMG_PUT_VIRTUAL_DISPLAY_ENCODED = SMG$PUT_VIRTUAL_DISPLAY_ENCODED( &
+ !		PVDID, FULL_LEN, CODED_TEXT BY REF, &
+ !		PROW,  PCOL, PWRAP)
+
+
+	!
+	! Map statements for use in setting up the coded string
+	!
+	RECORD T_RECORD
+		VARIANT
+		CASE
+			STRING	FD = 5
+		CASE
+			WORD CBEG
+			WORD CLEN
+			BYTE CATR
+		END VARIANT
+	END RECORD
+
+	DECLARE T_RECORD T
+
+	RECORD R_RECORD
+		VARIANT
+		CASE
+			STRING	C_LEN_S = 2
+		CASE
+			WORD	C_LEN
+		END VARIANT
+	END RECORD
+
+	DECLARE R_RECORD R
+
+	R::C_LEN_S	= RIGHT( CODED_TEXT, FULL_LEN - '1'L )
+	B_POINT%	= FULL_LEN - R::C_LEN
+	THETEXT$	= LEFT( CODED_TEXT, B_POINT% )
+	C_STR$		= MID(  CODED_TEXT, B_POINT%+1%, ( R::C_LEN - 2% ) )
+
+	SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE( PVDID )
+
+	SMG_STATUS% = SMG$PUT_CHARS(PVDID, THETEXT$, PROW, PCOL,, VSET,, PCSET )
+
+	IF VSET < '1'L AND LEN( C_STR$ ) > 4%
+	THEN
+		FOR PC% = 1% TO LEN( C_STR$ ) STEP 5%
+			T::FD = MID( C_STR$, PC%, 5% )
+			SMG_STATUS% = SMG$PUT_CHARS( PVDID, &
+				MID(THETEXT$, T::CBEG, T::CLEN), PROW, &
+				INTEGER( T::CBEG, LONG ) + PCOL - '1'L,, &
+				INTEGER( T::CATR, LONG ),, PCSET )
+		NEXT PC%
+	END IF
+
+	SMG_STATUS% = SMG$END_DISPLAY_UPDATE( PVDID )
+
+	END FUNCTION

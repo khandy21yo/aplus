@@ -1,0 +1,469 @@
+1	%TITLE "CPT Type Description"
+	%SBTTL "BI_MAIN_CPTTYPE"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BI_MAIN_CPTTYPE(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Current Procedural Terminology Type\* screen provides for entry and
+	!	maintenance of the CPT type code including a description.
+	!
+	! Index:
+	!	.x CPT Type>Maintain
+	!	.x CPT Type>Add
+	!	.x CPT Type>Erase
+	!	.x CPT Type>Change
+	!
+	! Option:
+	!
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BI_SOURCE:BI_MAIN_CPTTYPE/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN BI_MAIN_CPTTYPE
+	!	$ DELETE BI_MAIN_CPTTYPE.OBJ;*
+	!
+	! Author:
+	!
+	!	10/31/88 - Frank F. Starman
+	!
+	! Modification history:
+	!
+	!	03/01/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	10/16/96 - Kevin Handy
+	!		Reformat source code
+	!
+	!	05/22/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	03/09/99 - Kevin Handy
+	!		Fix FIND bug
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "FUNC_INCLUDE:BI_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.HB"
+	MAP (BI_CPTTYPE)	BI_CPTTYPE_CDD		BI_CPTTYPE
+	MAP (BI_CPTTYPE_OLD)	BI_CPTTYPE_CDD BI_CPTTYPE_OLD, BI_CPTTYPE2
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	MAP (GL_CHART)		GL_CHART_CDD		GL_CHART
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_BI_CPTTYPE) &
+		BI_CPTTYPE.CH%, &
+		BI_CPTTYPE.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION MAIN_WINDOW
+	EXTERNAL LONG   FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "CPT Type Description"
+		SMG_WINDOW::NHELP = "BI_MAIN_CPTTYPE"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 78%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 3%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 2%
+		SMG_WINDOW::KNAME(0%) = "Type"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+		SMG_WINDOW::KNAME(1%) = "Description"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF BI_CPTTYPE.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF BI_CPTTYPE.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.CRE"
+		BI_CPTTYPE.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[BI.OPEN]BI_CPTTYPE.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		BI_CPTTYPE.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(BI_CPTTYPE.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = BI_CPTTYPE.CH%
+		RESET #BI_CPTTYPE.CH%
+		GET #BI_CPTTYPE.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	04, 05, "(01) CPT Type", &
+			05, 05, "(02) Description", &
+			06, 05, "(03) Account Number", &
+			00, 00, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) &
+				IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+ Reenter:	SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Current Procedural Terminology Type\*
+	!	.p
+	!	The ^*Current Procedural Terminology Type\* field provides for entry of a code
+	!	which will identify a particular service or procedure performed.
+	!
+	! Index:
+	!	.x Current Procedural Terminology>Type
+	!
+	!--
+
+			BI_CPTTYPE::CPTTYPE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "04;28", TEMP$, &
+				BI_CPTTYPE::CPTTYPE, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Description\*
+	!	.p
+	!	The ^*Description\* field is provided to enter a description
+	!	of the CPT type code entered in field (01).
+	!	.p
+	!	The field will accommodate forty (40) alphanumeric characters.
+	!
+	! Index:
+	!	.x Description>Current Procedural Terminology
+	!	.x Current Procedural Terminology Description
+	!	.x Description>CPT
+	!	.x CPT>Description
+	!
+	!--
+
+			BI_CPTTYPE::DESCRIPTION = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "05;28", TEMP$, &
+				BI_CPTTYPE::DESCRIPTION, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	^*(03) Account Number\*
+	!	.p
+	!	The ^*Account Number\* field provides the means to enter the
+	!	General Ledger Chart of Accounts number to which this record has
+	!	reference.
+	!	.p
+	!	Pressing ^*<List Choices>\* while the cursor is located at
+	!	this field will provide a list of valid Chart of Account
+	!	numbers.
+	!
+	! Index:
+	!	.x Account Number
+	!
+	!--
+
+			BI_CPTTYPE::ACCOUNT= ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "06;28", TEMP$, &
+				BI_CPTTYPE::ACCOUNT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE::SCOPE_EXIT = SMG$K_TRM_F14)
+			THEN
+				IF MAIN_WINDOW(GL_MAIN_CHART.ID, "VX") = 1%
+				THEN
+					BI_CPTTYPE::ACCOUNT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO Reenter
+			END IF
+
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+
+		BI_MAIN_CPTTYPE = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF BI_CPTTYPE::CPTTYPE = ""
+			THEN
+				BI_MAIN_CPTTYPE = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #BI_CPTTYPE.CH%, &
+						KEY#0% EQ BI_CPTTYPE::CPTTYPE + "", &
+						REGARDLESS
+
+					BI_MAIN_CPTTYPE = 2%
+					CALL ENTR_3MESSAGE(SCOPE, "Record Already Exists", 1%)
+				END IF
+			END IF
+
+		CASE 3%
+			IF BI_CPTTYPE::ACCOUNT <> ""
+			THEN
+				BI_MAIN_CPTTYPE = FUNC_TESTENTRY(SMG_WINDOW, &
+					BI_CPTTYPE::ACCOUNT, &
+					GL_CHART::DESCR, &
+					"BI", MLOOP, "ACCT", &
+					"Account Number", GL_MAIN_CHART.ID)
+
+				SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+					GL_CHART::DESCR,7%,28%, ,SMG$M_BOLD)
+
+			END IF
+
+		END SELECT
+
+
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(3%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID, &
+				"Q0" + BI_CPTTYPE::ACCOUNT) <> 1%
+			THEN
+				GL_CHART::DESCR = &
+				STRING$(LEN(GL_CHART::DESCR),ASCII("?"))
+			END IF
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				GL_CHART::DESCR,7%,28%, ,SMG$M_BOLD)
+		END IF
+
+20500	CASE OPT_SETOLD
+
+		BI_CPTTYPE_OLD = BI_CPTTYPE
+
+	CASE OPT_RESETOLD
+
+		BI_CPTTYPE = BI_CPTTYPE_OLD
+
+	CASE OPT_SETDEFAULT
+
+		BI_CPTTYPE2 = BI_CPTTYPE
+
+	CASE OPT_RESETDEFAULT
+
+		BI_CPTTYPE = BI_CPTTYPE2
+
+	CASE OPT_VIEW
+
+		SELECT MLOOP
+
+		CASE 1%
+
+			MVALUE = "  CPTType Description                   "+ &
+				"           Account"
+
+		CASE 2%
+
+			MVALUE = "010,051"
+
+		CASE 3%
+
+			MVALUE = BI_CPTTYPE::CPTTYPE + "      "   + &
+				BI_CPTTYPE::DESCRIPTION+" "+ &
+				BI_CPTTYPE::ACCOUNT
+
+		END SELECT
+
+	CASE OPT_FIND
+		SELECT MLOOP
+		CASE 0%
+			FIND #BI_CPTTYPE.CH%, &
+				KEY#0% GE BI_CPTTYPE::CPTTYPE + "", &
+				REGARDLESS
+		CASE 1%
+
+			FIND #BI_CPTTYPE.CH%, &
+				KEY#1% GE BI_CPTTYPE::DESCRIPTION + "", &
+				REGARDLESS
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap Errors
+	!***************************************************************
+	SELECT ERL
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		BI_MAIN_CPTTYPE = ERR
+		RESUME 770
+
+	CASE 760%
+		BI_MAIN_CPTTYPE = ERR
+		RESUME 770
+
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

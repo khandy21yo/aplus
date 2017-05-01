@@ -1,0 +1,40 @@
+	!======================================================================
+	! AP_VENDOR file (unknown)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_VENDOR.CH%, STAT%)
+	CALL READ_DEVICE('AP_VENDOR',AP_VENDOR.DEV$, STAT%)
+
+	AP_VENDOR.NAME$ = AP_VENDOR.DEV$+"AP_VENDOR.MAS"
+
+	OPEN AP_VENDOR.NAME$ FOR INPUT AS FILE AP_VENDOR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_VENDOR, &
+		PRIMARY KEY &
+			AP_VENDOR::VENNUM, &
+		ALTERNATE KEY &
+			AP_VENDOR::VENNAM &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_VENDOR::ALPSRT &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_VENDOR::STATE &
+			DUPLICATES CHANGES, &
+		ALTERNATE KEY &
+			AP_VENDOR::ZIP &
+			DUPLICATES CHANGES, &
+		
+
+	!++
+	! Abstract:FILE
+	!	^*AP__VENDOR.MAS\*
+	!	.p
+	!	Vendor Description.
+	!	concerning each vendor. Such things as address and phone number are included.
+	!
+	! Index:
+	!	.x Vendor Description
+	!	.x AP_VENDOR
+	!
+	!--

@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Product Structure File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BM__RELATION.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Bill of Material System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Product Structure File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BM__RELATION.MAS\*
+	!	.p
+	!	Product Structure File.
+	!
+	! Index:
+	!	.x Product Structure File
+	!	.x BM_RELATION
+	!--

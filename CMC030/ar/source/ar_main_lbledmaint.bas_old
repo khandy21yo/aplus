@@ -1,0 +1,769 @@
+1	%TITLE "AR Ledger Maintenance"
+	%SBTTL "AR_MAIN_LBLEDMAINT"
+	%IDENT "V3.3"
+
+	FUNCTION LONG AR_MAIN_LBLEDMAINT(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! Abstract:HELP
+	!	.p
+	!	The ^*Maintain Ledger File\* provides the means to initialize data
+	!	pertinent to each customer when the Accounts Receivable system is
+	!	first installed.  Therefore, the file will be updated with information
+	!	pertaining to each cash receipt as it is updated from the Cash
+	!	Receipts Journal.
+	!	.Note
+	!	^*This program should NOT be used to make changes to the ledger.
+	!	Any changes made through this program will NOT appear in the
+	!	General Ledger, or anywhere else.  The correct procedure to make
+	!	changes is through the Journal program. (Cash Receipts Journal)\*
+	!	.en
+	!
+	! Index:
+	!	.x Maintain>Ledger File
+	!	.x Ledger File>Maintain
+	!
+	! Option:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS AR_SOURCE:AR_MAIN_LBLEDMAINT/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP AR_MAIN_LBLEDMAINT
+	!	$ DELETE AR_MAIN_LBLEDMAINT.OBJ;*
+	!
+	!
+	! Author:
+	!
+	!	02/23/88 - Aaron Redd
+	!
+	! Modification history:
+	!
+	!	05/16/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	10/11/91 - Kevin Handy
+	!		Modified to be able to access all keys.
+	!
+	!	04/01/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	02/22/93 - Dan Perkins
+	!		Changed "V0" to "VX" on chart of accounts to be
+	!		able to list accounts starting at a particular
+	!		account.
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE	= (REAL GFLOAT, INTEGER LONG)
+
+	!
+	! Include Files
+	!
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:MAIN_WINDOW.COM"
+	%INCLUDE "FUNC_INCLUDE:AR_WINDOW.INC"
+	%INCLUDE "FUNC_INCLUDE:GL_WINDOW.INC"
+
+	!
+	! CDD and Maps
+	!
+	%INCLUDE %FROM %CDD "CDD$TOP.CDD.CDD_WINDOW"
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_CONTROL"
+	MAP	(AR_CONTROL)	AR_CONTROL_CDD	AR_CONTROL
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_OPEN"
+	MAP	(AR_OPEN)	AR_OPEN_CDD	AR_OPEN
+	MAP	(AR_OPEN_OLD)	AR_OPEN_CDD	AR_OPEN_OLD, AR_OPEN2
+
+	%INCLUDE %FROM %CDD "CDD$TOP.GL.GL_CHART"
+	MAP (GL_CHART)		GL_CHART_CDD	GL_CHART
+
+	%INCLUDE %FROM %CDD "CDD$TOP.AR.AR_35CUSTOM"
+	MAP (AR_35CUSTOM)		AR_35CUSTOM_CDD	AR_35CUSTOM
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+
+	COM (TT_AR_LBLEDMAINT) &
+		ARTITLE$ = 20%, &
+		ARTYPE$(7%) = 20%
+
+	COM (CH_AR_OPEN)		&
+		AR_OPEN.CH%,		&
+		AR_OPEN.READONLY%
+
+	!
+	! External functions
+	!
+	EXTERNAL STRING		FUNCTION PRNT_DATE
+	EXTERNAL STRING		FUNCTION ENTR_3STRING
+	EXTERNAL STRING		FUNCTION ENTR_3STRINGLIST
+	EXTERNAL STRING		FUNCTION ENTR_3DATE
+	EXTERNAL REAL		FUNCTION ENTR_3NUMBER
+	EXTERNAL LONG		FUNCTION MAIN_WINDOW
+	EXTERNAL LONG		FUNCTION FUNC_TESTENTRY
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "AR Open Ledger Maintenance"
+		SMG_WINDOW::NHELP = "AR_MAIN_LBLEDMAINT"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 11%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 4%
+		SMG_WINDOW::KNAME(0%) = TRM$(AR_CONTROL::CTITLE)
+			SMG_WINDOW::KFIELD(0%, 0%) = 2%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+			SMG_WINDOW::KFIELD(0%, 2%) = 2%
+		SMG_WINDOW::KNAME(1%) = "Batch"
+			SMG_WINDOW::KFIELD(1%, 0%) = 2%
+			SMG_WINDOW::KFIELD(1%, 1%) = 13%
+			SMG_WINDOW::KFIELD(1%, 2%) = 1%
+		SMG_WINDOW::KNAME(2%) = "Salesman"
+			SMG_WINDOW::KFIELD(2%, 0%) = 3%
+			SMG_WINDOW::KFIELD(2%, 1%) = 15%
+			SMG_WINDOW::KFIELD(2%, 2%) = 1%
+			SMG_WINDOW::KFIELD(2%, 3%) = 2%
+		SMG_WINDOW::KNAME(3%) = "Invoice"
+			SMG_WINDOW::KFIELD(3%, 0%) = 1%
+			SMG_WINDOW::KFIELD(3%, 1%) = 2%
+			SMG_WINDOW::KFIELD(3%, 2%) = 1%
+
+		!
+		! AR type
+		!
+		ARTITLE$	= "Type   Description"
+		ARTYPE$(0%)	= "7"
+		ARTYPE$(1%)	= "01   Receivable"
+		ARTYPE$(2%)	= "02   Cash Sale"
+		ARTYPE$(3%)	= "03   Debit Memo"
+		ARTYPE$(4%)	= "04   Service Charge"
+		ARTYPE$(5%)	= "08   Credit Memo"
+		ARTYPE$(6%)	= "09   ROA"
+		ARTYPE$(7%)	= "10   Cash Receipt"
+
+		!
+		! Load in defaults
+		!
+		AR_OPEN::DISAMT = 0.0
+		AR_OPEN::OTHCHG = 0.0
+		AR_OPEN::SALNUM = ""
+		AR_OPEN::BATCH = ""
+
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF AR_OPEN.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF AR_OPEN.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.CRE"
+		AR_OPEN.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		AR_OPEN.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(AR_OPEN.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = AR_OPEN.CH%
+		RESET #AR_OPEN.CH%
+		GET #AR_OPEN.CH%, REGARDLESS
+
+20100	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	3,  3, "(01)", &
+			4,  3, "(02) Invoice", &
+			5,  3, "(03) Type", &
+			6,  3, "(04) Date", &
+			7,  3, "(05) Amount", &
+			8,  3, "(06) Receipt", &
+			9,  3, "(07) Check No", &
+			10,  3, "(08) Account", &
+			11,  3, "(09) Matter #", &
+			12,  3, "(10) Description", &
+			13,  3, "(11) Update", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+		I%=0%
+		WHILE (XPOS% <> 0)
+			I% = I% + 1%
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				XSTR$, XPOS%, YPOS%) IF (SMG_WINDOW::HFLAG(I%) AND 2%)=0%
+		READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+			LEFT(AR_CONTROL::CTITLE, 14%), 3%, 8%)
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Select function
+	!
+	CASE OPT_OPTLIST
+
+		MVALUE = MVALUE + " cLosed"
+
+	!
+	! Direction
+	!
+	CASE OPT_MOREMENU
+
+		SELECT PRG_ITEM
+			CASE	"cLosed"
+				!
+				! Access closed file
+				!
+				V% = MAIN_WINDOW(AR_MAIN_LBCLOSEMAINT.ID, "" )
+
+		END SELECT
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE.EXIT% = 0%
+
+ E0loop:	SELECT MLOOP
+
+		CASE 1%
+
+	!++
+	! Abstract:FLD001
+	!	^*(01) Customer _#\*
+	!	.b
+	!	.lm +5
+	!	The ^*Customer _#\* refers to the number assigned to a customer
+	!	as recorded in the Customer Master File.
+	!	.b
+	!	^*Note:\* It is ^*not\* recommended that Customer Numbers be changed, or
+	!	that records be added or deleted in this option. Nevertheless,
+	!	the ability to accomplish these kinds of edit functions is
+	!	provided, but should be used in very unusual circumstances only.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::CUSNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"3;21", TEMP$, &
+				AR_OPEN::CUSNUM, MFLAG, "'E", MVALUE)
+
+				IF (SCOPE.EXIT% = SMG$K_TRM_F14)
+				THEN
+					IF (MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, "VX  ") = 1%)
+					THEN
+						AR_OPEN::CUSNUM = &
+							AR_35CUSTOM::CUSNUM
+					END IF
+					GOTO E0Loop
+				END IF
+
+		CASE 2%
+
+	!++
+	! Abstract:FLD002
+	!	^*(02) Invoice _#\*
+	!	.b
+	!	.lm +5
+	!	The ^*Invoice _#\* refers to a reference number as to whether the
+	!	record represents an invoice or credit memo.
+	!	.b
+	!	^*Note:\* It is ^*not\* recommended the Invoice Numbers be changed in this
+	!	option. Nevertheless, the ability to accomplish this function
+	!	is provided, but should be used in very unusual circumstances only.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::INVNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"4;21", TEMP$, &
+				AR_OPEN::INVNUM, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+
+	!++
+	! Abstract:FLD003
+	!	.ts 55
+	!	^*(03) Type	01,02,03,04,08,09,10\*
+	!	.b
+	!	.lm +5
+	!	The ^*Type\* field contains a code which indicates the type
+	!	of transaction this screen represents.
+	!	.b
+	!	Valid types are:
+	!	.table 3,25
+	!	.te
+	!	^*01\*	Receivable
+	!	.te
+	!	^*02\*	Cash Sale
+	!	.te
+	!	^*03\*	Debit Memo
+	!	.te
+	!	^*04\*	Service Charge
+	!	.te
+	!	^*08\*	Credit Memo
+	!	.te
+	!	^*09\*	ROA
+	!	.te
+	!	^*10\*	Cash Receipt
+	!	.end table
+	!	.b
+	!	^*Note:\* It is not recommended that the type field be changed in this
+	!	screen, even though the ability to accomplish this edit function
+	!	is provided.
+	!	.b
+	!	Valid types may be viewed by pressing List Choices.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::TRATYP = ENTR_3STRINGLIST(SCOPE, SMG_WINDOW::WNUMBER, &
+				"5;21", TEMP$, &
+				AR_OPEN::TRATYP, MFLAG, "'E", MVALUE, &
+				ARTYPE$(),ARTITLE$,"005")
+
+		CASE 4%
+
+	!++
+	! Abstract:FLD004
+	!	.ts 55
+	!	^*(04) Date	MMDDYYYY or MMDDYY\*
+	!	.b
+	!	.lm +5
+	!	The ^*Date\* field represents the date of a particular
+	!	transaction.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::TRADAT = ENTR_3DATE(SCOPE, SMG_WINDOW::WNUMBER, &
+				"6;21", TEMP$, &
+				AR_OPEN::TRADAT, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+
+	!++
+	! Abstract:FLD005
+	!	^*(05) Amount\*
+	!	.b
+	!	.lm +5
+	!	The ^*Amount\* field will display the gross amount of the
+	!	transaction.
+	!	.b
+	!	^*Note:\* It is recommended that the Amount field not be changed
+	!	in this screen, even though the ability to do so exists.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::SALAMT = ENTR_3NUMBER(SCOPE, SMG_WINDOW::WNUMBER, &
+				"7;21", TEMP$, &
+				AR_OPEN::SALAMT, MFLAG, "######.##", MVALUE)
+
+		CASE 6%
+
+	!++
+	! Abstract:FLD006
+	!	^*(06) Receipt\*
+	!	.b
+	!	.lm +5
+	!	The ^*Receipt\* field contains the receipt number when the
+	!	transaction is a cash receipt type.
+	!	.b
+	!	^*Note:\* It is not recommended that changes be made in this screen,
+	!	even though the ability to do so exists.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::RECNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"8;21", TEMP$, &
+				AR_OPEN::RECNUM, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+
+	!++
+	! Abstract:FLD007
+	!	^*(07) Check Number\*
+	!	.b
+	!	.lm +5
+	!	The ^*Check Number\* field contains the customers check number
+	!	when the type of transaction is a cash receipt.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::CHKNUM = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"9;21", TEMP$, &
+				AR_OPEN::CHKNUM, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+
+	!++
+	! Abstract:FLD008
+	!	^*(08) Account _#\*
+	!	.b
+	!	.lm +5
+	!	The ^*Account _#\* field contains the General Ledger Cash
+	!	account number whenever the transaction is a cash sale, or the
+	!	Accounts Receivable General Ledger number if the transaction
+	!	relates to an on account transaction.
+	!	.b
+	!	^*Note:\* It is not recommended that changes be made in this
+	!	screen, even though the ability to do so exists.
+	!	.b
+	!	Valid account numbers may be viewed by pressing ^*List Choices\*.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::ARACCT = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"10;21", TEMP$, &
+				AR_OPEN::ARACCT, MFLAG, "'E", MVALUE)
+
+			IF (SCOPE.EXIT% = SMG$K_TRM_F14)
+			THEN
+				IF (MAIN_WINDOW(GL_MAIN_CHART.ID, "VX  ") = 1%)
+				THEN
+					AR_OPEN::ARACCT = &
+						GL_CHART::ACCT
+				END IF
+				GOTO E0Loop
+			END IF
+
+		CASE 9%
+
+	!++
+	! Abstract:FLD009
+	!	^*(09) Matter Number\*
+	!	.b
+	!	.lm +5
+	!	The ^*Matter Number\* field contains the identification number of different
+	!	cases for each customer. They are used especially for billing when the customer
+	!	has more than one case with the organization.
+	!	.b
+	!	^*Note:\* It is not recommended that changes by made in this
+	!	screen even though the ability to do so exists.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::SUBACC = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"11;21", TEMP$, &
+				AR_OPEN::SUBACC, MFLAG, "~L0'E", MVALUE)
+
+		CASE 10%
+
+	!++
+	! Abstract:FLD010
+	!
+	!	^*(10) Description\*
+	!	.p
+	!	The ^*Description\* field contains the description for a
+	!	transaction if one were entered in the Receipts Journal.
+	!	.p
+	!	.NOTE
+	!	^*It is not recommended that changes be made in this
+	!	screen, even though the ability to do so exists.\*
+	!	.en
+	!
+	! Index:
+	!--
+
+			AR_OPEN::DESCR = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"12;21", TEMP$, &
+				AR_OPEN::DESCR, MFLAG, "'E", MVALUE)
+
+		CASE 11%
+
+	!++
+	! Abstract:FLD011
+	!	^*(11) Update\*
+	!	.p
+	!	The ^*Update\* field contains the year and month in which
+	!	a transaction is updated.
+	!	.p
+	!	.NOTE
+	!	^*It is not recommended that changes be made in this screen
+	!	in the update field, even though the ability to do so exists.\*
+	!	.en
+	!
+	! Index:
+	!
+	!--
+
+			AR_OPEN::UPDATED = ENTR_3STRING(SCOPE, SMG_WINDOW::WNUMBER, &
+				"13;21", TEMP$, &
+				AR_OPEN::UPDATED, MFLAG, "'E", MVALUE)
+
+		END SELECT
+
+		PRG_ITEM = TEMP1$
+
+20300	CASE OPT_TESTENTRY
+
+		AR_MAIN_LBLEDMAINT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			AR_MAIN_LBLEDMAINT = FUNC_TESTENTRY( SMG_WINDOW, &
+				AR_OPEN::CUSNUM, AR_35CUSTOM::CUSNAM, &
+				"AR", MLOOP, "CUST", &
+				"Customer number", AR_MAIN_35CUSTOM.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				3%, 45%, , SMG$M_BOLD)
+
+		CASE 8%
+			AR_MAIN_LBLEDMAINT = FUNC_TESTENTRY( SMG_WINDOW, &
+				AR_OPEN::ARACCT, GL_CHART::DESCR, &
+				"GL", MLOOP, "ACCT", &
+				"Account number", GL_MAIN_CHART.ID)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR, 30%), &
+				10%, 45%, , SMG$M_BOLD)
+
+		END SELECT
+
+	CASE OPT_DISPLAY
+
+		IF (SMG_WINDOW::HFLAG(1%) AND 2%)=0%
+		THEN
+			IF MAIN_WINDOW(AR_MAIN_35CUSTOM.ID, 'Q0' + AR_OPEN::CUSNUM) <> 1%
+			THEN
+				AR_35CUSTOM::CUSNAM = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(AR_35CUSTOM::CUSNAM, 30%), &
+				3%, 45%, , SMG$M_BOLD)
+		END IF
+
+		IF (SMG_WINDOW::HFLAG(8%) AND 2%) = 0%
+		THEN
+			IF MAIN_WINDOW(GL_MAIN_CHART.ID, 'Q0' + AR_OPEN::ARACCT) <> 1%
+			THEN
+				GL_CHART::DESCR = "????????????????????"
+			END IF
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_WINDOW::WNUMBER, &
+				LEFT(GL_CHART::DESCR,30%), &
+				10%, 45%, , SMG$M_BOLD)
+		END IF
+
+20500	CASE OPT_SETOLD
+		AR_OPEN_OLD = AR_OPEN
+
+	CASE OPT_RESETOLD
+		AR_OPEN = AR_OPEN_OLD
+
+	CASE OPT_SETDEFAULT
+		AR_OPEN2 = AR_OPEN
+
+	CASE OPT_RESETDEFAULT
+		AR_OPEN = AR_OPEN2
+
+	CASE OPT_VIEW
+		SELECT MLOOP
+
+			CASE 1%
+
+				MVALUE = LEFT(AR_CONTROL::CTITLE, 10%) + &
+					"  Inv Num    Date      " + &
+					"Amount  Sales Tx Description"
+
+			CASE 2%
+
+				MVALUE = "013,022,033,042,051,060"
+
+			CASE 3%
+
+				MVALUE = AR_OPEN::CUSNUM + " " + &
+					AR_OPEN::INVNUM + " " + &
+					PRNT_DATE(AR_OPEN::TRADAT, 8%) + " " + &
+					FORMAT$(AR_OPEN::SALAMT, "#####.##") + " " + &
+					FORMAT$(AR_OPEN::OTHCHG, "#####.##") + " " + &
+					AR_OPEN::DESCR
+
+		END SELECT
+	CASE OPT_FIND
+		SELECT MLOOP
+
+		CASE 0%
+			FIND #AR_OPEN.CH%, KEY #0% GE AR_OPEN::CUSNUM + &
+				AR_OPEN::INVNUM, &
+				REGARDLESS
+
+		CASE 1%
+
+			FIND #AR_OPEN.CH%, KEY #1% GE AR_OPEN::BATCH, &
+				REGARDLESS
+
+		CASE 2%
+
+			FIND #AR_OPEN.CH%, KEY #2% GE AR_OPEN::SALNUM + &
+				AR_OPEN::CUSNUM + AR_OPEN::INVNUM, &
+				REGARDLESS
+
+		CASE 3%
+
+			FIND #AR_OPEN.CH%, KEY #3% GE AR_OPEN::INVNUM + &
+				AR_OPEN::CUSNUM, &
+				REGARDLESS
+
+		END SELECT
+
+
+	END SELECT
+
+	EXIT FUNCTION
+
+29000	!***************************************************************
+	! Trap Errors
+	!***************************************************************
+	SELECT ERL
+		CASE 750%
+			RESUME 760 IF ERR = 10%
+			AR_MAIN_LBLEDMAINT = ERR
+			RESUME 770
+
+		CASE 760%
+			AR_MAIN_LBLEDMAINT = ERR
+			RESUME 770
+
+		CASE 790%
+			RESUME 32767
+
+		CASE 20300%
+			RESUME 32767 IF ERR = 155%
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION

@@ -1,0 +1,26 @@
+	!======================================================================
+	! MO_ORDERJOUR file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_ORDERJOUR.CH%, STAT%)
+	CALL READ_DEVICE('MO_ORDERJOUR',MO_ORDERJOUR.DEV$, STAT%)
+
+	MO_ORDERJOUR.NAME$ = MO_ORDERJOUR.DEV$+"MO_ORDERJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN MO_ORDERJOUR.NAME$ FOR INPUT AS FILE MO_ORDERJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_ORDERJOUR, &
+		PRIMARY KEY &
+			MO_ORDERJOUR::ORDNUM, &
+		ALTERNATE KEY &
+		( &
+			MO_ORDERJOUR::ORDTYPE, &
+			MO_ORDERJOUR::ORDNUM &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			MO_ORDERJOUR::CUSNUM, &
+			MO_ORDERJOUR::ORDNUM &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

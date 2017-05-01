@@ -1,0 +1,136 @@
+1	%TITLE "Inverse of DATE_DAYCODE Function"
+	%SBTTL "DATE_INVDCODE"
+	%IDENT "V3.3"
+
+	FUNCTION STRING DATE_INVDCODE(DAYCODE%)
+
+	!
+	!		COPYRIGHT (C) 1988 BY
+	!		Computer Management Center, Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.B
+	!	Inverse of DATE__DAYCODE function.
+	!
+	! Index:
+	!
+	! Parameters:
+	!
+	!	DAYCODE%
+	!		The passed day code as returned from DATE_DAYCODE.
+	!
+	!	Returned value
+	!		A string in the form YYYYMMDD.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:DATE_INVDCODE/NOLINE
+	!	$ LIB FUNC_LIB:CMC_3VECTOR/REP DATE_INVDCODE
+	!	$ DELETE DATE_INVDCODE.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	09/05/85 - Frank Starman
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	12/08/85 - Frank Starman
+	!		Correction calculation YR%
+	!
+	!	05/13/89 - Kevin Handy
+	!		Changed from using a real to using a long
+	!		for the input parameter.
+	!
+	!	07/06/93 - Kevin Handy
+	!		Modified to calculate END.YR without using a
+	!		conversion to string and back to lose all but the
+	!		last two digits.
+	!		This should make this functions faster because
+	!		a divide/multiply should be faster than a
+	!		convert-to-string/convert-from-string.
+	!
+	!	07/07/93 - Kevin Handy
+	!		Modified to do more of the work using integers
+	!		instead of floating point math. Modified
+	!		implied if to if-then-else. Lost several INT()'s.
+	!		About 5-10% faster now.
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	DAY%
+	!		An integer that decifers the days in COD.
+	!
+	!	YR%
+	!		An integer that extracts the years.
+	!
+	!	MON%
+	!		An integer that extracts the months.
+	!
+	!	CD%
+	!		An integer that holds the COD value.
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	CD%	= DAYCODE% + 55773%
+	!
+	!
+	CENT%	= (CD% - 1%) / 36524%
+	CENT21%	= 1% IF CD% > 146097%
+	CD%	= CD% - CENT% * 36524% - CENT21%
+	YR%	= INT((CD% - CD% / 1462.0)/365.0) + 100% * CENT% + 1600%
+
+	END.YR%	= SGN(YR% - (YR% / 100%) * 100%)
+
+	JUL%	= DAYCODE% - (YR% - 1600%) * 365% - &
+			((YR% - 1601%) / 4%) + 55757% + &
+			((YR% - 1%) / 100%) - &
+			((YR% - 1601%) / 400%)
+	LY%	= 1% - END.YR% * SGN(YR% - 4% * (YR% / 4%)) - &
+			(1% - END.YR%) * SGN(YR% - 400% * (YR% / 400%))
+
+	IF JUL% < 32%
+	THEN
+		MON%	= 1%
+	ELSE
+		MON%	= ((JUL% - LY% - 59%) / 30.59 + 2.98)
+	END IF
+
+	IF MON% < 3%
+	THEN
+		DAY%	= JUL% - 31% * (MON% - 1%)
+	ELSE
+		DAY%	= JUL% - INT((MON% - 2.98) * 30.59 + 59%) - LY%
+	END IF
+
+	DATE_INVDCODE = FORMAT$(YR%, "<0>###") + &
+		FORMAT$(MON%, "<0>#") + &
+		FORMAT$(DAY%, "<0>#")
+
+	END FUNCTION

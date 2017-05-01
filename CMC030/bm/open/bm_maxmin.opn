@@ -1,0 +1,24 @@
+	!======================================================================
+	! BM_MAXMIN file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BM_MAXMIN.CH%, STAT%)
+	CALL READ_DEVICE('BM_MAXMIN',BM_MAXMIN.DEV$, STAT%)
+
+	BM_MAXMIN.NAME$ = BM_MAXMIN.DEV$+"BM_MAXMIN.TBL"
+
+	OPEN BM_MAXMIN.NAME$ FOR INPUT AS FILE BM_MAXMIN.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BM_MAXMIN, &
+		PRIMARY KEY &
+		( &
+			BM_MAXMIN::PRODUCT, &
+			BM_MAXMIN::MGROUP &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			BM_MAXMIN::MGROUP, &
+			BM_MAXMIN::PRODUCT &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,19 @@
+	!======================================================================
+	! BI_CPTTYPE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_CPTTYPE.CH%, STAT%)
+	CALL READ_DEVICE('BI_CPTTYPE',BI_CPTTYPE.DEV$, STAT%)
+
+	BI_CPTTYPE.NAME$ = BI_CPTTYPE.DEV$+"BI_CPTTYPE.TBL"
+
+	OPEN BI_CPTTYPE.NAME$ FOR INPUT AS FILE BI_CPTTYPE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_CPTTYPE, &
+		PRIMARY KEY &
+			BI_CPTTYPE::CPTTYPE, &
+		ALTERNATE KEY &
+			BI_CPTTYPE::DESCRIPTION &
+			DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

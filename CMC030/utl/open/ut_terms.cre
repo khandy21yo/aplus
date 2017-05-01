@@ -1,0 +1,25 @@
+	!======================================================================
+	! UT_TERMS file (create, open read/write)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(UT_TERMS.CH%, STAT%)
+	CALL READ_DEVICE('UT_TERMS',UT_TERMS.DEV$, STAT%)
+	CALL READ_PROTECTION('UT_TERMS',UT_TERMS.PRO$,STAT%)
+	CALL READ_CURPROTECTION(OLD_PROT$,STAT%)
+	CALL WRIT_CURPROTECTION(UT_TERMS.PRO$, STAT%)
+
+	UT_TERMS.NAME$ = UT_TERMS.DEV$+"UT_TERMS.TBL"
+
+	OPEN UT_TERMS.NAME$ AS FILE UT_TERMS.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP UT_TERMS, &
+		BUFFER 32%, &
+		PRIMARY KEY &
+			UT_TERMS::CODE, &
+		ALTERNATE KEY &
+			UT_TERMS::DESCR &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW MODIFY
+
+	CALL WRIT_CURPROTECTION(OLD_PROT$, STAT%)
+

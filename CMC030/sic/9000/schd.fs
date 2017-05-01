@@ -1,0 +1,239 @@
+INPUT "Output ";TEST
+FORM WIDE
+
+TITLE
+
+
+
+"<COMPANY124>"
+"<REPORT124>"
+TAB(49);/
+"For the <NPERSTR> Ended"
+
+"<PERIOD124>"
+
+TAB(34);/
+"-----------------CURRENT YEAR-------------------  ";/
+"------------------LAST YEAR--------------------"
+TAB(34);/
+"-----CURRENT MONTH----- ------YEAR-TO-DATE------  ";/
+"----CURRENT MONTH----- ------YEAR-TO-DATE------"
+TAB(34);/
+"       AMOUNT         %         AMOUNT        %   ";/
+"       AMOUNT         %         AMOUNT        %"
+END
+FORMAT 1 "   \                              \";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ",/
+2,(0)-(1),100*((0)-(1))/T8(1),(0),100*(0)/T8(2),/
+(12)-(13),100*((12)-(13))/T8(3),(12),100*(12)/T8(4)
+FORMAT 2 "      \                           \";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ",/
+X,X,100*X/T8(1),X,100*X/T8(2),X,100*X/T8(3),X,100*X/T8(4)
+FORMAT 3 "   \                              \";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ",/
+2,-((0)-(1)),100*((1)-(0))/T8(1),-(0),100*(-(0))/T8(2),/
+-((12)-(13)),100*((13)-(12))/T8(3),-(12),100*(-(12))/T8(4)
+FORMAT 4 "                                   ";/
+" ------------  -------   -------------  -------  ";/
+" ------------  -------   -------------  ------- "
+FORMAT 6 "                                   ";/
+" ============  =======   =============  =======  ";/
+" ============  =======   =============  ======= "
+FORMAT 7 "   \                              \";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ";/
+"###,###,###.##  ####.##  ###,###,###.##  ####.## ",/
+X,X,100*X/T8(1),X,100*X/T8(2),X,100*X/T8(3),X,100*X/T8(4)
+FORMAT 9 "#########.##  ########.##  ########.##  ########.##",/
+(1)-(0),-(0),(13)-(12),-(12)
+PRINT TITLE
+PRINT
+SUM INTO T8 F9 R??????????
+PRINT "INCOME FROM OPERATIONS:"
+SUM INTO T1 F3 RS????RT??
+PRINT AND SUM INTO T2 F7,SALES-RETAIL,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTTS
+PRINT AND SUM INTO T2 F7,SALES-TIMESHARING,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTSW
+PRINT AND SUM INTO T2 F7,SALES-SOFTWARE,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTCS
+PRINT AND SUM INTO T2 F7,SALES-CUSTOM SOFTWARE,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTSV
+PRINT AND SUM INTO T2 F7,SALES-SERVICE,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTRL
+PRINT AND SUM INTO T2 F7,RENTALS,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTSP
+PRINT AND SUM INTO T2 F7,SALES-SUPPLIES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RS??TESTOT
+PRINT AND SUM INTO T2 F7,SALES-OTHER,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F3 RT??TEST**
+PRINT AND SUM INTO T2 F7,OTHER INCOME,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+PRINT F4
+PRINT F2,TOTAL INCOME,T2(1),T2(1),T2(3),T2(3),/
+		T2(5),T2(5),T2(7),T2(7)
+PRINT F4
+PRINT "COST OF SALES:"
+SUM INTO T1 F1 COS?TESTHW
+PRINT AND SUM INTO T3 F7,HARDWARE,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTIN
+PRINT AND SUM INTO T3 F7,INSTALLATION,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0 
+SUM INTO T1 F1 COS?TESTCM
+PRINT AND SUM INTO T3 F7,COMMISSIONS,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTTR
+PRINT AND SUM INTO T3 F7,TRAVEL EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTTE
+PRINT AND SUM INTO T3 F7,TELE COMMUNICATIONS,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTDN
+PRINT AND SUM INTO T3 F7,DEPRECIATION,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTSW
+PRINT AND SUM INTO T3 F7,SOFTWARE,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTCS
+PRINT AND SUM INTO T3 F7,CUSTOM SOFTWARE,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTSV
+PRINT AND SUM INTO T3 F7,SERVICE,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTTC
+PRINT AND SUM INTO T3 F7,TECHNICAL SUPPORT,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTRL
+PRINT AND SUM INTO T3 F7,RENTAL,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTSP
+PRINT AND SUM INTO T3 F7,SUPPLIES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=0
+SUM INTO T1 F1 COS?TESTOT
+PRINT AND SUM INTO T3 F7,OTHER,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T1=T3
+ADD T3=0
+PRINT F4
+PRINT F2,TOTAL COST OF SALES,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+PRINT F4
+ADD T2=T2-T1
+PRINT F2,GROSS PROFIT,T2(1),T2(1),T2(3),T2(3),/
+		T2(5),T2(5),T2(7),T2(7)
+PRINT F4
+ADD T1=0
+PRINT
+PRINT "OPERATING EXPENSES:"
+PRINT " SELLING EXPENSES"
+PRINT AND SUM INTO T1 F1 ES??TEST01
+PRINT F4
+PRINT F2,TOTAL SELLING EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT " OCCUPANCY EXPENSES"
+PRINT AND SUM INTO T1 F1 EO??TEST02
+PRINT F4
+PRINT F2,TOTAL OCCUPANCY EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT "EQUIPMENT EXPENSES"
+PRINT AND SUM INTO T1 F1 EE??TEST03
+PRINT F4
+PRINT F2,TOTAL EQUIPMENT EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT "R & D EXPENSES"
+PRINT AND SUM INTO T1 F1 ER??TEST04
+PRINT F4
+PRINT F2,TOTAL R & D EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT "SERVICE EXPENSES"
+PRINT AND SUM INTO T1 F1 EV??TEST05
+PRINT F4
+PRINT F2,TOTAL SERVICE EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT "OUTSIDE SERVICES"
+PRINT AND SUM INTO T1 F1 ED??TEST06
+PRINT F4
+PRINT F2,TOTAL OUTSIDE SERVICES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT "GENERAL & ADMIN EXPENSES"
+PRINT AND SUM INTO T1 F1 EG??TEST07
+PRINT F4
+PRINT F2,TOTAL GENERAL & ADMIN EXPENSES,T1(1),T1(1),T1(3),T1(3),/
+                T1(5),T1(5),T1(7),T1(7)
+ADD T2=T2-T1
+ADD T3=T3+T1
+PRINT F4
+ADD T1=0
+PRINT F2,TOTAL OPERATING EXPENSES,T3(1),T3(1),T3(3),T3(3),/
+		T3(5),T3(5),T3(7),T3(7)
+PRINT F4
+PRINT F2,NET INCOME (LOSS) FROM OPERATIONS,T2(1),T2(1),T2(3),T2(3),/
+		T2(5),T2(5),T2(7),T2(7)
+PRINT F4
+PRINT "TAXES:"
+PRINT AND SUM INTO T1 F1 TX00TEST**
+PRINT F4
+PRINT F2,TOTAL TAXES,T1(1),T1(1),T1(3),T1(3),/
+		T1(5),T1(5),T1(7),T1(7)
+PRINT F4
+ADD T2=T2-T1
+PRINT F2,NET INCOME (LOSS),T2(1),T2(1),T2(3),T2(3),/
+		T2(5),T2(5),T2(7),T2(7)
+PRINT F6
+END

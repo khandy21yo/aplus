@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Shipping Journal Header File is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__SHIPJOUR.JRL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the journal file in the ^*Order Entry System\* going
+	!	under JOURNAL.
+	!
+	! Index:
+	!	.x Shipping Journal Header File
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__SHIPJOUR.JRL\*
+	!	.p
+	!	Shipping Journal Header File.
+	!
+	! Index:
+	!	.x Shipping Journal Header File
+	!	.x OE_SHIPJOUR
+	!--

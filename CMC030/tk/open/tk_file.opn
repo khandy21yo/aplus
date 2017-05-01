@@ -1,0 +1,32 @@
+	!======================================================================
+	! TK_FILE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TK_FILE.CH%, STAT%)
+	CALL READ_DEVICE('TK_FILE',TK_FILE.DEV$, STAT%)
+
+	TK_FILE.DEV$ = "REF:" IF TK_FILE.DEV$ = ""
+
+	TK_FILE.NAME$ = TK_FILE.DEV$+"TK_FILE.MAS"
+
+	OPEN TK_FILE.NAME$ FOR INPUT AS FILE TK_FILE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TK_FILE, &
+		PRIMARY KEY &
+		( &
+			TK_FILE::STRUCT, &
+			TK_FILE::SEQUENCE &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			TK_FILE::DATABASE, &
+			TK_FILE::STRUCT, &
+			TK_FILE::SEQUENCE &
+		)	CHANGES, &
+		ALTERNATE KEY &
+		( &
+			TK_FILE::DATETYPE, &
+			TK_FILE::STRUCT &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

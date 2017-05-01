@@ -1,0 +1,28 @@
+	!++
+	! Error:5
+	!	^*The Customer Extra Information is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BC_CUSTOMEX.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Customer Billing Agency\* going
+	!	under MASTER. 
+	!
+	! Index:
+	!	.x Customer Extra Information
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BC__CUSTOMEX.TBL\*
+	!	.p
+	!	Customer Extra Information.
+	!	additional information for each customer which may be useful as some time.
+	!
+	! Index:
+	!	.x Customer Extra Information
+	!	.x BC_CUSTOMEX
+	!
+	!--

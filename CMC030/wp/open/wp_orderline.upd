@@ -1,0 +1,23 @@
+	!======================================================================
+	! WP_ORDERLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(WP_ORDERLINE.CH%, STAT%)
+	CALL READ_DEVICE('WP_ORDERLINE',WP_ORDERLINE.DEV$, STAT%)
+
+	WP_ORDERLINE.NAME$ = WP_ORDERLINE.DEV$+"WP_ORDERLINE_"+BATCH_NO$+".JRL"
+
+	OPEN WP_ORDERLINE.NAME$ FOR INPUT AS FILE WP_ORDERLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP WP_ORDERLINE, &
+		PRIMARY KEY &
+			WP_ORDERLINE::JOB &
+			DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			WP_ORDERLINE::TTYPE, &
+			WP_ORDERLINE::ITEMCODE, &
+			WP_ORDERLINE::JOB &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

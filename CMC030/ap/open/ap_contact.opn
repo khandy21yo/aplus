@@ -1,0 +1,17 @@
+	!======================================================================
+	! AP_CONTACT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AP_CONTACT.CH%, STAT%)
+	CALL READ_DEVICE('AP_CONTACT',AP_CONTACT.DEV$, STAT%)
+
+	AP_CONTACT.NAME$ = AP_CONTACT.DEV$+"AP_CONTACT.MAS"
+
+	OPEN AP_CONTACT.NAME$ FOR INPUT AS FILE AP_CONTACT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AP_CONTACT, &
+		PRIMARY KEY &
+			AP_CONTACT::CUSNUM &
+			DUPLICATES , &
+		ACCESS READ, ALLOW MODIFY
+

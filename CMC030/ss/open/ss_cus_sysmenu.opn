@@ -1,0 +1,25 @@
+	!======================================================================
+	! SS_CUS_SYSMENU file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SS_CUS_SYSMENU.CH%, STAT%)
+	CALL READ_DEVICE('SS_CUS_SYSMENU',SS_CUS_SYSMENU.DEV$, STAT%)
+
+	SS_CUS_SYSMENU.NAME$ = SS_CUS_SYSMENU.DEV$+"SS_CUS_SYSMENU.MAS"
+
+	OPEN SS_CUS_SYSMENU.NAME$ FOR INPUT AS FILE SS_CUS_SYSMENU.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SS_CUS_SYSMENU, &
+		PRIMARY KEY &
+		( &
+			SS_CUS_SYSMENU::CUSNUM, &
+			SS_CUS_SYSMENU::TAPE &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			SS_CUS_SYSMENU::SYSTEM, &
+			SS_CUS_SYSMENU::INSDAT, &
+			SS_CUS_SYSMENU::CUSNUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

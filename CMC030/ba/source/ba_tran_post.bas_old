@@ -1,0 +1,374 @@
+1	%TITLE "BA System Posting Function"
+	%SBTTL "BA_TRAN_POST"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG BA_TRAN_POST(LONG OPT, &
+		LONG SUBOPT, &
+		STRING BATCH_NUMBER, &
+		STRING TITLE(), &
+		UTL_REPORTX_CDD	UTL_REPORTX, &
+		BA_BILTBL_CDD BA_BILTBL_POST, &
+		STRING GLPERIOD)
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	Help message deleted by Frank.
+	!
+	!
+	! Index:
+	!	.X BA>Post
+	!	.X Post>BA
+	!
+	! Option:
+	!
+	!
+	! Inputs:
+	!
+	!	OPT
+	!		The variable which decides what this
+	!		function will be doing each time it is run.
+	!		(i.e. OPT = OPT_CONFIRM is a signal to confirm
+	!		the post process with the user)
+	!
+	!	SUBOPT
+	!
+	!	BATCH_NUMBER
+	!
+	!	TITLE()
+	!		the array holding the titles and headings
+	!		which will be printed on the final transmittal.
+	!
+	!	UTL_REPORTX
+	!		A data structure used by all functions
+	!		and subprograms involved in printing reports and
+	!		posting transmittals.
+	!
+	!	GLPERIOD
+	!		contains the Year and Period (in YYYYPP
+	!		form) of the GL Year/Period Ledger.
+	!
+	! Outputs:
+	!
+	!	Returned Value
+	!		is CMC$_NORMAL when whatever this function
+	!		is doing has been done correctly, CMC$_WARNING when
+	!		there are easily (?) solved problems, or some other
+	!		value if REALLY bizarre things are going on.
+	!
+	! Compile:
+	!
+	!	$ BAS BA_SOURCE:BA_TRAN_POST
+	!	$ LIB FUNC_LIB:CMCFUN/REP BA_TRAN_POST
+	!	$ DELETE BA_TRAN_POST.OBJ;*
+	!
+	! Author:
+	!
+	!	07/12/89 - Aaron Redd
+	!
+	! Modification History:
+	!
+	!	11/03/90 - Kevin Handy
+	!		Modified to post into BA_BILTBL::BILTODAT.
+	!
+	!	05/24/91 - Kevin Handy
+	!		Modified to close GL_PERIOD as soon as possible.
+	!
+	!	08/07/91 - Frank F. Starman
+	!		Remove GL_PERIOD File. No need.
+	!
+	!	03/23/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/25/97 - Kevin Handy
+	!		Change 'val' to 'val%'
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include special CMC code file
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	!
+	! CDD inclusions and MAPs/DECLAREs
+	!
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_CONTROL.HB"
+	MAP	(BA_CONTROL)	BA_CONTROL_CDD		BA_CONTROL
+
+	%INCLUDE "SOURCE:[BA.OPEN]BA_BILTBL.HB"
+	MAP	(BA_BILTBL)	BA_BILTBL_CDD		BA_BILTBL
+	MAP	(BA_BILTBL_TEMP) BA_BILTBL_CDD		BA_BILTBL_TEMP
+
+	COM (BA_BILTBL_CH) &
+		BA_BILTBL.CH%
+
+	COM (BA_BILTBL_JUNK) &
+		BA_BILTBL_TEMP.CH%, &
+		RECORDS%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION	ASSG_POSTBATCH
+
+	!
+	! Declare variables and/or constants
+	!
+	DECLARE LONG EXIT_STATUS
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Assume success
+	!
+	EXIT_STATUS = CMC$_NORMAL
+
+	%PAGE
+
+	SELECT OPT
+
+	CASE OPT_RESTART
+
+		!
+		! Open up temporary file
+		!
+		CALL ASSG_CHANNEL(BA_BILTBL_TEMP.CH%, STAT%)
+
+		OPEN "BA_BILTBL_TEMP.TMP" FOR OUTPUT AS FILE BA_BILTBL_TEMP.CH%, &
+			ORGANIZATION INDEXED FIXED, &
+			BUFFER 32%, &
+			MAP BA_BILTBL_TEMP, &
+			PRIMARY KEY ( &
+				BA_BILTBL_TEMP::EMPNUM, &
+				BA_BILTBL_TEMP::CUSNUM, &
+				BA_BILTBL_TEMP::FROMDATE &
+			) DUPLICATES, &
+			TEMPORARY, &
+			ACCESS MODIFY, &
+			ALLOW NONE
+
+	CASE OPT_POSTFILE
+
+		!
+		! Get BA_CONTROL information
+		!
+1100		%INCLUDE "SOURCE:[BA.OPEN]BA_CONTROL.MOD"
+		GET #BA_CONTROL.CH%, RECORD 1%
+
+		BA_CONTROL::LASTPERCLOSE = VAL%(RIGHT(GLPERIOD, 5%))
+		BA_CONTROL::YEAR = LEFT(GLPERIOD, 4%)
+
+1300		UPDATE #BA_CONTROL.CH%
+
+2000		!
+		! Update to BA_BILTBL::BILTODAT
+		!
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_MARKFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"BA_BILTBL.TBL", "", "", "")
+
+		RESET #BA_BILTBL.CH%
+
+2010		GET #BA_BILTBL.CH%
+
+		INCREMENT = 0.0
+		BA_FLAG% = 0%
+
+2100		GET #BA_BILTBL_TEMP.CH%, &
+			KEY#0% GE BA_BILTBL::EMPNUM + BA_BILTBL::CUSNUM + BA_BILTBL::FROMDATE
+
+		!
+		! Look up all records that can match this biltbl
+		!
+2110		WHILE (BA_BILTBL::EMPNUM = BA_BILTBL_TEMP::EMPNUM) AND &
+			(BA_BILTBL::CUSNUM = BA_BILTBL_TEMP::CUSNUM) AND &
+			(BA_BILTBL_TEMP::FROMDATE >= BA_BILTBL::FROMDATE) AND &
+			((BA_BILTBL::TODATE <= "00000000") OR &
+				(BA_BILTBL_TEMP::FROMDATE <= BA_BILTBL::TODATE))
+
+
+
+			!
+			! Keep track of additional amount for YTD
+			!
+			INCREMENT = INCREMENT + BA_BILTBL_TEMP::BILTODAT
+			BA_FLAG% = -1%
+
+			!
+			! Set up to look at next record.  Delete this one so
+			! that there cannot be any duplications
+			!
+			DELETE #BA_BILTBL_TEMP.CH%
+			GET #BA_BILTBL_TEMP.CH%
+		NEXT
+
+2120		!
+		! Skip update if nothing to update
+		!
+		IF BA_FLAG%
+		THEN
+			!
+			! Update master record
+			!
+			IF (BA_BILTBL::BATCH <> BATCH_NUMBER)
+			THEN
+				BA_BILTBL::BATCH = BATCH_NUMBER
+				BA_BILTBL::BILTODAT = BA_BILTBL::BILTODAT + INCREMENT
+
+				UPDATE #BA_BILTBL.CH%
+			END IF
+
+			RECORDS% = RECORDS% + 1%
+
+		END IF
+
+		GOTO 2010
+
+2200		EXIT_STATUS = ASSG_POSTBATCH(OPT_CLOSEFILE, BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"", "", "", "")
+
+		TEXT$ = FORMAT$(RECORDS%, "         ########") + &
+			" Updated Records"
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE(), TEXT$, 0%)
+
+	CASE OPT_ADDREC
+
+3000		!
+		! Load record into temporary file
+		!
+		BA_BILTBL_TEMP = BA_BILTBL_POST
+		PUT #BA_BILTBL_TEMP.CH%
+
+	CASE ELSE
+		!
+		! Undefined option
+		!
+		EXIT_STATUS = CMC$_NOOPTION
+
+	END SELECT
+
+ ExitFunction:
+	BA_TRAN_POST = EXIT_STATUS
+	EXIT FUNCTION
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_PRINTMESS(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR), &
+		UTL_REPORTX, TITLE(), 0%)
+
+	EXIT_STATUS = CMC$_UNTERROR
+	GOTO ExitFunction
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Trap errors by error number
+	!
+	SELECT ERR
+		!
+		! Locked block
+		!
+		CASE 154%
+			SLEEP 1%
+			RESUME
+
+	END SELECT
+
+	!
+	! Trap errors by line number
+	!
+	FILENAME$ = ""
+
+	SELECT ERL
+		!
+		! Cannot open BA Control file
+		!
+		CASE 1100%
+			FILENAME$ = "BA_CONTROL"
+
+		!
+		! Cannot update BA Control file
+		!
+		CASE 1300%
+			FILENAME$ = "BA_CONTROL"
+
+		CASE 2010%
+			RESUME 2200 IF ERR = 11%
+			FILENAME$ = "BA_BILTBL"
+
+		CASE 2100%
+			RESUME 2010
+
+		CASE 2110%
+			RESUME 2120 IF ERR = 11%
+			FILENAME$ = "BA_BILTBL_TEMP"
+
+		!
+		! Unable to add to temporary file
+		!
+		CASE 3000%
+			FILENAME$ = "BA_BILTBL_TEMP"
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+	END FUNCTION

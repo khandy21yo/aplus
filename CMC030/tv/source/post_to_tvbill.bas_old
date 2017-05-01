@@ -1,0 +1,411 @@
+1	%TITLE "POST_TO_TVBILL - TV Bill Posting Program"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	SUB POST_TO_TVBILL(PASS%, POST_STATUS%, FILE_NAME$, &
+		BATCHNO$, UTL_BATCH.CH%, TV_BILL.CH%, AR_CUSTOM.CH%)
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! ABSTRACT:
+	!
+	!	This function is used to make 3 passes through a
+	!	file being posted:
+	!
+	!		Pass 1 will kill crashed entries.
+	!		Pass 2 will check for invalid vendor names
+	!		Pass 4 will actually add the records
+	!
+	!	NOTE:  It is assumed that the file being posted
+	!	is not modified between the two passes, although
+	!	totals are calculated during the first path only.
+	!
+	!		POST_STATUS% flag
+	!			1% = Undefined account or key
+	!			2% = Journal out of balance
+	!			4% = Abort
+	!
+	!		NOTE::  The POST_STATUS% flag can be added to but
+	!			should not in any other way be altered.
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:POST_TO_TVBILL/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN POST_TO_TVBILL
+	!	$ DELETE POST_TO_TVBILL.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	02/22/87 - Kevin Handy
+	!
+	! MODIFICATION HISTORY:
+	!
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BILL.HB"
+	MAP (TV_BILL)		TV_BILL_CDD	TV_BILL
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CUSTOM.HB"
+	MAP (AR_CUSTOM)		AR_CUSTOM_CDD	AR_CUSTOM
+
+	RECORD	UTL_BATCH
+		STRING	FILE_NAME = 6%
+		RFA	RFA_RFA
+	END RECORD UTL_BATCH
+
+	MAP (UTL_BATCH)	UTL_BATCH	UTL_BATCH
+
+	MAP (DP_OUTP_XUNSOL) RRR_FLAG%
+
+	!
+	! Externals Functions
+	!
+	EXTERNAL LONG    OUTP_XUNSOL ! (It's really an AST routine)
+
+	!
+	! Declarations
+	!
+	DECLARE RFA    TEST_RFA
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+1000	SELECT PASS%
+
+		!
+		! In the first pass, we will remove all entries
+		! that have been posted to the registers with
+		! the batch number that was interrupted
+		!
+		CASE 1%
+1100			!***************************************************
+			! This subroutine deletes all of the records in the
+			! TV_BILL file that has the same
+			! batch number as the current batch.
+			!***************************************************
+			!
+			! Set up to trap interrupt
+			!
+			SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID, &
+				OUTP_XUNSOL, SCOPE::SMG_KBID)
+
+			RRR_FLAG% = 0%
+
+ KillLoop:
+			!
+			! Handle any special junk in RRR_FLAG%
+			!
+			SELECT RRR_FLAG%
+
+			!
+			! Repaint screen
+			!
+			CASE SMG$K_TRM_F11, SMG$K_TRM_CTRLW
+				SMG_STATUS% = SMG$REPAINT_SCREEN(SCOPE::SMG_PBID)
+				SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, 1%)
+
+			!
+			! Help
+			!
+			CASE SMG$K_TRM_HELP
+				SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, 1%)
+				CALL HELP_3MESSAGE(SCOPE, &
+					SCOPE::PRG_COMPANY, SCOPE::PRG_IDENT, SCOPE::PRG_PROGRAM, SCOPE::PRG_ITEM)
+				SMG_STATUS% = SMG$SET_CURSOR_MODE(SCOPE::SMG_PBID, 1%)
+
+			!
+			! Interupt
+			!
+			CASE SMG$K_TRM_F6, SMG$K_TRM_F20
+				SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID)
+
+				CALL MENU_3INTERRUPT(SCOPE)
+
+				SMG_STATUS% = SMG$ENABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID, &
+					OUTP_XUNSOL, SCOPE::SMG_KBID)
+
+			!
+			! Exit Not allowed
+			!
+			END SELECT
+
+			RRR_FLAG% = 0%
+
+			GET #UTL_BATCH.CH%, KEY#0 EQ FILE_NAME$
+
+			DELETE #UTL_BATCH.CH%
+
+1110			GET #TV_BILL.CH%, RFA UTL_BATCH::RFA_RFA
+
+			DELETE #TV_BILL.CH%
+
+			GOTO KillLoop
+
+1120			!
+			! Disable unsolicited input
+			!
+			SMG_STATUS% = SMG$DISABLE_UNSOLICITED_INPUT(SCOPE::SMG_PBID)
+
+			!
+			! Look for more records in this batch
+			!
+			GET #TV_BILL.CH%, KEY#2 EQ BATCHNO$
+
+			!
+			! Create the data display
+			!
+			SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(18%, &
+				130%, SMG_VIEW%, SMG$M_BORDER)
+
+			SMG_STATUS% = SMG$CHANGE_PBD_CHARACTERISTICS(SCOPE::SMG_PBID, 132%)
+
+			SMG_STATUS% = SMG$LABEL_BORDER(SMG_VIEW%, &
+				" Purchase Journal Post - ERROR ")
+
+			!
+			! Paste on the data display
+			!
+			SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(SMG_VIEW%, &
+				SCOPE::SMG_PBID, 2%, 2%)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_VIEW%, &
+				" Form    Customer  Sked   Date       " + &
+				"Time     Length Flag Cart", 9%, 1%, SMG$M_BOLD)
+
+			SMG_STATUS% = SMG$PUT_CHARS(SMG_VIEW%, &
+				"Remove record from the transaction file (TV_BILL) ? ", &
+				18%, 1%, , SMG$M_BOLD)
+
+1140			SMG_STATUS% = SMG$PUT_CHARS(SMG_VIEW%, &
+				TV_BILL::FRMNUM + " " + &
+				TV_BILL::CUSNUM + " " + &
+				TV_BILL::SKEDNUM + "  " + &
+				PRNT_DATE(TV_BILL::SCH_DATE, 8%) + " " + &
+				PRNT_TIME(TV_BILL::SCH_TIME, 0%) + " " + &
+				PRNT_TIME(TV_BILL::LENGTH, 0%) + " " + &
+				TV_BILL::SPOTS_FLAG + "-" + &
+				TV_BILL::SPOTS_CODE + " " + &
+				TV_BILL::CARTNUM, &
+				10%, 1%, , SMG$M_BOLD)
+
+1150			TEMP_IDENT$ = SCOPE::PRG_IDENT
+			TEMP_ITEM$ = SCOPE::PRG_ITEM
+
+			SCOPE::PRG_IDENT = "POST"
+			SCOPE::PRG_ITEM = "DELETE_ENTRY"
+
+			INP$ = EDIT$(ENTR_3YESNO(SCOPE, SCOPE::SMG_OPTION, "", &
+				"Confirm Deletion of Entry - then press <Do> ", &
+				"N", 0%, "", ""), -1%)
+
+			SCOPE::PRG_IDENT = TEMP_IDENT$
+			SCOPE::PRG_ITEM = TEMP_ITEM$
+
+			SELECT SCOPE::SCOPE_EXIT
+			!
+			! Exit
+			!
+			CASE 3%, SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+
+				POST_STATUS% = (POST_STATUS% OR 4%)
+				SMG_STATUS% = SMG$POP_VIRTUAL_DISPLAY( &
+					SMG_VIEW%, SCOPE::SMG_PBID)
+				GOTO ExitSubroutine
+
+			!
+			! Normal key typed
+			!
+			CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+			!
+			! Bad key typed
+			!
+			CASE ELSE
+				CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+				GOTO 1150
+
+			END SELECT
+
+1160			IF INP$ = "Y"
+			THEN
+				DELETE #TV_BILL.CH%
+			END IF
+
+1170			GET #TV_BILL.CH%
+
+			GOTO 1140
+
+1180			SMG_STATUS% = SMG$POP_VIRTUAL_DISPLAY(SMG_VIEW%, SCOPE::SMG_PBID)
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_OPTION)
+
+		!
+		! In the second pass, we will check for invalid
+		! vendor numbers in the header file
+		!
+		CASE 2%
+1200			!
+			! Check for correct vendor numbers
+			!
+			GET #AR_CUSTOM.CH%, KEY#0 EQ TV_BILL::CUSNUM
+
+			GOTO ExitSubroutine
+
+1230			SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+			TEMP_IDENT$ = SCOPE::PRG_IDENT
+			TEMP_ITEM$ = SCOPE::PRG_ITEM
+
+			SCOPE::PRG_IDENT = "POST"
+			SCOPE::PRG_ITEM = "UNDEFINED_VENDOR"
+
+			SMG_STATUS% = SMG$PUT_CHARS(SCOPE::SMG_MESSAGE, "Undefined customer " + &
+				"number:  " + TV_BILL::CUSNUM + "     " + &
+				"     Press <RESUME> to continue, <EXIT> to ABORT!!!", &
+				2%, 1%, 0%, SMG$M_BOLD)
+
+			!
+			! Get input
+			!
+			JUNK% = ENTR_4ENTRY(SCOPE, SCOPE::SMG_MESSAGE, 0%)
+
+			SCOPE::PRG_IDENT = TEMP_IDENT$
+			SCOPE::PRG_ITEM = TEMP_ITEM$
+
+			SMG_STATUS% = SMG$ERASE_DISPLAY(SCOPE::SMG_MESSAGE)
+
+			SELECT SCOPE::SCOPE_EXIT
+			!
+			! Exit
+			!
+			CASE 3%, SMG$K_TRM_F8, SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+
+				POST_STATUS% = (POST_STATUS% OR 4%)
+
+			!
+			! Normal key typed
+			!
+			CASE 0%, 10%, 12%, 13%, SMG$K_TRM_DO
+
+			!
+			! Bad key typed
+			!
+			CASE ELSE
+				CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+				GOTO 1230
+
+			END SELECT
+
+			CALL ENTR_3MESSAGE(SCOPE, "Creating posting transmitals",1%)
+
+		!
+		! In the fourth pass, we will all the records to the file
+		!
+		CASE 4%
+1320			!
+			! As simple as that
+			!
+			PUT #TV_BILL.CH%
+
+1350			!
+			! Put record into UTL_BATCH file in case of crash
+			!
+			UTL_BATCH::FILE_NAME = FILE_NAME$
+
+			UTL_BATCH::RFA_RFA = GETRFA(TV_BILL.CH%)
+
+			PUT #UTL_BATCH.CH%
+
+	END SELECT
+
+ ExitSubroutine:
+
+	EXIT SUB
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+
+	!
+	! Locked block
+	!
+	IF ERR = 154%
+	THEN
+		SLEEP 5%
+		RESUME
+	END IF
+
+	SELECT ERL
+
+		!
+		! Unable to find any more records to delete
+		!
+		CASE 1100%
+			RESUME 1120 IF ERR = 155%
+
+		!
+		! Check to see if batch no is in file
+		!
+		CASE 1120%
+			RESUME 1180
+
+		CASE 1170%
+			RESUME 1180
+
+		!
+		! Unable to find AR CUSTOM number
+		!
+		CASE 1200%
+			RESUME 1230
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END SUB

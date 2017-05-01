@@ -1,0 +1,16 @@
+	!======================================================================
+	! MO_MAKESIZE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(MO_MAKESIZE.CH%, STAT%)
+	CALL READ_DEVICE('MO_MAKESIZE',MO_MAKESIZE.DEV$, STAT%)
+
+	MO_MAKESIZE.NAME$ = MO_MAKESIZE.DEV$+"MO_MAKESIZE.TBL"
+
+	OPEN MO_MAKESIZE.NAME$ FOR INPUT AS FILE MO_MAKESIZE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP MO_MAKESIZE, &
+		PRIMARY KEY &
+			MO_MAKESIZE::MSIZE, &
+		ACCESS READ, ALLOW MODIFY
+

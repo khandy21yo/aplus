@@ -1,0 +1,65 @@
+1	!
+	!++
+	! Description:
+	!
+	!	DROP BM on parts listed in text file
+	!
+	! History:
+	!
+	!	06/11/2002 - Kevin Handy
+	!		Original version
+	!
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[BM.OPEN]BM_RELATION.HB"
+	MAP (BM_RELATION) BM_RELATION_CDD BM_RELATION
+
+100	!
+	! Open up product master file
+	!
+	%INCLUDE "SOURCE:[BM.OPEN]BM_RELATION.MOD"
+
+190	!
+	! Open text file for results
+	!
+	OUTFILE.CH% = 2%
+	OPEN "CHBT.TXT" FOR INPUT AS FILE OUTFILE.CH%
+
+1000	!
+	! Get next part
+	!
+	WHEN ERROR IN
+		LINPUT #OUTFILE.CH%, PN$
+	USE
+		CONTINUE 1900
+	END WHEN
+
+	PN$ = LEFT(PN$ + SPACE$(LEN(BM_RELATION::PRODUCT)), &
+		LEN(BM_RELATION::PRODUCT))
+
+1005	!
+	! Search for the next item
+	!
+	WHEN ERROR IN
+		GET #BM_RELATION.CH%, KEY #0% EQ PN$
+	USE
+		CONTINUE 1000
+	END WHEN
+
+1010	IF BM_RELATION::PRODUCT = PN$
+	THEN
+		PRINT BM_RELATION::PRODUCT; " "; BM_RELATION::COMPONENT
+
+		DELETE #BM_RELATION.CH%
+
+		GOTO 1005
+	END IF
+
+	GOTO 1000
+
+1900	CLOSE OUTFILE.CH%
+	CLOSE #BM_RELATION.CH%
+
+32767	END

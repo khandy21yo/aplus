@@ -1,0 +1,803 @@
+1	%TITLE "Accounts Receivable Salesman Report"
+	%SBTTL "AR_RPRT_SALNUM"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:AR033
+	!
+	! Abstract:HELP
+	!	.b
+	!	.lm +5
+	!	The ^*Salesman Report\* program prints a
+	!	report of the salesman who
+	!	completed the sale.
+	!	The information is accessed in the open General Ledger
+	!	file and compiled to
+	!	show the salesman receiving credit for each sale.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Salesman Report
+	!
+	! Option:
+	!
+	! Author:
+	!
+	!	08/05/88 - Kevin Handy
+	!
+	! Compile:
+	!
+	!	$  BAS AR_SOURCE:AR_RPRT_SALNUM.BAS/LINE
+	!	$  LINK/EXE=AR_EXE:*.EXE AR_RPRT_SALNUM, FUNC_LIB:CMCLINK/OPTION
+	!	$  DELETE AR_RPRT_SALNUM.OBJ;*
+	!
+	! Modification history:
+	!
+	!	06/21/90 - Aaron Redd
+	!		Added line layout information so that the report could
+	!		be sent to either a spreadsheet or a DIF file.
+	!
+	!	11/05/91 - Dan Perkins
+	!		Changed key of temp file so that invoice number
+	!		comes before customer number.  Removed AR_CONTROL
+	!		CDD and open which did nothing.
+	!		Cleaned up progrom code.
+	!
+	!	11/08/91 - Dan Perkins
+	!		Changed output to print one saleman per page.
+	!		Added start date to only print lines after
+	!		said date.
+	!
+	!	03/18/92 - Dan Perkins
+	!		Print salesman name in report.
+	!
+	!	03/22/92 - Kevin Handy
+	!		Clean up (check)
+	!
+	!	03/27/92 - Dan Perkins
+	!		Also look in AR_CLOSED file.  Cleaned up
+	!		code a little bit.  Added FROM.DATE and TO.DATE.
+	!		Deleted PERIOD field.
+	!
+	!	08/03/92 - Dan Perkins
+	!		Modified report to show reason for transaction.
+	!		Other small modifications per request of KING B.
+	!
+	!	08/14/92 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	08/27/92 - Kevin Handy
+	!		Rewrote section to handle OPEN and CLOSED files
+	!		simultaneously so that code is more readable.
+	!
+	!	08/27/92 - Kevin Handy
+	!		Added "SALESLINE_FLAG%=-1%" to SalesmanTotal
+	!		section so it will print next salesman's title.
+	!
+	!	05/06/93 - Dan Perkins
+	!		Substitute COMP_ARRAY for COMP_STRING.
+	!
+	!	05/02/94 - Kevin Handy
+	!		Added subtotals by customer.
+	!
+	!	05/02/94 - Kevin Handy
+	!		Added test around lookup of customer name to not
+	!		look it up if we already have it. (Speed up)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	03/20/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/13/97 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	08/29/97 - Kevin Handy
+	!		Lose unecessary external definitions
+	!
+	!	08/17/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!
+	!	10/15/98 - Kevin Handy
+	!		Lose excessive %PAGE's
+	!--
+
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.HB"
+	MAP (AR_OPEN)		AR_OPEN_CDD		AR_OPEN
+	DECLARE			AR_OPEN_CDD		AR_OPEN_TEMP
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CLOSED.HB"
+	MAP (AR_CLOSED)		AR_CLOSED_CDD		AR_CLOSED
+
+	%INCLUDE "SOURCE:[SB.OPEN]SB_SUBACCOUNT.HB"
+	MAP (SB_SUBACCOUNT)	SB_SUBACCOUNT_CDD	SB_SUBACCOUNT
+
+	%INCLUDE "SOURCE:[SA.OPEN]SA_SALESMAN.HB"
+	MAP (SB_SUBACCOUNT)	SA_SALESMAN_CDD		SA_SALESMAN
+
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	DECLARE			AR_35CUSTOM_CDD		AR_35CUSTOM_EXAM
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION AR_EXAM_CUSTOM
+
+	%PAGE
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Set some initial variable values
+	!
+	GRAND.TOTAL    = 0.0
+	SALESMAN.TOTAL = 0.0
+	CUSTOMER.TOTAL = 0.0
+
+ Init:
+	!
+	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	SORTBY$ = EDIT$(UTL_REPORTX::OPTDEF(0%), -1%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Sort by	(S,C,T)\*
+	!	.b
+	!	.lm +5
+	!	The ^*Sort by\* field determines the order
+	!	in which the report will print or be displayed.
+	!	.b
+	!	Valid settings are:
+	!	.te
+	!	.table 3,25
+	!	^*S\* - Salesman
+	!	.te
+	!	^*C\* - Class
+	!	.te
+	!	^*T\* - Type
+	!	.end table
+	!	A setting is required in this field.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) From Item\*
+	!	.b
+	!	.lm +5
+	!	^*From Item\* causes the printing or
+	!	displaying of the report to begin
+	!	with the selected Item.  The value
+	!	entered must be in agreement
+	!	with the value in Field (01) Sort by.
+	!	.b
+	!	A blank setting will cause the report
+	!	to begin with the first item in
+	!	the file.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) To Item\*
+	!	.b
+	!	.lm +5
+	!	^*To Item\* causes the printing or displaying
+	!	of the report to end with
+	!	the selected Item.
+	!	The value must be in
+	!	agreement with the value
+	!	entered in field (01) Sort by.
+	!	.b
+	!	A blank setting will cause the report to
+	!	end with the last item in the
+	!	file.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+
+	!++
+	! Abstract:FLD04
+	!	^*(04) Wildcard\*
+	!	.b
+	!	.lm +5
+	!	^*Wildcard\* is used to designated items, selected
+	!	by the sort-by field, to be printed or
+	!	displayed by entering a "wildcard"
+	!	using the Wildcarding Technique.
+	!	.lm -5
+	!
+	! Index:
+	!
+	!--
+
+	FROM.DATE$ = DATE_STOREDATE(TRM$(UTL_REPORTX::OPTDEF(5%)))
+
+	!++
+	! Abstract:FLD06
+	!	^*(06) From Date\*
+	!	.b
+	!	.lm +5
+	!	The ^*From Date\* field specifies
+	!	the starting date for which the data
+	!	on the salesmen will be printed or displayed.
+	!	.b
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!	.lm -5
+	!
+	! Index:
+	!	.x From Date>Salesman Report
+	!	.x Salesman Report>From Date
+	!
+	!--
+
+	TO.DATE$ = DATE_STOREDATE(TRM$(UTL_REPORTX::OPTDEF(6%)))
+
+	!++
+	! Abstract:FLD07
+	!	^*(07) To Date\*
+	!	.b
+	!	.lm +5
+	!	The ^*To Date\* field specifies
+	!	the ending date for which the data
+	!	on the salesmen will be printed or displayed.
+	!	.b
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!	.lm -5
+	!
+	! Index:
+	!	.x To Date>Salesman Report
+	!	.x Salesman Report>To Date
+	!
+	!--
+
+	DO.GROUP$ = LEFT(EDIT$(UTL_REPORTX::OPTDEF(7%), -1%), 1%)
+
+	!++
+	! Abstract:FLD08
+	!	^*(08) Sales/Cash	(S,C)\*
+	!	.b
+	!	.lm +5
+	!	The ^*Sales/Cash\* field specifies if the report is generated
+	!	in sales made (*S), or cash collected (*C).
+	!	The entry in this field must relate
+	!	with the type entered in field
+	!	(3). A sales entry corresponds
+	!	with types '01', '02', '03', and '04'
+	!	and a cash entry corresponds
+	!	with types '02', '09', and '10'.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Sales/Cash>Salesman Report
+	!	.x Salesman Report>Sales/Cash
+	!
+	!--
+
+	SELECT DO.GROUP$
+
+	CASE "S"
+		DO.LIST$   = "01,02,03,08"
+		ADD.TITLE$ = "SHOWING SALES"
+		FACTOR     = 1.0
+
+	CASE "C"
+		DO.LIST$   = "02,09"
+		ADD.TITLE$ = "SHOWING CASH RECEIVED"
+		FACTOR     = -1.0
+
+	END SELECT
+
+	CUS.TOTAL$ = LEFT(UTL_REPORTX::OPTDEF(8%), 1%)
+
+	!++
+	! Abstract:FLD09
+	!	^*(09) Customer Totals\*
+	!	.b
+	!	.lm +5
+	!	This field specifies if subtotals should be printed by
+	!	customer within the salesman.
+	!	.lm -5
+	!
+	! Index:
+	!	.x Customer Total>Salesman Report
+	!	.x Salesman Report>Customer Total
+	!
+	!--
+
+
+300	%INCLUDE "SOURCE:[SB.OPEN]SB_SUBACCOUNT.OPN"
+
+310	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.OPN"
+
+320	%INCLUDE "SOURCE:[AR.OPEN]AR_CLOSED.OPN"
+
+	%PAGE
+
+ ReportTitle:
+	!
+	! Set up titles
+	!
+	TITLE$(1%) = "BROKER/SALESMAN SALES REPORT " + ADD.TITLE$
+
+	SELECT SORTBY$
+
+	CASE "S"
+		K_NUM%     = 0%
+		TITLE$(2%) = "SORTED BY BROKER/SALESMAN"
+
+	CASE "C"
+		K_NUM%     = 2%
+		TITLE$(2%) = "SORTED BY BROKER/SALESMAN CLASS"
+
+	CASE "T"
+		K_NUM%     = 1%
+		TITLE$(2%) = "SORTED BY BROKER/SALESMAN TYPE"
+
+	END SELECT
+
+	TITLE$(3%) = "AR System"
+	TITLE$(4%) = "From " + PRNT_DATE(FROM.DATE$, 8%) + " To " + PRNT_DATE(TO.DATE$, 8%)
+	TITLE$(4%) = "Before " + PRNT_DATE(TO.DATE$, 8%) IF FROM.DATE$ = ""
+	TITLE$(4%) = "After " + PRNT_DATE(FROM.DATE$, 8%) IF TO.DATE$ = ""
+	TITLE$(4%) = "For All Dates" IF FROM.DATE$ + TO.DATE$ = ""
+	TITLE$(5%) = ""
+
+	!
+	! Column headings
+	!
+	TITLE$(6%) = "Broker/Salesman#      Name" + SPACE$(38%) + &
+		"Type  Class"
+
+	TITLE$(7%) = "     Invoice   InvDate   Cust#       "   + &
+		"Name                            TraDate" + &
+		"   Receipt#  Description                        Amount"
+
+	TITLE$(8%) = "."
+
+	!
+	! Adjust Dates
+	!
+	FROM.DATE$ = "01010001" IF FROM.DATE$ = ""
+	TO.DATE$   = "31129999" IF TO.DATE$   = ""
+
+	!
+	! Initialize variables
+	!
+	LIN% = 0%
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	IF FROM.ITEM$ = ""
+	THEN
+		FIND #SB_SUBACCOUNT.CH%, KEY#K_NUM% GE "S", REGARDLESS
+	ELSE
+		FIND #SB_SUBACCOUNT.CH%, &
+			KEY#K_NUM% GE "S" + FROM.ITEM$, &
+			REGARDLESS
+	END IF
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #SB_SUBACCOUNT.CH%, REGARDLESS
+
+	GOTO GetNextRec IF SA_SALESMAN::SUBJECT <> "S"
+
+	SELECT SORTBY$
+
+	CASE "C"
+		GOTO ExitTotal IF (SA_SALESMAN::CLASS > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_ARRAY(EDIT$(SA_SALESMAN::CLASS,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+
+	CASE "S"
+		GOTO ExitTotal IF (SA_SALESMAN::SALESMAN > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_ARRAY(EDIT$(SA_SALESMAN::SALESMAN,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+
+	CASE "T"
+		GOTO ExitTotal IF (SA_SALESMAN::TTYPE > TO.ITEM$) AND &
+			TO.ITEM$ <> ""
+
+		GOTO GetNextRec &
+			IF COMP_ARRAY(EDIT$(SA_SALESMAN::TTYPE,-1%), &
+			WLDCRD$) = 0% &
+			AND WLDCRD$ <> ""
+
+	END SELECT
+
+	SALESLINE_FLAG% = -1%
+	TEST.INVOICE$ = ""
+	INVOICE.DATE$ = ""
+	OPEN.CUSNUM$ = ""
+	CLOSED.CUSNUM$ = ""
+	OPEN_FLAG% = -1%
+	CLOSED_FLAG% = -1%
+	LAST_CUSTOMER$ = "~~~~~~~~~~~~~~~~"
+	LAST_CUSTOMER% = 0%
+
+17200	!
+	! See if salesman exists in AR_OPEN file
+	!
+	GET #AR_OPEN.CH%, KEY#2% EQ SA_SALESMAN::SALESMAN, REGARDLESS
+
+	OPEN_FLAG% = 0%
+	OPEN.CUSNUM$ = AR_OPEN::CUSNUM + AR_OPEN::INVNUM
+
+17210	!
+	! See if salesman exists in AR_CLOSED file
+	!
+	GET #AR_CLOSED.CH%, KEY#1% EQ SA_SALESMAN::SALESMAN, REGARDLESS
+
+	CLOSED_FLAG% = 0%
+	CLOSED.CUSNUM$ = AR_CLOSED::CUSNUM + AR_CLOSED::INVNUM
+
+ EndFirstTest:
+	GOTO GetNextRec IF OPEN_FLAG% * CLOSED_FLAG%
+
+17220	!
+	! Are we already done
+	!
+	GOTO SalesmanTotal IF OPEN_FLAG% * CLOSED_FLAG%
+
+	!
+	! Decide which file to look in. (Open or Closed)
+	!
+	IF (CLOSED_FLAG% <> 0%) OR &
+		((OPEN_FLAG% = 0%) AND &
+		(AR_OPEN::CUSNUM + AR_OPEN::INVNUM < &
+		AR_CLOSED::CUSNUM + AR_CLOSED::INVNUM))
+	THEN
+		!
+		! output from the open file
+		!
+		AR_OPEN_TEMP = AR_OPEN
+		GOSUB TestRecord
+
+		!
+		! Get next record out of open file
+		!
+		OPEN_FLAG% = -1%
+		GET #AR_OPEN.CH%, REGARDLESS
+
+		!
+		! Are we at the end of what we want in the open file
+		!
+		IF AR_OPEN::SALNUM = SA_SALESMAN::SALESMAN
+		THEN
+			OPEN_FLAG% = 0%
+		END IF
+
+	ELSE
+		!
+		! Output from the Cloaed file
+		!
+		AR_OPEN_TEMP = AR_CLOSED
+		GOSUB TestRecord
+
+		!
+		! Get next record out of open file
+		!
+		CLOSED_FLAG% = -1%
+		GET #AR_CLOSED.CH%, REGARDLESS
+
+		!
+		! Are we at the end of what we want in the open file
+		!
+		IF AR_CLOSED::SALNUM = SA_SALESMAN::SALESMAN
+		THEN
+			CLOSED_FLAG% = 0%
+		END IF
+	END IF
+
+	GOTO 17220
+
+ TestRecord:
+	IF AR_OPEN_TEMP::INVNUM <> TEST.INVOICE$
+	THEN
+		INVOICE.DATE$ = ""
+		TEMP.DESCR$   = ""
+	END IF
+
+	TEST.INVOICE$ = AR_OPEN_TEMP::INVNUM
+	INVOICE.DATE$ = AR_OPEN_TEMP::TRADAT IF AR_OPEN_TEMP::TRATYP = "01"
+	TEMP.DESCR$   = AR_OPEN_TEMP::DESCR IF AR_OPEN_TEMP::TRATYP = "08"
+
+	RETURN IF (INSTR(1%, DO.LIST$, AR_OPEN_TEMP::TRATYP) = 0%)
+	RETURN IF AR_OPEN_TEMP::TRADAT < FROM.DATE$
+	RETURN IF AR_OPEN_TEMP::TRADAT > TO.DATE$
+
+	INVOICE.DATE$ = AR_OPEN_TEMP::TRADAT IF INVOICE.DATE$ = ""
+	TEMP.DESCR$   = AR_OPEN_TEMP::DESCR IF TEMP.DESCR$ = ""
+
+	!
+	! If we made it this far, we can print the salesman information
+	!
+	IF SALESLINE_FLAG%
+	THEN
+		TEXT$ = SA_SALESMAN::SALESMAN + SPACE$(12%) + &
+			SA_SALESMAN::DESCR + "  "        + &
+			SA_SALESMAN::TTYPE + "    "      + &
+			SA_SALESMAN::CLASS
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, LIN%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+
+		SALESLINE_FLAG% = 0%
+		LIN% = 0%
+	END IF
+
+	IF AR_OPEN_TEMP::TRATYP = "02" AND DO.GROUP$ = "C"
+	THEN
+		AR_OPEN_TEMP::SALAMT = -AR_OPEN_TEMP::SALAMT
+	END IF
+
+	!
+	! Subtotal by customer?
+	!
+	IF LAST_CUSTOMER$ <> AR_OPEN_TEMP::CUSNUM
+	THEN
+		GOSUB CustomerTotal
+	END IF
+
+	!
+	! Look up customer name
+	!
+	IF (AR_OPEN_TEMP::CUSNUM <> AR_35CUSTOM_EXAM::CUSNUM)
+	THEN
+		IF AR_EXAM_CUSTOM(AR_OPEN_TEMP::CUSNUM, AR_35CUSTOM_EXAM) <> &
+			CMC$_NORMAL
+		THEN
+			AR_35CUSTOM_EXAM::CUSNAM = &
+				STRING$(LEN(AR_35CUSTOM_EXAM::CUSNAM), &
+				ASCII("?"))
+		END IF
+	END IF
+
+	!
+	! Print the cash receipt line
+	!
+	TEXT$ = "     " + AR_OPEN_TEMP::INVNUM + "  " + &
+		PRNT_DATE(INVOICE.DATE$, 6%) + "  " + &
+		AR_OPEN_TEMP::CUSNUM + "  " + &
+		LEFT(AR_35CUSTOM_EXAM::CUSNAM, 30%) + "  " + &
+		PRNT_DATE(AR_OPEN_TEMP::TRADAT, 6%) + "  " + &
+		AR_OPEN_TEMP::RECNUM + "  " + &
+		TEMP.DESCR$ + "  " + &
+		FORMAT$(FACTOR * AR_OPEN_TEMP::SALAMT, "###,###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GRAND.TOTAL    = GRAND.TOTAL + AR_OPEN_TEMP::SALAMT
+	SALESMAN.TOTAL = SALESMAN.TOTAL + AR_OPEN_TEMP::SALAMT
+	CUSTOMER.TOTAL = CUSTOMER.TOTAL + AR_OPEN_TEMP::SALAMT
+	LAST_CUSTOMER% = -1%
+
+	RETURN
+
+ SalesmanTotal:
+	!
+	! Make sure we have subtotaled by customer
+	!
+	GOSUB CustomerTotal
+
+	!
+	! Print a total for one salesman
+	!
+	IF SALESLINE_FLAG% = 0%
+	THEN
+		IF (CUS.TOTAL$ <> "Y")
+		THEN
+			CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+		END IF
+
+		TEXT$ = SPACE$(92%) + &
+			"Broker/Salesman Total:  " + &
+			FORMAT$(FACTOR * SALESMAN.TOTAL, "###,###,###.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+
+		LIN% = 999%
+	END IF
+
+	SALESMAN.TOTAL = 0.0
+	SALESLINE_FLAG% = -1%
+
+	GOTO GetNextRec
+
+ CustomerTotal:
+
+	!
+	! Print a total for one customer
+	!
+	IF (CUS.TOTAL$ = "Y") AND (LAST_CUSTOMER% <> 0%)
+	THEN
+
+		TEXT$ = SPACE$(92%) + &
+			"Customer Total:         " + &
+			FORMAT$(FACTOR * CUSTOMER.TOTAL, "###,###,###.##")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		GOTO ExitProgram IF UTL_REPORTX::STAT
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", -1%)
+
+	END IF
+
+	LAST_CUSTOMER% = 0%
+	LAST_CUSTOMER$ = AR_OPEN_TEMP::CUSNUM
+	CUSTOMER.TOTAL = 0.0
+
+	RETURN
+
+ ExitTotal:
+	!
+	! Handle end of report
+	!
+	TEXT$ = SPACE$(102%) + &
+		"Grand Total:  " + &
+		FORMAT$(FACTOR * GRAND.TOTAL, "###,###,###.##")
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 999%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "SB_SUBACCOUNT"
+
+	CASE 310%
+		FILENAME$ = "AR_OPEN"
+
+	CASE 320%
+		RESUME ReportTitle IF ERR = 5%
+		FILENAME$ = "AR_CLOSED"
+
+	CASE 17000%
+		RESUME ExitTotal IF ERR = 155%
+		FILENAME$ = "SA_SALESMAN"
+
+	CASE 17020%
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "SA_SALESMAN"
+
+	CASE 17200%
+		RESUME 17210 IF ERR = 155%
+		FILENAME$ = "AR_OPEN"
+
+	CASE 17210%
+		RESUME EndFirstTest IF ERR = 155%
+		FILENAME$ = "AR_CLOSED"
+
+	CASE 17220%
+		RESUME 17220 IF ERR = 11%
+		FILENAME$ = "AR_OPEN"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

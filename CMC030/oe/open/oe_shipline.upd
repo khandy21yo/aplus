@@ -1,0 +1,19 @@
+	!======================================================================
+	! OE_SHIPLINE file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_SHIPLINE.CH%, STAT%)
+	CALL READ_DEVICE('OE_SHIPLINE',OE_SHIPLINE.DEV$, STAT%)
+
+	OE_SHIPLINE.NAME$ = OE_SHIPLINE.DEV$+"OE_SHIPLINE_"+BATCH_NO$+".JRL"
+
+	OPEN OE_SHIPLINE.NAME$ FOR INPUT AS FILE OE_SHIPLINE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_SHIPLINE, &
+		PRIMARY KEY &
+		( &
+			OE_SHIPLINE::ORDNUM, &
+			OE_SHIPLINE::LIN &
+		)	, &
+		ACCESS MODIFY, ALLOW NONE
+

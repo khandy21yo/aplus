@@ -1,0 +1,19 @@
+	!======================================================================
+	! BI_RATE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BI_RATE.CH%, STAT%)
+	CALL READ_DEVICE('BI_RATE',BI_RATE.DEV$, STAT%)
+
+	BI_RATE.NAME$ = BI_RATE.DEV$+"BI_RATE.TBL"
+
+	OPEN BI_RATE.NAME$ FOR INPUT AS FILE BI_RATE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BI_RATE, &
+		PRIMARY KEY &
+		( &
+			BI_RATE::CPT, &
+			BI_RATE::EFFDATE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

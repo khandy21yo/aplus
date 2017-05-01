@@ -1,0 +1,741 @@
+1	%TITLE "TV_SPEC_SKED_AUTO - Auto Scheduler"
+	%SBTTL "TV Traffic system"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program is used to schedule all commercial
+	!	orders for a specified date range into the spots
+	!	file. (Doesn't that sound easy?)
+	!
+	! Index:
+	!
+	!	Schedule orders
+	!	Auto schedule
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_SPEC_SKED_AUTO
+	!	$ LINK/EXE=TV_EXE: TV_SPEC_SKED_AUTO, -
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE TV_SPEC_SKED_AUTO.OBJ;*
+	!
+	! Author:
+	!
+	!	12/02/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	06/27/89 - Kevin Handy
+	!		Modified to use READ_INITIALIZE.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+
+	!
+	! Maps
+	!
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.HB"
+	MAP	(TV_COMMER)		TV_COMMER_CDD		TV_COMMER
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_SKED_INSTR"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.HB"
+	MAP	(TV_COMMER_SKED_INSTR)	TV_COMMER_SKED_INSTR_CDD TV_COMMER_SKED_INSTR
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOG_BREAK"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.HB"
+	MAP	(TV_LOG_BREAK)		TV_LOG_BREAK_CDD	TV_LOG_BREAK
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_LOGSPOTS"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.HB"
+	MAP	(TV_LOGSPOTS)		TV_LOGSPOTS_CDD		TV_LOGSPOTS
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_SKED_WORK"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SKED_WORK.HB"
+	MAP	(TV_SKED_WORK)		TV_SKED_WORK_CDD	TV_SKED_WORK
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CUSTOM_CONFLICT"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.HB"
+	MAP	(TV_CUSTOM_CONFLICT)	TV_CUSTOM_CONFLICT_CDD	TV_CUSTOM_CONFLICT
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_BREAK_TYPE"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.HB"
+	MAP	(TV_BREAK_TYPE)		TV_BREAK_TYPE_CDD	TV_BREAK_TYPE
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_COMMER_CONFLICT"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.HB"
+	MAP	(TV_COMMER_CONFLICT)	TV_COMMER_CONFLICT_CDD	TV_COMMER_CONFLICT
+
+ !	%INCLUDE %FROM %CDD "CDD$TOP.TV.TV_CONTROL"
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.HB"
+	MAP	(TV_CONTROL)		TV_CONTROL_CDD		TV_CONTROL
+
+	!
+	! Channels and stuff to pass around
+	!
+	MAP	(CH_TV_COMMER)			TV_COMMER.CH%
+	MAP	(CH_TV_COMMER_SKED_INSTR)	TV_COMMER_SKED_INSTR.CH%
+	MAP	(CH_TV_SKED_WORK)		TV_SKED_WORK.CH%
+	MAP	(CH_TV_LOG_BREAK)		TV_LOG_BREAK.CH%
+	MAP	(CH_TV_LOGSPOTS)		TV_LOGSPOTS.CH%
+	MAP	(CH_TV_CUSTOM_CONFLICT)		TV_CUSTOM_CONFLICT.CH%
+	MAP	(CH_TV_BREAK_TYPE)		TV_BREAK_TYPE.CH%
+	MAP	(CH_TV_COMMER_CONFLICT)		TV_COMMER_CONFLICT.CH%
+	MAP	(CH_TV_CONTROL)			TV_CONTROL.CH%
+	MAP	(CH_TV_TEMP_CONFLICT)		TV_TEMP_CONFLICT.CH%
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG   FUNCTION TV_FIND_PRIORITY
+
+	%PAGE
+
+	!*******************************************************************
+	! Initilization.  Init error trapping, terminal, Set up for help,
+	! allocate channels.
+	!*******************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Init terminal
+	!
+	CALL READ_INITIALIZE
+
+	!
+	! Init help
+	!
+	SCOPE::PRG_IDENT = "PROG"
+	SCOPE::PRG_PROGRAM = "TV_SPEC_SKED_AUTO"
+	SCOPE::PRG_ITEM = "SCHEDULE"
+
+	!
+	! Init day of week array
+	!
+	SCHED_DAY$(1%) = "Monday"
+	SCHED_DAY$(2%) = "Tuesday"
+	SCHED_DAY$(3%) = "Wednesday"
+	SCHED_DAY$(4%) = "Thursday"
+	SCHED_DAY$(5%) = "Friday"
+	SCHED_DAY$(6%) = "Saturday"
+	SCHED_DAY$(7%) = "Sunday"
+
+	!*******************************************************************
+	! Create windows to play in
+	!*******************************************************************
+
+	SMG_STATUS% = SMG$BEGIN_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	!
+	! Create IO window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(4%, 78%, IO_INPUT%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_INPUT%, "Auto Scheduler")
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "From date", 2%, 1%)
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "To date", 3%, 1%)
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "From priority", 2%, 39%)
+	SMG_STATUS% = SMG$PUT_CHARS(IO_INPUT%, "To priority", 3%, 39%)
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_INPUT%, SCOPE::SMG_PBID, 2%, 2%)
+
+	!
+	! Create entertainment window
+	!
+	SMG_STATUS% = SMG$CREATE_VIRTUAL_DISPLAY(13%, 78%, IO_MESSAGE%, &
+		SMG$M_BORDER)
+	SMG_STATUS% = SMG$LABEL_BORDER(IO_MESSAGE%, "Messages")
+	SMG_STATUS% = SMG$PASTE_VIRTUAL_DISPLAY(IO_MESSAGE%, SCOPE::SMG_PBID, 7%, 2%)
+	SMG_STATUS% = SMG$SET_CURSOR_ABS(IO_MESSAGE%, 1%, 1%)
+
+	SMG_STATUS% = SMG$END_PASTEBOARD_UPDATE(SCOPE::SMG_PBID)
+
+	%PAGE
+
+	!*******************************************************************
+	! Open up files that can be opened up and left open
+	!*******************************************************************
+
+1010	!
+	! Commercial header file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER.OPN"
+
+1015	!
+	! Commercial schedule instructions (orders)
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_SKED_INSTR.OPN"
+
+1020	!
+	! Customer conflict file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.OPN"
+
+1025	!
+	! Break type definition file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_BREAK_TYPE.OPN"
+
+1030	!
+	! Conflict definition file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.OPN"
+
+1035	!
+	! Control file
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CONTROL.OPN"
+	GET #TV_CONTROL.CH%, RECORD 1%, REGARDLESS
+
+1040	!
+
+	%PAGE
+
+1100	!*******************************************************************
+	! Get from date
+	!*******************************************************************
+
+	FROM_DATE$ = ENTR_3DATE(SCOPE, IO_INPUT%, "2;13", &
+		"Schedule from date", DATE_TODAY, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1100
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DOWN, SMG$K_TRM_DO
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1100
+	END SELECT
+
+1200	!*******************************************************************
+	! Get to date
+	!*******************************************************************
+
+	TO_DATE$ = ENTR_3DATE(SCOPE, IO_INPUT%, "3;13", &
+		"Schedule to date", FROM_DATE$, 0%, "'E", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1100
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DO, SMG$K_TRM_DOWN
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1200
+	END SELECT
+
+	%PAGE
+
+1300	!*******************************************************************
+	! Get from priority
+	!*******************************************************************
+
+	FROM_PRIOR% = ENTR_3NUMBER(SCOPE, IO_INPUT%, "2;53", &
+		"Extend from priority", 0.0, 0%, "#####", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1200
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DOWN, SMG$K_TRM_DO
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1300
+	END SELECT
+
+1400	!*******************************************************************
+	! Get to priority
+	!*******************************************************************
+
+	TO_PRIOR% = ENTR_3NUMBER(SCOPE, IO_INPUT%, "3;53", &
+		"Extend to priority", 9999.0, 0%, "#####", "")
+
+	SELECT SCOPE::SCOPE_EXIT
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ, SMG$K_TRM_F8
+			GOTO ExitProgram
+
+		CASE SMG$K_TRM_UP
+			GOTO 1300
+
+		CASE SMG$K_TRM_DOWN
+			GOTO 1400
+
+		CASE 10%, 12%, 13%, 0%, SMG$K_TRM_DO
+
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE, SCOPE::SCOPE_EXIT)
+			GOTO 1400
+	END SELECT
+
+	%PAGE
+
+1600	!*******************************************************************
+	! Loop from FROM_DATE to TO_DATE
+	!*******************************************************************
+
+	FROM_DATE% = DATE_DAYCODE(FROM_DATE$)
+	TO_DATE%   = DATE_DAYCODE(TO_DATE$)
+
+	!
+	! Make sure that a range exists
+	!
+	IF FROM_DATE% > TO_DATE%
+	THEN
+		SCOPE::PRG_ITEM = "BADDATE"
+		CALL ENTR_3MESSAGE(SCOPE, "ERROR: From date > to date!", 0%)
+		GOTO ExitProgram
+	END IF
+
+	!
+	! Make sure that a priority range exists
+	!
+	IF FROM_PRIOR% > TO_PRIOR%
+	THEN
+		SCOPE::PRG_ITEM = "BADPRIOR"
+		CALL ENTR_3MESSAGE(SCOPE, "ERROR: From priority > to priority!", 0%)
+		GOTO ExitProgram
+	END IF
+
+	!
+	! If it is more than a week, make real sure that is what they
+	! want to do.
+	!
+	IF (TO_DATE% - FROM_DATE%) > 6%
+	THEN
+		SCOPE::PRG_ITEM = "BIGRANGE"
+		CONFIRM$ = ENTR_3YESNO(SCOPE, IO_INPUT%, "", &
+			"Confirm large range (" + &
+			NUM1$(TO_DATE% - FROM_DATE% + 1%) + " Days)", &
+			"N", 0%, "'E", "")
+		GOTO ExitProgram UNLESS CONFIRM$ = "Y"
+	END IF
+
+	!
+	! If they make it to here, then the range must be OK.
+	! Loop through all days in that range and extend the
+	! logs.
+	!
+	FOR DAY_LOOP% = FROM_DATE% TO TO_DATE%
+
+		!
+		! Figure out all sorts of useful things about the
+		! given date.
+		!
+		SCHED_DATE$ = DATE_INVDCODE(DAY_LOOP%)
+		SCHED_DAY%  = DATE_DAYOFWEEK(DAY_LOOP%)
+
+		!
+		! Schedule for that date
+		!
+		GOSUB ScheduleOneDate
+
+	NEXT DAY_LOOP%
+
+	CALL ENTR_3MESSAGE(SCOPE, "Finished!", 0%)
+
+	GOTO ExitProgram
+
+	%PAGE
+
+4000	!*******************************************************************
+	! Extend the schedule for one date.
+	!*******************************************************************
+
+ ScheduleOneDate:
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		"Starting " + PRNT_DATE(SCHED_DATE$, 8%) + " (" + &
+		SCHED_DAY$(SCHED_DAY%) + ")")
+
+4010	!
+	! Open up break file for the given date.  We don't need the
+	! program file while scheduling, so we will completely
+	! ignore it.
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOG_BREAK.OPN"
+
+4020	!
+	! Make sure that there is some breaks scheduled for the
+	! specified date.  (ie. that the log has been extended).
+	!
+	RESET #TV_LOG_BREAK.CH%
+	GET #TV_LOG_BREAK.CH%, REGARDLESS
+
+4040	!
+	! Open/create a spots file for the given date
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_LOGSPOTS.CRE"
+
+4050	!
+	! Open/create a work file (which deletes itself when closed)
+	! to hold the commercials that want to be scheduled.
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SKED_WORK.TEN"
+
+4060	!
+	! Handle scheduling this date.
+	!
+	GOSUB GenerateOrderList
+	GOSUB DoSchedule
+
+4090	!
+	! Finish up the day
+	!
+	CLOSE #TV_LOG_BREAK.CH%, TV_LOGSPOTS.CH%, TV_SKED_WORK.CH%
+
+	RETURN
+
+	!*******************************************************************
+	! Handle several errors from the scheduling section.
+	!*******************************************************************
+
+4100	!
+	! Handle an un-extended log
+	!
+	CALL HELP_3MESSAGE(SCOPE, "Log has not been extended", &
+		"ERR", SCOPE::PRG_PROGRAM, "EXTEND")
+
+	GOTO 4090
+
+	%PAGE
+
+5000	!*******************************************************************
+	! Generate the list of ordered spots for this date
+	!*******************************************************************
+ GenerateOrderList:
+
+	!
+	! Scan through the commercial header file for any commercial
+	! order that has any possibility of having a order for the
+	! current date.
+	!
+	RESET #TV_COMMER.CH%
+
+5010	GET #TV_COMMER.CH%, REGARDLESS
+
+	!
+	! The commercial header cannot have any orders for this
+	! schedule when:
+	!
+	!	1. The order dates do not have the schedule date in
+	!	its range. (Remember that a blank date is a TFN).
+	!	Note that a blank start date will take care of
+	!	itself in the comparison so no special tests are
+	!	needed for it.
+	!	2. The priority is outside of the range that the user
+	!	wants to schedule.
+	!	3. The commercial order has been canceled.
+	!
+	TEMP% = VAL%(TV_COMMER::END_DATE)
+
+	GOTO 5010 IF &
+		(TV_COMMER::START_DATE > SCHED_DATE$) OR		! 1. &
+		(TV_COMMER::END_DATE < SCHED_DATE$ AND &
+			TEMP% <> 0%) OR &
+		(TV_COMMER::PRIORITY < FROM_PRIOR% OR		! 2. &
+			TV_COMMER::PRIORITY > TO_PRIOR%) OR &
+		(TV_COMMER::CANCELLED = "Y")			! 3.
+
+ ! Debug statement
+ ! SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+ ! " -- Order " + TV_COMMER::FRMNUM)
+
+5020	!
+	! Now that we have a header that may have commercials, we
+	! need to look at the line items to see if there are any
+	! commercials there.
+	!
+	FIND #TV_COMMER_SKED_INSTR.CH%, &
+		KEY #0 GE TV_COMMER::FRMNUM, REGARDLESS
+
+5030	GET #TV_COMMER_SKED_INSTR.CH%, REGARDLESS
+
+	GOTO 5010 IF TV_COMMER_SKED_INSTR::FRMNUM <> TV_COMMER::FRMNUM
+
+	!
+	! We do not schedule zero length commercials, because they
+	! are most likely an error.
+	!
+	GOTO 5030 IF TIME_CODE(TV_COMMER_SKED_INSTR::LENGTH) <= 0%
+
+	!
+	! Check out the simple parts of the line to see if it can
+	! have any commercials for this date.  There can be no spots
+	! for this line when:
+	!
+	!	1. The from-to dates are out of range.
+	!	2. The spots/week value is zero.
+	!
+	TEMP% = VAL%(TV_COMMER_SKED_INSTR::END_DATE)
+
+	GOTO 5030 IF &
+		(TV_COMMER_SKED_INSTR::START_DATE > SCHED_DATE$) OR	! 1. &
+		(TV_COMMER_SKED_INSTR::END_DATE < SCHED_DATE$ AND &
+			TEMP% <> 0%) OR &
+		(TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(SCHED_DAY% - 1%) = 0%) ! 2.
+
+	!
+	! Now that we have a possible order, we need to fix any
+	! of the variable parts of the line (-1's in the line).
+	! We will use the TV_FIND_ROTATION function for this,
+	! which modifies the record (SO DON'T UPDATE THE RECORD
+	! IN THE SKED_INSTR FILE AFTER CALLING THIS) so that it
+	! looks like a normal record.
+	!
+	CALL TV_FIND_ROTATION(SCHED_DATE$, TV_COMMER_SKED_INSTR)
+
+ ! Debug statement
+ ! TEMP$ = ""
+ ! TEMP$ = TEMP$ + &
+ ! FORMAT$(TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(TEMP%), " <0>#.") &
+ ! FOR TEMP% = 0% TO 6%
+
+ ! SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+ ! " -- Order " + TV_COMMER_SKED_INSTR::FRMNUM + &
+ ! " Line " + TV_COMMER_SKED_INSTR::SKED_NUM + " spots: " + &
+ ! FORMAT$(TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(SCHED_DAY%), " <0>#."))
+
+	!
+	! Now that we have hardened the number of spots per day, we can
+	! decide how many we need for this date.  Take the total number
+	! of spots, and subtract the number of spots that have already
+	! been scheduled to get the total that need to be scheduled.
+	!
+	! If this number is negitive, we probibly should remove
+	! the extras, but for now, we will allow them to stay.
+	!
+	TOTAL_ORDER% = TV_COMMER_SKED_INSTR::SPOTS_PER_DAY(SCHED_DAY% - 1%)
+
+5040	FIND #TV_LOGSPOTS.CH%, &
+		KEY #2% GE TV_COMMER_SKED_INSTR::FRMNUM + &
+		TV_COMMER_SKED_INSTR::SKED_NUM, &
+		REGARDLESS
+
+5045	GET #TV_LOGSPOTS.CH%, REGARDLESS
+
+	IF (TV_COMMER_SKED_INSTR::FRMNUM = TV_LOGSPOTS::FRMNUM) AND &
+		(TV_COMMER_SKED_INSTR::SKED_NUM = TV_LOGSPOTS::SKEDNUM)
+	THEN
+		!
+		! There are a few special types that are not counted
+		! as a spot scheduled against this order.
+		!
+		!	S-MG	Scheduled as a make good.
+		!
+		TOTAL_ORDER% = TOTAL_ORDER% - 1% &
+			UNLESS INSTR(1%, "S-MG", &
+			TV_LOGSPOTS::SCH_TYPE + "-" + TV_LOGSPOTS::SPOTS_FLAG)
+
+		!
+		! Look for more
+		!
+		GOTO 5045
+	END IF
+
+5050	!
+	! Ok, now we need to make entries in the ordered spots file.
+	! We need one record added for each spot ordered for this
+	! date on this form.
+	!
+	TV_SKED_WORK::FRMNUM	= TV_COMMER_SKED_INSTR::FRMNUM
+	TV_SKED_WORK::SKED_NUM	= TV_COMMER_SKED_INSTR::SKED_NUM
+
+	SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+		" -- Order " + TV_COMMER_SKED_INSTR::FRMNUM + &
+		" Line " + TV_COMMER_SKED_INSTR::SKED_NUM + " spots: " + &
+		FORMAT$(TOTAL_ORDER%, " <0>#.")) &
+		IF TOTAL_ORDER% <> 0%
+
+	FOR LOOP% = 1% TO TOTAL_ORDER%
+
+		!
+		! NOTE: Storing priority as a negitive number so that
+		! it will sort in the order that we want.
+		!
+		TV_SKED_WORK::PRIORITY = &
+			- TV_FIND_PRIORITY(TV_COMMER, TV_COMMER_SKED_INSTR)
+
+		PUT #TV_SKED_WORK.CH%
+
+ ! Debug statement
+ ! SMG_STATUS% = SMG$PUT_LINE(IO_MESSAGE%, &
+ ! " -- enter " + TV_SKED_WORK::FRMNUM + " " + TV_SKED_WORK::SKED_NUM + " " + &
+ ! NUM1$(TV_SKED_WORK::PRIORITY))
+
+	NEXT LOOP%
+
+	!
+	! Now, go back for the next line
+	!
+	GOTO 5030
+
+5080	RETURN
+
+	%PAGE
+
+6000	!*******************************************************************
+	! Do the actual scheduling
+	!*******************************************************************
+ DoSchedule:
+
+	!
+	! For scheduling, we use a function that handles all of the
+	! odd stuff about actual scheduling.
+	!
+	! NOTE: All channels and stuff are passed through map areas
+	! so be sure that you have all of the right files open for
+	! the function to work properly.
+	!
+	CALL TV_SKED_ORDER(IO_MESSAGE%, SCHED_DATE$, SCHED_DAY%)
+
+	RETURN
+
+	%PAGE
+
+	!*******************************************************************
+	! Exit the program
+	!*******************************************************************
+
+ ExitProgram:
+
+	CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+
+	%PAGE
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+
+	!
+	! Errors in file opens
+	!
+	CASE 1010%
+		FINAME$ = "COMMER_HEADER"
+		RESUME HelpFile
+
+	CASE 1015%
+		FINAME$ = "COMMER_SKED_INSTR"
+		RESUME HelpFile
+
+	CASE 1020%
+		RESUME 1025
+
+	CASE 1025%
+		FINAME$ = "BREAK_TYPE"
+		RESUME HelpFile
+
+	CASE 1030%
+		RESUME 1040
+
+	!
+	! Error when there are no breaks.
+	!
+	CASE 4010%, 4020%
+		RESUME 4100
+
+	!
+	! End of commer file
+	!
+	CASE 5010%
+		RESUME 5080
+
+	!
+	! Error when no/nomore lines can be found for a order.
+	!
+	CASE 5020%, 5030%
+		RESUME 5010
+
+	!
+	! Error when searching for existing spots
+	!
+	CASE 5040%, 5045%
+		RESUME 5050
+	!
+	! Error looking for any already scheduled spots
+	!
+	END SELECT
+
+	RESUME HelpError
+
+ HelpError:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", SCOPE::PRG_PROGRAM, "ERROR" + NUM1$(ERR))
+
+	GOTO ExitProgram
+
+ HelpFile:
+	CALL HELP_3MESSAGE(SCOPE, ERN$ + " " + NUM1$(ERL) + " " + NUM1$(ERR), &
+		"ERR", "FILE_" + FINAME$, "ERROR" + NUM1$(ERR))
+
+	GOTO ExitProgram
+
+	END

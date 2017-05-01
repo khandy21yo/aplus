@@ -1,0 +1,315 @@
+/*
+ * %TITLE "String Comparison Function"
+ * %SBTTL "COMP_STRING"
+ * %IDENT "V3.6 Calico"
+ *
+ *	COPYRIGHT (C) 1995 BY
+ *	Software Solutions, Inc.
+ *	Idaho Falls, Idaho.
+ *
+ * This software is furnished under a license and may be used and
+ * copied only in accordance with terms of such license and with
+ * the inclusion of the above copyright notice.  This software or
+ * any other copies thereof may not be provided or otherwise made
+ * available to any other person.  No title to and ownership of
+ * the software is hereby transferred.
+ *
+ * The information in this software is subject to change without
+ * notice and should not be construed as a commitment by
+ * Software Solutions, Inc.
+ *
+ * Software Solutions, Inc. assumes no responsibility for the use
+ * or reliability of its software on equipment which is not supported
+ * by Software Solutions, Inc..
+ *
+ *++
+ *
+ * Abstract:HELP
+ *	.b
+ *	.lm +5
+ *	This function compares a string to a pattern.
+ *	It returns 0 if there is no match, and -1
+ *	if there is.
+ *	.lm -5
+ *
+ * Index:
+ *
+ * Parameters:
+ *
+ *	TEST_STRING$
+ *		The passed string to be tested.
+ *
+ *	WILDCARD_STRING$
+ *		The passed pattern to compare against.
+ *		This value can be anything that is allowed in the
+ *		"Wildcard" as defined in other manuels.
+ *		('*'s, ",", "/", "?", ...)
+ *
+ *	Returned value
+ *		An integer value containing the result of the
+ *		comparison.
+ *		(0 if match fails and -1 it succeeds.)
+ *
+ * Compile:
+ *
+ *	$ CC/G_FLOAT FUNC_SOURCE:COMP_STRING
+ *	$ LIB FUNC_LIB:CMC_3VECTOR/REP COMP_STRING
+ *	$ DELETE COMP_STRING.OBJ;*
+ *
+ * AUTHOR:
+ *
+ *	11/11/85 - Kevin Handy
+ *
+ * MODIFICATION HISTORY:
+ *
+ *	04/27/88 - Kevin Handy
+ *		Modified to use the VAX function STR$MATCH_WILD
+ *		which gives a much nicer range of matching
+ *		(as well as being more consistant with the
+ *		rest of VMS wildcards)
+ *
+ *	05/05/88 - Kevin Handy
+ *		Modified to trim compare string, so that it will
+ *		work like it did originally.
+ *
+ *	09/09/91 - Kevin Handy
+ *		Modify documentation of function.
+ *
+ *	03/14/92 - Kevin Handy
+ *		Clean up vars (checkvar)
+ *
+ *	04/15/95 - Kevin Handy
+ *		(V3.6)
+ *		Update to V3.6 coding standards
+ *
+ *	11/17/95 - Kevin Handy
+ *		Complete re-write under C.
+ *
+ *	11/27/95 - Kevin Handy
+ *		Mask off length of descriptor strings, to lose excess
+ *		length info.
+ *
+ *	06/26/96 - Kevin Handy
+ *		Add efficiency code, set up flag to use strcmp
+ *		when possible.
+ *--
+ */
+
+/*
+ * Include files
+ */
+#include <string.h>
+#include <strdef.h>
+#include <descrip.h>
+
+/*
+ * Global functions
+ */
+extern long str$match_wild();
+
+/*
+ * Local functions
+ */
+static int DoWildThing(const char* source, char* wild);
+
+/*
+ * Main function
+ */
+int comp_string(struct dsc$descriptor_s *test_string,
+	struct dsc$descriptor_s *wildcard_string)
+{
+	char* PartWild;		/* Portion of wildcard string */
+	char* TrimSource;	/* Source string trimmed off */
+	int leader;		/* Loop variable for scanning strings */
+	int  PartPtr;		/* Pointer into PartWild */
+	int is_match = 0;	/* Matching flag */
+	int WildFlag = 0;	/* Wildcard in string flag */
+
+	/*
+	 * Create working area for strings
+	 */
+	TrimSource = (char*)malloc((test_string->dsc$w_length & 0x7fff) + 1);
+	PartWild = (char*)malloc((wildcard_string->dsc$w_length & 0x7fff) + 1);
+
+	/*
+	 * Create a trimmed off source string
+	 */
+	strncpy(TrimSource, test_string->dsc$a_pointer,
+		test_string->dsc$w_length  & 0x7fff);
+	leader = test_string->dsc$w_length & 0x7fff;
+	while ((leader > 0) && (TrimSource[leader - 1] == ' '))
+	{
+		leader--;
+	}
+	TrimSource[leader] = '\0';
+
+	/*
+	 * Assume no match
+	 */
+	PartPtr = 0;
+
+	/*
+	 * Look through partial string
+	 */
+	for (leader = 0;
+		(leader < (wildcard_string->dsc$w_length & 0x7fff)) &&
+		(is_match == 0);
+		leader++)
+	{
+		switch(wildcard_string->dsc$a_pointer[leader])
+		{
+		case ',':
+			/*
+			 * Wildcard seperator character
+			 */
+			PartWild[PartPtr] = '\0';
+			if (WildFlag == 0)
+			{
+				is_match = (strcmp(TrimSource, PartWild) == 0)
+			}
+			else
+			{
+				is_match = DoWildThing(TrimSource, PartWild);
+			}
+			PartPtr = 0;
+			WildFlag = 0;
+			break;
+
+		case '?':
+		case '%':
+		case '*':
+		case '/':		
+			/*
+			 * Add to wildcard string
+			 */
+			WildFlag = 1;
+			PartWild[PartPtr++] =
+				wildcard_string->dsc$a_pointer[leader];
+			break;
+
+		default:
+			/*
+			 * Add to wildcard string
+			 */
+			PartWild[PartPtr++] =
+				wildcard_string->dsc$a_pointer[leader];
+			break;
+
+		}
+	}
+
+	/*
+	 * Handle last section of wildcard
+	 */
+	if (is_match == 0)
+	{
+		if (WildFlag == 0)
+		{
+			is_match = (strcmp(TrimSource, PartWild) == 0)
+		}
+		else
+		{
+			is_match = DoWildThing(TrimSource, PartWild);
+		}
+	}
+
+	free(TrimSource);
+	free(PartWild);
+	return is_match;
+}
+
+/*
+ * Local function to handle a chunk of the source string.
+ * (Yes, it does mangle the wildcard string portion
+ */
+static int DoWildThing(const char* source, char* wild)
+{
+	int leader;
+	char* slash = NULL;
+	struct dsc$descriptor_s DscWild;
+	struct dsc$descriptor_s DscSrc;
+	int Status;
+
+	/*
+	 * Trim wildcard string
+	 */
+	leader = strlen(wild);
+	while ((leader > 0) && (wild[leader - 1] == ' '))
+	{
+		leader--;
+	}
+	wild[leader] = '\0';
+
+	/*
+	 * Yes match all
+	 */
+	if (strcmp(wild, "*") == 0)
+	{
+		return -1;
+	}
+
+	/*
+	 * A slash is used for from-to, but if there is a wildcard
+	 * character in it, it is ignored.
+	 */
+	slash = strstr(wild, "/");
+	if ((strstr(wild, "%") != NULL) | (strstr(wild, "*") != NULL))
+	{
+		slash = 0;
+	}
+
+	/*
+	 * Handle as either from/to, or as a comparison string
+	 */
+	if (slash != NULL)
+	{
+		/*
+		 * From/to
+		 */
+		*(slash++) = '\0';
+		if ((strcmp(source, wild) >= 0) && (strcmp(source, slash) <= 0))
+		{
+			return -1;
+		}
+	}
+	else
+	{
+		/*
+		 * Change all question marks (?) to percent signes (%)
+		 * so that old type of comparison from RSTS/E will
+		 * still work.
+		 */
+		for (leader = 0; wild[leader] != '\0'; leader++)
+		{
+			if (wild[leader] == '?')
+			{
+				wild[leader] = '%';
+			}
+		}
+
+		/*
+		 * Create a descriptor for wildcard portion
+		 */
+		DscWild.dsc$a_pointer =	wild;
+		DscWild.dsc$w_length = strlen(wild);
+		DscWild.dsc$b_class = DSC$K_CLASS_S;
+		DscWild.dsc$b_dtype = DSC$K_DTYPE_T;
+
+		/*
+		 * Create a descriptor for source portion
+		 */
+		DscSrc.dsc$a_pointer = (char*)source;
+		DscSrc.dsc$w_length = strlen(source);
+		DscSrc.dsc$b_class = DSC$K_CLASS_S;
+		DscSrc.dsc$b_dtype = DSC$K_DTYPE_T;
+
+		/*
+		 * Use VMS wildcard function
+		 */
+		if ((Status = str$match_wild(&DscSrc, &DscWild)) == STR$_MATCH)
+		{
+			return -1;
+		}
+	}
+	return 0;
+}

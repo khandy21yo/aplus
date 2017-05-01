@@ -1,0 +1,24 @@
+	!======================================================================
+	! BS_BILL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(BS_BILL.CH%, STAT%)
+	CALL READ_DEVICE('BS_BILL',BS_BILL.DEV$, STAT%)
+
+	BS_BILL.NAME$ = BS_BILL.DEV$+"BS_BILL_"+BATCH_NO$+".JRL"
+
+	OPEN BS_BILL.NAME$ FOR INPUT AS FILE BS_BILL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP BS_BILL, &
+		PRIMARY KEY &
+		( &
+			BS_BILL::CLIENT, &
+			BS_BILL::PRG &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			BS_BILL::PRG, &
+			BS_BILL::CLIENT &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

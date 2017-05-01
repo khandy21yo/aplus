@@ -1,0 +1,64 @@
+1	!
+	!++
+	! Description:
+	!
+	!	Cchange part types listed in text file from MP to PP
+	!
+	! History:
+	!
+	!	06/11/2002 - Kevin Handy
+	!		Original version
+	!
+	!--
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP (PD_PRODUCT) PD_PRODUCT_CDD PD_PRODUCT
+
+100	!
+	! Open up product master file
+	!
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.MOD"
+
+190	!
+	! Open text file for results
+	!
+	OUTFILE.CH% = 2%
+	OPEN "CHBT.TXT" FOR INPUT AS FILE OUTFILE.CH%
+
+1000	!
+	! Get next part
+	!
+	WHEN ERROR IN
+		LINPUT #OUTFILE.CH%, PN$
+	USE
+		CONTINUE 1900
+	END WHEN
+
+	PN$ = LEFT(PN$ + SPACE$(LEN(PD_PRODUCT::PRODUCT_NUM)), &
+		LEN(PD_PRODUCT::PRODUCT_NUM))
+
+1005	!
+	! Search for the next "O" category item
+	!
+	WHEN ERROR IN
+		GET #PD_PRODUCT.CH%, KEY #0% EQ PN$
+	USE
+		CONTINUE 1000
+	END WHEN
+
+1010	IF PD_PRODUCT::PROD_TYPE = "MP"
+	THEN
+		PRINT PD_PRODUCT::PRODUCT_NUM; " "; PD_PRODUCT::DESCRIPTION
+
+		PD_PRODUCT::PROD_TYPE = "PP"
+		UPDATE #PD_PRODUCT.CH%
+	END IF
+
+	GOTO 1000
+
+1900	CLOSE OUTFILE.CH%
+	CLOSE #PD_PRODUCT.CH%
+
+32767	END

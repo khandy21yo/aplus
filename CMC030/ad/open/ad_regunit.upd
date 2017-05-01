@@ -1,0 +1,23 @@
+	!======================================================================
+	! AD_REGUNIT file (open update only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(AD_REGUNIT.CH%, STAT%)
+	CALL READ_DEVICE('AD_REGUNIT',AD_REGUNIT.DEV$, STAT%)
+
+	AD_REGUNIT.NAME$ = AD_REGUNIT.DEV$+"AD_REGUNIT.HIS"
+
+	OPEN AD_REGUNIT.NAME$ FOR INPUT AS FILE AD_REGUNIT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP AD_REGUNIT, &
+		PRIMARY KEY &
+		( &
+			AD_REGUNIT::ASSET_NUM, &
+			AD_REGUNIT::DEP_OBJECT, &
+			AD_REGUNIT::PERIOD &
+		)	DUPLICATES , &
+		ALTERNATE KEY &
+			AD_REGUNIT::BATCH &
+			DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

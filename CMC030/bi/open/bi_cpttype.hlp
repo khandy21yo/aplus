@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The CPT Type and Account Number Table is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*BI__CPTTYPE.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Billing Insurance System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x CPT Type and Account Number Table
+	!--
+	!++
+	! Abstract:FILE
+	!	^*BI__CPTTYPE.TBL\*
+	!	.p
+	!	CPT Type and Account Number Table.
+	!
+	! Index:
+	!	.x CPT Type and Account Number Table
+	!	.x BI_CPTTYPE
+	!--

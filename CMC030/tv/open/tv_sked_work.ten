@@ -1,0 +1,22 @@
+	!======================================================================
+	! TV_SKED_WORK file (open temporary file)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(TV_SKED_WORK.CH%, STAT%)
+	CALL READ_DEVICE('TV_SKED_WORK',TV_SKED_WORK.DEV$, STAT%)
+
+	TV_SKED_WORK.NAME$ = TV_SKED_WORK.DEV$+"TV_SKED_WORK.TMP"
+
+	OPEN TV_SKED_WORK.NAME$ FOR OUTPUT AS FILE TV_SKED_WORK.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP TV_SKED_WORK, &
+		PRIMARY KEY &
+			TV_SKED_WORK::PRIORITY &
+			DUPLICATES , &
+		ALTERNATE KEY &
+		( &
+			TV_SKED_WORK::FRMNUM, &
+			TV_SKED_WORK::SKED_NUM &
+		)	DUPLICATES CHANGES, &
+		ACCESS MODIFY, ALLOW NONE
+

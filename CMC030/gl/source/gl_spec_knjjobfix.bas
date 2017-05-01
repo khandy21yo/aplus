@@ -1,0 +1,66 @@
+1	!
+	! Quick and dirty fix for KBJ problem with account numbers
+	! entered wrong for several jobs
+	!
+	!++
+	!
+	! History:
+	!
+	!	09/23/2003 - Kevin Handy
+	!		Original version
+	!--
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.HB"
+	MAP (GL_YYYY_PP) GL_YYYY_PP_CDD GL_YYYY_PP
+
+
+100	YYYY_PP$ = "2003_09"
+
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.MOD"
+
+	LAST_SUB$ = "0"
+	COUNTER% = 0%
+
+1000	WHEN ERROR IN
+		GET #GL_YYYY_PP.CH%, KEY #1% GE LAST_SUB$ + ""
+	USE
+		PRINT "Find Failure "; ERR; ERT$(ERR); " - "; LAST_SUB$
+		CONTINUE 9000
+	END WHEN
+
+
+1100	IF (MID(GL_YYYY_PP::SUBACC, 6%, 1%) = "P" OR &
+		MID(GL_YYYY_PP::SUBACC, 6%, 1%) = "G") AND &
+		GL_YYYY_PP::ACCT = "01-363-01-01"
+	THEN
+		PRINT GL_YYYY_PP::ACCT; " "; GL_YYYY_PP::SUBACC
+
+		DELETE #GL_YYYY_PP.CH%
+		GL_YYYY_PP::ACCT = "01-366-01-01"
+		PUT #GL_YYYY_PP.CH%
+
+		PRINT "*";
+		PRINT " "; LAST_SUB$ IF CCPOS(0%) >= 50%
+		COUNTER% = COUNTER% + 1%
+
+		GOTO 1000
+	END IF
+
+	WHEN ERROR IN
+		GET #GL_YYYY_PP.CH%
+	USE
+		PRINT "Next Failure "; ERR; ERT$(ERR); " - "; LAST_SUB$
+		CONTINUE 9000
+	END WHEN
+
+	LAST_SUB$ = GL_YYYY_PP::SUBACC
+
+	GOTO 1100
+
+
+9000	CLOSE GL_YYYY_PP.CH%
+
+	PRINT COUNTER%; " records changed"
+
+32767	END

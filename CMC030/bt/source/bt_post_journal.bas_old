@@ -1,0 +1,928 @@
+1	%TITLE "Tuition Bill Journal Posting Program"
+	%SBTTL "BT_POST_JOURNAL"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1989 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies therof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:BTPST
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Post Billing Tuition Journal\* option is provided to post
+	!	the journal to the General Ledger and the Accounts Receivable system.
+	!	.p
+	!	If the entries being posted are out of balance, the message, ^*"Batch
+	!	is OUT OF BALANCE - POSTING IS ABORTED. Hit any key to continue"\*,
+	!	will appear on the screen. Any imbalance must be corrected before the
+	!	posting can be executed.
+	!	.p
+	!	After the posting is completed, the system will return to the BT
+	!	Journal Menu.
+	!
+	! Index:
+	!	.x Post>Billing Journal
+	!	.x Billing Journal>Post
+	!	.x Journal>Post
+	!
+	! Option:
+	!
+	!
+	! Compile:
+	!
+	!	$ BAS BT_SOURCE:BT_POST_JOURNAL/LINE
+	!	$ LINK/EXE=BT_EXE: BT_POST_JOURNAL, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE BT_POST_JOURNAL.OBJ;*
+	!
+	! Author:
+	!
+	!	07/14/89 - Aaron Redd
+	!
+	! Modification History:
+	!
+	!	03/12/92 - Kevin Handy
+	!		Unrolled error trapping (check)
+	!
+	!	06/08/92 - Dan Perkins
+	!		Kill Journal files before completing posting, if
+	!		posting gets that far.
+	!
+	!	02/05/93 - Kevin Handy
+	!		Added AR_OPEN::DUEDATE and AR_OPEN::DISCOUNTDATE.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/03/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	05/23/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/19/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include constants and and some functions
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	!
+	! Map statements
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALH.HB"
+	MAP (BT_JOURNALH)	BT_JOURNALH_CDD	BT_JOURNALH
+
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALL.HB"
+	MAP (BT_JOURNALL)	BT_JOURNALL_CDD	BT_JOURNALL
+
+	!
+	! CDD inclusions
+	!
+	%INCLUDE "SOURCE:[AR.OPEN]AR_CONTROL.HB"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_35CUSTOM.HB"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN.HB"
+	%INCLUDE "SOURCE:[AR.OPEN]AR_OPEN_DIST.HB"
+	%INCLUDE "SOURCE:[BT.OPEN]BT_CONTROL.HB"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_CHART.HB"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_PERIOD.HB"
+	%INCLUDE "SOURCE:[GL.OPEN]GL_YYYY_PP.HB"
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG	FUNCTION	AR_EXAM_CUSTOM
+	EXTERNAL LONG	FUNCTION	AR_TRAN_POSTAR
+	EXTERNAL LONG	FUNCTION	ASSG_POSTBATCH
+	EXTERNAL LONG	FUNCTION	BT_TRAN_POST
+	EXTERNAL LONG	FUNCTION	GL_EXAM_CHART
+	EXTERNAL LONG	FUNCTION	GL_TRAN_POSTGL
+	EXTERNAL LONG	FUNCTION	OUTP_UNDEFCODES
+
+	!
+	! Declare internal variables
+	!
+	DECLARE	AR_CONTROL_CDD		AR_CONTROL
+	DECLARE AR_35CUSTOM_CDD		AR_35CUSTOM_EXAM
+	DECLARE AR_OPEN_CDD		AR_OPEN
+	DECLARE	AR_OPEN_DIST_CDD	AR_OPEN_DIST
+	DECLARE	BT_CONTROL_CDD		BT_CONTROL
+	DECLARE	GL_CHART_CDD		GL_CHART_EXAM
+	DECLARE	GL_PERIOD_CDD		GL_PERIOD
+	DECLARE	GL_YYYY_PP_CDD		GL_YYYY_PP
+	DECLARE	UTL_REPORTX_CDD		UTL_REPORTX
+
+	DECLARE	LONG			EXIT_STATUS
+	DECLARE	LONG			INTR_STATUS
+	DECLARE	LONG			PRNT_SUMMARY
+	DECLARE LONG			CHECK_PERIOD
+
+	DECLARE	STRING			BATCH_NUMBER
+	DECLARE	STRING			GLPERIOD
+	DECLARE	STRING			AR.INTER.PERIOD
+	DECLARE	STRING			GL.INTER.PERIOD
+	DECLARE	STRING			POSTDATE
+	DECLARE	STRING			POSTTIME
+	DECLARE	STRING			TEXT
+	DECLARE	STRING			TITLE(10%)
+
+	%PAGE
+
+	!**************************************************************
+	! Get some stuff done before we start
+	!**************************************************************
+
+	!
+	! Set up error trapping
+	!
+	ON ERROR GOTO 19000
+
+	!
+	! Title
+	!
+	TITLE(1%) = "TUITION  BILL  JOURNAL  POSTING  PROTOCOL"
+	TITLE(2%) = "Tuition Billing System"
+	TITLE(3%) = ""
+
+	!
+	! Heading
+	!
+	TITLE(4%) = "."
+
+	%PAGE
+
+	!**************************************************************
+	! Process `from user' input
+	!**************************************************************
+
+	!
+	! Set user defined fields
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	GLPERIOD = TRM$(UTL_REPORTX::OPTDEF(0%))
+	BATCH_NO$ = TRM$(UTL_REPORTX::OPTDEF(1%))
+	CHECK_DATE$ = TRM$(UTL_REPORTX::OPTDEF(2%))
+
+	CHECK_PERIOD = SUBOPT_NOOPT
+	CHECK_PERIOD = SUBOPT_CHECK IF (CHECK_DATE$ = "Y")
+
+310	!
+	! Open journal header file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALH.UPD"
+
+320	!
+	! Open journal line file
+	!
+	%INCLUDE "SOURCE:[BT.OPEN]BT_JOURNALL.UPD"
+
+	%PAGE
+
+	!******************************************************************
+	!	1) See if the posting process has been interrupted
+	!	2) If not interrupted, go on
+	!	3) If interrupted, delete the superceded ledger records
+	!		and then continue
+	!******************************************************************
+
+	!******************************************************************
+	! Check if posting process has been interrupted
+	!******************************************************************
+
+	!
+	! Open up batch control file and check if interrupted
+	!
+	INTR_STATUS = ASSG_POSTBATCH(OPT_RESTART, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "BT_JOURNALH", BATCH_NO$, &
+		GL.INTER.PERIOD, AR.INTER.PERIOD)
+
+	SELECT INTR_STATUS
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Process was interrupted
+	!
+	CASE CMC$_WARNING
+
+		IF TRM$(GL.INTER.PERIOD) <> ""
+		THEN
+			GOTO Aborted IF &
+				GL_TRAN_POSTGL(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+				"", "", GL.INTER.PERIOD) <> CMC$_NORMAL
+		END IF
+
+		IF TRM$(AR.INTER.PERIOD) <> ""
+		THEN
+			GOTO Aborted IF &
+				AR_TRAN_POSTAR(OPT_RESTART, SUBOPT_NOOPT, &
+				BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+				"", "", "", AR.INTER.PERIOD) <> CMC$_NORMAL
+		END IF
+
+	!
+	! Abort post process
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	%PAGE
+
+ AssignBatch:
+	!******************************************************************
+	!	1) Assign a batch number
+	!	2) Make sure no legitimate records in the ledger already
+	!		have this batch number; if any records do have
+	!		this newly assigned number, go back to (1) and
+	!		get a new one.
+	!******************************************************************
+	!
+	! Open up batch control file and get a batch number
+	!
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ASSIGN, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "BT_JOURNALH", &
+		BATCH_NO$, GLPERIOD, "") <> CMC$_NORMAL
+
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_CHECK, SUBOPT_NOOPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD)
+
+	SELECT EXIT_STATUS
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Something's definitely wrong here
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	EXIT_STATUS = AR_TRAN_POSTAR(OPT_CHECK, SUBOPT_NOOPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD)
+
+	SELECT EXIT_STATUS
+	!
+	! Success; keep going
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Found batch number, go for new one
+	!
+	CASE CMC$_WARNING
+		GOTO AssignBatch
+
+	!
+	! Something's definitely wrong here
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	%PAGE
+
+	!******************************************************************
+	!	1) List the debits/credits transmittal for the user while
+	!		also putting the journal data in temporary files
+	!	2) If confirmation, then go on
+	!******************************************************************
+
+	!******************************************************************
+	! Create transmittal
+	!******************************************************************
+	GOTO Aborted IF ASSG_POSTBATCH(OPT_ADDREC, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "BT_JOURNALH", &
+		BATCH_NO$, "", "") <> CMC$_NORMAL
+
+	POSTDATE = DATE_TODAY
+	POSTTIME = TIME_NOW
+
+	!
+	! Blank flags
+	!
+	CUSTNUM$, ARACCT$, TRANDAT$ = " "
+
+ ReadHeader:
+	!
+	! Read in one record from the header file
+	!
+3100	GET #BT_JOURNALH.CH%
+
+	!
+	! Set some initial variable values
+	!
+	TOTAL_RATE = 0.0
+	PRINTHEAD% = 0%
+
+	!
+	! Get the customer description
+	!
+	EXIT_STATUS = AR_EXAM_CUSTOM(BT_JOURNALH::CUSNUM, AR_35CUSTOM_EXAM)
+
+	SELECT EXIT_STATUS
+	!
+	! Success; go on
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Undefined; set flag and go on
+	!
+	CASE CMC$_UNDEFINED
+		CUSTNUM$ = "*"
+
+	!
+	! SNAFU:  Situation Normal - All Fouled Up
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! Define Header Account number
+	!
+	EXIT_STATUS = GL_EXAM_CHART(BT_JOURNALH::AR_ACCT, GL_CHART_EXAM)
+
+	SELECT EXIT_STATUS
+	!
+	! Success; go on
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Undefined; set a flag and go on
+	!
+	CASE CMC$_UNDEFINED
+		ARACCT$ = "*"
+
+	!
+	! SNAFU:  (Situation Normal - it's All Fouled Up)
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+ ProcessLines:
+	!
+	! Find the first line item for the header
+	!
+	LASTCHILD$ = ""
+
+3500	FIND #BT_JOURNALL.CH%, KEY #0% EQ BT_JOURNALH::CUSNUM
+
+	!
+	! Set an initial flag value
+	!
+	ACCTNUM$ = " "
+
+ LineItem:
+	!
+	! Get the (next) line item
+	!
+3600	GET #BT_JOURNALL.CH%
+
+	!
+	! Finish up the header if we're done with the line items
+	!
+	GOTO 3700 IF (BT_JOURNALL::CUSNUM <> BT_JOURNALH::CUSNUM)
+
+3650	!
+	! Generate a GL record to pass through to the post function
+	!
+	GL_YYYY_PP::ACCT	= BT_JOURNALL::ACCT
+	GL_YYYY_PP::SOURCE	= "BT"
+	GL_YYYY_PP::XREFNO	= BT_JOURNALH::CUSNUM
+	GL_YYYY_PP::REFNO	= BT_JOURNALH::INVNUM
+	GL_YYYY_PP::TRANDAT	= BT_JOURNALH::TRADAT
+	GL_YYYY_PP::DESCR	= BT_JOURNALL::CHILD
+	GL_YYYY_PP::AMOUNT	= -BT_JOURNALL::RATE
+	GL_YYYY_PP::POSTIM	= POSTTIME
+	GL_YYYY_PP::POSDAT	= POSTDATE
+	GL_YYYY_PP::CKNO	= ""
+	GL_YYYY_PP::TRANKEY	= ""
+	GL_YYYY_PP::SUBACC	= ""
+	GL_YYYY_PP::OPERATION	= ""
+	GL_YYYY_PP::UNITS	= 0.0
+	GL_YYYY_PP::HOURS	= 0.0
+	GL_YYYY_PP::UPDSTA	= ""
+	GL_YYYY_PP::BTHNUM	= BATCH_NUMBER
+
+	!
+	! See if GL Chart number is defined
+	!
+	EXIT_STATUS = GL_EXAM_CHART(BT_JOURNALL::ACCT, GL_CHART_EXAM)
+
+	SELECT EXIT_STATUS
+	!
+	! Success; go on
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Undefined; set a flag and go on
+	!
+	CASE CMC$_UNDEFINED
+		ACCTNUM$ = "*"
+
+	!
+	! SNAFU:  (Situation Normal - it's All Fouled Up)
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! Put the record into the temporary file
+	!
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_ADDREC, SUBOPT_NOOPT, "", TITLE(), &
+		UTL_REPORTX, GL_YYYY_PP, GL_CHART_EXAM, GLPERIOD)
+
+	!
+	! Was the account number undefined?
+	!
+	IF (ACCTNUM$ = "*")
+	THEN
+		!
+		! Print out the header if it hasn't already been
+		!
+		IF PRINTHEAD% = 0%
+		THEN
+			!
+			! Put the header line in TEXT
+			!
+			TEXT = "HEADER " + &
+				CUSTNUM$ + BT_JOURNALH::CUSNUM + " " + &
+				ARACCT$ + BT_JOURNALH::AR_ACCT + " " + &
+				TRANDAT$ + PRNT_DATE(BT_JOURNALH::TRADAT, 8%)
+
+			!
+			! Keep undefined codes
+			!
+			GOTO Aborted &
+				IF OUTP_UNDEFCODES(OPT_ADDREC, TITLE(), &
+				UTL_REPORTX, TEXT) <> CMC$_NORMAL
+			PRINTHEAD% = -1%
+
+		END IF
+
+		!
+		! Put the invalid stuff in TEXT to send to OUTP_UNDEFCODES
+		!
+		TEXT = "  LINE             " + ACCTNUM$ + BT_JOURNALL::ACCT
+
+		!
+		! Keep undefined codes
+		!
+		GOTO Aborted &
+			IF OUTP_UNDEFCODES(OPT_ADDREC, TITLE(), &
+			UTL_REPORTX, TEXT) <> CMC$_NORMAL
+
+		!
+		! Blank flag
+		!
+		ACCTNUM$ = " "
+
+	END IF
+
+	TOTAL_RATE = TOTAL_RATE + BT_JOURNALL::RATE
+
+	IF LASTCHILD$ = ""
+	THEN
+		LASTCHILD$ = BT_JOURNALL::CHILD
+		GOTO 3690
+	END IF
+
+	FOR ZX% = 1 TO 10
+		IF MID$(LASTCHILD$, ZX%, 1%) <> &
+			MID$(BT_JOURNALL::CHILD, ZX%, 1%)
+		THEN
+			LASTCHILD$ = "Billing Tuition - All Children"
+			GOTO 3600
+		END IF
+	NEXT ZX%
+
+	LASTCHILD$ = BT_JOURNALL::CHILD
+
+3690	GOTO 3600
+
+ ProcessHeader:
+	!
+	! Process the header
+	!
+
+3700	!
+	! Generate a GL record to pass through to the post function
+	!
+	GL_YYYY_PP::DESCR	= AR_35CUSTOM_EXAM::CUSNAM
+	GL_YYYY_PP::REFNO	= BT_JOURNALH::INVNUM
+	GL_YYYY_PP::XREFNO	= BT_JOURNALH::CUSNUM
+	GL_YYYY_PP::POSTIM	= POSTTIME
+	GL_YYYY_PP::POSDAT	= POSTDATE
+	GL_YYYY_PP::TRANKEY	= ""
+	GL_YYYY_PP::SUBACC	= ""
+	GL_YYYY_PP::OPERATION	= ""
+	GL_YYYY_PP::UNITS	= 0.0
+	GL_YYYY_PP::HOURS	= 0.0
+	GL_YYYY_PP::UPDSTA	= ""
+	GL_YYYY_PP::BTHNUM	= BATCH_NUMBER
+	GL_YYYY_PP::ACCT	= BT_JOURNALH::AR_ACCT
+	GL_YYYY_PP::SOURCE	= "BT"
+	GL_YYYY_PP::TRANDAT	= BT_JOURNALH::TRADAT
+	GL_YYYY_PP::AMOUNT	= TOTAL_RATE
+	GL_YYYY_PP::CKNO	= ""
+	GL_YYYY_PP::TRANKEY	= ""
+
+	!
+	! Get the definition for the Account number
+	!
+	EXIT_STATUS = GL_EXAM_CHART(BT_JOURNALH::AR_ACCT, GL_CHART_EXAM)
+
+	GOTO Aborted IF &
+		(EXIT_STATUS <> CMC$_NORMAL) AND &
+		(EXIT_STATUS <> CMC$_UNDEFINED)
+
+	!
+	! Put the record into the temporary file
+	!
+	GOTO Aborted IF GL_TRAN_POSTGL(OPT_ADDREC, CHECK_PERIOD, "", &
+		TITLE(), UTL_REPORTX, GL_YYYY_PP, &
+		GL_CHART_EXAM, GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Check the date; is it out of range?
+	!
+	SELECT EXIT_STATUS
+	!
+	! Date is correct; go on
+	!
+	CASE CMC$_NORMAL
+
+	!
+	! Date is not in the correct period
+	!
+	CASE CMC$_DATEOUT
+		TRANDAT$ = "*"
+
+	!
+	! Something else going wrong
+	!
+	CASE ELSE
+		GOTO Aborted
+
+	END SELECT
+
+	!
+	! Generate a AR record to pass through to the post function
+	!
+	AR_OPEN::CUSNUM		= BT_JOURNALH::CUSNUM
+	AR_OPEN::INVNUM		= BT_JOURNALH::INVNUM
+	AR_OPEN::TRATYP		= "01"
+	AR_OPEN::TRADAT		= BT_JOURNALH::TRADAT
+	AR_OPEN::SALAMT		= TOTAL_RATE
+	AR_OPEN::DISAMT		= 0.0
+	AR_OPEN::OTHCHG		= 0.0
+	AR_OPEN::RECNUM		= ""
+	AR_OPEN::CHKNUM		= ""
+	AR_OPEN::ARACCT		= BT_JOURNALH::AR_ACCT
+	AR_OPEN::SUBACC		= ""
+	AR_OPEN::SALNUM		= ""
+	AR_OPEN::DESCR		= LASTCHILD$
+	AR_OPEN::BATCH		= BATCH_NUMBER
+	AR_OPEN::UPDATED	= GLPERIOD + "00"
+	AR_OPEN::CLOSEDATE	= ""
+	AR_OPEN::DUEDATE	= ""
+	AR_OPEN::DISCOUNTDATE	= ""
+
+	!
+	! Call the post function
+	!
+	GOTO Aborted IF AR_TRAN_POSTAR(OPT_ADDREC, SUBOPT_REGISTER, &
+		BATCH_NUMBER, TITLE(), UTL_REPORTX, &
+		AR_OPEN, "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Was anything undefined?
+	!
+	IF INSTR(1%, CUSTNUM$+ARACCT$+TRANDAT$, "*") AND (PRINTHEAD% = 0%)
+	THEN
+		!
+		! Put the invalid stuff in TEXT to send to OUTP_UNDEFCODES
+		!
+		TEXT = "HEADER " + &
+			CUSTNUM$ + BT_JOURNALH::CUSNUM + " " + &
+			ARACCT$ + BT_JOURNALH::AR_ACCT + " " + &
+			TRANDAT$ + PRNT_DATE(BT_JOURNALH::TRADAT, 8%)
+
+
+		!
+		! Keep undefined codes
+		!
+		GOTO Aborted &
+			IF OUTP_UNDEFCODES(OPT_ADDREC, TITLE(), &
+			UTL_REPORTX, TEXT) <> CMC$_NORMAL
+
+		!
+		! Blank flags
+		!
+		CUSTNUM$, ARACCT$, TRANDAT$ = " "
+
+	END IF
+
+	GOTO 3100
+
+ Confirm:
+	!******************************************************************
+	! Confirm posting
+	!******************************************************************
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_CONFIRM, SUBOPT_NOOPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD)
+
+	EXIT_STATUS = EXIT_STATUS AND OUTP_UNDEFCODES(OPT_CONFIRM, TITLE(), &
+		UTL_REPORTX, "")
+
+	GOTO Aborted IF (EXIT_STATUS <> CMC$_NORMAL)
+
+	%PAGE
+
+	!******************************************************************
+	!	1) Since everything's correct and we have the user's
+	!		permission, transfer all data from the temporary
+	!		files into the ledger
+	!******************************************************************
+	!
+	! Begin posting
+	!
+	GOTO Interrupt IF &
+		GL_TRAN_POSTGL(OPT_POSTFILE, SUBOPT_DETAIL, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Post the BT Billing Journal to the AR Register
+	!
+	GOTO Interrupt IF &
+		AR_TRAN_POSTAR(OPT_POSTFILE, SUBOPT_REGISTER, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", "", GLPERIOD) <> CMC$_NORMAL
+
+	!
+	! Reset period in the BT Control file -
+	! If we can't reset the period, then the user can do it manually
+	!
+	ST% = BT_TRAN_POST(OPT_POSTFILE, SUBOPT_NOOPT, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, GLPERIOD)
+
+	%PAGE
+
+	!
+	! Remove files
+	!
+4200	CLOSE BT_JOURNALH.CH%
+	CLOSE BT_JOURNALL.CH%
+
+4210	KILL BT_JOURNALH.DEV$ + "BT_JOURNALH.JRL" &
+		FOR I% = 1% TO 10%
+
+4220	KILL BT_JOURNALL.DEV$ + "BT_JOURNALL.JRL" &
+		FOR I% = 1% TO 10%
+
+4230	KILL BT_JOURNALH.DEV$ + "BT_JOURNALH.TLB" &
+		FOR I% = 1% TO 10%
+
+ Complete:
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_COMPLETE, BATCH_NUMBER, TITLE(), &
+		UTL_REPORTX, "BT_JOURNALH", &
+		BATCH_NO$, "", "")
+
+	PRNT_SUMMARY = SUBOPT_FINAL
+
+ ExitProgram:
+	!******************************************************************
+	! Exit normally
+	!******************************************************************
+	!
+	! Print credit and debit transmittals
+	!
+	EXIT_STATUS = GL_TRAN_POSTGL(OPT_SUMMARY, PRNT_SUMMARY, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "", "", GLPERIOD)
+
+	!
+	! Print undefined codes (if any)
+	!
+	TEXT = "Item    CustomNum   AccountNumber       TransDate"
+
+	EXIT_STATUS = OUTP_UNDEFCODES(OPT_SUMMARY, TITLE(), UTL_REPORTX, TEXT)
+
+	!
+	! Finish up the transmittal
+	!
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ Aborted:
+	!******************************************************************
+	! Abort process
+	!******************************************************************
+	IF INTR_STATUS <> CMC$_WARNING
+	THEN
+		EXIT_STATUS = ASSG_POSTBATCH(OPT_ABORT,	BATCH_NUMBER, &
+			TITLE(), UTL_REPORTX, &
+			"BT_JOURNALH", BATCH_NO$, "", "")
+		GOTO ExitProgram
+	END IF
+
+	%PAGE
+
+ Interrupt:
+	!******************************************************************
+	! Interrupt process
+	!******************************************************************
+	EXIT_STATUS = ASSG_POSTBATCH(OPT_INTERRUPT, BATCH_NUMBER, &
+		TITLE(), UTL_REPORTX, "BT_JOURNALH", BATCH_NO$, "", "")
+
+	GOTO ExitProgram
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%PAGE
+
+19000	!******************************************************************
+	! Error trapping
+	!******************************************************************
+	!
+	! Errors by Error number
+	!
+	SELECT ERR
+	!
+	! Locked Block
+	!
+	CASE 154%
+		SLEEP 1%
+		RESUME
+	END SELECT
+
+	!
+	! Errors by line number
+	!
+	FILENAME$ = ""
+	SELECT ERL
+	!
+	! Unable to open the BT Journal Header file
+	!
+	CASE 310%
+		FILENAME$ = "BT_JOURNALH"
+
+	!
+	! Unable to open the BT Journal Line Item file
+	!
+	CASE 320%
+		FILENAME$ = "BT_JOURNALL"
+
+	!
+	! End of the BT Journal Header file
+	!
+	CASE 3100%
+		RESUME Confirm
+
+	!
+	! Unable to find BT Journal Line Items
+	!
+	CASE 3500%
+		RESUME 3700
+
+	!
+	! End of file on line items BT_JOURNALL
+	!
+	CASE 3600%
+		RESUME 3700 IF ERR = 11%
+		FILENAME$ = "JOURNALL"
+
+	!
+	! Cannot kill the header
+	!
+	CASE 4210%
+		RESUME 4220
+
+	!
+	! Cannot kill the line
+	!
+	CASE 4220%
+		RESUME 4230
+
+	!
+	! Cannot kill the .TLB file
+	!
+	CASE 4230%
+		RESUME Complete
+
+	END SELECT
+
+	!
+	! Trap untrapped errors
+	!
+	RESUME HelpError
+
+	%PAGE
+
+32000	!******************************************************************
+	! End of posting program BT_POST_JOURNAL
+	!******************************************************************
+	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) Post Period\*
+	!	.p
+	!	The ^*Post Period\* field provides the means to enter the period which will
+	!	be posted in the posting process.  Entry is required in this field, and
+	!	format for entry is YYYYPP.
+	!
+	! Index:
+	!	.x Post Period>Posting Program
+	!	.x Posting Program>Post Period
+	!	.x Period>Post
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Check Dates\*
+	!	.p
+	!	The ^*Check Dates\* field provides the means for the user to decide if all
+	!	transactions will be posted or if the transaction date will be check before
+	!	it is posted. A entry of ^*Y\* causes the date to be checked and an entry
+	!	of ^*N\* causes all transactions to be posted.
+	!
+	! Index:
+	!	.x Check Dates
+	!	.x Dates>Check
+	!
+	!--

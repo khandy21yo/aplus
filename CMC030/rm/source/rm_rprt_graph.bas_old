@@ -1,0 +1,477 @@
+1	%TITLE "Forecasting Sales Analysis Graph"
+	%SBTTL "RM_RPRT_GRAPH"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM021
+	!
+	! Abstract:HELP
+	!	.p
+	!	This program prints out a forecasting analysis graph for sale
+	!		based on half hour sales history
+	!
+	! Index:
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_GRAPH/LINE
+	!	$ LINK/EXECUTABLE=RM_EXE: RM_RPRT_GRAPH, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_GRAPH.OBJ;*
+	!
+	! Author:
+	!
+	!	02/17/89 - Frank Starman
+	!
+	! Modification History:
+	!
+	!	04/28/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	06/11/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/26/97 - Kevin Handy
+	!		Use 'val%' instead of 'val'
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE			UTL_REPORTX_CDD	UTL_REPORTX
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.HB"
+	MAP	(RM_HISTORY)	RM_HISTORY_CDD	RM_HISTORY
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	DIM REAL WEEK.TOTAL(300%)
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	LOC$ = EDIT$(UTL_REPORTX::OPTDEF(0%), -1%)
+	MTH$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	FROM.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(3%), 132%))
+	TO.DATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(4%), 132%))
+	PARAMETER% = VAL%(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+	ALFA = VAL(EDIT$(UTL_REPORTX::OPTDEF(6%), 132%))
+
+	SELECT MTH$
+	CASE "00"
+		TITUL$ = "Sales"
+	CASE "01"
+		TITUL$ = "Average last weeks ("+NUM1$(PARAMETER%)+")"
+	CASE "02"
+		TITUL$ = "Average weekdays"
+	CASE "03"
+		TITUL$ = "Exponential smoothing("+NUM1$(ALFA)+")"
+	CASE "04"
+		TITUL$ = "Double exp smoothing("+NUM1$(ALFA)+")"
+	CASE "05"
+		TITUL$ = "Adaptive exponential smoothing("+NUM1$(ALFA)+")"
+	CASE "06"
+		TITUL$ = "Compare last year ("+NUM1$(PARAMETER%*2%+1%)+")"
+	CASE "07"
+		TITUL$ = "Exponential("+NUM1$(ALFA)+") and "+ &
+			"average last weeks("+NUM1$(PARAMETER%)+")"
+	END SELECT
+
+	WDAY% = DATE_DAYOFWEEK(DATE_DAYCODE(FROM.DATE$))
+
+	WDAY$(5%) = "Friday"
+	WDAY$(6%) = "Saturday"
+	WDAY$(7%) = "Sunday"
+	WDAY$(1%) = "Monday"
+	WDAY$(2%) = "Tuesday"
+	WDAY$(3%) = "Wednesday"
+	WDAY$(4%) = "Thursday"
+
+	TITUL$ = TITUL$ + " "+WDAY$(WDAY%)
+
+300	%INCLUDE "SOURCE:[RM.OPEN]RM_HISTORY.OPN"
+
+310	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = TITUL$
+	!TITLE$(2%) = "Restaurant Management System"
+	TITLE$(2%) = ""
+
+	!
+	! Heading
+	!
+	IF MTH$="00"
+	THEN
+		TITLE$(3%) = "Loc  Date    $___________________1500_______"+ &
+			"_________2000________________2500_______"+ &
+			"_________3000________________3500"
+	ELSE
+		TITLE$(3%) = "Loc  Date    %___________________5.0________"+ &
+			"_________10.0________________15.0_______"+ &
+			"_________20.0________________25.0"
+	END IF
+
+	TITLE$(4%) = ""
+
+	LYT_LINE$ = "$Loc:005,DDate:13,$BARGRAPH:118,VDiff:125,VPerc:133"
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	RESET #UTL_LOCATION.CH%
+
+ NextLocation:
+	GET #UTL_LOCATION.CH%, REGARDLESS
+
+	GOTO NextLocation IF LOC$ <> "" AND &
+		COMP_STRING(EDIT$(UTL_LOCATION::LOCATION,-1%), LOC$) = 0%
+
+	FIND.DATE$ = DATE_INVDCODE(DATE_DAYCODE(FROM.DATE$)-7%*55%)
+	!FIND.DATE$ = FROM.DATE$
+	LOOP% = 0%
+	PERC = 0.
+
+ GetNextRec:
+17020	!
+	! Main loop starts here
+	!
+	!
+	! Get next record
+	!
+	FIND.DATE$ = DATE_INVDCODE(DATE_DAYCODE(FIND.DATE$)+7%*LOOP%)
+	GOTO ExitTotal IF FIND.DATE$ > TO.DATE$
+	LOOP% = 1%
+	FIND #RM_HISTORY.CH%, KEY#0% EQ "02"+UTL_LOCATION::LOCATION+ &
+		FIND.DATE$,REGARDLESS
+	GET #RM_HISTORY.CH%, REGARDLESS
+
+	CHECK.DATE$ = RM_HISTORY::ACTION_DATE
+
+	TOTAL = 0.
+	TOTAL = TOTAL + RM_HISTORY::AMOUNT_QTY(I%) FOR I%=0% TO 47%
+
+	SELECT MTH$
+
+	CASE "01"
+		!
+		! X week day average
+		!
+		COLUMN = 0.
+		FOR I%=WEEK% TO ABS(WEEK%+1%-PARAMETER%) STEP -1%
+			COLUMN = COLUMN + WEEK.TOTAL(I%)
+		NEXT I%
+
+		COLUMN = COLUMN/PARAMETER%
+
+	CASE "02"
+		!
+		! Week day average
+		!
+		COLUMN = DAY.TOTAL/WEEK% IF WEEK%<>0%
+
+	CASE "03"
+		!
+		! Exponential smoothing
+		!
+		COLUMN = ALFA * WEEK.TOTAL(WEEK%)+ &
+			(1.-ALFA) * EXPONENT
+		EXPONENT = COLUMN
+
+	CASE "04"
+		!
+		! Double Exponential smoothing
+		!
+		COLUMN = ALFA * WEEK.TOTAL(WEEK%)+ &
+			(1.-ALFA) * EXPONENT
+
+		EXPONENT = COLUMN
+
+		COLUMN = ALFA * COLUMN + (1.-ALFA) * DBL
+
+		DBL = COLUMN
+
+	CASE "05"
+		!
+		! Adaptive Exponential smoothing
+		!
+		IF METHOD%>20%
+		THEN
+			IF ABS(COLUMNLESS-WEEK.TOTAL(WEEK%))< &
+				ABS(COLUMNMORE-WEEK.TOTAL(WEEK%))
+			THEN
+				ALFA = ALFA - 0.05
+				ALFA = 0.05 IF ALFA = 0.
+			ELSE
+				ALFA = ALFA + 0.05
+				ALFA = 0.95 IF ALFA = 1.
+			END IF
+		END IF
+
+		COLUMN = ALFA * WEEK.TOTAL(WEEK%)+ &
+			(1.-ALFA) * EXPONENT
+
+		COLUMNLESS = (ALFA-0.05) * WEEK.TOTAL(WEEK%)+ &
+			(1.-ALFA+0.05) * EXPONENT
+		COLUMNMORE = (ALFA+0.05) * WEEK.TOTAL(WEEK%)+ &
+			(1.-ALFA-0.05) * EXPONENT
+
+		EXPONENT = COLUMN
+
+	CASE "06"
+		COMP.DATE$ = DATE_INVDCODE(DATE_DAYCODE(FIND.DATE$)- &
+			361%-7%*PARAMETER%)
+
+		WHILE DATE_DAYOFWEEK(DATE_DAYCODE(COMP.DATE$))<>WDAY%
+			COMP.DATE$ = DATE_INVDCODE(DATE_DAYCODE(COMP.DATE$)+1%)
+		NEXT
+
+		COLUMN = 0.
+		WEEKS% = 0%
+		FOR J%=0% TO 1% !PARAMETER%*2%
+			TEMP.DATE$ = DATE_INVDCODE(DATE_DAYCODE(COMP.DATE$) + &
+				7% * J%)
+17100			FIND #RM_HISTORY.CH%, KEY#0% EQ "02"+ &
+				UTL_LOCATION::LOCATION+TEMP.DATE$,REGARDLESS
+			GET #RM_HISTORY.CH%, REGARDLESS
+			COLUMN = COLUMN + RM_HISTORY::AMOUNT_QTY(I%) &
+				FOR I% = 0% TO 47%
+			WEEKS% = WEEKS%+1%
+17105		NEXT J%
+
+		COLUMN = COLUMN/WEEKS% IF WEEKS%<>0%
+
+	CASE "07"
+		COLUMN = 0.
+		FOR I%=WEEK% TO ABS(WEEK%+1%-PARAMETER%) STEP -1%
+			COLUMN = COLUMN + WEEK.TOTAL(I%)
+		NEXT I%
+
+		COLUMN = COLUMN/PARAMETER%
+
+		COLUMNEXP = ALFA * WEEK.TOTAL(WEEK%)+ (1.-ALFA) * EXPONENT
+
+		EXPONENT = COLUMNEXP
+
+		COLUMN = ALFA * COLUMNEXP + (1.-ALFA) * COLUMN
+
+	END SELECT
+
+	WEEK% = WEEK%+1%
+	WEEK.TOTAL(WEEK%) = TOTAL
+	DAY.TOTAL = DAY.TOTAL + TOTAL
+
+	GOTO 17350 IF FROM.DATE$ > CHECK.DATE$
+
+	IF MTH$="00"
+	THEN
+		PEAK% = 2500%
+		PERC = TOTAL/WEEK.TOTAL(WEEK%-1%)*100.0 &
+			IF WEEK.TOTAL(WEEK%-1%)<>0.
+		DIFF = TOTAL
+		TOTAL = TOTAL - 1000.0
+		TOTAL = 0. IF TOTAL < 0.
+		METHOD% = TOTAL*100%/PEAK%
+	ELSE
+		PEAK% = 25%
+		!METHOD%  = ABS(COLUMN-TOTAL)*100%/PEAK%
+		DIFF = COLUMN-TOTAL
+		DEVIA = DEVIA + (DIFF*0.01)^2%
+		PERC = DIFF/TOTAL*100.0
+		METHOD%  = ABS(PERC)*100%/PEAK%
+	END IF
+
+	BAR$ = SPACE$(19%)+"."+SPACE$(19%)+"."+SPACE$(19%)+"."+ &
+		SPACE$(19%)+"."+SPACE$(19%)
+	IF METHOD%>=100%
+	THEN
+		BAR$ = STRING$(LEN(BAR$),ASCII("#"))+":"
+	ELSE
+		BAR$ = STRING$(METHOD%,ASCII("#"))+RIGHT(BAR$,METHOD%+1%)+":"
+	END IF
+
+	SELECT METHOD%
+	CASE 0% TO 20%
+		ONE% = ONE% + 1%
+	CASE 21% TO 40%
+		TWO% = TWO% + 1%
+	CASE 41% TO 60%
+		THREE% = THREE% + 1%
+	CASE 61% TO 80%
+		FOUR% = FOUR% + 1%
+	CASE ELSE
+		FIVE% = FIVE% + 1%
+	END SELECT
+
+	!
+	! Print out one line
+	!
+	TEXT$ = RM_HISTORY::LOCATION + " " + &
+		PRNT_DATE (FIND.DATE$,6%) + ":" + &
+		BAR$+ &
+		FORMAT$(DIFF," #####")+" "+ &
+		FORMAT$(PERC," ####.##%")
+
+	V_INT_LIN% = 0%
+	IF LAST.LOCATION$ <> UTL_LOCATION::LOCATION
+	THEN
+		V_INT_LIN% = 999%
+		LAST.LOCATION$ = UTL_LOCATION::LOCATION
+	END IF
+
+	CALL OUTP_LINE(lyt_line$, UTL_REPORTX, TITLE$(), TEXT$, V_INT_LIN%)
+
+	TOTAL.PERC = TOTAL.PERC + ABS(PERC)
+	BIAS = BIAS + DIFF
+	!MAD  = MAD + ABS(DIFF)
+
+	PERC% = PERC% + 1%
+
+17350	!
+	! Try for next record
+	!
+	GOTO GetNextRec
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+	TEXT$ = FORMAT$(DEVIA,"   ######.## ")+ &
+		FORMAT$(ONE%,"                ####")+ &
+		FORMAT$(TWO%,"                ####")+ &
+		FORMAT$(THREE%,"                ####")+ &
+		FORMAT$(FOUR%,"                ####")+ &
+		FORMAT$(FIVE%,"                ####")+ &
+		FORMAT$(BIAS/PERC%," ######")+ &
+		FORMAT$(TOTAL.PERC/PERC%,"  ####.##%")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	WEEK%,PERC%,ONE%,TWO%,THREE%,FOUR%,FIVE% = 0%
+	DAY.TOTAL,TOTAL.PERC,BIAS,DEVIA = 0.
+ !	MAD = 0.0
+	GOTO NextLocation
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 310%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 17000%
+		RESUME ExitProgram IF ERR = 11%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		RESUME IF ERR = 155%
+		FILENAME$ = "RM_HISTORY"
+
+	CASE 17100%	!
+		RESUME 17105 IF ERR = 155%
+		FILENAME$ = "RM_HISTORY"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END

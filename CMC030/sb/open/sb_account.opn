@@ -1,0 +1,19 @@
+	!======================================================================
+	! SB_ACCOUNT file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(SB_ACCOUNT.CH%, STAT%)
+	CALL READ_DEVICE('SB_ACCOUNT',SB_ACCOUNT.DEV$, STAT%)
+
+	SB_ACCOUNT.NAME$ = SB_ACCOUNT.DEV$+"SB_ACCOUNT.TBL"
+
+	OPEN SB_ACCOUNT.NAME$ FOR INPUT AS FILE SB_ACCOUNT.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP SB_ACCOUNT, &
+		PRIMARY KEY &
+		( &
+			SB_ACCOUNT::SYSTEM, &
+			SB_ACCOUNT::ACCOUNT &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

@@ -1,0 +1,410 @@
+1	%TITLE "Create Help File Text"
+	%SBTTL "HELP_CREATION"
+	%IDENT "V3.3"
+
+	SUB HELP_CREATION(STRING WPOSITION, &
+			STRING WSIZE,	&
+			STRING HELP_FILE_TEMPLATE, &
+			STRING LIB_NAME, &
+			STRING KEY_NAME)
+
+	!
+	! COPYRIGHT (C) 1987 BY
+	! Computer Management Center
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This call is used to create a help text file
+	!	and add it to the rms help file
+	!
+	! Parameters:
+	!
+	!	WPOSITION
+	!		The passed variable holding the Window position
+	!
+	!	WSIZE
+	!		The passed Window size
+	!
+	!	HELP_FILE_TEMPLATE
+	!		Passed template file name
+	!
+	!	LIB_NAME
+	!		Passed Help Library name
+	!
+	!	KEY_NAME
+	!		Passed Key to find text in library
+	!
+	!	Returned value
+	!		Creates a help text file and add it to the help file.
+	!
+	! Example:
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:HELP_CREATION/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP HELP_CREATION
+	!	$ DELETE HELP_CREATION.OBJ;*
+	!
+	! AUTHOR:
+	!
+	!	01/01/1900 - Robert Peterson
+	!
+	! MODIFICATION HISTORY:
+	!
+	!	03/14/92 - Kevin Handy
+	!		Clean up vars (checkvar)
+	!
+	!	03/26/93 - Kevin Handy
+	!		Clean up (Check)
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TEMP$
+	!		String used to see if the help already exist
+	!	 in the help library.
+	!
+	!	YESNO$
+	!		String variable.
+	!
+	!	TEMP_FILE$
+	!		String that creates a temperary file.
+	!
+	!	QUESTION$(200%)
+	!		Array used to open data element
+	!	template files.
+	!
+	!	ANSWER$(200%)
+	!		Array used to create the text file.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	ON ERROR GOTO 19000
+
+	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+
+	EXTERNAL LONG    FUNCTION LIB$GET_LUN
+	EXTERNAL LONG    FUNCTION LIB$FREE_LUN
+	EXTERNAL LONG    CONSTANT LIB$_INSLUN
+	EXTERNAL LONG    FUNCTION EDT$EDIT
+	EXTERNAL LONG    FUNCTION LIBR_LOOKUP
+	EXTERNAL LONG    FUNCTION LIBR_3INSERT
+	EXTERNAL LONG    FUNCTION LIBR_EXTRACT
+	EXTERNAL STRING  FUNCTION READ_SYSJOB
+	EXTERNAL STRING  FUNCTION ENTR_3YESNO
+
+	!
+	! Declare vars
+	!
+	DECLARE LONG TEXT_FILE.CH
+
+	DIM QUESTION$(200%), ANSWER$(200%)
+
+	!
+	! Name temporary work file
+	!
+	TEMP_FILE$ = "TEMP" + READ_SYSJOB + ".TMP"
+
+100	!
+	! Get the channels from VMS
+	!
+
+	SMG_STATUS%	= LIB$GET_LUN( TEXT_FILE.CH )
+	GOTO ErrorGetCh IF SMG_STATUS% = LIB$_INSLUN
+	GOTO 150
+
+ ErrorGetCh:
+	CALL ENTR_3MESSAGE(SCOPE, "No free channels from VMS:  " + NUM1$(SMG_STATUS%), 0%)
+	GOTO ExitProgram
+
+150	!
+	! See if that help already exist in the help library
+	!
+	TEMP% = LIBR_LOOKUP(LIB_NAME, KEY_NAME)
+
+	IF (TEMP% AND 1%) = 1%
+	THEN
+		TEMP$ = "Help already exits.  Create new help?  Confirm then press <Do> "
+		YESNO$ = EDIT$(ENTR_3YESNO(SCOPE, SMG_OPTION, "", TEMP$, "N", 0%, "", ""), -1%)
+		GOTO 200 IF YESNO$ = "Y"
+
+		TEMP$ = "Edit this help?  Confirm then press <Do> "
+		YESNO$ = EDIT$(ENTR_3YESNO(SCOPE, SMG_OPTION, "", TEMP$, "N", 0%, "", ""), -1%)
+		IF YESNO$ = "Y"
+		THEN
+			TEMP% = LIBR_EXTRACT(LIB_NAME, TEMP_FILE$, KEY_NAME)
+			IF (TEMP% AND 1%) = 0%
+			THEN
+				CALL ENTR_3MESSAGE(SCOPE, "Error occured when " + &
+					"extracting the help.", 0%)
+				GOTO ExitProgram
+			END IF
+			GOTO EditWindow
+		ELSE
+			GOTO ExitProgram
+		END IF
+	END IF
+
+200	!
+	! Open help template file
+	!
+
+	CALL ENTR_3MESSAGE(SCOPE, "Reading " + HELP_FILE_TEMPLATE, 1%)
+
+	OPEN HELP_FILE_TEMPLATE FOR INPUT AS FILE TEXT_FILE.CH, &
+		RECORDSIZE 132%
+
+210	!
+	! Read data type file
+	!
+	LINPUT #TEXT_FILE.CH, INP$
+
+	TEXT$ = TEXT$ + INP$ + CHR$(13%)
+
+	GOTO 210
+
+220	!
+	! Open data element template file
+	!
+	CLOSE TEXT_FILE.CH
+
+	TEMP% = INSTR(1%, TEXT$, "{")
+
+	WHILE TEMP%
+		TEMP1% = INSTR(TEMP% + 1%, TEXT$, "}")
+		WORK$ = MID(TEXT$, TEMP%, TEMP1% - (TEMP% - 1%))
+		LOOP% = 1%
+		LOOP_STOP% = 0%
+		WHILE QUESTION$(LOOP%) <> "" AND LOOP_STOP% = 0%
+			IF QUESTION$(LOOP%) = WORK$
+			THEN
+				LOOP_STOP% = -1%
+			ELSE
+				LOOP% = LOOP% + 1%
+			END IF
+		NEXT
+		QUESTION$(LOOP%) = WORK$ IF LOOP_STOP% = 0%
+		TEMP% = INSTR(TEMP1%, TEXT$, "{")
+	NEXT
+
+	QUESTION_LOOP% = 1%
+	WHILE QUESTION$(QUESTION_LOOP%) <> ''
+
+		CALL NOTE_PAD(WPOSITION, WSIZE, ANSWER$(QUESTION_LOOP%), &
+			'2'L,QUESTION$(QUESTION_LOOP%), '0'L)
+
+		QUESTION_LOOP% = QUESTION_LOOP% + 1%
+	NEXT
+
+	TEMP% = INSTR(1%, TEXT$, "{")
+
+	WHILE TEMP%
+		TEMP1% = INSTR(TEMP% + 1%, TEXT$, "}")
+		WORK$ = MID(TEXT$, TEMP%, TEMP1% - (TEMP% - 1%))
+		LOOP% = 1%
+		LOOP_STOP% = 0%
+		WHILE QUESTION$(LOOP%) <> "" AND LOOP_STOP% = 0%
+			IF QUESTION$(LOOP%) = WORK$
+			THEN
+				WORK$ = ANSWER$(LOOP%)
+				LOOP_STOP% = -1%
+			ELSE
+				LOOP% = LOOP% + 1%
+			END IF
+		NEXT
+		TEXT$ = LEFT(TEXT$, TEMP% - 1%) + WORK$ + &
+			RIGHT(TEXT$, TEMP1% + 1%)
+		TEMP% = INSTR(TEMP% + LEN(WORK$), TEXT$, "{")
+	NEXT
+
+	GOSUB PutHelpFile
+
+ EditWindow:
+	!=====================================================================
+	! Edit a window
+	!=====================================================================
+
+	CALL ENTR_3MESSAGE(SCOPE, "Entering the editor 'EDT' . . .", 1%)
+
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(SMG_PBID,'0'L)
+
+	SMG_STATUS% = EDT$EDIT(TEMP_FILE$,,,,,,,)
+
+	SMG_STATUS% = SMG$SET_CURSOR_MODE(SMG_PBID,'1'L)
+
+	SMG_STATUS% = SMG$REPAINT_SCREEN( SMG_PBID)
+
+	IF (SMG_STATUS% AND 1%) = 0%
+	THEN
+		CALL ENTR_3MESSAGE(SCOPE, 'ERROR in edit!!!! '+NUM1$(SMG_STATUS%),0%)
+		GOTO ExitProgram
+	END IF
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY( SMG_MESSAGE )
+
+ InstallLibHelp:
+	!******************************************************************
+	! Add to help library
+	!******************************************************************
+
+	TEMP$ = "Add help to library?  Confirm then press <Do> "
+
+	YESNO$ = EDIT$(ENTR_3YESNO(SCOPE, SMG_OPTION, "", TEMP$, "N", 0%, "", ""), -1%)
+
+	SELECT SCOPE.EXIT%
+
+		CASE SMG$K_TRM_F10, SMG$K_TRM_CTRLZ
+			GOTO ExitProgram
+
+		!
+		! Good keys
+		CASE 0%, 10%, 12%, 13%, 87%, 73%, 65%, &
+			69%, 70%, 87%, SMG$K_TRM_DO
+
+		!
+		! Bad Keys
+		!
+		CASE ELSE
+			CALL ENTR_3BADKEY(SCOPE,SCOPE::SCOPE_EXIT)
+			GOTO InstallLibHelp
+
+	END SELECT
+
+	IF YESNO$ = 'Y'
+	THEN
+		TEMP% = LIBR_3INSERT(LIB_NAME, TEMP_FILE$, KEY_NAME)
+		IF (TEMP% AND 1%) = 0%
+		THEN
+			CALL ENTR_3MESSAGE(SCOPE, "Error occured when " + &
+				"creating the help.", 0%)
+			GOTO ExitProgram
+		END IF
+	END IF
+
+	%PAGE
+
+
+ ExitProgram:
+	!******************************************************************
+	! Delete temp file to prepare for exit
+	!******************************************************************
+
+1000	KILL TEMP_FILE$ WHILE (-1)
+
+
+1010	CALL ENTR_3MESSAGE(SCOPE, "",1%)
+
+	SMG_STATUS% = SMG$ERASE_DISPLAY( SMG_MESSAGE )
+	SMG_STATUS% = SMG$ERASE_DISPLAY( SMG_OPTION )
+
+	SMG_STATUS% = LIB$FREE_LUN( TEXT_FILE.CH )
+
+	EXIT SUB
+
+ PutHelpFile:
+	!=====================================================================
+	! Put text into help file
+	!=====================================================================
+	OPEN TEMP_FILE$  FOR OUTPUT AS FILE TEXT_FILE.CH, RECORDSIZE 132%
+
+	STORE_LINE$ = ""
+	TEMP% = INSTR(1%, TEXT$, CHR$(13%))
+
+	WHILE TEMP%
+		WORK$ = LEFT(TEXT$, TEMP% - 1%)
+		IF LEFT(WORK$,1%) = "."
+		THEN
+			PRINT #TEXT_FILE.CH, STORE_LINE$ IF STORE_LINE$ <> ""
+			STORE_LINE$ = ""
+			PRINT #TEXT_FILE.CH, WORK$
+		ELSE
+			STORE_LINE$ = EDIT$(STORE_LINE$,128%) + " " + WORK$
+			WHILE LEN(STORE_LINE$) > 70%
+				FIND% = 70%
+				UNTIL FIND% < 1% OR MID(STORE_LINE$, FIND%, 1%) <> " "
+					FIND% = FIND% - 1%
+				NEXT
+
+				UNTIL FIND% < 1% OR MID(STORE_LINE$, FIND%, 1%) = " "
+					FIND% = FIND% - 1%
+				NEXT
+
+				FIND% = 1% IF FIND% < 1%
+				WORK$ = LEFT(STORE_LINE$, FIND%)
+				STORE_LINE$ = RIGHT(STORE_LINE$, FIND% + 1%)
+				PRINT #TEXT_FILE.CH, WORK$
+			NEXT
+		END IF
+
+		TEXT$ = RIGHT(TEXT$, TEMP% + 1%)
+		TEMP% = INSTR(1%, TEXT$, CHR$(13%))
+	NEXT
+
+	IF LEN(TEXT$) <> 0%
+	THEN
+		PRINT #TEXT_FILE.CH, LEFT(TEXT$, TEMP% - 1%)
+	END IF
+
+	CLOSE TEXT_FILE.CH
+
+	RETURN
+
+	%PAGE
+
+19000	!======================================================================
+	! Error Trapping
+	!======================================================================
+
+	SELECT ERL
+
+		!
+		! Can't open data type file
+		!
+		CASE 200%
+			RESUME 220
+
+		!
+		! End of help template file
+		!
+		CASE 210%
+			RESUME 220
+
+		!
+		! No more temp files to delete
+		!
+		CASE 1000%
+			RESUME 1010
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+32767	END SUB

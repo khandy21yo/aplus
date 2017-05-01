@@ -1,0 +1,21 @@
+	!======================================================================
+	! PS_CASHREG file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PS_CASHREG.CH%, STAT%)
+	CALL READ_DEVICE('PS_CASHREG',PS_CASHREG.DEV$, STAT%)
+
+	PS_CASHREG.NAME$ = PS_CASHREG.DEV$+"PS_CASHREG.TBL"
+
+	OPEN PS_CASHREG.NAME$ FOR INPUT AS FILE PS_CASHREG.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PS_CASHREG, &
+		PRIMARY KEY &
+			PS_CASHREG::CASHREG, &
+		ALTERNATE KEY &
+		( &
+			PS_CASHREG::LOCATION, &
+			PS_CASHREG::CASHREG &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

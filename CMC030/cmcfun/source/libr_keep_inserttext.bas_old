@@ -1,0 +1,198 @@
+1	%TITLE "Insert a Text String into a Library"
+	%SBTTL "LIBR_KEEP_INSERTTEXT"
+	%IDENT "V3.6 Calico"
+
+	FUNCTION LONG LIBR_KEEP_INSERTTEXT(LIB_NUMBER%, TEXT$, KEY_NAME$)
+
+	!
+	!	COPYRIGHT (C) 1988 BY
+	!	Computer Management Center, Inc.
+	!	Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:HELP
+	!	.p
+	!	This function will insert text into a library,
+	!	and append a key to that text.
+	!
+	! Parameters:
+	!
+	!	LIB_NUMBER%
+	!		Passed number of library to insert text into.
+	!
+	!	TEXT$
+	!		Passed text to insert into the library.
+	!
+	!	KEY_NAME$
+	!		Passed name of key to append to text.
+	!
+	!	Returns a status code.
+	!
+	! Example:
+	!
+	!	ST% = LIBR_INSERT(LIB_FUN.CH%, "Happyville Party Club", "EVENT")
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS FUNC_SOURCE:LIBR_KEEP_INSERTTEXT/LINE
+	!	$ LIB FUNC_LIB:CMCFUN/REP LIBR_KEEP_INSERTTEXT
+	!	$ DELETE LIBR_KEEP_INSERTTEXT.OBJ;*
+	!
+	! Author:
+	!
+	!	12/28/88 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!--
+	%PAGE
+
+	!++
+	!
+	! Variables:
+	!
+	!	TEST.RFA
+	!		Variable used to test the data.
+	!
+	!	NULL.RFA
+	!		Variable used to enter the text information.
+	!
+	!--
+	%PAGE
+
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+ !	%INCLUDE "FUNC_INCLUDE:SCOPE.COM"
+	%INCLUDE "FUNC_INCLUDE:LIBRARY.COM"
+
+	!
+	! External functions
+	!
+	EXTERNAL LONG LIBR_INSERT_A
+
+	DECLARE RFA TEST.RFA, NULL.RFA
+
+	MAP (LBR_JUNKJUNK) C_ARRAY%(19%)
+	MAP (LBR_JUNKJUNK) C_ARRAY$ = 88%
+
+	MAP (LBR_JUNKJUNK) K.NAME%, K.NAME$(64%) = 39%
+
+	%PAGE
+
+	LIBR_KEEP_INSERTTEXT = 1%
+
+300	!
+	! Delete key if it already exists
+	!
+	ST% = LBR$LOOKUP_KEY(LIB_NUMBER%, KEY_NAME$, TEST.RFA)
+
+	K.NAME% = 0%
+
+	IF (ST% AND 1%)
+	THEN
+		!
+		! Delete the primary key
+		!
+		ST% = LBR$DELETE_KEY(LIB_NUMBER%, KEY_NAME$) &
+
+		!
+		! Delete all records associated with this key
+		!
+		ST% = LBR$SEARCH(LIB_NUMBER%, 1%, TEST.RFA, LIBR_INSERT_A)
+
+		ST% = LBR$DELETE_KEY(LIB_NUMBER%, K.NAME$(I%)) &
+			FOR I% = 1% TO K.NAME%
+
+		!
+		! Delete the data
+		!
+		ST% = LBR$DELETE_DATA(LIB_NUMBER%, TEST.RFA)
+	END IF
+
+	!
+	! Load in text information
+	!
+	TEST.RFA = NULL.RFA
+
+	LINE.FLAG% = 0%
+
+	JUNK$ = TRM$(TEXT$)
+
+310	WHILE JUNK$ <> ""
+		I% = INSTR(1%, JUNK$, '13'C)
+		I% = LEN(JUNK$) + 1% IF I% = 0%
+
+		LINE.FLAG% = -1%
+		JUNK1$ = LEFT(JUNK$, I% - 1%)
+		JUNK$ = RIGHT(JUNK$, I% + 1%)
+ Loop1:
+		!
+		! Break up the line if it is more than 80 characters wide.
+		!
+		IF LEN(JUNK1$) < 80%
+		THEN
+			ST% = LBR$PUT_RECORD(LIB_NUMBER%, JUNK1$ + "-", TEST.RFA)
+		ELSE
+			ST% = LBR$PUT_RECORD(LIB_NUMBER%, &
+				LEFT(JUNK1$, 80%) + "+", TEST.RFA)
+			JUNK1$ = RIGHT(JUNK1$, 81%)
+			GOTO Loop1
+		END IF
+	NEXT
+
+350	IF LINE.FLAG% = 0%
+	THEN
+		LIBR_KEEP_INSERTTEXT = 2%
+		GOTO 900
+	END IF
+
+	!
+	! Mark end of text
+	!
+	ST% = LBR$PUT_END(LIB_NUMBER%)
+
+	!
+	! Insert main key pointing to text
+	!
+	LIBR_KEEP_INSERTTEXT = LBR$INSERT_KEY(LIB_NUMBER%, KEY_NAME$, TEST.RFA)
+
+	!
+	! Insert additional keys pointing to text
+	!
+	ST% = LBR$INSERT_KEY(LIB_NUMBER%, K.NAME$(I%), TEST.RFA) &
+		FOR I% = 1% TO K.NAME%
+
+	ST% = LBR$FLUSH(LIB_NUMBER%, LBR$C_FLUSHALL)
+
+900	!
+	! Close all files
+	!
+
+	END FUNCTION

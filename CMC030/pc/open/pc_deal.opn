@@ -1,0 +1,24 @@
+	!======================================================================
+	! PC_DEAL file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PC_DEAL.CH%, STAT%)
+	CALL READ_DEVICE('PC_DEAL',PC_DEAL.DEV$, STAT%)
+
+	PC_DEAL.NAME$ = PC_DEAL.DEV$+"PC_DEAL.MAS"
+
+	OPEN PC_DEAL.NAME$ FOR INPUT AS FILE PC_DEAL.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PC_DEAL, &
+		PRIMARY KEY &
+		( &
+			PC_DEAL::DEAL, &
+			PC_DEAL::CUSTOMER &
+		)	, &
+		ALTERNATE KEY &
+		( &
+			PC_DEAL::CUSTOMER, &
+			PC_DEAL::DEAL &
+		)	CHANGES, &
+		ACCESS READ, ALLOW MODIFY
+

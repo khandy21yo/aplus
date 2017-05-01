@@ -1,0 +1,833 @@
+1	%TITLE "Mix Report"
+	%SBTTL "RM_RPRT_SALESMIX"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM017
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Mix Report\* option prints a report which contains the standard cost of
+	!	the sales mix. The report contains the following fields:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Product Number
+	!	.le
+	!	Description
+	!	.le
+	!	Type
+	!	.le
+	!	Category
+	!	.le
+	!	Standard Cost
+	!	.le
+	!	Intended Percentage
+	!	.le
+	!	Intended Menu Price
+	!	.le
+	!	Menu Price
+	!	.le
+	!	Menu Percentage
+	!	.le
+	!	Total Percentage
+	!	.le
+	!	Mix Percentage
+	!	.els
+	!
+	! Index:
+	!	.x Mix Report
+	!	.x Report>Mix
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_SALESMIX/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_SALESMIX,-
+	!		FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_SALESMIX.OBJ;*
+	!
+	! Author:
+	!
+	!	03/06/88 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	06/07/89 - J. Shad Rydalch
+	!		Added sort.by selecting case 'S' Secondary Code
+	!
+	!	04/28/93 - Kevin Handy
+	!		Clean up (Check)
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE				UTL_REPORTX_CDD		UTL_REPORTX
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.HB"
+	MAP	(PD_PRODUCT)		PD_PRODUCT_CDD		PD_PRODUCT
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.HB"
+	MAP	(RM_TRANSACTION)	RM_TRANSACTION_CDD	RM_TRANSACTION
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_CATEGORY.HB"
+	MAP	(PD_CATEGORY)		PD_CATEGORY_CDD		PD_CATEGORY
+
+	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODTYPE.HB"
+	MAP	(PD_PRODTYPE)		PD_PRODTYPE_CDD		PD_PRODTYPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)		UTL_LOCATION_CDD	UTL_LOCATION
+
+	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.HB"
+	MAP	(RM_CONTROL)		RM_CONTROL_CDD		RM_CONTROL
+
+	!
+	! External functions
+	!
+	EXTERNAL REAL    FUNCTION PC_READ_PRICE
+	EXTERNAL REAL    FUNCTION PC_READ_COST
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	SORT.BY$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Location \*
+	!	.p
+	!	A ^*From Location\* value entered in this field causes the printing of the
+	!	report to begin with the selected location.
+	!	.p
+	!	A blank field causes the report to start with the first location record in
+	!	the file.
+	!
+	! Index:
+	!	.x From Location
+	!	.x Location>From
+	!
+	!--
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Location\*
+	!	.p
+	!	A ^*To Location\* value entered in this field causes the printing of the
+	!	report to end with the selected location.
+	!	.p
+	!	A blank field causes the report to end with the last location in the file.
+	!
+	! Index:
+	!	.x To Location
+	!	.x Location>To
+	!
+	!--
+
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(2%), 132%)
+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard \*
+	!	.p
+	!	The ^*Wildcard\* setting enables the user to print a report including selected
+	!	Locations only using the wildcarding techniques.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(3%), -1%)
+
+	!++
+	! Abstract:FLD04
+	!	^*(04) Product Type\*
+	!	.p
+	!	The ^*Product Type\* field contains the product type which will be printed
+	!	on the report.
+	!
+	! Index:
+	!	.x Product Type
+	!	.x Type>Product
+	!
+	!--
+
+	LOCATIONS$ = EDIT$(UTL_REPORTX::OPTDEF(4%), -1%)
+
+	!++
+	! Abstract:FLD05
+	!	^*(05) Product Category\*
+	!	.p
+	!	The ^*Product Category\* field provides the means to enter the category which
+	!	will be printed on the report.
+	!
+	! Index:
+	!	.x Product Category
+	!	.x Category>Product
+	!
+	!--
+
+	FROMDATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+
+	!++
+	! Abstract:FLD06
+	!	^*(06) From Date\*
+	!	.p
+	!	The ^*From Date\* entered in this field causes the report to begin with the
+	!	selected date.  A blank field causes the report to begin with the first date
+	!	in the file.
+	!	.p
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x From Date
+	!	.x Date>From
+	!
+	!--
+
+	TODATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(6%), 132%))
+
+	!++
+	! Abstract:FLD07
+	!	^*(07) To Date\*
+	!	.p
+	!	The ^*To Date\* entered in this field causes the report to end with the selected
+	!	date.  A blank field causes the report to print to the end of the file.
+	!	.p
+	!	The format for entry is MMDDYYYY or MMDDYY.
+	!
+	! Index:
+	!	.x To Date
+	!	.x Date>To
+	!
+	!--
+
+	ZERO.BAL$ = EDIT$(UTL_REPORTX::OPTDEF(7%), -1%)
+
+	!++
+	! Abstract:FLD08
+	!
+	!	^* Print Zero (Y,N) \*
+	!
+	! Index:
+	! Datatype:TEXT
+	! Size:0
+	! Required:
+	!--
+
+
+	TITLE1$ = "From "+PRNT_DATE(FROMDATE$,8%)+" to "+PRNT_DATE(TODATE$,8%)
+
+300	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODUCT.OPN"
+
+310	%INCLUDE "SOURCE:[RM.OPEN]RM_TRANSACTION.OPN"
+
+320	%INCLUDE "SOURCE:[PD.OPEN]PD_CATEGORY.OPN"
+
+330	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+340	%INCLUDE "SOURCE:[RM.OPEN]RM_CONTROL.OPN"
+	GET #RM_CONTROL.CH%, RECORD 1%
+	CLOSE RM_CONTROL.CH%
+
+350	%INCLUDE "SOURCE:[PD.OPEN]PD_PRODTYPE.OPN"
+
+ ReportTitle:
+
+	SELECT SORT.BY$
+	CASE "P"
+		ADD.TITLE$ = "PRODUCT  NUMBER"
+		SORT.KEY%  = 0%
+
+	CASE "T"
+		ADD.TITLE$ = "PRODUCT  TYPE"
+		SORT.KEY%  = 1%
+
+	CASE "C"
+		ADD.TITLE$ = "CATEGORY"
+		SORT.KEY%  = 2%
+
+	CASE "S"
+		ADD.TITLE$ = "SECONDARY  CODE"
+		SORT.KEY%  = 4%
+
+	END SELECT
+
+	!
+	! Title
+	!
+	TITLE$(1%) = "STD  COST  OF  SALES  MIX  REPORT  SORTED  BY  " + &
+		ADD.TITLE$
+	TITLE$(2%) = "Restaurant Management System"
+	TITLE$(3%) = ""
+
+	!
+	! Heading
+	!
+	SELECT SORT.BY$
+	CASE "P","C","T"
+		TITLE$(5%) = &
+			"Product#       Description                        "+ &
+			"      Tp Cate     STDCost    Int% IntMenuPrc "+ &
+			" MenuPrice   Menu%  Total%    Mix%"
+
+	CASE "S"
+		TITLE$(5%) = &
+			"SecondaryCode  Description                        "+ &
+			"      Tp Cate     STDCost    Int% IntMenuPrc "+ &
+			" MenuPrice   Menu%  Total%    Mix%"
+
+	END SELECT
+
+	TITLE$(6%) = "."
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	RESET #UTL_LOCATION.CH%
+
+ GetNextSto:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #UTL_LOCATION.CH%, REGARDLESS
+
+	GOTO GetNextSto IF LOCATIONS$ <>"" AND &
+		COMP_STRING(EDIT$(UTL_LOCATION::LOCATION,-1%), LOCATIONS$) = 0%
+
+	IF TOTAL_FLAG%
+	THEN
+		GOSUB 18010 IF SORT.BY$ = "C"
+		GOSUB 18000
+	END IF
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 999%) &
+		IF LAST_LOCATION$ <> ""
+
+	TITLE$(4%) = LEFT("==== "+UTL_LOCATION::LOCATION+" "+ &
+		EDIT$(UTL_LOCATION::LOCNAME,128%)+" "+ &
+		STRING$(102%,61%),102%)+" "+TITLE1$
+
+17030	EMP_TOTAL, PROM_TOTAL, SALES_TOTAL, WASTE_TOTAL = 0.
+	MENPERC_CAT,INDPERC_CAT,SALPERC_CAT,MIXPERC_CAT = 0.
+	MENPERC_LOC,INDPERC_LOC,SALPERC_LOC,MIXPERC_LOC = 0.
+	CLINE%,LOCLINE% = 0%
+	TEST_PRINTING$ = ""
+	CALL ENTR_3MESSAGE(SCOPE, "Searching for Sales at Location "+ &
+		UTL_LOCATION::LOCATION, 1%)
+	FIND #RM_TRANSACTION.CH%, KEY#2% GE UTL_LOCATION::LOCATION, REGARDLESS
+
+ NextTrans:
+	GET #RM_TRANSACTION.CH%, REGARDLESS
+
+	GOTO HaveTotal IF RM_TRANSACTION::LOCATION <> UTL_LOCATION::LOCATION
+	GOTO NextTrans IF RM_TRANSACTION::TRANSDATE < FROMDATE$
+	GOTO NextTrans IF RM_TRANSACTION::TRANSDATE > TODATE$
+
+	IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTEMP
+	THEN
+		EMP_TOTAL = EMP_TOTAL + &
+			FUNC_ROUND(RM_TRANSACTION::QUANTITY * &
+			RM_TRANSACTION::PRICE, 2%)
+	END IF
+
+	IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTPROM
+	THEN
+		PROM_TOTAL = PROM_TOTAL + &
+			FUNC_ROUND(RM_TRANSACTION::QUANTITY * &
+			RM_TRANSACTION::COST, 2%)
+	END IF
+
+	IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTSALES
+	THEN
+		SALES_TOTAL = SALES_TOTAL + &
+			FUNC_ROUND(RM_TRANSACTION::QUANTITY * &
+			RM_TRANSACTION::PRICE, 2%)
+	END IF
+
+	IF RM_TRANSACTION::TRANSTYPE = RM_CONTROL::TTWASTE
+	THEN
+		WASTE_TOTAL = WASTE_TOTAL + &
+			FUNC_ROUND(RM_TRANSACTION::QUANTITY * &
+			RM_TRANSACTION::COST, 2%)
+	END IF
+
+	GOTO NextTrans
+
+ HaveTotal:
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #PD_PRODUCT.CH%, KEY#SORT.KEY%
+	ELSE
+		FIND #PD_PRODUCT.CH%, KEY#SORT.KEY% GE FROM.ITEM$,REGARDLESS
+	END IF
+
+	TOTAL_FLAG% = -1%
+	LAST_LOCATION$ = UTL_LOCATION::LOCATION
+
+ GetNextRec:
+17125	!
+	! Subloop starts here
+	!
+	! Get next record
+	!
+	GET #PD_PRODUCT.CH%, REGARDLESS
+
+	!
+	! Check current record
+	!
+	GOTO GetNextRec IF PD_PRODUCT::SSTATUS <> "A"
+
+	SELECT SORT.BY$
+	CASE "C"
+
+		GOTO ExitTotal IF (PD_PRODUCT::CATEGORY > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::CATEGORY,-1%), WLDCRD$) = 0%
+
+	CASE "T"
+
+		GOTO ExitTotal IF (PD_PRODUCT::PROD_TYPE > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::PROD_TYPE,-1%), WLDCRD$) = 0%
+
+	CASE "P"
+
+		GOTO ExitTotal IF (PD_PRODUCT::PRODUCT_NUM > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::PRODUCT_NUM,-1%), WLDCRD$) = 0%
+
+	CASE "S"
+
+		GOTO ExitTotal IF (PD_PRODUCT::SECONDARY_CODE > TO.ITEM$) &
+			AND TO.ITEM$ <> ""
+
+		GOTO GetNextRec IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(PD_PRODUCT::SECONDARY_CODE,-1%), WLDCRD$) = 0%
+
+	END SELECT
+
+17200	!
+	! Read RM Transaction file
+	!
+	PRODUCT_TOTAL = 0.
+	FIND #RM_TRANSACTION.CH%, KEY#2% GE UTL_LOCATION::LOCATION + &
+		PD_PRODUCT::PRODUCT_NUM + RM_CONTROL::TTSALES + FROMDATE$, &
+		REGARDLESS
+ NextTransRec:
+	GET #RM_TRANSACTION.CH%, REGARDLESS
+
+	GOTO 17300 IF RM_TRANSACTION::LOCATION + RM_TRANSACTION::PRODUCT + &
+		RM_TRANSACTION::TRANSTYPE + RM_TRANSACTION::TRANSDATE > &
+		UTL_LOCATION::LOCATION + PD_PRODUCT::PRODUCT_NUM + &
+			RM_CONTROL::TTSALES + TODATE$
+
+	PRODUCT_TOTAL = PRODUCT_TOTAL + &
+		FUNC_ROUND(RM_TRANSACTION::QUANTITY * RM_TRANSACTION::PRICE,2%)
+
+	GOTO NextTransRec
+
+17300	!
+	! Print out one line
+	!
+	SALPERC = 0.
+	SALPERC = PRODUCT_TOTAL/SALES_TOTAL * 100. IF SALES_TOTAL <> 0.
+
+	GOTO GetNextRec IF SALPERC = 0. AND ZERO.BAL$="N"
+
+	STDCOST = PC_READ_COST(PD_PRODUCT::PRODUCT_NUM, &
+		UTL_LOCATION::LOCATION,TODATE$,"")
+
+	MENU = PC_READ_PRICE(PD_PRODUCT::PRODUCT_NUM,UTL_LOCATION::LOCATION, &
+		RM_CONTROL::PRCMENU,TODATE$,"000000","","")
+
+	MENPERC = 0.
+	MENPERC = STDCOST/MENU * 100. IF MENU <> 0.
+
+	INDMENU = PC_READ_PRICE(PD_PRODUCT::PRODUCT_NUM, &
+		UTL_LOCATION::LOCATION, &
+		RM_CONTROL::INDMENU,TODATE$,"000000","","")
+
+	INDPERC = 0.
+	INDPERC = STDCOST/INDMENU * 100. IF INDMENU <> 0.
+
+	MIXPERC = SALPERC * MENPERC/100.
+
+	SELECT SORT.BY$
+
+	CASE "P","S"
+		MENPERC_LOC = MENPERC_LOC + MENPERC
+		INDPERC_LOC = INDPERC_LOC + INDPERC
+		SALPERC_LOC = SALPERC_LOC + SALPERC
+		MIXPERC_LOC = MIXPERC_LOC + MIXPERC
+		LOCLINE% = LOCLINE% + 1%
+
+	CASE "C"
+17330		IF TEST_PRINTING$ <> PD_PRODUCT::CATEGORY AND &
+			TEST_PRINTING$ <> ""
+		THEN
+			GOSUB 18010
+		END IF
+
+		MENPERC_CAT = MENPERC_CAT + MENPERC
+		INDPERC_CAT = INDPERC_CAT + INDPERC
+		SALPERC_CAT = SALPERC_CAT + SALPERC
+		MIXPERC_CAT = MIXPERC_CAT + MIXPERC
+
+		GOTO EndCategory IF TEST_PRINTING$ = PD_PRODUCT::CATEGORY
+
+		PD_CATEGORY::DESCRIPTION = &
+			STRING$(LEN(PD_CATEGORY::DESCRIPTION),ASCII("?"))
+		GET #PD_CATEGORY.CH%, KEY#0% EQ PD_PRODUCT::CATEGORY, REGARDLESS
+
+17340		TEXT$ = "==== "+PD_CATEGORY::DESCRIPTION
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		TEST_PRINTING$ = PD_PRODUCT::CATEGORY
+         EndCategory:
+
+	CASE "T"
+17430		IF TEST_PRINTING$ <> PD_PRODUCT::PROD_TYPE AND &
+			TEST_PRINTING$ <> ""
+		THEN
+			GOSUB 18010
+		END IF
+
+		MENPERC_CAT = MENPERC_CAT + MENPERC
+		INDPERC_CAT = INDPERC_CAT + INDPERC
+		SALPERC_CAT = SALPERC_CAT + SALPERC
+		MIXPERC_CAT = MIXPERC_CAT + MIXPERC
+
+		GOTO EndType IF TEST_PRINTING$ = PD_PRODUCT::PROD_TYPE
+
+		PD_PRODTYPE::DESCRIPTION = &
+			STRING$(LEN(PD_PRODTYPE::DESCRIPTION),ASCII("?"))
+		GET #PD_PRODTYPE.CH%, &
+			KEY#0% EQ PD_PRODUCT::PROD_TYPE, &
+			REGARDLESS
+
+17440		TEXT$   =   "==== "+PD_PRODTYPE::DESCRIPTION
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+		TEST_PRINTING$ = PD_PRODUCT::PROD_TYPE
+         EndType:
+
+	END SELECT
+
+	SELECT SORT.BY$
+	CASE "P","C","T"
+		TEXT$ = PD_PRODUCT::PRODUCT_NUM	+ " "
+
+	CASE "S"
+		TEXT$ = PD_PRODUCT::SECONDARY_CODE + "     "
+
+	END SELECT
+
+	TEXT$ = TEXT$ + PD_PRODUCT::DESCRIPTION	+ " " + &
+			PD_PRODUCT::PROD_TYPE	+ " " + &
+			PD_PRODUCT::CATEGORY	+ " " + &
+			FORMAT$(STDCOST, " ##,###.###")	+ " " + &
+			FORMAT$(INDPERC, "###.##%")	+ " " + &
+			FORMAT$(INDMENU, " ##,###.##")	+ " " + &
+			FORMAT$(MENU, " ##,###.##")	+ " " + &
+			FORMAT$(MENPERC, "###.##%")	+ " " + &
+			FORMAT$(SALPERC, "###.##%")	+ " " + &
+			FORMAT$(MIXPERC, "###.##%")
+
+	CLINE% = CLINE% + 1%
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+17550	!
+	! Try for next record
+	!
+
+	GOTO GetNextRec
+
+ ExitTotal:
+17600	!
+	! Handle end of report
+	!
+	IF TOTAL_FLAG%
+	THEN
+		GOSUB 18010 IF SORT.BY$ = "C"
+		GOSUB 18000
+	END IF
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+18000	!
+	! Print totals
+	!
+	IF LOCLINE%
+	THEN
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%) &
+			IF (SORT.BY$ = "P") OR (SORT.BY$ = "S")
+
+		TEXT$   =   SPACE$(5%)+LAST_LOCATION$+SPACE$(6%)+ &
+			"TOTAL "+ &
+			SPACE$(55%)+ &
+			FORMAT$(INDPERC_LOC/LOCLINE%, "###.##%")+ &
+			SPACE$(22%)+ &
+			FORMAT$(MENPERC_LOC/LOCLINE%, "###.##%")+" "+ &
+			FORMAT$(SALPERC_LOC, "###.##%")+" "+ &
+			FORMAT$(MIXPERC_LOC, "###.##%")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, +2%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+	END IF
+
+	TEXT$ = SPACE$(5%) + LAST_LOCATION$ + SPACE$(6%) + &
+		"TOTAL SALES              " + &
+		SPACE$(14%) + &
+		FORMAT$(SALES_TOTAL, "$#,###,###.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(5%) + LAST_LOCATION$ + SPACE$(6%) + &
+		"TOTAL EMPLOYEE MEAL      " + &
+		SPACE$(14%) + &
+		FORMAT$(EMP_TOTAL, "$#,###,###.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(5%) + LAST_LOCATION$ + SPACE$(6%) + &
+		"TOTAL WASTE              " + &
+		SPACE$(14%) + &
+		FORMAT$(WASTE_TOTAL, "$#,###,###.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	TEXT$ = SPACE$(5%) + LAST_LOCATION$ + SPACE$(6%) + &
+		"TOTAL PROMOTIONAL MEAL   " + &
+		SPACE$(14%) + &
+		FORMAT$(PROM_TOTAL, "$#,###,###.##")
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%)
+
+	RETURN
+
+18010	!
+	! Print percentage subtotal
+	!
+	IF CLINE%
+	THEN
+		TEXT$   =   SPACE$(15%) + &
+			"TOTAL " + TEST_PRINTING$ + &
+			SPACE$(46%) + &
+			FORMAT$(INDPERC_CAT/CLINE%, "###.##%") + " " + &
+			SPACE$(26%) + &
+			FORMAT$(MENPERC_CAT/CLINE%, "###.##%") + "   "+ &
+			FORMAT$(SALPERC_CAT, "###.##%")+"   " + &
+			FORMAT$(MIXPERC_CAT, "###.##%")
+
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, +2%)
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 0%)
+
+		MENPERC_LOC = MENPERC_LOC + MENPERC_CAT
+		INDPERC_LOC = INDPERC_LOC + INDPERC_CAT
+		SALPERC_LOC = SALPERC_LOC + SALPERC_CAT
+		MIXPERC_LOC = MIXPERC_LOC + MIXPERC_CAT
+		LOCLINE% = LOCLINE% + CLINE%
+	END IF
+
+	MENPERC_CAT,INDPERC_CAT,SALPERC_CAT,MIXPERC_CAT = 0.
+	CLINE% = 0%
+
+	RETURN
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+	CASE 300%
+		FILENAME$ = "PD_PRODUCT"
+
+	CASE 310%
+		FILENAME$ = "RM_TRANSACTION"
+
+	CASE 320%
+		FILENAME$ = "PD_CATEGORY"
+
+	CASE 330%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 340%
+		FILENAME$ = "RM_CONTROL"
+
+	CASE 350%
+		FILENAME$ = "PD_PRODTYPE"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+
+	CASE 17030	! End file
+		RESUME HaveTotal IF ERR = 11% OR ERR = 155%
+
+	CASE 17125%	! End of file
+		IF ERR = 11%
+		THEN
+			RESUME 17020
+		END IF
+
+	CASE 17200%	! Can't find
+		RESUME 17300 IF ERR = 155% OR ERR = 11%
+
+	CASE 17330%	! Undefined Category
+		RESUME 17340 IF ERR = 155% OR ERR = 9%
+
+	CASE 17430%	! Undefined Type
+		RESUME 17440 IF ERR = 155% OR ERR = 9%
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD09
+	!	^*(09) Print Zeros (Y,N)\*
+	!	.p
+	!	The ^*Print Zeros\* field provides the means to determine if the zeros will
+	!	be printed on the report.  A ^*Y\* entry causes the zeros to be printed, while
+	!	a ^*N\* entry causes the them not to be printed.
+	!
+	! Index:
+	!	.x Print>Zeros
+	!	.x Zeros>Print
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD10
+	!	^*(10) Sort (C,P,S)\*
+	!	.p
+	!	The value entered in the ^*Sort\* field causes the report to print in the
+	!	selected order.
+	!	.p
+	!	An entry is required in this field and only the following are valid:
+	!	.b
+	!	.lm 15
+	!	.list 0,"*"
+	!	.le
+	!	C = Category
+	!	.le
+	!	P = Product
+	!	.le
+	!	S = Secondary Code
+	!	.els
+	!
+	! Index:
+	!	.x Sort
+	!
+	!--

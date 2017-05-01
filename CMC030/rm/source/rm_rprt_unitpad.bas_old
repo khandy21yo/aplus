@@ -1,0 +1,389 @@
+1	%TITLE "Blank Worksheet in Units"
+	%SBTTL "RM_RPRT_UNITPAD"
+	%IDENT "V3.6a Calico"
+
+	!
+	! COPYRIGHT (C) 1986, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	! ID:RM012
+	!
+	! Abstract:HELP
+	!	.p
+	!	The ^*Blank Worksheet in Units\* program prints out a blank worksheet in units
+	!	for sales, waste, etc in the Restaurant Management System.  These blank sheets
+	!	are used mostly when new products have been ordered.  Contained in this
+	!	worksheet are the following fields:
+	!	.lm 15
+	!	.b
+	!	.list 0,"*"
+	!	.le
+	!	Location
+	!	.le
+	!	Product Number
+	!	.le
+	!	Description
+	!	.le
+	!	Price
+	!	.le
+	!	Day of week with corresponding date
+	!	.els
+	!
+	! Index:
+	!	.x Worksheet>Blank in Units
+	!	.x Blank Worksheet in Units
+	!
+	! Option:
+	!
+	! Compile:
+	!
+	!	$ BAS RM_SOURCE:RM_RPRT_UNITPAD/LINE
+	!	$ LINK/EXE=RM_EXE: RM_RPRT_UNITPAD, FUNC_LIB:CMCLINK/OPTION
+	!	$ DELETE RM_RPRT_UNITPAD.OBJ;*
+	!
+	! Author:
+	!
+	!	11/08/87 - Frank F. Starman
+	!
+	! Modification History:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	09/13/96 - Kevin Handy
+	!		Reformat source code.
+	!
+	!	06/03/97 - Kevin Handy
+	!		Use integer for #key
+	!
+	!	08/26/97 - Kevin Handy
+	!		Use 'val%' instead of 'val'
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Include files
+	!
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
+	DECLARE UTL_REPORTX_CDD UTL_REPORTX
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.HB"
+	MAP	(UTL_LOCATION)	UTL_LOCATION_CDD	UTL_LOCATION
+
+	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.HB"
+	MAP	(UTL_TRANSTYPE)	UTL_TRANSTYPE_CDD	UTL_TRANSTYPE
+
+	%PAGE
+
+	ON ERROR GOTO 19000
+
+	!
+ Init:	! Initilize report
+	!
+	CALL OUTP_INITFROMFILE(UTL_REPORTX, 132%)
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	FROM.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(0%), 132%)
+	TO.ITEM$ = EDIT$(UTL_REPORTX::OPTDEF(1%), 132%)
+	WLDCRD$ = EDIT$(UTL_REPORTX::OPTDEF(2%), -1%)
+	TRANS.TYPE$ = EDIT$(UTL_REPORTX::OPTDEF(3%), 132%)
+	TODATE$ = DATE_STOREDATE(EDIT$(UTL_REPORTX::OPTDEF(4%), 132%))
+	END.PAGE% = VAL%(EDIT$(UTL_REPORTX::OPTDEF(5%), 132%))
+
+	DAY.WEEK$(1%) = "MON      "
+	DAY.WEEK$(2%) = "TUE      "
+	DAY.WEEK$(3%) = "WED      "
+	DAY.WEEK$(4%) = "THU      "
+	DAY.WEEK$(5%) = "FRI      "
+	DAY.WEEK$(6%) = "SAT      "
+	DAY.WEEK$(7%) = "SUN      "
+
+	HEADER.LINE1$,HEADER.LINE2$=""
+
+	FOR I% = 0% TO 6%
+		DAY.CODE%     =DATE_DAYCODE(TODATE$)+I%
+		TEST.DATE$   =DATE_INVDCODE(DAY.CODE%)
+		HEADER.LINE1$=HEADER.LINE1$+PRNT_DATE(TEST.DATE$,6%)+" "
+		HEADER.LINE2$=HEADER.LINE2$+DAY.WEEK$(DATE_DAYOFWEEK(DAY.CODE%))
+	NEXT I%
+
+
+300	%INCLUDE "SOURCE:[UTL.OPEN]UTL_LOCATION.OPN"
+
+310	%INCLUDE "SOURCE:[UTL.OPEN]UTL_TRANSTYPE.OPN"
+
+ ReportTitle:
+	!
+	! Title
+	!
+	TITLE$(1%) = "ANALYSIS  WORKSHEET  IN  UNITS"
+	TITLE$(3%) = "Restaurant management system"
+	TITLE$(4%) = ""
+
+	!
+	! Heading
+	!
+	TITLE$(6%) = "Product#       Description              "+ &
+		"                     Price   "+HEADER.LINE2$
+	TITLE$(7%) = " "
+
+	%PAGE
+
+17000	!******************************************************************
+	! OUTPUT REPORT
+	!******************************************************************
+
+	TEXT$ = "|"+STRING$(13%,ASCII("_"))+ "|" + &
+		STRING$(40%,ASCII("_"))+ "|" + &
+		STRING$(12%,ASCII("_"))+"|"+ &
+		"________|"+ &
+		"________|"+ &
+		"________|"+ &
+		"________|"+ &
+		"________|"+ &
+		"________|"+ &
+		"________|" &
+
+	IF FROM.ITEM$ = ""
+	THEN
+		RESET #UTL_LOCATION.CH%
+	ELSE
+		FIND #UTL_LOCATION.CH%, KEY#0% GE FROM.ITEM$, REGARDLESS
+	END IF
+
+17005	TRANSNAME$ = "?"
+	GET #UTL_TRANSTYPE.CH%, KEY#0% EQ TRANS.TYPE$, REGARDLESS
+	TRANSNAME$ = UTL_TRANSTYPE::DESCRIPTION
+
+17010	TITLE$(2%) = TRANSNAME$
+
+ GetNextSto:
+17020	!
+	! Main loop starts here
+	!
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	!
+	! Get next record
+	!
+	GET #UTL_LOCATION.CH%, REGARDLESS
+
+	GOTO GetNextSto IF WLDCRD$ <>"" AND &
+		COMP_STRING(EDIT$(UTL_LOCATION::LOCATION,-1%), WLDCRD$) = 0%
+
+	GOTO ExitTotal IF (UTL_LOCATION::LOCATION > TO.ITEM$) AND &
+		TO.ITEM$ <> ""
+
+	TITLE$(5%) = LEFT("==== "+UTL_LOCATION::LOCATION+" "+ &
+		EDIT$(UTL_LOCATION::LOCNAME,128%)+" "+ &
+		STRING$(68%,61%),68%)+" "+HEADER.LINE1$
+
+	LOOP% = 1%
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 999%)
+
+17300	!
+	! Print out one line
+	!
+
+	CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), TEXT$, 0%) &
+			FOR I%=1% TO 48%
+
+	GOTO ExitProgram IF UTL_REPORTX::STAT
+
+	IF LOOP% < END.PAGE%
+	THEN
+		CALL OUTP_LINE("", UTL_REPORTX, TITLE$(), "", 999%)
+		LOOP% = LOOP% + 1%
+		GOTO 17300
+	END IF
+
+17350	!
+	! Try for next record
+	!
+
+	GOTO GetNextSto
+
+ ExitTotal:
+17400	!
+	! Handle end of report
+	!
+
+ ExitProgram:
+	CALL OUTP_FINISH(UTL_REPORTX)
+
+	!
+	! Exit to next program or menu
+	!
+	IF TRM$(UTL_REPORTX::NEXTRUN) = ""
+	THEN
+		CALL SUBR_3EXITPROGRAM(SCOPE, "", "")
+	ELSE
+		CALL SUBR_3EXITPROGRAM(SCOPE, "RUN " + UTL_REPORTX::NEXTRUN, "")
+	END IF
+
+	%PAGE
+
+ HelpError:
+	!******************************************************************
+	! Help Message for an error
+	!******************************************************************
+	CALL HELP_34MESSAGE(SCOPE, NUM1$(ERL) + " " + ERT$(ERR), &
+		"E", ERN$, FILENAME$, NUM1$(ERR))
+	UTL_REPORTX::STAT = -1%
+	GOTO ExitProgram
+
+	%Page
+
+19000	!******************************************************************
+	! ERROR TRAPPING
+	!******************************************************************
+
+	SELECT ERR
+	CASE 154%	! Locked record
+		SLEEP 5%
+		RESUME
+	END SELECT
+
+	FILENAME$ = ""
+	SELECT ERL
+
+	CASE 300%
+		FILENAME$ = "UTL_LOCATION"
+
+	CASE 310%
+		RESUME ReportTitle IF ERR = 5%
+		FILENAME$ = "UTL_TRANSTYPE"
+
+	CASE 17000%
+		CALL ENTR_3MESSAGE(SCOPE, &
+			"Unable to find beginning record!", 0%)
+		RESUME ExitProgram
+
+	CASE 17005%	! Can't find TransType
+		RESUME 17010
+
+	CASE 17020%	! End of file
+		RESUME ExitTotal IF ERR = 11%
+		FILENAME$ = "UTL_LOCATION"
+
+	END SELECT
+
+	!
+	! Untrapped error
+	!
+	RESUME HelpError
+
+32767	END
+	!+-+-+
+	!++
+	! Abstract:FLD01
+	!	^*(01) From Location\*
+	!	.p
+	!	The value entered in the ^*From Location\* field causes the worksheet to begin
+	!	with the selected location.
+	!	.p
+	!	A blank setting causes the worksheet to begin with the first location in the
+	!	file.
+	!
+	! Index:
+	!	.x From Location
+	!	.x Location>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD02
+	!	^*(02) To Location\*
+	!	.p
+	!	The value entered in the ^*To Location\* field causes the worksheet to end with
+	!	the selected location.
+	!	.p
+	!	A blank setting causes the worksheet to print to the end of the file.
+	!
+	! Index:
+	!	.x To Location
+	!	.x Location>To
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD03
+	!	^*(03) Wildcard\*
+	!	.p
+	!	The ^*Wildcard\* field provides the means to select designated items to be
+	!	printed by entering a "Wildcard" value in this field.
+	!
+	! Index:
+	!	.x Wildcard
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD04
+	!	^*(04) Transaction Type\*
+	!	.p
+	!	The ^*Transaction Type\* field provides the means to enter the transaction
+	!	type which will be printed on this report.  Entry in this field is required.
+	!
+	! Index:
+	!	.x Transaction Type
+	!	.x Type>Transaction
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD05
+	!	^*(05) From Date\*
+	!	.p
+	!	The value entered in the ^*From Date\* field causes the worksheet to begin with
+	!	the selected date.
+	!	.p
+	!	A blank setting causes the worksheet to begin with the first date in the file.
+	!
+	! Index:
+	!	.x From Date
+	!	.x Date>From
+	!
+	!--
+	!+-+-+
+	!++
+	! Abstract:FLD06
+	!	^*(06) Sheet Quantity\*
+	!	.p
+	!	The ^*Sheet Quantity\* field provides the means to enter the number of pages
+	!	or sheets which will be printed.
+	!
+	! Index:
+	!	.x Sheet Quantity
+	!	.x Quantity>Sheet
+	!
+	!--

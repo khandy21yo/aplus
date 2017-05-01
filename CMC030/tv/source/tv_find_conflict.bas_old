@@ -1,0 +1,180 @@
+1	%TITLE "TV_FIND_CONFLICT - Find conflict codes for a customer"
+	%SBTTL "TV System"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION STRING TV_FIND_CONFLICT(CUSNUM$, CONFCODE$)
+
+	!
+	! COPYRIGHT (C) 1987, 1988  BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This function will generate a list of all conflict
+	!	codes for a given customer number.
+	!
+	! Index:
+	!
+	!
+	! Input:
+	!
+	!	CUSNUM$
+	!		Customer number to find the conflict codes
+	!		for.
+	!
+	! Output:
+	!
+	!	TV_FIND_CONFLICT
+	!		returns the conflict codes, seperated by chr$(7)'s,
+	!		thus each conflict uses 9 characters.
+	!
+	! Example:
+	!
+	!	CODE$ = TV_FIND_CONFLICT(CUSNUM$)
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_FIND_CONFLICT/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_FIND_CONFLICT
+	!	$ DELETE TV_FIND_CONFLICT.OBJ;*
+	!
+	! Author:
+	!
+	!	12/04/87 - Kevin Handy
+	!
+	! Modification history:
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	OPTION SIZE = (INTEGER LONG, REAL GFLOAT)
+
+	!
+	! Maps
+	!
+	%INCLUDE "SOURCE:[TV.OPEN]TV_CUSTOM_CONFLICT.HB"
+	MAP (TV_CUSTOM_CONFLICT) TV_CUSTOM_CONFLICT_CDD TV_CUSTOM_CONFLICT
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_COMMER_CONFLICT.HB"
+	MAP (TV_COMMER_CONFLICT) TV_COMMER_CONFLICT_CDD TV_COMMER_CONFLICT
+
+	!
+	! Channels
+	!
+	MAP (CH_TV_CUSTOM_CONFLICT) TV_CUSTOM_CONFLICT.CH%
+	MAP (CH_TV_COMMER_CONFLICT) TV_COMMER_CONFLICT.CH%
+
+	%PAGE
+
+	!
+	! Initilization
+	!
+	ON ERROR GOTO 19000
+
+	CONF$ = ""
+	C1$ = CONFCODE$
+	GOSUB 1020
+
+1000	!
+	! Search for first conflict code for this customer
+	!
+	FIND #TV_CUSTOM_CONFLICT.CH%, KEY #0% GE CUSNUM$, REGARDLESS
+
+1010	!
+	! Handle one conflict code
+	!
+	GET #TV_CUSTOM_CONFLICT.CH%, REGARDLESS
+
+	GOTO ExitFunction IF CUSNUM$ <> TV_CUSTOM_CONFLICT::CUSNUM
+	C1$ = TV_CUSTOM_CONFLICT::CONFLICT
+
+	GOSUB 1020
+
+	GOTO 1010
+
+1020	!
+	! See if it is defined as a major group in the conflict definition
+	! file.
+	!
+	CONF$ = CONF$ + C1$ + '7'C &
+		IF INSTR(1%, CONF$, C1$) = 0%
+
+	FIND #TV_COMMER_CONFLICT.CH%, &
+		KEY#1% EQ C1$, &
+		REGARDLESS
+
+1030	!
+	! Handle reading in all of the minor codes for this major code.
+	!
+	GET #TV_COMMER_CONFLICT.CH%, &
+		REGARDLESS
+
+	GOTO 1040 IF C1$ <> TV_COMMER_CONFLICT::MAJOR_CODE
+
+	CONF$ = CONF$ + TV_COMMER_CONFLICT::CODE + '7'C &
+		IF INSTR(1%, CONF$, TV_COMMER_CONFLICT::CODE) = 0%
+
+	GOTO 1030
+
+1040	RETURN
+
+	!*******************************************************************
+	! Exit from the function
+	!*******************************************************************
+
+ ExitFunction:
+	TV_FIND_CONFLICT = CONF$
+	EXIT FUNCTION
+
+19000	!*******************************************************************
+	! Trap errors
+	!*******************************************************************
+
+	SELECT ERL
+
+	!
+	! No conflict codes/end of conflict codes in customer_conflict
+	!
+	CASE 1000%, 1010%
+		Resume ExitFunction
+
+	!
+	! No major groupings
+	!
+	CASE 1020%, 1030%
+		RESUME 1040
+
+	END SELECT
+
+	ON ERROR GOTO 0
+
+	END FUNCTION

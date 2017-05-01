@@ -1,0 +1,16 @@
+	!======================================================================
+	! OE_SHIPJOUR file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(OE_SHIPJOUR.CH%, STAT%)
+	CALL READ_DEVICE('OE_SHIPJOUR',OE_SHIPJOUR.DEV$, STAT%)
+
+	OE_SHIPJOUR.NAME$ = OE_SHIPJOUR.DEV$+"OE_SHIPJOUR_"+BATCH_NO$+".JRL"
+
+	OPEN OE_SHIPJOUR.NAME$ FOR INPUT AS FILE OE_SHIPJOUR.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP OE_SHIPJOUR, &
+		PRIMARY KEY &
+			OE_SHIPJOUR::ORDNUM, &
+		ACCESS READ, ALLOW MODIFY
+

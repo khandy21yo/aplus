@@ -1,0 +1,27 @@
+	!++
+	! Error:5
+	!	^*The Ship to Address is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*OE__SHIPTO.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Order Entry System\* going
+	!	under MASTER and run the process again.
+	!
+	! Index:
+	!	.x Ship to Address
+	!
+	!--
+	!++
+	! Abstract:FILE
+	!	^*OE__SHIPTO.MAS\*
+	!	.p
+	!	Ship to Address.
+	!
+	! Index:
+	!	.x Ship to Address
+	!	.x OE_SHIPTO
+	!--

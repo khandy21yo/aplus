@@ -1,0 +1,29 @@
+	!++
+	! Error:5
+	!	^*The Budget File for Fiscal Year is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*GL__BUD__YYYY.MAS\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*General Ledger System\* going
+	!	under MASTER run process again.
+	!
+	! Index:
+	!	.x Budget File for Fiscal Year
+	!--
+	!++
+	! Abstract:FILE
+	!	^*GL__BUD__YYYY.MAS\*
+	!	.B
+	!	.LM +5
+	!	Budget File for Fiscal Year.
+	!	.LM -5
+	!
+	! Index:
+	!	.x Budget File for Fiscal Year
+	!	.x GL_BUD_YYYY
+	!
+	!--

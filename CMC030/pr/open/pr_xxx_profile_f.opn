@@ -1,0 +1,17 @@
+	!======================================================================
+	! PR_XXX_PROFILE file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PR_XXX_PROFILE.CH%, STAT%)
+	CALL READ_DEVICE('PR_XXX_PROFILE',PR_XXX_PROFILE.DEV$, STAT%)
+
+	OPEN PR_XXX_PROFILE.DEV$+"PR_XXX_PROFILE.TBL" FOR INPUT AS FILE PR_XXX_PROFILE.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PR_XXX_PROFILE_F, &
+		PRIMARY KEY &
+		( &
+			PR_XXX_PROFILE_F::AUTH, &
+			PR_XXX_PROFILE_F::CODE &
+		)	, &
+		ACCESS READ, ALLOW MODIFY
+

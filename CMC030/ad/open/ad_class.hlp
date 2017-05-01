@@ -1,0 +1,26 @@
+	!++
+	! Error:5
+	!	^*The Asset Classes is Missing\*
+	!	.p
+	!	^*Explanation:\*
+	!	.p
+	!	The ^*AD__CLASS.TBL\* file has not been created.
+	!	.p
+	!	^*User Action:\*
+	!	.p
+	!	Create the file in the ^*Assets Depreciation System\* going
+	!	under MASTER and TABLE and run process again.
+	!
+	! Index:
+	!	.x Asset Classes
+	!--
+	!++
+	! Abstract:FILE
+	!	^*AD__CLASS.TBL\*
+	!	.p
+	!	Asset Classes.
+	!
+	! Index:
+	!	.x Asset Classes
+	!	.x AD_CLASS
+	!--

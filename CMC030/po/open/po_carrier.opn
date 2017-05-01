@@ -1,0 +1,16 @@
+	!======================================================================
+	! PO_CARRIER file (open read only)
+	!======================================================================
+
+	CALL ASSG_CHANNEL(PO_CARRIER.CH%, STAT%)
+	CALL READ_DEVICE('PO_CARRIER',PO_CARRIER.DEV$, STAT%)
+
+	PO_CARRIER.NAME$ = PO_CARRIER.DEV$+"PO_CARRIER.TBL"
+
+	OPEN PO_CARRIER.NAME$ FOR INPUT AS FILE PO_CARRIER.CH%, &
+		ORGANIZATION INDEXED FIXED, &
+		MAP PO_CARRIER, &
+		PRIMARY KEY &
+			PO_CARRIER::CODE, &
+		ACCESS READ, ALLOW MODIFY
+

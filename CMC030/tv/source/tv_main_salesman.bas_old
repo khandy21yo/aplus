@@ -1,0 +1,460 @@
+1	%TITLE "TV_MAIN_SALESMAN - TV Traffic Sales Person Table Maintenance"
+	%SBTTL "TV system"
+	%IDENT "V3.6a Calico"
+
+	FUNCTION LONG TV_MAIN_SALESMAN(CDD_WINDOW_CDD SMG_WINDOW, &
+		LONG MOPTION, LONG MLOOP, LONG MFLAG, STRING MVALUE)
+
+	!
+	! COPYRIGHT (C) 1987, 1988 BY
+	!
+	! Computer Management Center, Inc.
+	! Idaho Falls, Idaho.
+	!
+	! This software is furnished under a license and may be used and
+	! copied only in accordance with terms of such license and with
+	! the inclusion of the above copyright notice.  This software or
+	! any other copies thereof may not be provided or otherwise made
+	! available to any other person.  No title to and ownership of
+	! the software is hereby transferred.
+	!
+	! The information in this software is subject to change without
+	! notice and should not be construed as a commitment by
+	! Computer Management Center, Inc.
+	!
+	! CMC assumes no responsibility for the use or reliability of
+	! its software on equipment which is not supported by CMC.
+	!
+	!++
+	!
+	! Abstract:
+	!
+	!	This program maintains the TV Traffic Sales Person table.
+	!
+	! Index:
+	!
+	!	Sales Person
+	!	Sales Person Table
+	!	Salesman
+	!	Salesman Table
+	!
+	! Input:
+	!
+	!
+	! Output:
+	!
+	!
+	! Example:
+	!
+	!
+	! Environment:
+	!
+	!	VAX/VMS BASIC+2 V4.4
+	!
+	! Compile:
+	!
+	!	$ BAS TV_SOURCE:TV_MAIN_SALESMAN/LINE
+	!	$ LIB/REP FUNC_LIB:CMCFUN TV_MAIN_SALESMAN
+	!	$ DELETE TV_MAIN_SALESMAN.OBJ;*
+	!
+	! Author:
+	!
+	!	11/10/87 - B. Craig Larsen
+	!
+	! Modification history:
+	!
+	!	05/13/88 - Aaron Redd
+	!		Modified to allow R/O open of file if R/W open fails.
+	!
+	!	04/15/95 - Kevin Handy
+	!		(V3.6)
+	!		Update to V3.6 coding standards
+	!
+	!	08/22/98 - Kevin Handy
+	!		(V3.6a Calico)
+	!		Update to V3.6a coding standards
+	!--
+	%PAGE
+
+	!
+	! Set up compiling options
+	!
+	OPTION SIZE = (REAL GFLOAT, INTEGER LONG)
+
+	%INCLUDE "FUNC_INCLUDE:FUNCTION.HB"
+
+	MAP (SCOPE) SCOPE_STRUCT SCOPE
+
+	%INCLUDE "SOURCE:[CDD.OPEN]CDD_WINDOW.HB"
+
+	%INCLUDE "SOURCE:[TV.OPEN]TV_SALESMAN.HB"
+	MAP (TV_SALESMAN)	TV_SALESMAN_CDD	TV_SALESMAN
+	MAP (FOO_BAR_BLAH1)	TV_SALESMAN_CDD TV_SALESMAN_OLD, TV_SALESMAN2
+
+	!
+	! Common Areas
+	!
+	! These areas store information that is re-used between
+	! calls to these functions.
+	!
+	COM (CH_TV_SALESMAN) &
+		TV_SALESMAN.CH%, &
+		TV_SALESMAN.READONLY%
+
+	%PAGE
+
+	ON ERROR GOTO 29000
+
+	SELECT MOPTION
+
+	!
+	! Initialization
+	!
+	! This option is used to initialize the window structure,
+	! set up the default values for add, and open all files
+	! necessary that have not already been opened.
+	!
+	CASE OPT_INIT
+
+		!
+		! Define window
+		!
+		SMG_WINDOW::DESCR = "TV Traffic Sales Person Table Maintenance"
+		SMG_WINDOW::NHELP = "TV_MAST_SALESMAN"
+		SMG_WINDOW::HSIZE = 78%
+		SMG_WINDOW::VSIZE = 18%
+		SMG_WINDOW::HVIEW = 130%
+		SMG_WINDOW::VVIEW = 18%
+		SMG_WINDOW::HPOS  = 2%
+		SMG_WINDOW::VPOS  = 2%
+		SMG_WINDOW::NITEMS= 11%
+		SMG_WINDOW::FLAGS = 0%
+
+		SMG_WINDOW::NKEYS = 3%
+		SMG_WINDOW::KNAME(0%) = "Sales_number"
+			SMG_WINDOW::KFIELD(0%, 0%) = 1%
+			SMG_WINDOW::KFIELD(0%, 1%) = 1%
+
+		SMG_WINDOW::KNAME(1%) = "Name"
+			SMG_WINDOW::KFIELD(1%, 0%) = 1%
+			SMG_WINDOW::KFIELD(1%, 1%) = 2%
+
+		SMG_WINDOW::KNAME(2%) = "Alpha_sort"
+			SMG_WINDOW::KFIELD(2%, 0%) = 1%
+			SMG_WINDOW::KFIELD(2%, 1%) = 10%
+
+		!
+		! Load in defaults
+		!
+		CALL READ_DEFAULTS(SMG_WINDOW) &
+			IF INSTR(1%, " QV", MVALUE) <= 1%
+
+700		!
+		! Declare channels
+		!
+		IF TV_SALESMAN.CH% > 0%
+		THEN
+			!
+			! Already open, set flag to read-only if was
+			! that way from last time.
+			!
+			SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%) &
+				IF TV_SALESMAN.READONLY%
+			GOTO 790
+		END IF
+
+		!
+		! Open main file (existing) for modification
+		!
+750		%INCLUDE "SOURCE:[TV.OPEN]TV_SALESMAN.CRE"
+		TV_SALESMAN.READONLY% = 0%
+		GOTO 790
+
+760		!
+		! If unable to open for modify, try to open with read
+		! access only.
+		!
+		%INCLUDE "SOURCE:[TV.OPEN]TV_SALESMAN.OPN"
+		SMG_WINDOW::FLAGS = (SMG_WINDOW::FLAGS OR 2%)
+		TV_SALESMAN.READONLY% = -1%
+
+		GOTO 790
+
+770		!
+		! File not open, so reset channel
+		!
+		CALL ASSG_FREECHANNEL(TV_SALESMAN.CH%)
+
+		EXIT FUNCTION
+
+790		SMG_WINDOW::CHAN  = TV_SALESMAN.CH%
+		RESET #TV_SALESMAN.CH%
+		GET #TV_SALESMAN.CH%, REGARDLESS
+
+	!
+	! Display the background
+	!
+	! This option is used to display the background information on the
+	! screen.  It must first clear any junk on the screen, and then
+	! write the background onto it.
+	!
+20100	CASE OPT_BACKGROUND
+
+		SMG_STATUS% = SMG$BEGIN_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+		SMG_STATUS% = SMG$ERASE_DISPLAY(SMG_WINDOW::WNUMBER)
+
+		DATA	03, 04, "(01) Number", &
+			04, 04, "(02) Name", &
+			05, 04, "(03) Add1", &
+			06, 04, "(04) Add2", &
+			07, 04, "(05) City", &
+			08, 04, "(06) State", &
+			09, 04, "(07) Zip", &
+			10, 04, "(08) Country", &
+			11, 04, "(09) Phone", &
+			12, 04, "(10) Alph Sort", &
+			13, 04, "(11) Commission", &
+			0,  0, ""
+
+		RESTORE
+
+		READ XPOS%, YPOS%, XSTR$
+
+		WHILE (XPOS% <> 0)
+			SMG_STATUS% = SMG$PUT_CHARS( &
+				SMG_WINDOW::WNUMBER,XSTR$, XPOS%, YPOS%)
+			READ XPOS%, YPOS%, XSTR$
+		NEXT
+
+		SMG_STATUS% = SMG$END_DISPLAY_UPDATE(SMG_WINDOW::WNUMBER)
+
+	!
+	! Enter/Display/Default
+	!
+	! This option is used to enter the data from the user, display data,
+	! set defaults, and return the data back according to MFLAG.
+	!
+20200	CASE OPT_ENTRY
+
+		TEMP$, TEMP1$ = TRM$(SCOPE::PRG_ITEM)
+		TEMP$ = "View starting at" IF TEMP$ = "View"
+
+		SCOPE::PRG_ITEM = "FLD" + FORMAT$(MLOOP, "<0>##")
+
+		SCOPE::SCOPE_EXIT = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			TV_SALESMAN::SALNUM = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "3;20", TEMP$, &
+				TV_SALESMAN::SALNUM, MFLAG, "'E", MVALUE)
+
+		CASE 2%
+			TV_SALESMAN::SNAME = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "4;20", TEMP$, &
+				TV_SALESMAN::SNAME, MFLAG, "'E", MVALUE)
+
+		CASE 3%
+			TV_SALESMAN::ADD1 = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "5;20", TEMP$, &
+				TV_SALESMAN::ADD1, MFLAG, "'E", MVALUE)
+
+		CASE 4%
+			TV_SALESMAN::ADD2 = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "6;20", TEMP$, &
+				TV_SALESMAN::ADD2, MFLAG, "'E", MVALUE)
+
+		CASE 5%
+			TV_SALESMAN::CITY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "7;20", TEMP$, &
+				TV_SALESMAN::CITY, MFLAG, "'E", MVALUE)
+
+		CASE 6%
+			TV_SALESMAN::STATE = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "8;20", TEMP$, &
+				TV_SALESMAN::STATE, MFLAG, "'E", MVALUE)
+
+		CASE 7%
+			TV_SALESMAN::ZIP = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "9;20", TEMP$, &
+				TV_SALESMAN::ZIP, MFLAG, "'E", MVALUE)
+
+		CASE 8%
+			TV_SALESMAN::COUNTRY = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "10;20", TEMP$, &
+				TV_SALESMAN::COUNTRY, MFLAG, "'E", MVALUE)
+
+		CASE 9%
+			TV_SALESMAN::PHONE = ENTR_3PHONE(SCOPE, &
+				SMG_WINDOW::WNUMBER, "11;20", TEMP$, &
+				TV_SALESMAN::PHONE, 2% OR MFLAG, 0%, MVALUE)
+
+		CASE 10%
+			TV_SALESMAN::ALPSRT = EDIT$(TV_SALESMAN::SNAME, 32%) &
+				IF (TEMP1$ = "Add") AND &
+				((MFLAG AND 1%) = 0%) AND &
+				(TV_SALESMAN::ALPSRT = "")
+
+			TV_SALESMAN::ALPSRT = ENTR_3STRING(SCOPE, &
+				SMG_WINDOW::WNUMBER, "12;20", TEMP$, &
+				TV_SALESMAN::ALPSRT, MFLAG, "'E", MVALUE)
+
+		CASE 11%
+			TV_SALESMAN::COMM = ENTR_3NUMBER(SCOPE, &
+				SMG_WINDOW::WNUMBER, "13;27", TEMP$, &
+				TV_SALESMAN::COMM * 1.0, MFLAG, &
+				"###.##%", MVALUE)
+
+		END SELECT
+
+		SCOPE::PRG_ITEM = TEMP1$
+
+	!
+	! Test values
+	!
+20300	CASE OPT_TESTENTRY
+
+		TV_MAIN_SALESMAN = 0%
+
+		SELECT MLOOP
+
+		CASE 1%
+			IF TV_SALESMAN::SALNUM = ""
+			THEN
+				TV_MAIN_SALESMAN = 1%
+			ELSE
+				IF (MVALUE = "ADD")
+				THEN
+					GET #TV_SALESMAN.CH%, &
+						KEY#0 EQ TV_SALESMAN::SALNUM, &
+						REGARDLESS
+					TV_MAIN_SALESMAN = 2%
+					CALL ENTR_3MESSAGE(SCOPE, &
+						"Record Already Exists", 1%)
+				END IF
+			END IF
+
+		END SELECT
+
+
+	CASE OPT_DISPLAY
+
+	!
+	! Set TV_SALESMAN_OLD value
+	!
+20500	CASE OPT_SETOLD
+
+		TV_SALESMAN_OLD = TV_SALESMAN
+
+	!
+	! Restore TV_SALESMAN_OLD value
+	!
+	CASE OPT_RESETOLD
+
+		TV_SALESMAN = TV_SALESMAN_OLD
+
+	!
+	! Set default value
+	!
+	CASE OPT_SETDEFAULT
+
+		TV_SALESMAN2 = TV_SALESMAN
+
+	!
+	! Restore default value
+	!
+	CASE OPT_RESETDEFAULT
+
+		TV_SALESMAN = TV_SALESMAN2
+
+	!
+	! View header
+	!
+	CASE OPT_VIEW
+
+		SELECT MLOOP
+
+		!
+		! Title (One line only)
+		!
+		CASE 1%
+			MVALUE = "  Sale #     Name                      Address" + &
+				"                                         City, State" + &
+				"                  Zip Code"
+
+		!
+		! Positions of lines
+		!
+		CASE 2%
+			MVALUE = "013,039,087,116"
+
+		!
+		! Convert current record into text
+		!
+		CASE 3%
+			MVALUE = &
+				TV_SALESMAN::SALNUM + " " + &
+				LEFT(TV_SALESMAN::SNAME, 25%) + " " + &
+				LEFT(TV_SALESMAN::ADD1 + "/" + &
+					TV_SALESMAN::ADD2, 47%) + " " + &
+				LEFT(TV_SALESMAN::CITY + ", " + &
+					TV_SALESMAN::STATE + " " + &
+					TV_SALESMAN::COUNTRY, 28%) + " " + &
+				TRM$(TV_SALESMAN::ZIP)
+		END SELECT
+
+	!
+	! Find
+	!
+	CASE OPT_FIND
+		SELECT MLOOP
+			CASE 0%
+				FIND #TV_SALESMAN.CH%, KEY#0 &
+					GE TV_SALESMAN::SALNUM, REGARDLESS
+			CASE 1%
+				FIND #TV_SALESMAN.CH%, KEY#1 &
+					GE TV_SALESMAN::SNAME, REGARDLESS
+			CASE 2%
+				FIND #TV_SALESMAN.CH%, KEY#2 &
+					GE TV_SALESMAN::ALPSRT, REGARDLESS
+		END SELECT
+	END SELECT
+
+ ExitFunction:
+	EXIT FUNCTION
+
+29000	!
+	! Trap errors
+	!
+	SELECT ERL
+	!
+	! Unable to open Read/Write
+	!
+	CASE 750%
+		RESUME 760 IF ERR = 10%
+		TV_MAIN_SALESMAN = ERR
+		RESUME 770
+
+	!
+	! Unable to open Read/Only
+	!
+	CASE 760%
+		TV_MAIN_SALESMAN = ERR
+		RESUME 770
+
+	!
+	! Unable to reset
+	!
+	CASE 790%
+		RESUME 32767
+
+	CASE 20300%
+		RESUME 32767
+
+	END SELECT
+
+	ON ERROR GO BACK
+
+32767	END FUNCTION
