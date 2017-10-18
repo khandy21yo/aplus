@@ -1,0 +1,17 @@
+This is a test, trying to convert the CMC030 code from Basic to C++.
+
+The code here is barely tested, and probably not very functional, and will change
+radically at any time. Much of the code will be disabled while other parts are
+being worked on.
+
+Much of the code has been translated using btran
+(http://github.com/khandy21yo/btran.git), and requires the libraryies and headers
+that it supplies. An example translation command is
+
+~/btran/src/btran ../../CMC030/tk/source/tk_spec_checkline.bas  > tk_spec_checkline.cc
+
+Compilation is done via g++ (optionally clang++)
+
+g++ -O0 -g -std=c++1y  -I ~/btran/lib tk_spec_checkline.cc  /home/kevin/btran/lib/libbtran.a  /home/kevin/btran/lib/libvms.a  -o tk_spec_checkline
+
+clang++  -std=c++1y  -I ~/btran/lib tk_spec_checkline.cc  /home/kevin/btran/lib/libbtran.a  /home/kevin/btran/lib/libvms.a
