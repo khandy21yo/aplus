@@ -11,19 +11,12 @@
 #include "basicfun.h"
 #include "basicchannel.h"
 
+#include "cmcfun.h"
 
 
 //
-// Function Prototypes
+// Main
 //
-std::string date_today();
-std::string time_now();
-std::string assg_makebatch(const std::string &batchdate,
-	const std::string &batchtime);
-std::string assg_unmakebatch(std::string &this_batch,
-	std::string &this_date, std::string &this_time);
-
-
 int main(int argc, char **argv)
 {
 	std::string this_batch;

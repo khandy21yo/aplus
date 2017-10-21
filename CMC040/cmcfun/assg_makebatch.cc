@@ -38,11 +38,7 @@
 #include <string>
 #include <cmath>
 
-/*
- * External functions
- */
-long date_daycode(const std::string &UseDate);
-long time_code(const std::string &UseTime);
+#include "cmcfun.h"
 
 /*
  * local constants

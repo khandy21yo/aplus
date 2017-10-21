@@ -35,6 +35,8 @@
 #include <ctime>
 #include <cstdlib>
 
+#include "cmcfun.h"
+
 /*
  * Main function
  */
