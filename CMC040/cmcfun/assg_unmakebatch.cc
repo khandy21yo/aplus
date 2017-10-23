@@ -51,13 +51,13 @@ void assg_unmakebatch(std::string &batch,
 	double buildup;
 	long char_V1;
 	const std::string character = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-	double cycle;
+	long cycle;
 	long i;
-	double todaybatch;
-	double u1;
+	long todaybatch;
+	long u1;
 	long u1_V2;
 	long u2;
-	double whatcycle;
+	long whatcycle;
 
 	//
 	// External functions
@@ -72,14 +72,15 @@ void assg_unmakebatch(std::string &batch,
 	//
 	// Calculate the number of seconds in a single cycle
 	//
-	cycle = (pow(char_V1, 6.0));
+	cycle = pow(char_V1, 6.0);
 	//
 	// Convert the given batch number back into a numeric value
 	//
 	buildup = 0.0;
 	for (i = 1; i <= batch.size(); i++)
 	{
-		buildup = buildup * char_V1 + (character.find(basic::mid(batch, i, 1), 0) + 1) - 1;
+		buildup = buildup * char_V1 +
+			character.find(basic::mid(batch, i, 1), 0);
 	}
 	buildup = buildup - 1;
 	//
@@ -87,12 +88,12 @@ void assg_unmakebatch(std::string &batch,
 	// for tomorrow. Use tomorrow so can calculate on batches created
 	// today.
 	//
-	todaybatch = (date_daycode(date_today()) + 1.0) * (24.0 * 60.0 * 60.0);
+	todaybatch = (date_daycode(date_today()) + 1) * (24 * 60 * 60);
 	//
 	// Calculate which cycle it is likely to be in. We may guess one
 	// cycle too far, so adjust back one cycle if necessary.
 	//
-	whatcycle = trunc(todaybatch / cycle + 0.0001);
+	whatcycle = todaybatch / cycle;
 	u1 = (buildup + whatcycle * cycle);
 	if (u1 > todaybatch)
 	{
@@ -101,8 +102,8 @@ void assg_unmakebatch(std::string &batch,
 	//
 	// Generate a daycode and timecode value for that date
 	//
-	u1_V2 = trunc(u1 / (24.0 * 60.0 * 60.0) + 0.00001);
-	u2 = trunc(u1 - u1_V2 * (24.0 * 60.0 * 60.0) + 0.5);
+	u1_V2 = u1 / (24 * 60 * 60);
+	u2 = u1 % (24 * 60 * 60);
 	//
 	// Return values back
 	//

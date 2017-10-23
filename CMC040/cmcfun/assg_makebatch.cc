@@ -52,10 +52,10 @@ std::string assg_makebatch(
 	const std::string &given_date,
 	const std::string &given_time)
 {
-	int alpha;
+	long alpha;
 	int loop;
 	char prior_number[7];
-	double seconds;
+	long seconds;
 	int radix;
 
 	/*
@@ -70,14 +70,13 @@ std::string assg_makebatch(
 	 * Generate the number of seconds since the beginning of time
 	 * (according to the date function).
 	 */
-	seconds = date_daycode(given_date) * 60.0 * 60.0 * 24.0 +
+	seconds = date_daycode(given_date) * 60 * 60 * 24 +
 		time_code(given_time);
 
 	/*
 	 * Trim it down to the maximum allowed for RADIX(char%)
 	 */
-	seconds = seconds -
-		floor(seconds / pow(radix, 6.0)) * pow(radix, 6.0);
+//	seconds = seconds % pow(radix, 6.0);
 
 	/*
 	 * Convert the number to RADIX(char%)
@@ -86,8 +85,8 @@ std::string assg_makebatch(
 	prior_number[6] = '\0';
 	for (loop = 5; loop >= 0; loop--)
 	{
-		alpha = seconds - floor(seconds / radix) * radix;
-		seconds = floor(seconds / radix);
+		alpha = seconds % radix;
+		seconds = seconds / radix;
 		prior_number[loop] = character[alpha];
 	}
 
