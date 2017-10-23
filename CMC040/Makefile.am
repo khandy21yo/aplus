@@ -17,6 +17,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
        	cmcfun/time_code.cc \
+       	cmcfun/time_invcode.cc \
        	cmcfun/time_now.cc
 
 # utl
