@@ -45,7 +45,7 @@ std::string time_now(void)
 		exit(EXIT_FAILURE);
 	}
 
-	if (strftime(outstr, sizeof(outstr), "H%M%S", tmp) == 0)
+	if (strftime(outstr, sizeof(outstr), "%H%M%S", tmp) == 0)
 	{
 		fprintf(stderr, "strftime returned 0");
 		exit(EXIT_FAILURE);

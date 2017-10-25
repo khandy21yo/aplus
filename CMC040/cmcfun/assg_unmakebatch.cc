@@ -76,7 +76,7 @@ void assg_unmakebatch(std::string &batch,
 	//
 	// Convert the given batch number back into a numeric value
 	//
-	buildup = 0.0;
+	buildup = 0;
 	for (i = 1; i <= batch.size(); i++)
 	{
 		buildup = buildup * char_V1 +
