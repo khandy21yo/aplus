@@ -12,6 +12,7 @@ std::string date_invdcode(long daycode);
 std::string date_today(void);
 long time_code(const std::string &datum);
 std::string date_invdcode(long dcode);
+std::string read_sysjob(void);
 std::string time_invcode(long tcode);
 std::string time_now(void);
 
