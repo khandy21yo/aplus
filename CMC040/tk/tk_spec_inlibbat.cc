@@ -5,6 +5,7 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
@@ -28,7 +29,6 @@ int main(int argc, char **argv)
 	std::string direct;
 	std::string filename;
 	std::string file_name;
-	void find_file();
 	long gls;
 	long gts;
 	long hlp;
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 	long pos1;
 	long pos2;
 	std::string prog_type;
-	long read_file_ch;
+	std::ifstream read_file_ch;
 	std::string severity;
 	long smg_status;
 	long spc;
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	long tpos2;
 	long ttl;
 	std::string type_s;
-	long writ_file_ch;
+	std::ofstream writ_file_ch;
 	std::string w_file_name;
 
 	BStack(20);
@@ -91,8 +91,6 @@ int main(int argc, char **argv)
 	//
 	// Handle input/output file
 	//
-	assg_channel(writ_file_ch, stat);
-	assg_channel(read_file_ch, stat);
 	w_file_name = read_sysjob() + ".TMP";
 	//*******************************************************************
 	// Get info from the user
@@ -105,7 +103,7 @@ int main(int argc, char **argv)
 	std::cin >> name;
 	std::cout << "Module Name: ";
 	std::cin >> module;
-	find_file("SOURCE:[000000]*.DIR", dir_name[NULL], 16, "", "");
+	find_file("SOURCE:[000000]*.DIR", dir_name, 16, "", "", "");
 	dir_loop = std::stol(dir_name[0]);
 	task[1] = "P";
 	task[2] = "F";
@@ -142,7 +140,7 @@ int main(int argc, char **argv)
 			{
 				goto nextloop;
 			}
-			find_file(prefix[loop] + boost::trim_right_copy(module) + ext[loop], file_name_V1[NULL], 16, "", "");
+			find_file(prefix[loop] + boost::trim_right_copy(module) + ext[loop], file_name_V1, 16, "");
 			i_loop = std::stol(file_name_V1[0]);
 			//************************************************************
 			// Loop through all files found
@@ -158,15 +156,8 @@ int main(int argc, char **argv)
 				//
 				// Open file to read from
 				//
-				try
-				{
-					BasicChannel[read_file_ch].ForInput();
-					BasicChannel[read_file_ch].SetRecordSize(132);
-					BasicChannel[read_file_ch].SetAccess(READ);
-					BasicChannel[read_file_ch].SetAllow(MODIFY);
-					BasicChannel[read_file_ch].Open(prefix[loop] + file_name_V1[i] + ext[loop]);
-				}
-				catch(basic::BasicError &Be)
+				read_file_ch.open((prefix[loop] + file_name_V1[i] + ext[loop]).c_str());
+				if (read_file_ch.bad())
 				{
 					std::cout << "Unable to open " << file_name_V1[i] << std::endl;
 					goto L_540;
@@ -174,9 +165,7 @@ int main(int argc, char **argv)
 				//
 				// Open the new file we are going to create
 				//
-				BasicChannel[writ_file_ch].ForOutput();
-				BasicChannel[writ_file_ch].SetRecordSize(132);
-				BasicChannel[writ_file_ch].Open(w_file_name);
+				writ_file_ch.open(w_file_name.c_str());
 				std::cout << std::string("Extacting from: ") + prefix[loop] + file_name_V1[i] + ext[loop] << std::endl;
 				desc = "";
 				idx = lin = gls = 0;
@@ -185,9 +174,9 @@ int main(int argc, char **argv)
 				//**************************************************
 				try
 				{
-					if (BasicChannel[read_file_ch].eof()) { throw basic::BasicError(11); }	// End of file on device
-					if (BasicChannel[read_file_ch].bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
-					getline(BasicChannel[read_file_ch], text);
+					if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+					if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+					std::getline(read_file_ch, text);
 				}
 				catch(basic::BasicError &Be)
 				{
@@ -214,9 +203,9 @@ int main(int argc, char **argv)
 				{
 					try
 					{
-						if (BasicChannel[read_file_ch].eof()) { throw basic::BasicError(11); }	// End of file on device
-						if (BasicChannel[read_file_ch].bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
-						getline(BasicChannel[read_file_ch], text);
+						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+						if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+						std::getline(read_file_ch, text);
 					}
 					catch(basic::BasicError &Be)
 					{
@@ -265,9 +254,9 @@ int main(int argc, char **argv)
 L_525:;
 					try
 					{
-						if (BasicChannel[read_file_ch].eof()) { throw basic::BasicError(11); }	// End of file on device
-						if (BasicChannel[read_file_ch].bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
-						getline(BasicChannel[read_file_ch], text);
+						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+						if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+						std::getline(read_file_ch, text);
 					}
 					catch(basic::BasicError &Be)
 					{
@@ -334,8 +323,8 @@ L_530:;
 				}
 L_540:;
 			}
-			BasicChannel[writ_file_ch].Close();
-			BasicChannel[read_file_ch].Close();
+			writ_file_ch.close();
+			read_file_ch.close();
 nextloop:;
 		}
 nextj:;
@@ -344,12 +333,7 @@ exitprogram:;
 	//*******************************************************************
 	// Exit program
 	//*******************************************************************
-	//	WHEN ERROR IN
-	//		KILL W_FILE_NAME$
-	//	USE
-	//		CONTINUE EndProgram
-	//	END WHEN
-	smg_status = unlink((w_file_name.c_str());
+	smg_status = unlink(w_file_name.c_str());
 	goto endprogram;
 subcode:;
 	//*******************************************************************
@@ -357,18 +341,18 @@ subcode:;
 	//*******************************************************************
 	for (ii = 1; ii <= lin; ii++)
 	{
-		BasicChannel[writ_file_ch] << text_lines[ii] << std::endl;
+		writ_file_ch << text_lines[ii] << std::endl;
 		if (ii == 1)
 		{
 			for (iii = 1; iii <= idx - 1; iii++)
 			{
-				BasicChannel[writ_file_ch] << index_lines[iii] << std::endl;
+				writ_file_ch << index_lines[iii] << std::endl;
 			}
 		}
 	}
 	for (ii = 1; ii <= gls; ii++)
 	{
-		BasicChannel[writ_file_ch] << gloss_lines[ii] << std::endl;
+		writ_file_ch << gloss_lines[ii] << std::endl;
 	}
 	idx = lin = gls = 0;
 	//
@@ -376,8 +360,11 @@ subcode:;
 	//
 	if (loop == 3)
 	{
-		BasicChannel[writ_file_ch] << ".!!" << std::endl;
-		BasicChannel[writ_file_ch] << std::string(".!.SCREEN ") + type_s + "$SCREEN" + "\\caption{" + title + " Menu Screen}" << std::endl;
+		writ_file_ch << ".!!" << std::endl;
+		writ_file_ch << ".!.SCREEN " << type_s <<
+			"$SCREEN" << "\\caption{" << title << 
+			" Menu Screen}" << 
+			std::endl;
 		goto opt;
 	}
 	hlp = (type_s.find("HELP", 0) + 1);
@@ -396,17 +383,22 @@ subcode:;
 	// ** Converted from a select statement **
 	if ((prog_type == "RPRT") || ((prog_type == "POST") || (prog_type == "FORM")))
 	{
-		BasicChannel[writ_file_ch] << ".!!" << std::endl;
-		BasicChannel[writ_file_ch] << std::string(".!.SCREEN ") + file_name_V1[i] + k_ext + "$SCREEN" + "\\caption{" + title + " Screen}" << std::endl;
-		BasicChannel[writ_file_ch] << std::string(".!.FIELD H$") + file_name_V1[i] + k_ext + "$FLD*" << std::endl;
-		BasicChannel[writ_file_ch] << ".!!" << std::endl;
-		line = std::string(".!.SCREEN ") + file_name_V1[i] + k_ext + "$REPORT" + "\\caption{" + title;
+		writ_file_ch << ".!!" << std::endl;
+		writ_file_ch << ".!.SCREEN " << 
+			file_name_V1[i] <<
+			k_ext << "$SCREEN" << 
+			"\\caption{" << title << " Screen}" << std::endl;
+		writ_file_ch << ".!.FIELD H$" << 
+			file_name_V1[i] << k_ext << "$FLD*" << std::endl;
+		writ_file_ch << ".!!" << std::endl;
+		line = std::string(".!.SCREEN ") + file_name_V1[i] + k_ext +
+			"$REPORT" + "\\caption{" + title;
 		// Add Report to title if not last word in title
-		if (0 == (title.find(" Report", title.size() - 10 - 1) + 1))
+		if (0 == (title.find(" Report", title.size() - 11) + 1))
 		{
 			line = line + " Report";
 		}
-		BasicChannel[writ_file_ch] << line + "}" << std::endl;
+		writ_file_ch << line + "}" << std::endl;
 	}
 	else
 	{
@@ -414,9 +406,12 @@ subcode:;
 		{
 			goto opt;
 		}
-		BasicChannel[writ_file_ch] << ".!!" << std::endl;
-		BasicChannel[writ_file_ch] << std::string(".!.SCREEN ") + file_name_V1[i] + k_ext + "$SCREEN" + "\\caption{" + title + " Screen}" << std::endl;
-		BasicChannel[writ_file_ch] << std::string(".!.FIELD H$") + file_name_V1[i] + k_ext + "$FLD*" << std::endl;
+		writ_file_ch << ".!!" << std::endl;
+		writ_file_ch << std::string(".!.SCREEN ") + file_name_V1[i] + 
+			k_ext + "$SCREEN" + "\\caption{" + 
+			title + " Screen}" << std::endl;
+		writ_file_ch << std::string(".!.FIELD H$") + file_name_V1[i] + 
+			k_ext + "$FLD*" << std::endl;
 	}
 	//*******************************************************************
 	// ??? Who knows ???
@@ -427,27 +422,33 @@ opt:;
 		goto putlib;
 	}
 L_18510:;
-	if (BasicChannel[read_file_ch].eof()) { throw basic::BasicError(11); }	// End of file on device
-	if (BasicChannel[read_file_ch].bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
-	getline(BasicChannel[read_file_ch], text);
+	if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+	if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+	std::getline(read_file_ch, text);
 	if (basic::edit(text, -1) == "!")
 	{
 		goto L_18510;
 	}
-	if (basic::edit(text, -1) == "!--" || ((text.find(":", 0) + 1) != 0 && basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
+	if (basic::edit(text, -1) == "!--" || 
+		((text.find(":", 0) + 1) != 0 && 
+		basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
 	{
 		goto putlib;
 	}
-	BasicChannel[writ_file_ch] << ".!!" << std::endl;
-	BasicChannel[writ_file_ch] << std::string(".!.OPTION H$") + basic::right(boost::trim_left_copy(text), 3) << std::endl;
+	writ_file_ch << ".!!" << std::endl;
+	writ_file_ch << std::string(".!.OPTION H$") + 
+		basic::right(boost::trim_left_copy(text), 3) << std::endl;
 	goto L_18510;
 putlib:;
 	//*******************************************************************
 	// Place in library
 	//*******************************************************************
-	BasicChannel[writ_file_ch].Close();
+	writ_file_ch.close();
 	st = libr_3insert(lib_name, w_file_name, key_name);
-	std::cout << std::string(12, ' ') + (key_name + basic::Qstring(40, '.')).substr(0, 40) + lib_name << std::endl;
+	std::cout << std::string(12, ' ') + 
+		(key_name + basic::Qstring(40, '.')).substr(0, 40) + 
+		lib_name << std::endl;
+
 	//	WHEN ERROR IN
 	//		KILL W_FILE_NAME$
 	//	USE
@@ -458,9 +459,7 @@ putlib:;
 	//*******************************************************************
 	// Reopen the new file we are going to create
 	//*******************************************************************
-	BasicChannel[writ_file_ch].ForOutput();
-	BasicChannel[writ_file_ch].SetRecordSize(132);
-	BasicChannel[writ_file_ch].Open(w_file_name);
+	writ_file_ch.open(w_file_name.c_str());
 	severity = "";
 	BReturn;
 
@@ -468,7 +467,8 @@ helperror:;
 	//*******************************************************************
 	// Help Message for an Error
 	//*******************************************************************
-	std::cout << Be.ern + " " + std::to_string(Be.erl) + " " + basic::ert(Be.err) << '\t' << "ERR" << '\t' << filename << '\t' << std::string("ERROR") + std::to_string(Be.err) << std::endl;
+	std::cout << "ERR" << '\t' << filename << '\t' << 
+		std::string("ERROR") << std::endl;
 	goto exitprogram;
 
 endprogram:;
