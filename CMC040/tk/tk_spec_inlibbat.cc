@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 				{
 					tpos1 = text.find("\"", 0) + 2;
 					tpos2 = text.find("\"", tpos1 - 1);
-					title = basic::Qseg(boost::replace_regex_all_copy(text, "[ \t]+", " "), tpos1, tpos2);
+					title = basic::Qseg(text, tpos1, tpos2);
 					lin = lin + 1;
 					text_lines[lin] = std::string("^*") + title + "\\*";
 				}
@@ -298,7 +298,7 @@ checkexcl:;
 						{
 							tpos1 = (text_line.find("^*", 0) + 1) + 2;
 							tpos2 = (text_line.find("\\*", tpos1 - 1) + 1) - 1;
-							title = basic::Qseg(boost::replace_regex_all_copy(text_line, "[ \t]+", " "), tpos1, tpos2);
+							title = basic::Qseg(text_line, tpos1, tpos2);
 							ttl = -1;
 						}
 					}
