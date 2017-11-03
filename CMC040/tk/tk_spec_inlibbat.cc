@@ -1,3 +1,14 @@
+// %TITLE "Read Help Messages from the Source Code"
+// %SBTTL "TK_SPEC_INSRTLIB"
+// %IDENT "V3.6a Calico"
+//
+// ++
+// Abstract:HELP
+//	.p
+//	Create documentation from source code.
+//
+// --
+	//
 //
 // Source: tk_spec_insrtlib.bas
 // Translated from Basic to C++ using btran
@@ -21,7 +32,6 @@
 
 int main(int argc, char **argv)
 {
-	void assg_channel();
 	long colon;
 	std::string desc;
 	long dexcl;
@@ -77,18 +87,6 @@ int main(int argc, char **argv)
 	std::string index_lines[51];
 	std::string gloss_lines[51];
 
-	// %TITLE "Read Help Messages from the Source Code"
-	// %SBTTL "TK_SPEC_INSRTLIB"
-	// %IDENT "V3.6a Calico"
-	//
-	// ++
-	// Abstract:HELP
-	//	.p
-	//	Create documentation from source code.
-	//
-	//
-	// --
-	//
 	// Handle input/output file
 	//
 	w_file_name = read_sysjob() + ".TMP";
@@ -107,7 +105,7 @@ int main(int argc, char **argv)
 	// Old VMS value
 	find_file("SOURCE:[000000]*.DIR", dir_name, 16, "", "");
 #else
-	find_file("~/splus/CMC030/", dir_name, 16, "", "");
+	find_file("~/aplus/CMC030/*", dir_name, 16, "", "");
 #endif
 	dir_loop = std::stol(dir_name[0]);
 	task[1] = "P";
@@ -125,9 +123,15 @@ int main(int argc, char **argv)
 		{
 			goto nextj;
 		}
+#if 0
 		prefix[1] = std::string("SOURCE:[") + dir_name[j] + ".SOURCE]";
 		prefix[2] = std::string("SOURCE:[") + dir_name[j] + ".OPEN]";
 		prefix[3] = std::string("SOURCE:[") + dir_name[j] + "]";
+#else
+		prefix[1] = "~/aplus/CMC030/" + dir_name[j] + "/source/";
+		prefix[2] = "~/aplus/CMC030/" + dir_name[j] + "/open/";
+		prefix[3] = "~/aplus/CMC030/" + dir_name[j] + "/";
+#endif
 		if (dir_name[j].size() > 2)
 		{
 			lib_name = "REF:HELP_DEFAULT.TLB";

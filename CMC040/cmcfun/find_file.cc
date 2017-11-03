@@ -87,6 +87,8 @@ void find_file(
 	{
 		file_name = pglob.gl_pathv[loop];
 
+// std::cerr << "Glob filename: " << file_name << std::endl;
+
 		/*
 		 * If we only want directory portion,
 		 * or only the name portion.
@@ -104,6 +106,7 @@ void find_file(
 		{
 			file_name = basename(file_name);
 		}
+// std::cerr << "Glob filename2: " << file_name << std::endl;
 		alist.push_back(file_name);
 	}
 

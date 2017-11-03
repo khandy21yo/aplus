@@ -61,7 +61,8 @@ long comp_string(const std::string &test_string, const std::string &wildcard_str
 	//
 	// Trim the test string
 	//
-	str2 = boost::trim_right_copy(wildcard_string) + ",";
+//	str2 = boost::trim_right_copy(wildcard_string);
+	str2 = wildcard_string;
 
 	// No match
 	is_match = 0;
@@ -94,13 +95,29 @@ long comp_string(const std::string &test_string, const std::string &wildcard_str
 	//
 	// Wildcard match
 	//
-	std::regex re(str2);
-	if (std::regex_match(test_stringa, re))
+	try
 	{
-		return -1;
+std::cerr << "comp_string('" << test_stringa << "', '" <<
+	str2 << "')" << std::endl;
+
+		std::regex re(str2);
+		if (std::regex_match(test_stringa, re))
+		{
+			return -1;
+		}
+		else
+		{
+			return 0;
+		}
 	}
-	else
+	catch (...)
 	{
+		//
+		// If we get an error, it probably means a bad
+		// wildcard string has been passed.
+		//
+std::cerr << "comp_string: Bad regex on ('" << str2 << "', '" <<
+	test_stringa << "'" << std::endl;
 		return 0;
 	}
 }
