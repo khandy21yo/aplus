@@ -103,7 +103,12 @@ int main(int argc, char **argv)
 	std::cin >> name;
 	std::cout << "Module Name: ";
 	std::cin >> module;
+#if 0
+	// Old VMS value
 	find_file("SOURCE:[000000]*.DIR", dir_name, 16, "", "");
+#else
+	find_file("~/splus/CMC030/", dir_name, 16, "", "");
+#endif
 	dir_loop = std::stol(dir_name[0]);
 	task[1] = "P";
 	task[2] = "F";

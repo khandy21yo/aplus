@@ -21,6 +21,9 @@ void find_file(
 	int flag,
 	const std::string &prefix,
 	const std::string &suffix);
+long libr_3insert(const std::string &lib_name,
+	const std::string &file_name,
+	const std::string &key_name);
 long time_code(const std::string &datum);
 std::string date_invdcode(long dcode);
 std::string read_sysjob(void);
