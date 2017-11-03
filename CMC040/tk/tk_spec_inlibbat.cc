@@ -111,9 +111,15 @@ int main(int argc, char **argv)
 	task[1] = "P";
 	task[2] = "F";
 	task[3] = "M";
+#if 0
 	ext[1] = ".BAS";
 	ext[2] = ".HLP";
 	ext[3] = ".HLP";
+#else
+	ext[1] = ".bas";
+	ext[2] = ".hlp";
+	ext[3] = ".hlp";
+#endif
 	//*******************************************************************
 	// Loop through all directories specified
 	//*******************************************************************
@@ -149,7 +155,8 @@ int main(int argc, char **argv)
 			{
 				goto nextloop;
 			}
-			find_file(prefix[loop] + boost::trim_right_copy(module) + ext[loop], file_name_V1, 16, "", "");
+			find_file(prefix[loop] + module + ext[loop], 
+				file_name_V1, 16, "", "");
 			i_loop = std::stol(file_name_V1[0]);
 			//************************************************************
 			// Loop through all files found
