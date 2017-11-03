@@ -67,8 +67,8 @@ int main(int argc, char **argv)
 
 	BStack(20);
 
-	std::string file_name_V1[1001];
-	std::string dir_name[101];
+	std::vector<std::string> file_name_V1;
+	std::vector<std::string> dir_name;
 	std::string prefix[4];
 	std::string task[4];
 	std::string ext[4];
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	std::cin >> name;
 	std::cout << "Module Name: ";
 	std::cin >> module;
-	find_file("SOURCE:[000000]*.DIR", dir_name, 16, "", "", "");
+	find_file("SOURCE:[000000]*.DIR", dir_name, 16, "", "");
 	dir_loop = std::stol(dir_name[0]);
 	task[1] = "P";
 	task[2] = "F";
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 			{
 				goto nextloop;
 			}
-			find_file(prefix[loop] + boost::trim_right_copy(module) + ext[loop], file_name_V1, 16, "");
+			find_file(prefix[loop] + boost::trim_right_copy(module) + ext[loop], file_name_V1, 16, "", "");
 			i_loop = std::stol(file_name_V1[0]);
 			//************************************************************
 			// Loop through all files found

@@ -51,6 +51,7 @@
 #include <string>
 #include <vector>
 #include <glob.h>
+#include <libgen.h>
 
 /*
  * Main Function
@@ -67,69 +68,58 @@ void find_file(
 	 */
 	long status;
 
-	alist.pclear();
-	alist.push_back(f"0");
+	alist.clear();
+	alist.push_back("0");
 
 	/*
 	 * Look up files until we run out of files, or run out of
 	 * array elements.
 	 */
-	item = 1;
-	while ((((status = lib$find_file(wildf, &name_buffer,
-		&context)) & 3) == 1) && (item <= maxitem))
+	glob_t pglob;
+	char *file_name;
+
+	glob(wildf.c_str(),
+		GLOB_MARK | GLOB_TILDE,
+		0 /* errfunc */,
+		&pglob);
+
+	for (int loop = 0; loop < pglob.gl_pathc; loop++)
 	{
-		sys$filescan(&name_buffer, &xx, &fflag);
+		file_name = pglob.gl_pathv[loop];
 
 		/*
-		 * Pull off parts of name that we want to use
+		 * If we only want directory portion,
+		 * or only the name portion.
+		 * This is an approximation of the VMS stuff.
 		 */
-		file_name[0] = '\0';
-		for (i = 0; i < fcount; i++)
+		if ((flag != 0) &&
+			((flag & (1 | 2 | 4 | 8)) != 0) &&
+			((flag & (16 | 32 | 64)) == 0))
 		{
-			length = strlen(file_name);
-			strncat(file_name, (char*)xx[i].bufadr, xx[i].buflen);
-			file_name[length + xx[i].buflen] = '\0';
+			file_name = dirname(file_name);
 		}
-
-		/*
-		 * Remove prefix
-		 */
-		if (prefix->dsc$w_length != 0)
+		else if ((flag != 0) &&
+			((flag & (1 | 2 | 4 | 8)) == 0) &&
+			((flag & (16 | 32 | 64)) != 0))
 		{
-			if (strncmp(file_name, prefix->dsc$a_pointer,
-				prefix->dsc$w_length) == 0)
-			{
-				strcpy(file_name, file_name + prefix->dsc$w_length);
-			}
+			file_name = basename(file_name);
 		}
-
-		/*
-		 * Remove suffix
-		 */
-		if (suffix->dsc$w_length != 0)
-		{
-			length = strlen(file_name);
-			if (strncmp(file_name + length - suffix->dsc$w_length,
-				suffix->dsc$a_pointer,
-				suffix->dsc$w_length) == 0)
-			{
-				file_name[length - suffix->dsc$w_length] = '\0';
-			}
-		}
-
 		alist.push_back(file_name);
 	}
 
- ExitProgram:
 	/*
 	 * Finish up directory call
 	 */
-	lib$find_file_end(&context);
+	globfree(&pglob);
 
+ ExitProgram:
 	/*
 	 * Code in number of files loaded
+	 *
+	 * NOTE: They caller could use the .size() operator, but
+	 * the old basic source didn't have that option.
 	 */
-	sprintf(file_name, "%d", item-1);
-	insertarray(alist, 0l, file_name);
+	sprintf(file_name, "%d", alist.size() - 1);
+	alist[0] = file_name;
 }
 

@@ -2,6 +2,9 @@
 #ifndef _cmcfun_h_
 #define _cmcfun_h_
 
+#include <string>
+#include <vector>
+
 std::string assg_makebatch(
 	const std::string &given_date,
 	const std::string &given_time);
@@ -12,6 +15,12 @@ long comp_string(const std::string &test_string,
 long date_daycode(const std::string &day);
 std::string date_invdcode(long daycode);
 std::string date_today(void);
+void find_file(
+	const std::string &wildf,
+	std::vector<std::string> &alist,
+	int flag,
+	const std::string &prefix,
+	const std::string &suffix);
 long time_code(const std::string &datum);
 std::string date_invdcode(long dcode);
 std::string read_sysjob(void);

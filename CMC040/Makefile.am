@@ -18,6 +18,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_daycode.cc \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
+       	cmcfun/find_file.cc \
        	cmcfun/read_sysjob.cc \
        	cmcfun/time_code.cc \
        	cmcfun/time_invcode.cc \
