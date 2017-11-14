@@ -232,30 +232,31 @@ int main(int argc, char **argv)
 						filename = file_name;
 						goto helperror;
 					}
+					std::string ztext = basic::edit(text,-1);
 					//
 					// Check for message key
 					//
-					if ((basic::edit(text, -1).find("!ABSTRACT:", 0) + 1))
+					if (ztext.find("!ABSTRACT:", 0) + 1)
 					{
 						severity = "H";
 					}
-					if ((basic::edit(text, -1).find("!WARNING:", 0) + 1))
+					if (ztext.find("!WARNING:", 0) + 1)
 					{
 						severity = "W";
 					}
-					if ((basic::edit(text, -1).find("!INFORMATION:", 0) + 1))
+					if (ztext.find("!INFORMATION:", 0) + 1)
 					{
 						severity = "I";
 					}
-					if ((basic::edit(text, -1).find("!SUCCESS:", 0) + 1))
+					if (ztext.find("!SUCCESS:", 0) + 1)
 					{
 						severity = "S";
 					}
-					if ((basic::edit(text, -1).find("!ERROR:", 0) + 1))
+					if (ztext.find("!ERROR:", 0) + 1)
 					{
 						severity = "E";
 					}
-					if ((basic::edit(text, -1).find("!FATALERROR:", 0) + 1))
+					if (ztext.find("!FATALERROR:", 0) + 1)
 					{
 						severity = "F";
 					}
@@ -263,7 +264,7 @@ int main(int argc, char **argv)
 					{
 						goto L_530;
 					}
-					colon = (basic::edit(text, -1).find(":", 0) + 1);
+					colon = (ztext.find(":", 0) + 1);
 					type_s = basic::right(basic::edit(text, -1), colon + 1);
 					key_name = severity + "$" + file_name_V1[i] + "$" + type_s;
 					ttl = 0;

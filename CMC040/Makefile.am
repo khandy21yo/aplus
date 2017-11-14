@@ -27,12 +27,12 @@ libcmcfun_a_SOURCES = \
 
 # utl
 testbatch_SOURCES = utl/testbatch.cc
-testbatch_LDADD = -lcmcfun -lbtran -lvms
+testbatch_LDADD = libcmcfun.a -lbtran -lvms
 
 # tk programs
 tk_spec_checkline_SOURCES = tk/tk_spec_checkline.cc
 tk_spec_checkline_LDADD = -lbtran -lvms
 
 tk_spec_inlibbat_SOURCES = tk/tk_spec_inlibbat.cc
-tk_spec_inlibbat_LDADD = -lcmcfun -lbtran -lvms
+tk_spec_inlibbat_LDADD = libcmcfun.a -lbtran -lvms
 
