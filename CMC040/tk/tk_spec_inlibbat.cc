@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 				// Open file to read from
 				//
 				read_file_ch.open((prefix[loop] + file_name_V1[i] + ext[loop]).c_str());
-				if (read_file_ch.bad())
+				if (read_file_ch.fail())
 				{
 					std::cout << "Unable to open " << file_name_V1[i] << std::endl;
 					goto L_540;
@@ -190,9 +190,9 @@ int main(int argc, char **argv)
 				//**************************************************
 				try
 				{
-					if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-					if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 					std::getline(read_file_ch, text);
+					if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+					if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 				}
 				catch(basic::BasicError &Be)
 				{
@@ -219,9 +219,9 @@ int main(int argc, char **argv)
 				{
 					try
 					{
-						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-						if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 						std::getline(read_file_ch, text);
+						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+						if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 					}
 					catch(basic::BasicError &Be)
 					{
@@ -271,9 +271,9 @@ int main(int argc, char **argv)
 L_525:;
 					try
 					{
-						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-						if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 						std::getline(read_file_ch, text);
+						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+						if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 					}
 					catch(basic::BasicError &Be)
 					{
@@ -439,9 +439,9 @@ opt:;
 		goto putlib;
 	}
 L_18510:;
-	if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-	if (read_file_ch.bad()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 	std::getline(read_file_ch, text);
+	if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+	if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 	if (basic::edit(text, -1) == "!")
 	{
 		goto L_18510;
