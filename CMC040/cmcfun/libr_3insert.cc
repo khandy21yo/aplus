@@ -38,10 +38,11 @@
 /*
  * Include files
  */
-#include "preferences.h"
 #include <iostream>
 #include <string>
 #include "cmcfun.h"
+
+#include "preferences.h"
 
 /*
  * Main function

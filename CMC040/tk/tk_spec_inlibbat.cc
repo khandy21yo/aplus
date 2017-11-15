@@ -8,7 +8,7 @@
 //	Create documentation from source code.
 //
 // --
-	//
+//
 //
 // Source: tk_spec_insrtlib.bas
 // Translated from Basic to C++ using btran
@@ -17,17 +17,20 @@
 
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
 #include "basicfun.h"
 
+#include "preferences.h"
 #include "cmcfun.h"
 
 
 //
 // Function Prototypes
 //
+
 
 
 int main(int argc, char **argv)
@@ -89,7 +92,8 @@ int main(int argc, char **argv)
 
 	// Handle input/output file
 	//
-	w_file_name = read_sysjob() + ".TMP";
+	w_file_name = "/tmp/" + read_sysjob() + ".TMP";
+
 	//*******************************************************************
 	// Get info from the user
 	//*******************************************************************
@@ -105,7 +109,7 @@ int main(int argc, char **argv)
 	// Old VMS value
 	find_file("SOURCE:[000000]*.DIR", dir_name, 16, "", "");
 #else
-	find_file("~/aplus/CMC030/*", dir_name, 16, "", "");
+	find_file(aplushome + "/aplus/CMC030/*", dir_name, 16, "", "");
 #endif
 	dir_loop = std::stol(dir_name[0]);
 	task[1] = "P";
@@ -134,9 +138,12 @@ int main(int argc, char **argv)
 		prefix[2] = std::string("SOURCE:[") + dir_name[j] + ".OPEN]";
 		prefix[3] = std::string("SOURCE:[") + dir_name[j] + "]";
 #else
-		prefix[1] = "~/aplus/CMC030/" + dir_name[j] + "/source/";
-		prefix[2] = "~/aplus/CMC030/" + dir_name[j] + "/open/";
-		prefix[3] = "~/aplus/CMC030/" + dir_name[j] + "/";
+		prefix[1] = aplushome + "/aplus/CMC030/" +
+			dir_name[j] + "/source/";
+		prefix[2] = aplushome + "/aplus/CMC030/" +
+			dir_name[j] + "/open/";
+		prefix[3] = aplushome + "/aplus/CMC030/" +
+			dir_name[j] + "/";
 #endif
 		if (dir_name[j].size() > 2)
 		{
@@ -144,7 +151,8 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			lib_name = std::string("REF:HELP_") + dir_name[j] + ".TLB";
+			lib_name = std::string("REF:HELP_") +
+				dir_name[j] + ".TLB";
 		}
 		//*******************************************************************
 		// Loop through three possible extensions
@@ -172,8 +180,8 @@ int main(int argc, char **argv)
 				//
 				// Open file to read from
 				//
-				read_file_ch.open((prefix[loop] + file_name_V1[i] + ext[loop]).c_str());
-				if (read_file_ch.fail())
+				read_file_ch.open((prefix[loop] + file_name_V1[i]).c_str());
+				if (!read_file_ch.is_open())
 				{
 					std::cout << "Unable to open " << file_name_V1[i] << std::endl;
 					goto L_540;
@@ -182,7 +190,7 @@ int main(int argc, char **argv)
 				// Open the new file we are going to create
 				//
 				writ_file_ch.open(w_file_name.c_str());
-				std::cout << std::string("Extacting from: ") + prefix[loop] + file_name_V1[i] + ext[loop] << std::endl;
+				std::cout << std::string("Extacting from: ") + prefix[loop] + file_name_V1[i] << std::endl;
 				desc = "";
 				idx = lin = gls = 0;
 				//**************************************************
@@ -192,7 +200,7 @@ int main(int argc, char **argv)
 				{
 					std::getline(read_file_ch, text);
 					if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-					if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+					if (read_file_ch.fail()) { throw basic::BasicError(11); }	// Fatal system I/O failure
 				}
 				catch(basic::BasicError &Be)
 				{
@@ -221,7 +229,7 @@ int main(int argc, char **argv)
 					{
 						std::getline(read_file_ch, text);
 						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-						if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+						if (read_file_ch.fail()) { throw basic::BasicError(11); }	// Fatal system I/O failure
 					}
 					catch(basic::BasicError &Be)
 					{
@@ -273,7 +281,7 @@ L_525:;
 					{
 						std::getline(read_file_ch, text);
 						if (read_file_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
-						if (read_file_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+						if (read_file_ch.fail()) { throw basic::BasicError(11); }	// Fatal system I/O failure
 					}
 					catch(basic::BasicError &Be)
 					{
@@ -466,13 +474,8 @@ putlib:;
 		(key_name + basic::Qstring(40, '.')).substr(0, 40) + 
 		lib_name << std::endl;
 
-	//	WHEN ERROR IN
-	//		KILL W_FILE_NAME$
-	//	USE
-	//		CONTINUE EndKill
-	//	END WHEN
 	smg_status = unlink(w_file_name.c_str());
-	//	GOTO 18550
+
 	//*******************************************************************
 	// Reopen the new file we are going to create
 	//*******************************************************************
