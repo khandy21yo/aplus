@@ -49,6 +49,7 @@
  */
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <glob.h>
 #include <libgen.h>
@@ -76,7 +77,7 @@ void find_file(
 	 * array elements.
 	 */
 	glob_t pglob;
-	char *file_name;
+	std::string file_name;
 
 	glob(wildf.c_str(),
 		GLOB_MARK | GLOB_TILDE,
@@ -98,13 +99,42 @@ void find_file(
 			((flag & (1 | 2 | 4 | 8)) != 0) &&
 			((flag & (16 | 32 | 64)) == 0))
 		{
-			file_name = dirname(file_name);
+			//
+			// We need a local copy necause dirname can modify it
+			//
+			char temp_name[file_name.size() + 1];
+			strcpy(temp_name, file_name.c_str());
+			file_name = dirname(temp_name);
 		}
 		else if ((flag != 0) &&
 			((flag & (1 | 2 | 4 | 8)) == 0) &&
 			((flag & (16 | 32 | 64)) != 0))
 		{
-			file_name = basename(file_name);
+			//
+			// We need a local copy necause basename can modify it
+			//
+			char temp_name[file_name.size() + 1];
+			strcpy(temp_name, file_name.c_str());
+			file_name = basename(temp_name);
+		}
+		//
+		// Maybe strip off pregix.
+		//
+		if (prefix.size() != 0 &&
+			file_name.compare(0, prefix.size(), prefix) == 0)
+		{
+			file_name.erase(0, prefix.size());
+		}
+		//
+		// Maybe strip off suffix
+		//
+		if (suffix.size() != 0 &&
+			file_name.size() >= suffix.size() &&
+			file_name.compare(file_name.size() - suffix.size(), 
+			suffix.size(), suffix) == 0)
+		{
+			file_name.erase(file_name.size() - suffix.size(), 
+				suffix.size());
 		}
 // std::cerr << "Glob filename2: " << file_name << std::endl;
 		alist.push_back(file_name);

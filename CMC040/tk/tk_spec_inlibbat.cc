@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 				goto nextloop;
 			}
 			find_file(prefix[loop] + module + ext[loop], 
-				file_name_V1, 16, "", "");
+				file_name_V1, 16, "", ext[loop]);
 			i_loop = std::stol(file_name_V1[0]);
 			//************************************************************
 			// Loop through all files found
@@ -180,7 +180,8 @@ int main(int argc, char **argv)
 				//
 				// Open file to read from
 				//
-				read_file_ch.open((prefix[loop] + file_name_V1[i]).c_str());
+				read_file_ch.open((prefix[loop] + 
+					file_name_V1[i] + ext[loop]).c_str());
 				if (!read_file_ch.is_open())
 				{
 					std::cout << "Unable to open " << file_name_V1[i] << std::endl;
