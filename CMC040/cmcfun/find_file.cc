@@ -122,8 +122,6 @@ void find_file(
 	 * NOTE: They caller could use the .size() operator, but
 	 * the old basic source didn't have that option.
 	 */
-	char fcount[10];
-	sprintf(fcount, "%d", alist.size() - 1);
-	alist[0] = fcount;
+	alist[0] = std::to_string(alist.size() - 1);
 }
 
