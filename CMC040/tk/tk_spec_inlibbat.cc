@@ -269,12 +269,12 @@ int main(int argc, char **argv)
 					{
 						severity = "F";
 					}
-					if (severity == "" || basic::right(text, (text.find("!", 0) + 1) + 1)[0] != 32)
+					if (severity == "" || basic::right(text, text.find("!", 0) + 2)[0] != 32)
 					{
 						goto L_530;
 					}
 					colon = (ztext.find(":", 0) + 1);
-					type_s = basic::right(basic::edit(text, -1), colon + 1);
+					type_s = basic::right(ztext, colon + 1);
 					key_name = severity + "$" + file_name_V1[i] + "$" + type_s;
 					ttl = 0;
 L_525:;
@@ -293,16 +293,17 @@ L_525:;
 						filename = file_name;
 						goto helperror;
 					}
-					if (basic::edit(text, -1) == "!")
+					ztext = basic::edit(text,-1);
+					if (ztext == "!")
 					{
 						goto L_525;
 					}
-					if (basic::edit(text, -1) == "!INDEX:")
+					if (ztext == "!INDEX:")
 					{
 						idx = 1;
 						goto L_525;
 					}
-					if (basic::edit(text, -1) == "!--" || ((text.find(":", 0) + 1) != 0 && basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
+					if (ztext == "!--" || ((text.find(":", 0) + 1) != 0 && basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
 					{
 						BGosub(subcode);
 						goto L_530;
@@ -348,10 +349,12 @@ checkexcl:;
 L_530:;
 				}
 L_540:;
+				writ_file_ch.close();
+				read_file_ch.close();
 			}
+nextloop:;
 			writ_file_ch.close();
 			read_file_ch.close();
-nextloop:;
 		}
 nextj:;
 	}
