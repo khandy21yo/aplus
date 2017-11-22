@@ -15,6 +15,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/assg_makebatch.cc \
 	cmcfun/assg_unmakebatch.cc \
 	cmcfun/comp_string.cc \
+	cmcfun/database.cc \
        	cmcfun/date_daycode.cc \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
