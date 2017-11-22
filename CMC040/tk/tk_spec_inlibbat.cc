@@ -77,6 +77,7 @@ int main(int argc, char **argv)
 	std::string type_s;
 	std::ofstream writ_file_ch;
 	std::string w_file_name;
+	std::string ztext;
 
 	BStack(20);
 
@@ -241,7 +242,7 @@ int main(int argc, char **argv)
 						filename = file_name;
 						goto helperror;
 					}
-					std::string ztext = basic::edit(text,-1);
+					ztext = basic::edit(text,-1);
 					//
 					// Check for message key
 					//
@@ -303,7 +304,9 @@ L_525:;
 						idx = 1;
 						goto L_525;
 					}
-					if (ztext == "!--" || ((text.find(":", 0) + 1) != 0 && basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
+					if (ztext == "!--" ||
+						((text.find(":", 0) + 1) != 0 && 
+						 basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
 					{
 						BGosub(subcode);
 						goto L_530;
