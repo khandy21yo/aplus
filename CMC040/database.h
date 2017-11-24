@@ -13,6 +13,7 @@
 extern "C"
 {
 #include <unistd.h>
+#include <postgresql/libpq-fe.h>
 }
 
 //
@@ -72,6 +73,7 @@ class db_connection
 private:
 	bool isconnected;	// Tracks weither the db is currently
 				// connected or not.
+	PGconn *dbh;		// PostgreSQL connection
 
 public:
 	//
@@ -120,6 +122,20 @@ public:
 	// If it might not be connected, use try_disconnedt() instead.
 	//
 	int disconnect();
+
+	//
+	// PostgreSQL connection
+	//
+	PGconn *get_dbh()
+	{
+		try_connect();
+		return dbh;
+	}
 };
+
+//
+// There really should only be one of these for most cases
+//
+extern db_connection db_conn;
 
 #endif
