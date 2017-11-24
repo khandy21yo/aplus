@@ -35,5 +35,5 @@ tk_spec_checkline_SOURCES = tk/tk_spec_checkline.cc
 tk_spec_checkline_LDADD = -lbtran -lvms
 
 tk_spec_inlibbat_SOURCES = tk/tk_spec_inlibbat.cc
-tk_spec_inlibbat_LDADD = libcmcfun.a -lbtran -lvms
+tk_spec_inlibbat_LDADD = libcmcfun.a -lbtran -lvms -lpq
 

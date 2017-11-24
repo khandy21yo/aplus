@@ -43,6 +43,7 @@
 #include "cmcfun.h"
 
 #include "preferences.h"
+#include "database.h"
 
 /*
  * Main function
@@ -52,6 +53,8 @@ long libr_3insert(const std::string &lib_name,
 	const std::string &key_name)
 {
 	int st = 0;		// Return status
+	bool testflag;		// status flag
+	PGconn *dbh;		// Database connection
 
 	//
 	// Just dump out a message for the moment
@@ -60,6 +63,59 @@ long libr_3insert(const std::string &lib_name,
 		", source=" << file_name <<
 		", key=" << key_name <<
 		std::endl;
+
+	dbh = db_conn.get_dbh();
+
+	//
+	// Does library already exist?
+	//
+	std::string cmd =
+		std::string("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = '") +
+		db_username() +
+		"' AND table_name = '" +
+		lib_name +
+		"'";
+
+	std::cerr << "Check for lib " << cmd << std::endl;
+
+	testflag = false;
+	PGresult *result = PQexec(dbh, cmd.c_str());
+
+	if ((result != NULL) && (PQresultStatus(result) == PGRES_TUPLES_OK) &&
+		PQntuples(result) > 0)
+	{
+		for (int pkgs = 0; pkgs < PQntuples(result); pkgs++)
+		{
+			testflag = true;
+		}
+	}
+
+	PQclear(result);
+
+	//
+	// If the library table doesn't exist, create it
+	//
+	if (testflag == false)
+	{
+		std::cerr << "We need to create " << lib_name << std::endl;
+
+		cmd = "CREATE TABLE " + lib_name +
+			"(libkey TEXT PRIMARY KEY, value TEXT)";
+
+		PGresult *result = PQexec(dbh, cmd.c_str());
+
+		if ((result == NULL) || 
+			(PQresultStatus(result) == PGRES_COMMAND_OK))
+		{
+			std::cerr << "Unable to create library!" << std::endl;
+
+			return -1;
+		}
+	}
+
+	//
+	// Yank text out of file
+	//
 
 	/*
 	 * Return status
