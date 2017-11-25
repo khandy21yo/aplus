@@ -6,6 +6,8 @@
 // Abstract:HELP
 //	.p
 //	Create documentation from source code.
+//	.p
+//	To do all, enter '*', 'P', '*'
 //
 // --
 //

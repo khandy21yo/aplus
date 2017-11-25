@@ -8,7 +8,8 @@ lib_LIBRARIES = \
 bin_PROGRAMS = \
 	testbatch \
 	tk_spec_inlibbat \
-	tk_spec_checkline
+	tk_spec_checkline \
+	ut_spec_amortization
 
 # cmcfun
 libcmcfun_a_SOURCES = \
@@ -20,6 +21,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
        	cmcfun/find_file.cc \
+       	cmcfun/func_round.cc \
        	cmcfun/libr_3insert.cc \
        	cmcfun/read_sysjob.cc \
        	cmcfun/time_code.cc \
@@ -36,4 +38,8 @@ tk_spec_checkline_LDADD = -lbtran -lvms
 
 tk_spec_inlibbat_SOURCES = tk/tk_spec_inlibbat.cc
 tk_spec_inlibbat_LDADD = libcmcfun.a -lbtran -lvms -lpq
+
+# utl programs
+ut_spec_amortization_SOURCES = utl/ut_spec_amortization.cc
+ut_spec_amortization_LDADD = libcmcfun.a -lbtran -lvms -lpq
 
