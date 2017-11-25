@@ -11,8 +11,9 @@
  *	This function will insert text into a library,
  *	and append a key to that text.
  *
- *	WARNING: This version should only be used when there is
- *	no chance of connected items.
+ *	WARNING: This version tries to suplicate the capabilities
+ *	of the VMS lib$ functions, and isn't what a native SQL
+ *	version should look like.
  *
  * Parameter:
  *
@@ -40,10 +41,11 @@
  */
 #include <iostream>
 #include <string>
-#include "cmcfun.h"
+#include <fstream>
 
 #include "preferences.h"
 #include "database.h"
+#include "cmcfun.h"
 
 /*
  * Main function
@@ -59,10 +61,10 @@ long libr_3insert(const std::string &lib_name,
 	//
 	// Just dump out a message for the moment
 	//
-	std::cerr << "libr_3insert: Lib=" << lib_name <<
-		", source=" << file_name <<
-		", key=" << key_name <<
-		std::endl;
+//	std::cerr << "libr_3insert: Lib=" << lib_name <<
+//		", source=" << file_name <<
+//		", key=" << key_name <<
+//		std::endl;
 
 	dbh = db_conn.get_dbh();
 
@@ -70,13 +72,11 @@ long libr_3insert(const std::string &lib_name,
 	// Does library already exist?
 	//
 	std::string cmd =
-		std::string("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = '") +
-		db_username() +
-		"' AND table_name = '" +
+		"SELECT * FROM information_schema.tables WHERE table_name = '" +
 		lib_name +
 		"'";
 
-	std::cerr << "Check for lib " << cmd << std::endl;
+//	std::cerr << "Check for lib " << cmd << std::endl;
 
 	testflag = false;
 	PGresult *result = PQexec(dbh, cmd.c_str());
@@ -97,25 +97,103 @@ long libr_3insert(const std::string &lib_name,
 	//
 	if (testflag == false)
 	{
-		std::cerr << "We need to create " << lib_name << std::endl;
+//		std::cerr << "We need to create " << lib_name << std::endl;
 
 		cmd = "CREATE TABLE " + lib_name +
-			"(libkey TEXT PRIMARY KEY, value TEXT)";
+			" (libkey TEXT PRIMARY KEY, value TEXT)";
 
 		PGresult *result = PQexec(dbh, cmd.c_str());
 
 		if ((result == NULL) || 
-			(PQresultStatus(result) == PGRES_COMMAND_OK))
+			(PQresultStatus(result) != PGRES_COMMAND_OK))
 		{
-			std::cerr << "Unable to create library!" << std::endl;
-
+			std::cerr << "Unable to create library!" <<
+				PQresultErrorMessage(result) <<
+				std::endl;
+			PQclear(result);
 			return -1;
 		}
+
+		PQclear(result);
+	}
+	//
+	// If it does exist, delete any e4xisting row
+	//
+	else
+	{
+//		std::cerr << "We need to delete " << 
+//			lib_name << " - " << key_name <<
+//			std::endl;
+
+		//
+		// This has SQL injection possibilities
+		//
+		cmd = "DELETE FROM " + 
+			lib_name +
+			" WHERE libkey = '" +
+			key_name +
+			"'";
+
+		PGresult *result = PQexec(dbh, cmd.c_str());
+
+		if ((result == NULL) || 
+			(PQresultStatus(result) != PGRES_COMMAND_OK))
+		{
+			std::cerr << "Unable to delete from library!" <<
+				PQresultErrorMessage(result) <<
+				std::endl;
+			PQclear(result);
+			return -1;
+		}
+
+		PQclear(result);
 	}
 
 	//
 	// Yank text out of file
 	//
+	std::string fulltext;
+	std::string oneline;
+
+	std::ifstream inf(file_name);
+	while (getline(inf, oneline))
+	{
+		fulltext += oneline;
+		fulltext += "\n";
+	}
+	inf.close();
+
+	//
+	// Insrt\\ert text into table
+	//
+	cmd = "INSERT INTO " +
+		lib_name +
+		" (libkey, value) VALUES ($1,$2)";
+	const char *params[3];
+
+	params[0] = key_name.c_str();
+	params[1] = fulltext.c_str();
+
+	result = PQexecParams(dbh,
+		cmd.c_str(),
+		2,
+		0,
+		params,
+		0,
+		0,
+		0);
+
+	if ((result == NULL) || 
+		(PQresultStatus(result) != PGRES_COMMAND_OK))
+	{
+		std::cerr << "Unable to delete from library!" <<
+			PQresultErrorMessage(result) <<
+			std::endl;
+
+		PQclear(result);
+		return -1;
+	}
+	PQclear(result);
 
 	/*
 	 * Return status

@@ -148,12 +148,12 @@ int main(int argc, char **argv)
 #endif
 		if (dir_name[j].size() > 2)
 		{
-			lib_name = "REF:HELP_DEFAULT.TLB";
+			lib_name = "help_default";
 		}
 		else
 		{
-			lib_name = std::string("REF:HELP_") +
-				dir_name[j] + ".TLB";
+			lib_name = std::string("help_") +
+				dir_name[j];
 		}
 		//*******************************************************************
 		// Loop through three possible extensions

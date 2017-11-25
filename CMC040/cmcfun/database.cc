@@ -19,6 +19,8 @@ int db_connection::connect()
 	std::string connstr =
 		"dbname=" + db_username() +
 	       " application_name=" __FILE__;
+//	std::cerr << "connect " << connstr << std::endl;
+
 	//
 	// Attach to the SLP SQL database
 	//
@@ -41,6 +43,7 @@ int db_connection::connect()
 		std::cerr << "Badd conection " << msg << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	isconnected = true;
 }
 
 //
