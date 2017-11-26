@@ -39,11 +39,12 @@
 #include <unistd.h>
 #include <cmath>
 
+#include "preferences.h"
 #include "basicfun.h"
 #include "pusing.h"
 #include "datalist.h"
 #include "cmcfun.h"
-#include "preferences.h"
+#include "scopedef.h"
 
 #include "utl/utl_reportx.h"
 
@@ -424,7 +425,12 @@ changer1:;
 			for (j = 0; j <= tp_item - 1; j++)
 			{
 				BGosub(repsub);
-				text = prnt_date(n_date, 8) + basic::Format(ipp, "###,###,###.##") + basic::Format(ppp, "###,###,###.##") + basic::Format(lpp, "###,###,###.##") + basic::Format(iid, "###,###,###.##") + basic::Format(pd, "###,###,###.##");
+				text = prnt_date(n_date, 8) +
+					basic::Format(ipp, "###,###,###.##") +
+					basic::Format(ppp, "###,###,###.##") +
+					basic::Format(lpp, "###,###,###.##") +
+					basic::Format(iid, "###,###,###.##") +
+					basic::Format(pd, "###,###,###.##");
 				outp_line("", utl_reportx, title, text, 0);
 				if (utl_reportx.stat)
 				{
@@ -455,7 +461,12 @@ changer1:;
 			for (j = 0; j <= tp_item - 1; j++)
 			{
 				BGosub(repsub);
-				text = prnt_date(date_invdcode[cd + 7 * j], 8) + basic::Format(ipp, "###,###,###.##") + basic::Format(ppp, "###,###,###.##") + basic::Format(lpp, "###,###,###.##") + basic::Format(iid, "###,###,###.##") + basic::Format(pd, "###,###,###.##");
+				text = prnt_date(date_invdcode(cd + 7 * j), 8) +
+					basic::Format(ipp, "###,###,###.##") +
+					basic::Format(ppp, "###,###,###.##") +
+					basic::Format(lpp, "###,###,###.##") +
+					basic::Format(iid, "###,###,###.##") +
+					basic::Format(pd, "###,###,###.##");
 				outp_line("", utl_reportx, title, text, 0);
 				if (utl_reportx.stat)
 				{
@@ -477,7 +488,12 @@ nextyear:;
 		{
 			in = i * intrv;
 			BGosub(repsub);
-			text = prnt_date(date_invdcode[cd + in], 8) + basic::Format(ipp, "###,###,###.##") + basic::Format(ppp, "###,###,###.##") + basic::Format(lpp, "###,###,###.##") + basic::Format(iid, "###,###,###.##") + basic::Format(pd, "###,###,###.##");
+			text = prnt_date(date_invdcode(cd + in), 8) +
+				basic::Format(ipp, "###,###,###.##") +
+				basic::Format(ppp, "###,###,###.##") +
+				basic::Format(lpp, "###,###,###.##") +
+				basic::Format(iid, "###,###,###.##") +
+				basic::Format(pd, "###,###,###.##");
 			outp_line("", utl_reportx, title, text, 0);
 			j = j + 1;
 			if (j == tp_item)

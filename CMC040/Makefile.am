@@ -23,7 +23,9 @@ libcmcfun_a_SOURCES = \
        	cmcfun/find_file.cc \
        	cmcfun/func_round.cc \
        	cmcfun/libr_3insert.cc \
+       	cmcfun/read_initialize.cc \
        	cmcfun/read_sysjob.cc \
+       	cmcfun/read_syspn.cc \
        	cmcfun/time_code.cc \
        	cmcfun/time_invcode.cc \
        	cmcfun/time_now.cc
