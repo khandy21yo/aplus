@@ -84,7 +84,8 @@ void read_initialize(void)
 	//
 	// Create the pasteboard
 	//
-	smg_status = smg$create_pasteboard(scope.smg_pbid, 0, 0, smg_rows, smg_cols);
+	smg_status = smg$create_pasteboard(scope.smg_pbid,
+		0, 0, &smg_rows, &smg_cols);
 	if ((smg_status & 1) == 0)
 	{
 		exit(smg_status);
@@ -94,7 +95,8 @@ void read_initialize(void)
 	//
 	if (scope.screen_width != smg_cols)
 	{
-		smg_status = smg$change_pbd_characteristics(scope.smg_pbid, scope.screen_width, smg_cols, 0, smg_rows);
+		smg_status = smg$change_pbd_characteristics(scope.smg_pbid,
+			scope.screen_width, &smg_cols, 0, &smg_rows);
 	}
 	//
 	// Create the Message display
@@ -153,7 +155,7 @@ void read_initialize(void)
 	//
 	// Paste the data display
 	//
-	smg_status = smg$create_virtual_keyboard[(long)(scope.smg_kbid)];
+	smg_status = smg$create_virtual_keyboard(scope.smg_kbid);
 	if ((smg_status & 1) == 0)
 	{
 		exit(smg_status);

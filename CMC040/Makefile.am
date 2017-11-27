@@ -3,7 +3,8 @@ AM_CPPFLAGS = -I ~/btran/lib
 AM_LDFLAGS = -L ~/btran/lib -L .
 
 lib_LIBRARIES = \
-	libcmcfun.a
+	libcmcfun.a \
+	libsmg.a
 
 bin_PROGRAMS = \
 	testbatch \
@@ -30,6 +31,14 @@ libcmcfun_a_SOURCES = \
        	cmcfun/time_invcode.cc \
        	cmcfun/time_now.cc
 
+libsmg_a_SOURCES = \
+	smg/smg_change_pbd_characteristics.cc \
+	smg/smg_create_pasteboard.cc \
+	smg/smg_create_virtual_display.cc \
+	smg/smg_create_virtual_keyboard.cc \
+	smg/smg_paste_virtual_display.cc \
+	smg/smg_set_cursor_mode.cc
+
 # utl
 testbatch_SOURCES = utl/testbatch.cc
 testbatch_LDADD = libcmcfun.a -lbtran -lvms
@@ -43,5 +52,5 @@ tk_spec_inlibbat_LDADD = libcmcfun.a -lbtran -lvms -lpq
 
 # utl programs
 ut_spec_amortization_SOURCES = utl/ut_spec_amortization.cc
-ut_spec_amortization_LDADD = libcmcfun.a -lbtran -lvms -lpq
+ut_spec_amortization_LDADD = libcmcfun.a libsmg.a -lbtran -lvms -lpq
 

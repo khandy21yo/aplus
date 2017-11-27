@@ -11,6 +11,8 @@
 
 #include <string>
 
+#include "smg/smg.h"
+
 //
 // Common area
 //
@@ -22,13 +24,13 @@ struct scope_struct
 	// Time for input timeout in seconds
 	long scope_timeout;
 	// Keyboard buffer name
-	long smg_kbid;
+	smg_keyboard_id smg_kbid;
 	// Pastboard buffer name
-	long smg_pbid;
+	smg_pasteboard_id smg_pbid;
 	// Option display
-	long smg_option;
+	smg_display_id smg_option;
 	// Message display
-	long smg_message;
+	smg_display_id smg_message;
 	// Macro command flag
 	long macroflag;
 	// Company name
