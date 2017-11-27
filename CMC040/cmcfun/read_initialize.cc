@@ -107,7 +107,8 @@ void read_initialize(void)
 	// No border
 	// No attributes
 	// Default character set
-	smg_status = smg$create_virtual_display(2, 132, scope.smg_message, 0, 0, 0);
+	smg_status = smg$create_virtual_display(2, 132,
+		scope.smg_message, 0, 0, 0);
 	if ((smg_status & 1) == 0)
 	{
 		exit(smg_status);
@@ -120,7 +121,8 @@ void read_initialize(void)
 	// Row to start in
 	// Column to start in
 	// Don't need top-disp
-	smg_status = smg$paste_virtual_display(scope.smg_message, scope.smg_pbid, 23, 1, 0);
+	smg_status = smg$paste_virtual_display(scope.smg_message,
+		scope.smg_pbid, 23, 1, 0);
 	if ((smg_status & 1) == 0)
 	{
 		exit(smg_status);
@@ -134,7 +136,8 @@ void read_initialize(void)
 	// No border
 	// No attributes
 	// Default character set
-	smg_status = smg$create_virtual_display(2, 132, scope.smg_option, 0, 0, 0);
+	smg_status = smg$create_virtual_display(2, 132,
+		scope.smg_option, 0, 0, 0);
 	if ((smg_status & 1) == 0)
 	{
 		exit(smg_status);
@@ -147,7 +150,8 @@ void read_initialize(void)
 	// Row to start in
 	// Column to start in
 	// Don't need top-disp
-	smg_status = smg$paste_virtual_display(scope.smg_option, scope.smg_pbid, 21, 1, 0);
+	smg_status = smg$paste_virtual_display(scope.smg_option,
+		scope.smg_pbid, 21, 1, 0);
 	if ((smg_status & 1) == 0)
 	{
 		exit(smg_status);
@@ -169,12 +173,14 @@ void read_initialize(void)
 	//
 	// (READ_BROADCAST is actually a function, but...)
 	//
-	smg_status = smg$set_broadcast_trapping(scope.smg_pbid, &(read_3broadcast), &(scope));
+	smg_status = smg$set_broadcast_trapping(scope.smg_pbid,
+		&read_3broadcast, &scope);
 	//
 	// Set up hardware form feed so reports will page correctly
 	// through printer port.
 	//
-	i = smg$set_term_characteristics(scope.smg_pbid, tt$m_mechform, 0, tt$m_wrap, 0);
+	i = smg$set_term_characteristics(scope.smg_pbid,
+		TT$M_MECHFORM, 0, TT$M_WRAP, 0);
 	//
 	// Load in company name
 	//

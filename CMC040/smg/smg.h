@@ -8,6 +8,12 @@
 #include <panel.h>
 
 //
+// Constants
+//
+static const long TT$M_MECHFORM = 1;
+static const long TT$M_WRAP = 2;
+
+//
 // Pasteboard class
 //
 class smg_pasteboard_id
@@ -70,10 +76,29 @@ long smg$paste_virtual_display(
 	long a);
 long smg$create_virtual_keyboard(
 	smg_keyboard_id &kbid);
+long smg$flush_buffer(
+	smg_pasteboard_id &pbid);
+long smg$get_broadcast_message(
+	smg_pasteboard_id &pbid,
+	std::string &text);
+long smg$put_chars(
+	smg_display_id &display,
+	const std::string &text,
+	long row,
+	long col);
+long smg$set_broadcast_trapping(
+	smg_pasteboard_id &pbid,
+	void (*fun)(void*,void*,void*,void*),
+	void *);
 long smg$set_cursor_mode(
 	smg_pasteboard_id &pbid,
 	long mode);
-
+long smg$set_term_characteristics(
+	smg_pasteboard_id &pbid,
+	long a,
+	long b,
+	long c,
+	long d);
 
 
 #endif

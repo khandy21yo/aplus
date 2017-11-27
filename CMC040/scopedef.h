@@ -50,6 +50,11 @@ struct scope_struct
 //
 // Prototypes
 //
+void read_3broadcast(
+	void *scope,
+	void *a2,
+	void *a3,
+	void *a4);
 void read_initialize(void);
 
 #endif

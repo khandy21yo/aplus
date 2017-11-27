@@ -1,0 +1,14 @@
+//
+// Flush smg buffers
+//
+
+#include "smg/smg.h"
+
+//
+// Flush buffers
+//
+long smg$flush_buffer(
+	smg_pasteboard_id &pbid)
+{
+	upfate_panels();
+}

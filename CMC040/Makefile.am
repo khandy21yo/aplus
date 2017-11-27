@@ -24,6 +24,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/find_file.cc \
        	cmcfun/func_round.cc \
        	cmcfun/libr_3insert.cc \
+	cmcfun/read_3broadcast.cc \
        	cmcfun/read_initialize.cc \
        	cmcfun/read_sysjob.cc \
        	cmcfun/read_syspn.cc \
@@ -36,8 +37,13 @@ libsmg_a_SOURCES = \
 	smg/smg_create_pasteboard.cc \
 	smg/smg_create_virtual_display.cc \
 	smg/smg_create_virtual_keyboard.cc \
+	smg/smg_get_broadcast_message.cc \
+	smg/smg_flush_buffer.cc \
 	smg/smg_paste_virtual_display.cc \
-	smg/smg_set_cursor_mode.cc
+	smg/smg_put_chars.cc \
+	smg/smg_set_broadcast_trapping \
+	smg/smg_set_cursor_mode.cc \
+	smg/smg_set_term_characteristics.cc
 
 # utl
 testbatch_SOURCES = utl/testbatch.cc
