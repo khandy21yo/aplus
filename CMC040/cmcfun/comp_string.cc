@@ -1,5 +1,5 @@
-// %TITLE "String Comparison Function"
-// %SBTTL "COMP_STRING"
+//! \file
+//! \brief "String Comparison Function
 // %IDENT "V3.6a Calico"
 //
 // Source: ../../CMC030/cmcfun/source/comp_string.bas
@@ -12,51 +12,35 @@
 #include "basicfun.h"
 #include "cmcfun.h"
 
-
-
-
-
-long comp_string(const std::string &test_string, const std::string &wildcard_string)
+//! \brief compare strings
+//!
+//!	This function compares a string to a pattern.
+//!	It returns 0 if there is no match, and -1
+//!	if there is.
+//!
+//! \return An integer value containing the result of the
+//! comparison.
+//! (0 if match fails and -1 it succeeds.)
+//!
+long comp_string(
+	const std::string &test_string,
+		//!< The passed string to be tested.
+	const std::string &wildcard_string)
+		//!< The passed pattern to compare against.
+		//! This value can be anything that is allowed in the
+		//! "Wildcard" as defined in other manuels.
+		//! ('*'s, ",", "/", "?", ...)
+		//!
+		//! A blank wildcard string matches nothing,not even
+		//! blank strings.
+		//!
+		//! Replaced with Unix Regex strings, but still
+		//! allows '*' as a match for anything (ie. ".*").
 {
 	long is_match;
 	std::string str2;
 	std::string test_stringa;
 
-	// ++
-	//
-	// Abstract:HELP
-	//	.b
-	//	.lm +5
-	//	This function compares a string to a pattern.
-	//	It returns 0 if there is no match, and -1
-	//	if there is.
-	//	.lm -5
-	//
-	// Index:
-	//
-	// Parameters:
-	//
-	//	TEST_STRING$
-	//		The passed string to be tested.
-	//
-	//	WILDCARD_STRING$
-	//		The passed pattern to compare against.
-	//		This value can be anything that is allowed in the
-	//		"Wildcard" as defined in other manuels.
-	//		('*'s, ",", "/", "?", ...)
-	//
-	//		A blank wildcard string matches nothing,not even
-	//		blank strings.
-	//
-	//		Replaced with Unix Regex strings, but still
-	//		allows '*' as a match for anything (ie. ".*").
-	//
-	//	Returned value
-	//		An integer value containing the result of the
-	//		comparison.
-	//		(0 if match fails and -1 it succeeds.)
-	//
-	// --
 
 	//
 	// Trim the test string

@@ -1,4 +1,4 @@
-//! \file assg_unmakebatch.cc
+//! \file
 //! \brief Generate a date and a time given a batch number
 // V3.6a Calico
 //

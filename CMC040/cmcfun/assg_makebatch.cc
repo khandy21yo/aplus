@@ -1,4 +1,4 @@
-//! \file assg_makebatch.cc
+//! \file
 //! \brief Generate a batch number given a date and a time
 //
 #pragma module assg_makebatch "V3.6 Calico"
