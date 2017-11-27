@@ -1,34 +1,7 @@
-// Generate a date and a time given a batch number
-// ASSG_UNMAKEBATCH
+//! \file assg_unmakebatch.cc
+//! \brief Generate a date and a time given a batch number
 // V3.6a Calico
 //
-// ++
-//
-// Abstract:HELP
-//	.b
-//	.lm +5
-//	This functon will generate
-//	a date and time
-//	when given a batch number.
-//	.lm -5
-//
-// Index:
-//
-// Parameters:
-//
-//	BATCH$
-//		This is the batch number to generate a date and time
-//		for.
-//
-//	GIVEN_DATE$
-//		This is the date returned from the batch number,
-//		in YYYYMMDD format.
-//
-//	GIVEN_TIME$
-//		This is the time to generate the batch number for,
-//		in HHMMSS format.
-//
-// --
 //
 // Source: ../../CMC030/cmcfun/source/assg_unmakebatch.bas
 // Translated from Basic to C++ using btran
@@ -45,8 +18,23 @@
 #include "cmcfun.h"
 
 
-void assg_unmakebatch(std::string &batch,
-	std::string &given_date, std::string &given_time)
+//! \brief UnMake batch number
+//!
+//! This functon will generate
+//! a date and time
+//! when given a batch number.
+//! .lm -5
+//!
+void assg_unmakebatch(
+	std::string &batch,
+		//!< This is the batch number to generate a date and time
+		//! for.
+	std::string &given_date,
+		//!< This is the date returned from the batch number,
+		//! in YYYYMMDD format.
+	std::string &given_time)
+		//!< This is the time to generate the batch number for,
+		//! in HHMMSS format.
 {
 	double buildup;
 	long char_V1;

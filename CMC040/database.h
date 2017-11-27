@@ -1,8 +1,9 @@
-//
-// Configuration preferences
+//! \file database.h
+//!
+//! \brief Configuration preferences
 // 
-// This file defines database parameters and classes to
-// define the connections to a PostgreSQL database.
+//! This file defines database parameters and classes to
+//! define the connections to a PostgreSQL database.
 //
 
 #ifndef _database_h_
@@ -26,11 +27,11 @@ extern "C"
 // Change these parameters as necessary
 //
 
-//
-// Database host name
-//
-// Defaults to current host
-//
+//!
+//! \brief Database host name
+//!
+//! Defaults to current host
+//!
 inline std::string db_hostname(void)
 {
 	return std::string("localhost");
@@ -47,51 +48,51 @@ inline std::string db_hostname(void)
 #endif
 }
 
-//
-// User name to use fot database
-//
+//!
+//! \brief User name to use fot database
+//!
 inline std::string db_username(void)
 {
 	return std::string(getlogin());
 }
 
 //
-// Class to help deal with the database connection
+//! \brief Class to help deal with the database connection
 //
-// PostgreSQL can be quite fast, but making connections can
-// really slow things down. We also don't want to stay constantly
-// connected because that can tie up the database server with
-// unnecessary connections, since the default limit is 100
-// connections.
-//
-// We don't want to connect/disconnect
-// for each transaction, so this class is used to handle the
-// database connection.
+//! PostgreSQL can be quite fast, but making connections can
+//! really slow things down. We also don't want to stay constantly
+//! connected because that can tie up the database server with
+//! unnecessary connections, since the default limit is 100
+//! connections.
+//!
+//! We don't want to connect/disconnect
+//! for each transaction, so this class is used to handle the
+//! database connection.
 //
 class db_connection
 {
 private:
-	bool isconnected;	// Tracks weither the db is currently
-				// connected or not.
-	PGconn *dbh;		// PostgreSQL connection
+	bool isconnected;	//!< Tracks weither the db is currently
+				//! connected or not.
+	PGconn *dbh;		//!< PostgreSQL connection
 
 public:
 	//
-	// constructor
+	//! \brief constructor
 	//
 	db_connection()
 	{
 		isconnected = false;
 	}
 	//
-	// Destructor
+	//! \brief Destructor
 	//
 	~db_connection()
 	{
 		try_disconnect();
 	}
 	//
-	// Make sure we are currently connected.
+	//! \brief Make sure we are currently connected.
 	//
 	int try_connect()
 	{
@@ -107,7 +108,7 @@ public:
 	//
 	int connect();
 	//
-	// If connected, disconnect.
+	//! \brief If connected, disconnect.
 	//
 	int try_disconnect()
 	{
@@ -124,7 +125,7 @@ public:
 	int disconnect();
 
 	//
-	// PostgreSQL connection
+	//! \brief PostgreSQL connection
 	//
 	PGconn *get_dbh()
 	{

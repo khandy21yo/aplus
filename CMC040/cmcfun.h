@@ -1,4 +1,12 @@
-
+//! \file cmcfun.h
+//
+//! \brief Simple functions in the cmcfun subdirectory.
+//
+//! This header defines simple functions in the cmcfun/ dubdirectory
+//! that do not need special headers.
+//!
+//! Other headers contain more complex functions, such as scopedef.h
+//
 #ifndef _cmcfun_h_
 #define _cmcfun_h_
 

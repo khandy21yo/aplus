@@ -1,5 +1,7 @@
-// SCOPEDEF.COM - Defines scope type terminal functions so that
-// they are easily changed.
+//! \file scopedef.h
+//!
+//! \brief Defines scope type terminal functions so that
+//! they are easily changed.
 //
 //
 // Source: scopedef.com
@@ -14,36 +16,35 @@
 #include "smg/smg.h"
 
 //
-// Common area
+//! \brief Global information about the display
 //
-// %NOCROSS
 struct scope_struct
 {
-	// Exit status of entry routines
+	//! \brief Exit status of entry routines
 	long scope_exit;
-	// Time for input timeout in seconds
+	//! \brief Time for input timeout in seconds
 	long scope_timeout;
-	// Keyboard buffer name
+	//! \brief Keyboard buffer name
 	smg_keyboard_id smg_kbid;
-	// Pastboard buffer name
+	//! \brief Pastboard buffer name
 	smg_pasteboard_id smg_pbid;
-	// Option display
+	//! \brief Option display
 	smg_display_id smg_option;
-	// Message display
+	//! \brief Message display
 	smg_display_id smg_message;
-	// Macro command flag
+	//! \brief Macro command flag
 	long macroflag;
-	// Company name
+	//! \brief Company name
 	std::string prg_company;
-	// Message type
+	//! \brief Message type
 	std::string prg_ident;
-	// Program Name
+	//! \brief Program Name
 	std::string prg_program;
-	// Item for help
+	//! \brief Item for help
 	std::string prg_item;
-	// Width of created screen
+	//! \brief Width of created screen
 	long screen_width;
-	// Interupt Menu Levels
+	//! \brief Interupt Menu Levels
 	long imenu_levels;
 };
 
