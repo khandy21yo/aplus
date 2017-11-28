@@ -1,48 +1,7 @@
-/*	%TITLE "Subroutine to Search for a Group of Files"
- */
+//! \file
+//! \brief Subroutine to Search for a Group of Files
+//!
 #pragma module find_file "V3.6 Calico"
-
-/*
- *
- *++
- *
- * Abstract:HELP
- *	.b
- *	.lm +5
- *	This subroutine will locate files of the requested group
- *	(wildcards allowed). It will put the info on each file in
- *	string form in the array ALIST(). The number of items found
- *	will be in ALIST(0). LPREF is the length of the prefix of
- *	the filename and LSUFF is the length of the suffix of the
- *	filename. If LPREF and/or LSUFF are greater than 0 and FLAGs
- *	are set to match the length of LPREF and/or LSUFF.
- *	.b
- *	FLAG RESULT
- *	========================================================
- *	.table 3,25
- *	.te
- *	0	Full file specification(FSCN$_FILESPEC)
- *	.te
- *	1	Node name; includes two colons and the access control string(if specified).
- *	.te
- *	2	Device name; includes colon.
- *	.te
- *	4	Root directory; includes colon.
- *	.te
- *	8	Directory name; includes brackets (or angle brackets).
- *	.te
- *	16	File name; includes quotation marks (if any).
- *	.te
- *	32	File type; includes period.
- *	.te
- *	64	Version number; includes semicolon (or period).
- *	.end table
- *	ALIST() is an array(no matter the size) passed in as follows:
- *	CALL FIND_FILE("[*]*.*;*", A$(), 0)
- *	.lm -5
- *
- *--
- */
 
 /*
  * Include files
@@ -54,9 +13,42 @@
 #include <glob.h>
 #include <libgen.h>
 
-/*
- * Main Function
- */
+//!
+//!
+//! \brief Subroutine to Search for a Group of Files
+//!
+//!	This subroutine will locate files of the requested group
+//!	(wildcards allowed). It will put the info on each file in
+//!	string form in the array ALIST(). The number of items found
+//!	will be in ALIST(0). LPREF is the length of the prefix of
+//!	the filename and LSUFF is the length of the suffix of the
+//!	filename. If LPREF and/or LSUFF are greater than 0 and FLAGs
+//!	are set to match the length of LPREF and/or LSUFF.
+//!
+//!	FLAG RESULT
+//!	========================================================
+//!	.table 3,25
+//!	.te
+//!	0	Full file specification(FSCN$_FILESPEC)
+//!	.te
+//!	1	Node name; includes two colons and the access control string(if specified).
+//!	.te
+//!	2	Device name; includes colon.
+//!	.te
+//!	4	Root directory; includes colon.
+//!	.te
+//!	8	Directory name; includes brackets (or angle brackets).
+//!	.te
+//!	16	File name; includes quotation marks (if any).
+//!	.te
+//!	32	File type; includes period.
+//!	.te
+//!	64	Version number; includes semicolon (or period).
+//!	.end table
+//!	ALIST() is an array(no matter the size) passed in as follows:
+//!	CALL FIND_FILE("[*]*.*;*", A$(), 0)
+//!
+//!/
 void find_file(
 	const std::string &wildf,
 	std::vector<std::string> &alist,

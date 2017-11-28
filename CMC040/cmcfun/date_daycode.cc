@@ -1,39 +1,25 @@
-/*
- *	%TITLE "Aging Function for Certain Number of Days"
- */
+//! \file
+//! \brief Aging Function for Certain Number of Days"
+//
 #pragma module date_daycode "V3.6 Calico"
-
-/*
- *
- *++
- *
- * Abstract:HELP
- *	.p
- *	This function is based on Sept 14,1752 as day 1 (the date of the
- *	United States conversion to Georgian calendar).
- *
- *	Assumes 8 character date YYYYMMDD.
- *
- * Parameters:
- *
- *	DATUM$
- *		The passed date in question in the form YYYYMMDD OR YYMMDD.
- *
- *	Returned value
- *		The number of days since 14-Sept-1752.
- *
- * Compile
- *
- *	$ cc FUNC_SOURCE:DATE_DAYCODE/G_FLOAT
- *	$ LIB FUNC_LIB:CMC_3VECTOR/REP DATE_DAYCODE
- *	$ DELETE DATE_DAYCODE.OBJ;*
- *
- *--
- */
 
 #include <string>
 
-long date_daycode(const std::string &datum)
+//*
+//! \brief Aging Function for Certain Number of Days"
+//!
+//! Abstract:HELP
+//!	.p
+//!	This function is based on Sept 14,1752 as day 1 (the date of the
+//!	United States conversion to Georgian calendar).
+//!
+//!	Assumes 8 character date YYYYMMDD.
+//!
+//! \returns The number of days since 14-Sept-1752.
+//
+long date_daycode(
+	const std::string &datum)
+		//!< The passed date in question in the form YYYYMMDD OR YYMMDD.
 {
 	long mon, day, yr, end_yr, code, ly;
 	double jdy;

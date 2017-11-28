@@ -1,26 +1,7 @@
-/*	TITLE "Inverse of DATE_DAYCODE Function"
- */
+//! \file
+//! \brief Inverse of DATE_DAYCODE Function
+//
 #pragma module date_invdcode "V3.6 Calico"
-
-/*
- *
- *++
- *
- * Abstract:HELP
- *	.B
- *	Inverse of DATE__DAYCODE function.
- *
- * Index:
- *
- * Parameters:
- *
- *	DAYCODE
- *		The passed day code as returned from DATE_DAYCODE.
- *
- *	Returned value
- *		A string in the form YYYYMMDD.
- *--
- */
 
 #include <stdio.h>
 #include <math.h>
@@ -28,9 +9,19 @@
 
 #include "cmcfun.h"
 
+//! \brief sgn (sign) function
 #define sgn(x) ((x) > 0 ? 1 : 0)
 
-std::string date_invdcode(long daycode)
+//!
+//! \brief Inverse of DATE_DAYCODE Function
+//!
+//!	Inverse of DATE__DAYCODE function.
+//!
+//! \returns A string in the form YYYYMMDD.
+//
+std::string date_invdcode(
+	long daycode)
+ 		//!< The passed day code as returned from DATE_DAYCODE.
 {
 	long cd;
 	long cent;

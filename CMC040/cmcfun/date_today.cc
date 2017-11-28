@@ -1,33 +1,8 @@
-/*	%TITLE "Returns the Current Date in YYYYMMDD Form"
- */
+//! \file
+//! \brief Returns the Current Date in YYYYMMDD Form
+//
 #pragma module date_today "V3.6 Calico"
 
-/*
- *++
- *
- * Abstract:HELP
- *	Date>Today
- *	.b
- *	.lm +5
- *	Returns the current date in YYYYMMDD format (8 char).
- *	.lm -5
- *
- * Index:
- *
- * Parameters:
- *
- *	Returned value
- *		The current date in YYYYMMDD format (8 char)
- *
- * Example:
- *
- *	DATUM$ = DATE_TODAY
- *
- * AUTHOR:
- *
- *	03/20/86 - Kevin Handy
- *--
- */
 /*
  * Include files
  */
@@ -37,9 +12,21 @@
 
 #include "cmcfun.h"
 
-/*
- * Main function
- */
+//!
+//! \brief Returns the Current Date in YYYYMMDD Form
+//!
+//!	Date>Today
+//!
+//!	Returns the current date in YYYYMMDD format (8 char).
+//!
+//! \returns The current date in YYYYMMDD format (8 char)
+//!
+//! Example:
+//!
+//!	DATUM$ = DATE_TODAY
+//!
+//! \author 03/20/86 - Kevin Handy
+//!
 std::string date_today(void)
 {
 	char outstr[200];

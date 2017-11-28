@@ -1,40 +1,7 @@
-/*	%TITLE "Insert a Text File into a Library"
- */
+//! \file
+//! \brief Insert a Text File into a Library
+//!
 #pragma module libr_3insert "V3.6 Calico"
-
-/*
- *
- *++
- *
- * Abstract:HELP
- *	.p
- *	This function will insert text into a library,
- *	and append a key to that text.
- *
- *	WARNING: This version tries to suplicate the capabilities
- *	of the VMS lib$ functions, and isn't what a native SQL
- *	version should look like.
- *
- * Parameter:
- *
- *	LIB_NAME$
- *		Passed name of library to insert text into.
- *
- *	FILE_NAME$
- *		Passed name of file containing text to insert
- *		into the library.
- *
- *	KEY_NAME$
- *		Passed name of key to append to text.
- *
- *	Returns a status code.
- *
- * Example:
- *
- *	ST% = LIBR_3INSERT("HELP_GL", "SOURCE.FILE", "ADDRESS")
- *
- *--
- */
 
 /*
  * Include files
@@ -47,12 +14,30 @@
 #include "database.h"
 #include "cmcfun.h"
 
-/*
- * Main function
- */
-long libr_3insert(const std::string &lib_name,
+//!
+//! \brief Insert a Text File into a Library
+//!
+//!	This function will insert text into a library,
+//!	and append a key to that text.
+//!
+//!	WARNING: This version tries to suplicate the capabilities
+//!	of the VMS lib$ functions, and isn't what a native SQL
+//!	version should look like.
+//!
+//! \ returns Returns a status code.
+//!
+//! Example:
+//!
+//!	ST% = LIBR_3INSERT("HELP_GL", "SOURCE.FILE", "ADDRESS")
+//!
+long libr_3insert(
+	const std::string &lib_name,
+		//!< Passed name of library to insert text into.
 	const std::string &file_name,
+		//!> Passed name of file containing text to insert
+		//! into the library.
 	const std::string &key_name)
+		//!< Passed name of key to append to text.
 {
 	int st = 0;		// Return status
 	bool testflag;		// status flag

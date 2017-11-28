@@ -1,41 +1,7 @@
-/*	%TITLE "Format Date into MM/DD/YY or MM/DD/YYYY Format"
- */
+//! \file
+//! \brief Format Date into MM/DD/YY or MM/DD/YYYY Format
+//!/
 #pragma module prnt_date "V3.6 Calico"
-
-/*
- *
- *++
- *
- * Abstract:HELP
- *	.b
- *	.lm +5
- *	This function formats a date into MM/DD/YYYY format if
- *	INDATE% is 8% and into MM/DD/YY format otherwise.
- *	.lm -5
- *
- * Index:
- *
- * Parameters:
- *
- *	INDATE$
- *		The passed date that is to be formatted.
- *	INDATE%
- *		The passed integer that tells how the date should be
- *		formatted.
- *
- *	This function formats a date into either MM/DD/YYYY or
- *	MM/DD/YY, depending on the users choice.
- *
- * Example:
- *
- *	PRNT_DATE(AP_OPEN::INVDAT,8%)
- *
- * Author:
- *
- *	08/02/85 - Kevin Handy
- *
- *--
- */
 
 /*
  * Include files
@@ -47,12 +13,27 @@
 #include "cmcfun.h"
 #include "preferences.h"
 
-/*
- * Main Function
- */
+//!
+//! \brief Format Date into MM/DD/YY or MM/DD/YYYY Format
+//!
+//!	This function formats a date into MM/DD/YYYY format if
+//!	INDATE% is 8% and into MM/DD/YY format otherwise.
+//!
+//! \returns This function formats a date into either MM/DD/YYYY or
+//!	MM/DD/YY, depending on the users choice.
+//!
+//! Example:
+//!
+//!	PRNT_DATE(AP_OPEN::INVDAT,8%)
+//!
+//! \author 08/02/85 - Kevin Handy
+//!
 std::string prnt_date(
 	const std::string &indate,
+		//!< The passed date that is to be formatted.
 	long outlen)
+		//!> The passed integer that tells how the date should be
+		//! formatted.
 {
 	int loop;
 	long length;

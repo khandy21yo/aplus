@@ -1,28 +1,7 @@
-/*	%TITLE "Handle Broadcast Trapping."
- */
+//! \file
+//! \brief Handle Broadcast Trapping.
+//!/
 #pragma module read_3broadcast "V3.6 Calico"
-
-/*
- *++
- *
- * Abstract:HELP
- *	.p
- * Parameters:
- *
- *	The input is five parameters passed through by the
- *	AST trapping routine.
- *
- * Example:
- *
- *	DO NOT CALL AS A NORMAL SUB.  This function is
- *	special and called by AST's.
- *
- * Author:
- *
- *	09/01/87 - Kevin Handy
- *
- *--
- */
 
 /*
  * Include files
@@ -33,9 +12,19 @@
 #include "scopedef.h"
 #include "smg/smg.h"
 
-/*
- * Main function
- */
+//!
+//! \brief Handle Broadcast Trapping.
+//!
+//!	The input is five parameters passed through by the
+//!	AST trapping routine.
+//!
+//! Example:
+//!
+//!	DO NOT CALL AS A NORMAL SUB.  This function is
+//!	special and called by AST's.
+//!
+//! \author 09/01/87 - Kevin Handy
+//!
 void read_3broadcast(
 	void *scopex,
 	void *a2,

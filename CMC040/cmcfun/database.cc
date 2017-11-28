@@ -1,7 +1,7 @@
-//
-// database.cc
-//
-// Implemet classes defined in database.h
+//! \file
+//! \brief database.cc
+//!
+//! Implemet classes defined in database.h
 //
 #include <iostream>
 #include "database.h"
@@ -12,7 +12,7 @@
 db_connection db_conn;
 
 //
-// Connect to database
+//! \brief Connect to database
 //
 int db_connection::connect()
 {
@@ -47,7 +47,7 @@ int db_connection::connect()
 }
 
 //
-// Disconnect from database
+//! \brief Disconnect from database
 //
 int db_connection::disconnect()
 {
