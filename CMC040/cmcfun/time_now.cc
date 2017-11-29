@@ -1,23 +1,7 @@
-/*	%TITLE "Returns the Current Time in HHMMSS(24-Hour) Form"
- */
+//! \file
+//! \brief Returns the Current Time in HHMMSS(24-Hour) Form
+//!/
 #pragma module time_now "V3.6 Calico"
-
-/*
- *++
- *
- * Abstract:HELP
- *	.p
- *	Returns the current time in the HHMMSS (24-hour) form.
- *
- * Parameters:
- *
- *	Returns the current time in the HHMMSS form.
- *
- * Example:
- *
- *	NOW$ = TIME_NOW
- *
- */
 
 /*
  * Include files
@@ -28,9 +12,17 @@
 
 #include "cmcfun.h"
 
-/*
- * Main function
- */
+//!
+//! \brief Returns the Current Time in HHMMSS(24-Hour) Form
+//!
+//!	Returns the current time in the HHMMSS (24-hour) form.
+//!
+//! \returns Returns the current time in the HHMMSS form.
+//!
+//! Example:
+//!
+//!	NOW$ = TIME_NOW
+//!
 std::string time_now(void)
 {
 	char outstr[200];

@@ -1,4 +1,5 @@
-// %TITLE "Maintenance Initilization"
+//! \file
+//! \brief Maintenance Initilization
 // %SBTTL "READ_INITIALIZE"
 // %IDENT "V3.6a Calico"
 //
@@ -20,35 +21,25 @@
 #include "utl/utl_set.h"
 #include "smg/smg.h"
 
-//
-// Global values
-//
+//!
+//! \brief Global definition of "scope".
+//!
+//! This should be the only true definition of the "scope"
+//! cariable. All others should refer to this one.
+//!
 scope_struct scope;
 
-// ++
+//! \brief Maintenance Initilization
+//!
+//!	This subroutine initializes the maintenance programs.
+//!
+//!
+//! Example:
+//!
+//!	CALL READ_INITIALIZE
+//!
+//! \author 02/23/87 - Kevin Handy
 //
-// Abstract:HELP
-//	.b
-//	.lm +5
-//	This subroutine initializes the maintenance programs.
-//	.lm -5
-//
-// Index:
-//
-// Parameters:
-//
-//	This subroutine initializes the maintainence programs.
-//
-// Example:
-//
-//	CALL READ_INITIALIZE
-//
-// Author:
-//
-//	02/23/87 - Kevin Handy
-//
-// --
-
 void read_initialize(void)
 {
 	long i;

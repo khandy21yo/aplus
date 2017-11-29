@@ -1,29 +1,8 @@
-/*	%TITLE "Return the File Name of the Current Image"
- *	%SBTTL "READ_SYSPN"
- *	%IDENT "V3.3"
- *
- *
- *++
- *
- * Abstract:HELP
- *	.p
- *	This function returns the name of the current image.
- *
- * Index:
- * Parameters:
- *
- *	This function returns the file name of the current image.
- *
- * Example:
- *
- *	IMAGE$ = READ_SYSPN
- *
- * Author:
- *
- *	09/18/86 - B. Craig Larsen
- *
- *--
- */
+//! \file
+//! \brief Return the File Name of the Current Image
+//	%SBTTL "READ_SYSPN"
+//	%IDENT "V3.3"
+//
 
 /*
  * Include files
@@ -34,9 +13,19 @@
 #include "preferences.h"
 #include "cmcfun.h"
 
-/*
- * Main function
- */
+//!
+//! \brief Return the File Name of the Current Image
+//!
+//!	This function returns the name of the current image.
+//!
+//! \returns This function returns the file name of the current image.
+//!
+//! Example:
+//!
+//!	IMAGE$ = READ_SYSPN
+//!
+//! \author 09/18/86 - B. Craig Larsen
+//!
 std::string read_syspn(void)
 {
 	//

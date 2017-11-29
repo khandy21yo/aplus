@@ -24,6 +24,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/find_file.cc \
        	cmcfun/func_round.cc \
        	cmcfun/libr_3insert.cc \
+	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
        	cmcfun/read_initialize.cc \
        	cmcfun/read_sysjob.cc \
