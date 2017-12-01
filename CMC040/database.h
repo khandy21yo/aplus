@@ -149,6 +149,9 @@ class db_rms_cdd
 {
 public:
 	db_map_cdd db_values;
+		//!< std::map containing values read from a table
+	std::string table_name;
+		//!< Name of the database table
 
 	int load_psql(PGresult *result, int row, db_map_cdd &dbmap);
 
@@ -159,8 +162,14 @@ public:
 //!
 //! \brief Base class for RMS relative files
 //!
+//! Relative files are implemented by an SQL table with a special
+//! key 'recoid' which contains the record number.
+//! 'recoid' starts at 1 and goes up. 0 is not used, as RMS didn't use it.
+//!
 class db_rmsrelative_cdd : public db_rms_cdd
 {
+public:
+	int get_record(int record);
 };
 
 //!

@@ -17,6 +17,7 @@
 #include "preferences.h"
 #include "cmcfun.h"
 #include "scopedef.h"
+#include "database.h"
 #include "utl/utl_profile.h"
 #include "utl/utl_set.h"
 #include "smg/smg.h"
@@ -177,7 +178,7 @@ void read_initialize(void)
 	//
 	try
 	{
-		utl_profile.GetRecord(1);
+		utl_profile.get_record(1);
 	}
 	catch(basic::BasicError &Be)
 	{

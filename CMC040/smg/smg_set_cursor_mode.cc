@@ -1,13 +1,13 @@
-//
-// Set cursor mode
+// \file
+// \brief Set cursor mode
 //
 
 #include "smg/smg.h"
 
 //
-// Set cursor mode
+// \brief Set cursor mode
 //
-smg$set_cursor_mode(
+long smg$set_cursor_mode(
 	smg_pasteboard_id &pbid,
 	long mode)
 {

@@ -16,7 +16,7 @@ long smg$paste_virtual_display(
 	long col,
 	long a)
 {
-	display.win = newwin(display.lines, display.cols, row, col);
+	display.win = newwin(display.rows, display.cols, row, col);
 	display.panel = new_panel(display.win);
 
 	return 1;

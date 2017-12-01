@@ -22,7 +22,7 @@ int smg$change_pbd_characteristics(
 	}
 	if (smg_cols != 0)
 	{
-		*smg_rcol = COLS;
+		*smg_cols = COLS;
 	}
 }
 

@@ -4,6 +4,7 @@
 #ifndef _smg_h_
 #define _smg_h_
 
+#include <string>
 #include <curses.h>
 #include <panel.h>
 

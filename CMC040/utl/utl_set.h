@@ -13,6 +13,14 @@ class utl_set_cdd : public db_rmsindexed_cdd
 {
 public:
 	//!
+	//! \brief Constructor
+	//!
+	utl_set_cdd(void)
+	{
+		table_name = "utl_set";
+	}
+
+	//!
 	//! brief Copy into a db_map_cdd into specific class variables
 	//!
 	virtual void copy_tomap(db_map_cdd &dbmap)
@@ -55,5 +63,13 @@ public:
 	//! Data Format
 	std::string fdata; //[30];
 };
+
+//
+// Prototypes
+//
+long read_35set(
+	std::string group,
+	std::string item,
+	utl_set_cdd &utl_set_read);
 
 #endif

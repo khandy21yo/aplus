@@ -8,10 +8,15 @@
  * Include files
  */
 #include <string>
-#include :cunistd>
+#include <unistd.h>
+#include <linux/limits.h>
 
 #include "preferences.h"
 #include "cmcfun.h"
+
+//#ifndef PATH_MAX
+//#define PATH_MAX 4096
+//#endif
 
 //!
 //! \brief Return the File Name of the Current Image

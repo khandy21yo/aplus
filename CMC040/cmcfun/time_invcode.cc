@@ -1,6 +1,6 @@
 //! \file
 //! \brief Time Aging Function
- */
+//
 #pragma module time_invcode "V3.6 Calico"
 
 #include <cstdio>

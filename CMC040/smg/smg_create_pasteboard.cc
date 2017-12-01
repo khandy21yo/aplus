@@ -26,6 +26,6 @@ int smg$create_pasteboard(
 	}
 	if (smg_cols != 0)
 	{
-		*smg_rcol = COLS;
+		*smg_cols = COLS;
 	}
 }
