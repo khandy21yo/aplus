@@ -16,6 +16,7 @@
 
 #include "preferences.h"
 #include "cmcfun.h"
+#include "database.h"
 
 #include "utl/utl_set.h"
 
@@ -35,40 +36,42 @@ long read_35set(
 	utl_set_cdd &utl_set_read)
 		//!  returned record
 {
-	long Result;
-	std::string a;
-	std::string b;
+	long exit_status = CMC$_UNDEFINED;
+	PGconn *dbh;		// Database connection
+	PGresult *result;
 
-	long exit_status;
+	const char *cmd =
+		"SELECT * FROM utl_set WHERE programname=$1 AND item=$2";
 
-// SELECT * FROM utl_set WHERE group=$1 AND item=$2
+	dbh = db_conn.get_dbh();
 
-	//
-	// Assume undefined
-	//
-	exit_status = CMC$_UNDEFINED;
-	//
-	// Try to read device name from DEVICE
-	//
-	a = std::string(utl_set.programname.size(), ' ');
-	Lset(a, group);
-	b = std::string(utl_set.item.size(), ' ');
-	Lset(b, item);
-	try
+	const char *param[3];
+	param[0] = group.c_str();
+	param[1] = item.c_str();
+
+	result = PQexecParams(dbh,
+		cmd,
+		2,
+		0,
+		param,
+		0,
+		0,
+		0);
+
+	if ((result != NULL) && (PQresultStatus(result) == PGRES_TUPLES_OK) &&
+		PQntuples(result) > 0)
 	{
-		BasicChannel[utl_set_ch].SetKey(0);
-		BasicChannel[utl_set_ch].SetKeyMode(Equal);
-		BasicChannel[utl_set_ch].SetKeyValue(a + b);
-		BasicChannel[utl_set_ch].SetRegardless();
-		BasicChannel[utl_set_ch].Get();
+		for (int pkgs = 0; pkgs < PQntuples(result); pkgs++)
+		{
+			utl_set_read.load_psql(result, pkgs,
+				utl_set_read.db_values);
+			utl_set_read.copy_frommap(utl_set_read.db_values);
+
+			exit_status = CMC$_NORMAL;
+		}
 	}
-	catch(basic::BasicError &Be)
-	{
-		exit_status = CMC$_UNDEFINED;
-		goto L_2000;
-	}
-	utl_set_read = utl_set;
-	exit_status = CMC$_NORMAL;
-L_2000:;
+
+	PQclear(result);
+
 	return exit_status;
 }

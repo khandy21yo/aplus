@@ -10,6 +10,7 @@
 #define _database_h_
 
 #include <string>
+#include <map>
 
 extern "C"
 {
@@ -133,6 +134,43 @@ public:
 		return dbh;
 	}
 };
+
+//!
+//! \brief map to hold database values
+//!
+//! This hold infividual values in a key/data format.
+//!
+typedef std::map<std::string, std::string> db_map_cdd;
+
+//!
+//! \brief base class for all rms type data files
+//!
+class db_rms_cdd
+{
+public:
+	db_map_cdd db_values;
+
+	int load_psql(PGresult *result, int row, db_map_cdd &dbmap);
+
+	virtual void copy_tomap(db_map_cdd &dbmap);
+	virtual void copy_frommap(db_map_cdd &dbmap);
+};
+
+//!
+//! \brief Base class for RMS relative files
+//!
+class db_rmsrelative_cdd : public db_rms_cdd
+{
+};
+
+//!
+//! \brief Base class for RMS indexed files
+//!
+class db_rmsindexed_cdd : public db_rms_cdd
+{
+};
+
+
 
 //
 // There really should only be one of these for most cases

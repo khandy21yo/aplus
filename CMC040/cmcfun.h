@@ -13,6 +13,51 @@
 #include <string>
 #include <vector>
 
+//
+// Constants
+//
+//=================================================================
+static const long CMC$_ABORT              =         10;
+static const long CMC$_DATEOUT            =         11;
+static const long CMC$_LEFT               =          0;
+static const long CMC$_MACRO              =         19;
+static const long CMC$_NOOPTION           =          4;
+static const long CMC$_NORMAL             =          1;
+static const long CMC$_RIGHT              =          1;
+static const long CMC$_TERMINATED         =          8;
+static const long CMC$_UNDEFINED          =          3;
+static const long CMC$_UNTERROR           =          2;
+static const long CMC$_WARNING            =          0;
+//=================================================================
+static const long OPT_ABORT               =          1;
+static const long OPT_ADDREC              =          2;
+static const long OPT_ASSIGN              =          3;
+static const long OPT_CHECK               =          4;
+static const long OPT_CLOSEFILE           =          5;
+static const long OPT_COMPLETE            =          6;
+static const long OPT_CONFIRM             =          7;
+static const long OPT_HHMMSS              =          0;
+static const long OPT_INTERRUPT           =          8;
+static const long OPT_MARKFILE            =          9;
+static const long OPT_MMDDYY              =          0;
+static const long OPT_OPENFILE            =         10;
+static const long OPT_POSTFILE            =         11;
+static const long OPT_REPORT              =         14;
+static const long OPT_RESTART             =         12;
+static const long OPT_SUMMARY             =         13;
+//=================================================================
+static const long SUBOPT_CHECK            =      65536;
+static const long SUBOPT_DETAIL           =     131072;
+static const long SUBOPT_FINAL            =     262144;
+static const long SUBOPT_LEDGER           =          1;
+static const long SUBOPT_LINEITEM         =          2;
+static const long SUBOPT_NOOPT            =          0;
+static const long SUBOPT_REGISTER         =          3;
+static const long SUBOPT_REVERSE          =     524288;
+
+//
+// Prototypes
+//
 std::string assg_makebatch(
 	const std::string &given_date,
 	const std::string &given_time);
@@ -43,3 +88,4 @@ std::string time_invcode(long tcode);
 std::string time_now(void);
 
 #endif
+

@@ -14,7 +14,7 @@ static const long TT$M_MECHFORM = 1;
 static const long TT$M_WRAP = 2;
 
 //
-// Pasteboard class
+//! \brief Pasteboard class
 //
 class smg_pasteboard_id
 {
@@ -22,7 +22,7 @@ private:
 };
 
 //
-// Virtual display class
+//! \brief Virtual display class
 //
 class smg_display_id
 {
@@ -35,7 +35,7 @@ public:
 };
 
 //
-// Keyboard id
+//! \brief Keyboard id
 //
 class smg_keyboard_id
 {
