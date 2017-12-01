@@ -11,8 +11,17 @@
 //
 // Constants
 //
-static const long TT$M_MECHFORM = 1;
-static const long TT$M_WRAP = 2;
+static const long TT$M_MECHFORM = 1;	//!< Terminal mechanical form feed
+static const long TT$M_WRAP = 2;	//!< Terminal setting wraparound
+
+static const int SMG$M_BOLD = 1;	//< Display in Bold
+static const int SMG$M_NORMAL = 0;	//< Display in Normal
+static const int SMG$M_BORDER = 2;	//< Display border around window
+
+static const int SMG$K_TRM_CTRLZ = ('Z' & 0x1f);	//!< Control/Z
+static const int SMG$K_TRM_DOWN = KEY_DOWN;	//!< Down arrow
+static const int SMG$K_TRM_F10 = KEY_F(10);	//!< F10 key
+static const int SMG$K_TRM_UP = KEY_UP;		//!< Up arrow
 
 //
 //! \brief Pasteboard class

@@ -212,7 +212,7 @@ L_1100:;
 		// Exit key
 		//
 	}
-	else if ((scope.scope_exit == smg$k_trm_f10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
+	else if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
 	{
 		goto exitprogram;
 	}
