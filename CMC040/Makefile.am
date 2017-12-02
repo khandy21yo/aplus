@@ -40,6 +40,7 @@ libsmg_a_SOURCES = \
 	smg/smg_create_virtual_keyboard.cc \
 	smg/smg_get_broadcast_message.cc \
 	smg/smg_flush_buffer.cc \
+	smg/smg_label_botder.cc \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_put_chars.cc \
 	smg/smg_set_broadcast_trapping \

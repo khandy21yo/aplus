@@ -121,7 +121,7 @@ int main(int argc, char **argv)
 // #pragma psect end tt_flag_option
 	long xlong;
 	long ylong;
-	long smg_view;
+	smg_display_id smg_view;
 
 	auto fnni = [&](long n, double i_V3)
 	{

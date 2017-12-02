@@ -1,17 +1,20 @@
-//
-// Put characters
-//
+//! \file
+//! \btief  Put characters
+//!
 #include <string>
 #include "smg/smg.h"
 
-//
-// Put characters
-//
+//!
+//! \brief Put characters
+//!
 long smg$put_chars(
-	smg_display_id &display,
-	const std::string &text,
-	long row,
-	long col)
+	smg_display_id &display,	//!< Display to write to
+	const std::string &text,	//!< Text to write
+	long row,			//!< Row to dosplay at
+	long col)			//! Column to display at
 {
-	mvwaddstr(display.win, row, col, text.c_str());
+	mvwaddstr(display.win,
+		row + display.border,
+		col + display.border,
+		text.c_str());
 }

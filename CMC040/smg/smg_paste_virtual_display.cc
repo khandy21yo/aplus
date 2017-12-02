@@ -1,22 +1,25 @@
-//
-// Paste virtual display
-//
+//! \file
+//! \btief Paste virtual display
+//!
 
 #include "smg/smg.h"
 
-//
-// Paste virtual display
-//
-// NOTE: We acutally do the curses window creatiion here
-//
+//!
+//! \brief Paste virtual display
+//!
+//! NOTE: We acutally do the curses window creatiion here
+//!
 long smg$paste_virtual_display(
-	smg_display_id &display,
-	smg_pasteboard_id &pbid,
-	long row,
-	long col,
-	long a)
+	smg_display_id &display,	//!< Display being pastes
+	smg_pasteboard_id &pbid,	//!< Pasteboard
+	long row,			//!< Row to paste to
+	long col,			//!< Column to paste to
+	long a)				//!< ??
 {
-	display.win = newwin(display.rows, display.cols, row, col);
+	display.win = newwin(display.rows + display.border * 2,
+		display.cols + display.border * 2,
+		row - display.border,
+		col - display.border);
 	display.panel = new_panel(display.win);
 
 	return 1;

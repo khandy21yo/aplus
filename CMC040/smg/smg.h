@@ -1,6 +1,6 @@
-//
-// Functions to emulate SMG using curses and panels
-//
+//! \file
+//! \bried Functions to emulate SMG using curses and panels
+//!
 #ifndef _smg_h_
 #define _smg_h_
 
@@ -31,17 +31,18 @@ class smg_pasteboard_id
 private:
 };
 
-//
-//! \brief Virtual display class
-//
+//!
+//! \btief \brief Virtual display class
+//!
 class smg_display_id
 {
 public:
-	long border;	// 0 if no border, 1 if border
-	WINDOW *win;	// curses window id
-	PANEL *panel;	// curses panel id
-	long rows;	// Number of rows
-	long cols;	// Number of columns
+	long border;	//!< 0 if no border, 1 if border
+	WINDOW *win;	//!< curses window id
+	PANEL *panel;	//!< curses panel id
+	long rows;	//!< Number of rows
+	long cols;	//!< Number of columns
+	std::string label;	//!< Border label
 };
 
 //
@@ -75,15 +76,18 @@ long smg$create_virtual_display(
 	long rows,
 	long cols,
 	smg_display_id &display,
-	long a,
-	long b,
-	long c);
+	long flag = 0,
+	long b = 0,
+	long c = 0);
+long smg$label_border(
+	smg_display_id &display,
+	const std::string &&label);
 long smg$paste_virtual_display(
 	smg_display_id &display,
 	smg_pasteboard_id &pbid,
 	long row,
 	long col,
-	long a);
+	long a = 0);
 long smg$create_virtual_keyboard(
 	smg_keyboard_id &kbid);
 long smg$flush_buffer(
