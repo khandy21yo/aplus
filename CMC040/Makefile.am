@@ -21,6 +21,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_daycode.cc \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
+	cmcfun/entr_3option.cc \
        	cmcfun/find_file.cc \
        	cmcfun/func_round.cc \
        	cmcfun/libr_3insert.cc \
@@ -34,12 +35,15 @@ libcmcfun_a_SOURCES = \
        	cmcfun/time_now.cc
 
 libsmg_a_SOURCES = \
+	smg/smg_begin_display_update.cc \
 	smg/smg_change_pbd_characteristics.cc \
 	smg/smg_create_pasteboard.cc \
 	smg/smg_create_virtual_display.cc \
 	smg/smg_create_virtual_keyboard.cc \
-	smg/smg_get_broadcast_message.cc \
+	smg/smg_end_display_update.cc \
+	smg/smg_erase_display.cc \
 	smg/smg_flush_buffer.cc \
+	smg/smg_get_broadcast_message.cc \
 	smg/smg_label_botder.cc \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_put_chars.cc \

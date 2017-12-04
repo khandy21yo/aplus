@@ -21,6 +21,8 @@ static const int SMG$M_BORDER = 2;	//< Display border around window
 static const int SMG$K_TRM_CTRLZ = ('Z' & 0x1f);	//!< Control/Z
 static const int SMG$K_TRM_DOWN = KEY_DOWN;	//!< Down arrow
 static const int SMG$K_TRM_F10 = KEY_F(10);	//!< F10 key
+static const int SMG$K_TRM_LEFT = KEY_LEFT;	//!< Left arrow
+static const int SMG$K_TRM_RIGHT = KEY_RIGHT;	//!< Right arrow
 static const int SMG$K_TRM_UP = KEY_UP;		//!< Up arrow
 
 //
@@ -60,12 +62,14 @@ class smg_keyboard_id
 //
 // Function names
 //
+long smg$begin_display_update(
+	smg_display_id display);
 int smg$change_pbd_characteristics(
 	smg_pasteboard_id &pbid, 
 	long screen_width, 
-	long *smg_cols, 
-	long a, 
-	long *smg_rows);
+	long *smg_cols = 0, 
+	long a = 0, 
+	long *smg_rows = 0);
 int smg$create_pasteboard(
 	smg_pasteboard_id &smg_pbid,
 	long a,
@@ -79,6 +83,17 @@ long smg$create_virtual_display(
 	long flag = 0,
 	long b = 0,
 	long c = 0);
+long smg$create_virtual_keyboard(
+	smg_keyboard_id &kbid);
+long smg$end_display_update(
+	smg_display_id display);
+long smg$erase_display(
+	smg_display_id &display);
+long smg$flush_buffer(
+	smg_pasteboard_id &pbid);
+long smg$get_broadcast_message(
+	smg_pasteboard_id &pbid,
+	std::string &text);
 long smg$label_border(
 	smg_display_id &display,
 	const std::string &&label);
@@ -88,18 +103,14 @@ long smg$paste_virtual_display(
 	long row,
 	long col,
 	long a = 0);
-long smg$create_virtual_keyboard(
-	smg_keyboard_id &kbid);
-long smg$flush_buffer(
-	smg_pasteboard_id &pbid);
-long smg$get_broadcast_message(
-	smg_pasteboard_id &pbid,
-	std::string &text);
 long smg$put_chars(
 	smg_display_id &display,
 	const std::string &text,
 	long row,
-	long col);
+	long col,
+	long eline = 0,
+	long flags = 0,
+	long a = 0);
 long smg$set_broadcast_trapping(
 	smg_pasteboard_id &pbid,
 	void (*fun)(void*,void*,void*,void*),

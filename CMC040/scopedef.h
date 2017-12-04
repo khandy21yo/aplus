@@ -48,9 +48,29 @@ struct scope_struct
 	long imenu_levels;
 };
 
+//!
+//! \brief option lists
+//!
+class option_list_struct
+{
+public:
+	unsigned char option;	//!< Character to type to select
+	int optionptr;		//!< Pointer to option character in name
+	std::string name;	//!< Entire word for option
+	int curoppos;		//!< Position in original string
+	int line;		//!< Line option will display on
+	int column;		//!< Column will display on
+};
+
 //
 // Prototypes
 //
+std::string entr_3option(
+	scope_struct &scope,
+	std::string &op_group,
+	std::string &op_possible,
+	long &op_curop,
+	long op_flagw);
 void read_3broadcast(
 	void *scope,
 	void *a2,
