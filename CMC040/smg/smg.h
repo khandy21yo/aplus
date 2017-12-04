@@ -33,21 +33,45 @@ static const int SMG$K_TRM_CTRLP = ('P' & 0x1f);	//!< Control/P
 static const int SMG$K_TRM_CTRLR = ('R' & 0x1f);	//!< Control/R
 static const int SMG$K_TRM_CTRLS = ('S' & 0x1f);	//!< Control/S
 static const int SMG$K_TRM_CTRLT = ('T' & 0x1f);	//!< Control/T
+static const int SMG$K_TRM_CTRLW = ('W' & 0x1f);	//!< Control/W
 static const int SMG$K_TRM_CTRLX = ('X' & 0x1f);	//!< Control/X
 static const int SMG$K_TRM_CTRLZ = ('Z' & 0x1f);	//!< Control/Z
+static const int SMG$K_TRM_DO = KEY_F(16);	//!< DO (F16) key
 static const int SMG$K_TRM_DOWN = KEY_DOWN;	//!< Down arrow
 static const int SMG$K_TRM_F6 = KEY_F(6);	//!< F6 key
 static const int SMG$K_TRM_F7 = KEY_F(7);	//!< F7 key
 static const int SMG$K_TRM_F8 = KEY_F(8);	//!< F8 key
 static const int SMG$K_TRM_F9 = KEY_F(9);	//!< F9 key
 static const int SMG$K_TRM_F10 = KEY_F(10);	//!< F10 key
+static const int SMG$K_TRM_F11 = KEY_F(11);	//!< F11 key
 static const int SMG$K_TRM_F12 = KEY_F(12);	//!< F12 key
 static const int SMG$K_TRM_F14 = KEY_F(14);	//!< F14 key
 static const int SMG$K_TRM_F17 = KEY_F(17);	//!< F17 key
 static const int SMG$K_TRM_F18 = KEY_F(18);	//!< F18 key
 static const int SMG$K_TRM_F19 = KEY_F(19);	//!< F19 key
+static const int SMG$K_TRM_F20 = KEY_F(20);	//!< F20 key
+static const int SMG$K_TRM_FIND = KEY_FIND;	//!< FIND key
+static const int SMG$K_TRM_HELP = KEY_HELP;	//!< HELP key
+static const int SMG$K_TRM_INSERT_HERE = KEY_IC;	//!< Insert key
+static const int SMG$K_TRM_KP1 = KEY_C1;	//!< Keypad 1
+static const int SMG$K_TRM_KP2 = -9996;		//!< Keypad 2
+static const int SMG$K_TRM_KP3 = KEY_C3;	//!< Keypad 3
+static const int SMG$K_TRM_KP4 = -9995;		//!< Keypad 4
+static const int SMG$K_TRM_KP5 = KEY_B2;	//!< Keypad 5
+static const int SMG$K_TRM_KP6 = -9994;		//!< Keypad 6
+static const int SMG$K_TRM_KP7 = KEY_A1;	//!< Keypad 7
+static const int SMG$K_TRM_KP8 = -9993;		//!< Keypad 8
+static const int SMG$K_TRM_KP9 = KEY_A3;	//!< Keypad 9
 static const int SMG$K_TRM_LEFT = KEY_LEFT;	//!< Left arrow
+static const int SMG$K_TRM_NEXT_SCREEN = KEY_NEXT;	//!< Next
+static const int SMG$K_TRM_PF1 = -9992;		//!< Keypad 8
+static const int SMG$K_TRM_PF2 = -9991;		//!< Keypad 8
+static const int SMG$K_TRM_PF3 = -9989;		//!< Keypad 8
+static const int SMG$K_TRM_PF4 = -9988;		//!< Keypad 8
+static const int SMG$K_TRM_PREV_SCREEN = KEY_PREVIOUS;	//!< Previous
+static const int SMG$K_TRM_REMOVE = KEY_DC;	//!< Remove key
 static const int SMG$K_TRM_RIGHT = KEY_RIGHT;	//!< Right arrow
+static const int SMG$K_TRM_SELECT = KEY_SELECT;	//!< Select Key
 static const int SMG$K_TRM_TIMEOUT = -9999;	//!< Timeout error
 static const int SMG$K_TRM_UNKNOWN = -9997;	//!< Unknown error
 static const int SMG$K_TRM_UP = KEY_UP;		//!< Up arrow
@@ -138,6 +162,8 @@ long smg$put_chars(
 	long eline = 0,
 	long flags = 0,
 	long a = 0);
+long smg$repaint_screen(
+	smg_pasteboard_id &pbid);
 long smg$set_broadcast_trapping(
 	smg_pasteboard_id &pbid,
 	void (*fun)(void*,void*,void*,void*),

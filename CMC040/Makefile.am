@@ -25,6 +25,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_4entry.cc \
 	cmcfun/entr_4specialkeys.cc \
        	cmcfun/find_file.cc \
+       	cmcfun/func_4scoseq.cc \
        	cmcfun/func_round.cc \
 	cmcfun/help_34message.cc \
        	cmcfun/libr_3insert.cc \
@@ -50,6 +51,7 @@ libsmg_a_SOURCES = \
 	smg/smg_label_botder.cc \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_put_chars.cc \
+	smg/smg_repaint_screen.cc \
 	smg/smg_set_broadcast_trapping \
 	smg/smg_set_cursor_mode.cc \
 	smg/smg_set_term_characteristics.cc

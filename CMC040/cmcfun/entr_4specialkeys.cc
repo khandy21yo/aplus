@@ -1,6 +1,6 @@
 //! \file
 //! \brief Subroutine to Enter Data From Scope/KB
- */
+//!
 #pragma module entr_4specialkeys "V3.6 Calico"
 
 /*

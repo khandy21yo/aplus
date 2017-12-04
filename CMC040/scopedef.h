@@ -80,6 +80,8 @@ long entr_4specialkeys(
 	smg_display_id &smg_option,
 	long xflag,
 	long retchar);
+int func_4scoseq(
+	int x);
 void help_34message(
 	scope_struct &scope,
 	const std::string &messages,
