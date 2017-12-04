@@ -22,8 +22,11 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
 	cmcfun/entr_3option.cc \
+	cmcfun/entr_4entry.cc \
+	cmcfun/entr_4specialkeys.cc \
        	cmcfun/find_file.cc \
        	cmcfun/func_round.cc \
+	cmcfun/help_34message.cc \
        	cmcfun/libr_3insert.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \

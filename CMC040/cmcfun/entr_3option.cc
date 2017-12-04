@@ -404,14 +404,13 @@ std::string entr_3option(
 	 * Copy over all return values
 	 */
 	op_curop = option_list[curop].curoppos;
-	length = 1;
-	str$copy_r(returnstr, length, option_list[curop].option);
 
 	/*
 	 * Exit from the function
 	 */
 	smg$erase_display(scope.smg_message);
 
+	return std::string(1, option_list[curop].option);
 }
 
 
@@ -425,7 +424,7 @@ static void drawoption(scope_struct &scope,
 	/*
 	 * Local variables
 	 */
-	struct dsc$descriptor segment;
+	std::string segment;
 	long column;
 	int loop;
 
@@ -456,8 +455,7 @@ static void drawoption(scope_struct &scope,
 			 */
 			column = min(sizeof(scope.prg_item) - flag_byte,
 				option_list.name.size());
-			strncpy(&scope.prg_item[flag_byte],
-				option_list.name, column);
+			scope.prg_item= option_list.name[flag_byte];
 			for (loop = column + flag_byte;
 				loop < sizeof(scope.prg_item);
 				loop++)
@@ -489,7 +487,7 @@ static void drawoption(scope_struct &scope,
 		if (option_list.optionptr > 0)
 		{
 			segment =
-				option_list->name[option_list.optionptr - 1];
+				option_list.name[option_list.optionptr - 1];
 
 			column = option_list.column + option_list.optionptr - 1;
 

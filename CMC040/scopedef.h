@@ -71,6 +71,22 @@ std::string entr_3option(
 	std::string &op_possible,
 	long &op_curop,
 	long op_flagw);
+long entr_4entry(
+	scope_struct &scope,
+	smg_display_id &smg_option,
+	long xflag);
+long entr_4specialkeys(
+	scope_struct &scope,
+	smg_display_id &smg_option,
+	long xflag,
+	long retchar);
+void help_34message(
+	scope_struct &scope,
+	const std::string &messages,
+	const std::string &help_severity,
+	const std::string &help_progname,
+	const std::string &help_filename,
+	const std::string &help_item);
 void read_3broadcast(
 	void *scope,
 	void *a2,
