@@ -61,12 +61,12 @@ long entr_4specialkeys(
 				/*
 				 * Create descriptors for all names
 				 */
-				dsc_iden = scope->prg_ident;
+				dsc_iden = scope.prg_ident;
 				dsc_prog = scope.prg_program;
 				dsc_item = scope.prg_item;
 				dsc_emtstr = "";
 
-				if (dsc_prig == "HELP_34MESSAGE")
+				if (dsc_prog == "HELP_34MESSAGE")
 				{
 					value = retchar;
 				}
@@ -100,7 +100,7 @@ long entr_4specialkeys(
 					scope.imenu_levels++;
 				}
 
-				smg_status = smg$set_cursor_mode(scope->smg_pbid, 1);
+				smg_status = smg$set_cursor_mode(scope.smg_pbid, 1);
 
 				col_col = smg$cursor_column(smg_option);
 				col_row = smg$cursor_row(smg_option);

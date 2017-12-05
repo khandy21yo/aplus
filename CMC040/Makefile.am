@@ -44,6 +44,8 @@ libsmg_a_SOURCES = \
 	smg/smg_create_pasteboard.cc \
 	smg/smg_create_virtual_display.cc \
 	smg/smg_create_virtual_keyboard.cc \
+	smg/smg_cursor_column.c \
+	smg/smg_cursor_row.c \
 	smg/smg_end_display_update.cc \
 	smg/smg_erase_display.cc \
 	smg/smg_flush_buffer.cc \

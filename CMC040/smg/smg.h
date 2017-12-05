@@ -136,6 +136,10 @@ long smg$create_virtual_display(
 	long c = 0);
 long smg$create_virtual_keyboard(
 	smg_keyboard_id &kbid);
+long smg$cursor_column(
+	smg_display_id gisplay);
+long smg$cursor_row(
+	smg_display_id gisplay);
 long smg$end_display_update(
 	smg_display_id display);
 long smg$erase_display(
