@@ -22,8 +22,9 @@ static const int SMG$K_TRM_BUFFER_FULL = -9997;	//!< Buffer full error
 static const int SMG$K_TRM_CANCELLED = -9998;	//!< Cancelled error
 static const int SMG$K_TRM_CTRLB = ('B' & 0x1f);	//!< Control/B
 static const int SMG$K_TRM_CTRLC = ('C' & 0x1f);	//!< Control/C
-static const int SMG$K_TRM_CTRLF = ('F' & 0x1f);	//!< Control/F
 static const int SMG$K_TRM_CTRLD = ('D' & 0x1f);	//!< Control/D
+static const int SMG$K_TRM_CTRLE = ('E' & 0x1f);	//!< Control/E
+static const int SMG$K_TRM_CTRLF = ('F' & 0x1f);	//!< Control/F
 static const int SMG$K_TRM_CTRLH = ('H' & 0x1f);	//!< Control/H
 static const int SMG$K_TRM_CTRLI = ('I' & 0x1f);	//!< Control/I
 static const int SMG$K_TRM_CTRLL = ('L' & 0x1f);	//!< Control/L
@@ -33,9 +34,11 @@ static const int SMG$K_TRM_CTRLP = ('P' & 0x1f);	//!< Control/P
 static const int SMG$K_TRM_CTRLR = ('R' & 0x1f);	//!< Control/R
 static const int SMG$K_TRM_CTRLS = ('S' & 0x1f);	//!< Control/S
 static const int SMG$K_TRM_CTRLT = ('T' & 0x1f);	//!< Control/T
+static const int SMG$K_TRM_CTRLU = ('U' & 0x1f);	//!< Control/U
 static const int SMG$K_TRM_CTRLW = ('W' & 0x1f);	//!< Control/W
 static const int SMG$K_TRM_CTRLX = ('X' & 0x1f);	//!< Control/X
 static const int SMG$K_TRM_CTRLZ = ('Z' & 0x1f);	//!< Control/Z
+static const int SMG$K_TRM_DELETE = KEY_DELETE;	//!< Delete key
 static const int SMG$K_TRM_DO = KEY_F(16);	//!< DO (F16) key
 static const int SMG$K_TRM_DOWN = KEY_DOWN;	//!< Down arrow
 static const int SMG$K_TRM_F6 = KEY_F(6);	//!< F6 key
@@ -45,6 +48,7 @@ static const int SMG$K_TRM_F9 = KEY_F(9);	//!< F9 key
 static const int SMG$K_TRM_F10 = KEY_F(10);	//!< F10 key
 static const int SMG$K_TRM_F11 = KEY_F(11);	//!< F11 key
 static const int SMG$K_TRM_F12 = KEY_F(12);	//!< F12 key
+static const int SMG$K_TRM_F13 = KEY_F(13);	//!< F13 key
 static const int SMG$K_TRM_F14 = KEY_F(14);	//!< F14 key
 static const int SMG$K_TRM_F17 = KEY_F(17);	//!< F17 key
 static const int SMG$K_TRM_F18 = KEY_F(18);	//!< F18 key
@@ -168,10 +172,16 @@ long smg$put_chars(
 	long a = 0);
 long smg$repaint_screen(
 	smg_pasteboard_id &pbid);
+long smg$ring_bell(
+	smg_display_id vdid);
 long smg$set_broadcast_trapping(
 	smg_pasteboard_id &pbid,
 	void (*fun)(void*,void*,void*,void*),
 	void *);
+long smg$set_cursor_abs(
+	smg_display_id &display,
+	long col_row,
+	long col_col);
 long smg$set_cursor_mode(
 	smg_pasteboard_id &pbid,
 	long mode);

@@ -65,6 +65,14 @@ public:
 //
 // Prototypes
 //
+long entr_3enter(
+	struct scope_struct &scope,
+	smg_display_id &xx_vdid,
+	long &cposy,
+	long &cposx,
+	std::string &xstr,
+	long &start,
+	long &flag);
 std::string entr_3option(
 	scope_struct &scope,
 	std::string &op_group,
@@ -80,6 +88,8 @@ long entr_4specialkeys(
 	smg_display_id &smg_option,
 	long xflag,
 	long retchar);
+long entr_macro(
+	scope_struct &scope);
 int func_4scoseq(
 	int x);
 void help_34message(
@@ -89,6 +99,8 @@ void help_34message(
 	const std::string &help_progname,
 	const std::string &help_filename,
 	const std::string &help_item);
+void menu_3interrupt(
+	scope_struct &scope);
 void read_3broadcast(
 	void *scope,
 	void *a2,

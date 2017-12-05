@@ -149,7 +149,7 @@ long entr_4specialkeys(
 
 	if (xflag & 256)
 	{
-		smg_status = smg$set_cursor_mode(scope->smg_pbid, 0);
+		smg_status = smg$set_cursor_mode(scope.smg_pbid, 0);
 	}
 	else
 	{
