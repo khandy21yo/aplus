@@ -73,6 +73,12 @@ long entr_3enter(
 	std::string &xstr,
 	long &start,
 	long &flag);
+long entr_3entrystring(
+	scope_struct &scope,
+	smg_display_id &smg_option,
+	long xflag,
+	long xlen,
+	std::string &retstring);
 std::string entr_3option(
 	scope_struct &scope,
 	std::string &op_group,
