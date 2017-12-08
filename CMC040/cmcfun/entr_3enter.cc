@@ -231,7 +231,7 @@ long entr_3enter(
 			 */
 			if (cxpos >= xlen)
 			{
-				smg$ring_bell(xx_vdid);
+				smg$ring_bell(scope.smg_kbid);
 			}
 			else
 			{
@@ -306,11 +306,6 @@ long entr_3enter(
 			DisplayText(work, xlen, blank_char, xx_vdid,
 				cposy, cposx, cxpos);
 		}
-
-		/*
-		 * Deallocate string
-		 */
-		str$free1_dx(&xwork1);
 	}
 
 	/*
@@ -451,16 +446,7 @@ long entr_3enter(
 	/*
 	 * Fall through to here means it is time to exit.
 	 */
-	strncpy(xstr.c_str(), work, xlen);
-
-#if 0
-/********* This causes cursor to return to left margin, but since
-	 * the cursor is usually hidden, or gets moved immediately
-	 * anyway, I'm disabling this for now till I see if anyone
-	 * notices. */
-
-	smg$set_cursor_abs(xx_vdid, 0l, &1l);
-#endif
+	xstr = work;
 
 	smg$set_cursor_mode(scope.smg_pbid, 1);
 

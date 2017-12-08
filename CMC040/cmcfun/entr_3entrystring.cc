@@ -5,8 +5,9 @@
 /*
  * Include files
  */
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 
 #include "preferences.h"
 #include "cmcfun.h"
@@ -75,24 +76,23 @@ long entr_3entrystring(
 	long value;
 	long smg_status;
 	long modifier;
-	std::string term_set = "\377\377\377\377\0\0\0\0\0\0\0\0\0\0\0\200");
+	std::string term_set = "\377\377\377\377\0\0\0\0\0\0\0\0\0\0\0\200";
 	long data_length;
-	char addbyte = ' ';
-	std::string addstring = addbyte;
-	addstring.dsc$b_dtype = DSC$K_DTYPE_T;
+	const char addbyte = ' ';
+	std::string addstring(1, addbyte);
 
 	/*
 	 * Set the timeout if requested else set to zero
 	 */
-	if ((*xflag) & 8)
+	if (xflag & 8)
 	{
-		if (scope->scope_timeout < 1)
+		if (scope.scope_timeout < 1)
 		{
 			timeout = 121;
 		}
 		else
 		{
-			timeout = scope->scope_timeout + 1;
+			timeout = scope.scope_timeout + 1;
 		}
 	}
 	else
@@ -110,7 +110,7 @@ long entr_3entrystring(
 	 */
 	modifier = 512 + 4096 + 32768 + 65536;
 
-	if ((*xflag) & 16)
+	if (xflag & 16)
 	{
 		modifier = modifier | 256;
 	}
@@ -119,35 +119,33 @@ l6000:
 	if (timeout != 0)
 	{
 		smg_status = smg$read_string(
-			&(scope->smg_kbid),	/* Keyboard ID */
+			scope.smg_kbid,		/* Keyboard ID */
 			retstring,		/* Returned string */
-			0L,			/* Prompt */
+			0,			/* Prompt */
 			xlen,
-			&modifier,
-			&timeout,		/* Time out */
-			&term_set,
-			&data_length,
-			&retchar,		/* Return terminator */
+			modifier,
+			timeout,		/* Time out */
+			term_set,
+			data_length,
+			retchar,		/* Return terminator */
 			smg_option
 		);
 	}
 	else
 	{
 		smg_status = smg$read_string(
-			&(scope->smg_kbid),	/* Keyboard ID */
+			scope.smg_kbid,		/* Keyboard ID */
 			retstring,		/* Returned string */
-			0L,			/* Prompt */
+			0,			/* Prompt */
 			xlen,
-			&modifier,
-			0L,		/* Time out */
-			&term_set,
-			&data_length,
-			&retchar,		/* Return terminator */
+			modifier,
+			0,			/* Time out */
+			term_set,
+			data_length,
+			retchar,		/* Return terminator */
 			smg_option
 		);
 	}
-
-/*???	DATA_STRING$ = LEFT(DATA_STRING$, DATA_LENGTH%) ???*/
 
 	/*
 	 * Handle odd return values
@@ -212,8 +210,8 @@ l6000:
 
 	if ((retchar >= 32) && (retchar < 127))
 	{
-		*(addstring.dsc$a_pointer) = retchar;
-		str$append(retstring, &addstring);
+		addstring = retchar;
+		retstring += addstring;
 		retchar = 12;
 	}
 
@@ -223,8 +221,8 @@ l6000:
 	if ((retchar == SMG$K_TRM_PF1) || (retchar == 7))
 	{
 		smg_status == smg$read_keystroke(
-			&(scope->smg_kbid),	/* Keyboard ID */
-			&retchar,		/* Return character */
+			scope.smg_kbid,		/* Keyboard ID */
+			retchar,		/* Return character */
 			0,			/* Prompt */
 			0,			/* Time out */
 			smg_option,		/* Window */

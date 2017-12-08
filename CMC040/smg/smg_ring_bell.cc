@@ -8,7 +8,7 @@
 //! \brief ring bell
 //!
 long smg$ring_bell(
-	smg_display_id vdid)
+	smg_keyboard_id &vdid)
 {
 	beep();
 }

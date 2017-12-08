@@ -173,7 +173,7 @@ long smg$put_chars(
 long smg$repaint_screen(
 	smg_pasteboard_id &pbid);
 long smg$ring_bell(
-	smg_display_id vdid);
+	smg_keyboard_id &vdid);
 long smg$set_broadcast_trapping(
 	smg_pasteboard_id &pbid,
 	void (*fun)(void*,void*,void*,void*),
