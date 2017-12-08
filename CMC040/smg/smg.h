@@ -170,6 +170,14 @@ long smg$put_chars(
 	long eline = 0,
 	long flags = 0,
 	long a = 0);
+long  smg$read_keystroke(
+	smg_keyboard_id kbid,
+	int &retchar,
+	int a,
+	int b,
+	smg_display_id &display,
+	int c,
+	int d);
 long smg$repaint_screen(
 	smg_pasteboard_id &pbid);
 long smg$ring_bell(

@@ -71,7 +71,7 @@ long entr_3entrystring(
 	long xlen,
 	std::string &retstring)
 {
-	short int retchar;		/* MUST be a word */
+	int retchar;		/* MUST be a word */
 	long timeout;
 	long value;
 	long smg_status;
@@ -226,8 +226,8 @@ l6000:
 			0,			/* Prompt */
 			0,			/* Time out */
 			smg_option,		/* Window */
-			0L,			/* Attribute */
-			0L			/*   "   " */
+			0,			/* Attribute */
+			0			/*   "   " */
 		);
 
 		switch (retchar)

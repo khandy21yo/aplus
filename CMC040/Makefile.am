@@ -57,6 +57,7 @@ libsmg_a_SOURCES = \
 	smg/smg_label_botder.cc \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_put_chars.cc \
+	smg/smg_read_keystroke.cc \
 	smg/smg_repaint_screen.cc \
 	smg/smg_ring_bell.cc \
 	smg/smg_set_broadcast_trapping \
