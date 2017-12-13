@@ -50,6 +50,7 @@ static const int SMG$K_TRM_F11 = KEY_F(11);	//!< F11 key
 static const int SMG$K_TRM_F12 = KEY_F(12);	//!< F12 key
 static const int SMG$K_TRM_F13 = KEY_F(13);	//!< F13 key
 static const int SMG$K_TRM_F14 = KEY_F(14);	//!< F14 key
+static const int SMG$K_TRM_F15 = KEY_F(15);	//!< F15 key
 static const int SMG$K_TRM_F17 = KEY_F(17);	//!< F17 key
 static const int SMG$K_TRM_F18 = KEY_F(18);	//!< F18 key
 static const int SMG$K_TRM_F19 = KEY_F(19);	//!< F19 key
@@ -178,6 +179,17 @@ long  smg$read_keystroke(
 	smg_display_id &display,
 	int c,
 	int d);
+long smg$read_string(
+	smg_keyboard_id &kbid,
+	std::string &retstring,
+	long a,
+	long xlen,
+	long modifier,
+	long timeout,
+	const char *term_set,
+	long data_length,
+	int &retchar,
+	smg_display_id &option);
 long smg$repaint_screen(
 	smg_pasteboard_id &pbid);
 long smg$ring_bell(

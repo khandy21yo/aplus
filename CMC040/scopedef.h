@@ -65,14 +65,17 @@ public:
 //
 // Prototypes
 //
+void entr_3badkey(
+	struct scope_struct &scope,
+	long bad_value);
 long entr_3enter(
 	struct scope_struct &scope,
 	smg_display_id &xx_vdid,
-	long &cposy,
-	long &cposx,
+	long cposy,
+	long cposx,
 	std::string &xstr,
 	long &start,
-	long &flag);
+	long flag);
 long entr_3entrystring(
 	scope_struct &scope,
 	smg_display_id &smg_option,

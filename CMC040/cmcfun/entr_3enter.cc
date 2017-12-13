@@ -106,14 +106,15 @@ static char *strnset(char *s, int ch, size_t n);
 long entr_3enter(
 	struct scope_struct &scope,
 	smg_display_id &xx_vdid,
-	long &cposy,
-	long &cposx,
+	long cposy,
+	long cposx,
 	std::string &xstr,
 	long &start,
-	long &flag)
+	long flag)
 {
 	int xlen;
 	int clearflag;
+
 	int cxpos;
 	int nocr;
 	char blank_char;

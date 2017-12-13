@@ -76,7 +76,7 @@ long entr_3entrystring(
 	long value;
 	long smg_status;
 	long modifier;
-	std::string term_set = "\377\377\377\377\0\0\0\0\0\0\0\0\0\0\0\200";
+	const char *term_set = "\377\377\377\377\0\0\0\0\0\0\0\0\0\0\0\200";
 	long data_length;
 	const char addbyte = ' ';
 	std::string addstring(1, addbyte);

@@ -21,6 +21,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_daycode.cc \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
+	cmcfun/entr_3badkey.cc \
 	cmcfun/entr_3enter.cc \
 	cmcfun/entr_3entrystring.cc \
 	cmcfun/entr_3option.cc \
@@ -58,6 +59,7 @@ libsmg_a_SOURCES = \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_put_chars.cc \
 	smg/smg_read_keystroke.cc \
+	smg/smg_read_string.cc \
 	smg/smg_repaint_screen.cc \
 	smg/smg_ring_bell.cc \
 	smg/smg_set_broadcast_trapping \

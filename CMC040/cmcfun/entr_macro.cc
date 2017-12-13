@@ -82,6 +82,7 @@ long entr_macro(
 	std::string save_program;
 	std::string save_item;
 	std::string macro;
+	long start;
 	//
 	// Save the prior help key
 	//
@@ -99,13 +100,17 @@ long entr_macro(
 	//
 	// Assume a good macro command
 	//
-	smg_status = smg$create_virtual_display(2, 132, macro_V2, SMG$M_BORDER, 0, 0);
+	smg_status = smg$create_virtual_display(2, 132,
+		macro_V2, SMG$M_BORDER, 0, 0);
 	smg_status = smg$paste_virtual_display(macro_V2, scope.smg_pbid, 21, 1);
 	smg_status = smg$put_chars(macro_V2, "Menu Command Level> ", 1, 1);
 	macro = std::string(50, ' ');
 	scope.scope_timeout = 0;
 entermacro:;
-	exit_status = entr_3enter(scope, macro_V2, 1, 21, macro, -1, 8 + 16 + 1024 + 4096);
+	start =-1;
+	exit_status = entr_3enter(scope, macro_V2, 1, 21,
+		macro, start, 8 + 16 + 1024 + 4096);
+
 	// ** Converted from a select statement **
 	//
 	// Help keys
@@ -165,7 +170,8 @@ entermacro:;
 	//
 	if (scope.macroflag == 0)
 	{
-		smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
+		smg_status = smg$pop_virtual_display(scope.smg_option,
+			scope.smg_pbid);
 	}
 	//
 	// Assign macro flag to allow quick exit from process to the menu
