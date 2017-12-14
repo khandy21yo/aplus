@@ -21,6 +21,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_daycode.cc \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
+	cmcfun/dspl_scroll.cc \
 	cmcfun/entr_3badkey.cc \
 	cmcfun/entr_3enter.cc \
 	cmcfun/entr_3entrystring.cc \

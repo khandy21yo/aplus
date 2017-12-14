@@ -15,11 +15,13 @@ static const long TT$M_MECHFORM = 1;	//!< Terminal mechanical form feed
 static const long TT$M_WRAP = 2;	//!< Terminal setting wraparound
 
 static const int SMG$M_BOLD = 1;	//< Display in Bold
-static const int SMG$M_NORMAL = 0;	//< Display in Normal
 static const int SMG$M_BLINK = 4;	//< Blink
 static const int SMG$M_BORDER = 2;	//< Display border around window
 static const int SMG$M_CURSOR_OFF = 0;	//< Turn off cursor
 static const int SMG$M_CURSOR_ON = 1;	//< Turn on cursor
+static const int SMG$M_DOWN = 2;	//< scroll down
+static const int SMG$M_NORMAL = 0;	//< Display in Normal
+static const int SMG$M_UP = 1;		//< scroll up
 
 static const int SMG$K_TRM_BUFFER_FULL = -9997;	//!< Buffer full error
 static const int SMG$K_TRM_CANCELLED = -9998;	//!< Cancelled error

@@ -17,3 +17,10 @@ Necessary packages required to compile include
 	postgresql
 	libpq-dev
 
+Some of the changes
+
+	Change struct's to classes
+
+	Change array of strings (char *x[])  passed to vector of strings
+	(std::vectorMstd::string> &x).
+

@@ -1,10 +1,20 @@
-/*
- * Scrolling structure
- */ 
-struct smg_scroll_cdd
+//! \file
+//! \btief  Scrolling structure
+//!
+
+#ifndef _scroll_h_
+#define _scroll_h_
+
+#include <vector>
+
+//!
+//! Scrolling structure
+//!
+class smg_scroll_cdd
 {
+public:
 	/* This is the window Virtual Display ID */
-	smg_display_id *window;
+	smg_display_id window;
 
 	/* The top row of the scrolling region within the window. */
 	long scroll_top;
@@ -43,10 +53,10 @@ struct smg_scroll_cdd
 	long smg_flag;
 
 	/* The characters to use to point to the current line */
-	char prompt[4];
+	std::string prompt;
 
 	/* The list of columns that need a column line drawn */
-	char draw_cols[160];
+	std::string draw_cols;
 
 	/* The number of columns in the window */
 	long num_colm;
@@ -63,3 +73,11 @@ struct smg_scroll_cdd
 	/* Virtual selected line number for use with Select/Remove_select */
 	long v_select_line;
 };
+
+long dspl_scroll(
+	smg_scroll_cdd &smg_scroll,
+	std::vector<std::string> &smg_array,
+	long &smg_scope_exit,
+	std::string &smg_scroll_option);
+
+#endif
