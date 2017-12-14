@@ -82,6 +82,10 @@ long entr_3entrystring(
 	long xflag,
 	long xlen,
 	std::string &retstring);
+void entr_3message(
+	scope_struct &scope,
+	const std::string &mesg,
+	long int flag);
 std::string entr_3option(
 	scope_struct &scope,
 	std::string &op_group,

@@ -24,6 +24,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_3badkey.cc \
 	cmcfun/entr_3enter.cc \
 	cmcfun/entr_3entrystring.cc \
+	cmcfun/entr_3message.cc \
 	cmcfun/entr_3option.cc \
 	cmcfun/entr_4entry.cc \
 	cmcfun/entr_4specialkeys.cc \
@@ -44,6 +45,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/time_now.cc
 
 libsmg_a_SOURCES = \
+	smg/lib_set_symbol.cc \
 	smg/smg_begin_display_update.cc \
 	smg/smg_change_pbd_characteristics.cc \
 	smg/smg_create_pasteboard.cc \
@@ -57,6 +59,7 @@ libsmg_a_SOURCES = \
 	smg/smg_get_broadcast_message.cc \
 	smg/smg_label_botder.cc \
 	smg/smg_paste_virtual_display.cc \
+	smg/smg_pop_virtual_display.cc \
 	smg/smg_put_chars.cc \
 	smg/smg_read_keystroke.cc \
 	smg/smg_read_string.cc \

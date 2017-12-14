@@ -18,6 +18,8 @@
 #include "cmcfun.h"
 #include "scopedef.h"
 #include "smg/smg.h"
+#include "cmcfun/scroll.h"
+
 
 //! \brief Help Function
 //!
@@ -81,15 +83,15 @@ void help_34message(
 
 	BStack(20);
 	smg_scroll_cdd smg_scroll;
-	long svd;
-	long old_option;
-	long old_message;
-	std::string line_num[num_lines + 1];
+	smg_display_id svd;
+	smg_display_id old_option;
+	smg_display_id old_message;
 	//
 	// Declarations
 	//
 	// Size of the array
 	const long num_lines = 3000;
+	std::string line_num[num_lines + 1];
 	//
 	// Dimension statements
 	//
@@ -230,7 +232,7 @@ menu:;
 	//
 	// ^C
 	//
-	if ((scope.scope_exit == smg$k_trm_ctrlc) || (scope.scope_exit == smg$k_trm_f11))
+	if ((scope.scope_exit == SMG$K_TRM_CTRLC) || (scope.scope_exit == SMG$K_TRM_F11))
 	{
 		//
 		// Print the array
@@ -249,14 +251,14 @@ menu:;
 		// Top
 		// Bottom
 	}
-	else if ((scope.scope_exit == smg$k_trm_up) || ((scope.scope_exit == smg$k_trm_down) || ((scope.scope_exit == smg$k_trm_left) || ((scope.scope_exit == smg$k_trm_right) || ((scope.scope_exit == smg$k_trm_prev_screen) || ((scope.scope_exit == smg$k_trm_next_screen) || ((scope.scope_exit == smg$k_trm_f18) || (scope.scope_exit == smg$k_trm_f19))))))))
+	else if ((scope.scope_exit == SMG$K_TRM_UP) || ((scope.scope_exit == SMG$K_TRM_DOWN) || ((scope.scope_exit == SMG$K_TRM_LEFT) || ((scope.scope_exit == SMG$K_TRM_RIGHT) || ((scope.scope_exit == SMG$K_TRM_PREV_SCREEN) || ((scope.scope_exit == SMG$K_TRM_NEXT_SCREEN) || ((scope.scope_exit == SMG$K_TRM_F18) || (scope.scope_exit == SMG$K_TRM_F19))))))))
 	{
 		v = dspl_scroll(smg_scroll, line_num, scope.scope_exit, "");
 		//
 		// F17 - Magic key to edit APP file
 		//
 	}
-	else if (scope.scope_exit == smg$k_trm_f17)
+	else if (scope.scope_exit == SMG$K_TRM_F17)
 	{
 		entr_3message(scope, "", 1 + 16);
 		//
@@ -277,14 +279,14 @@ menu:;
 		lib$set_symbol("CMC$HELP_KEY", key1_name);
 		smg_status = smg$disable_broadcast_trapping(scope.smg_pbid);
 		smg_status = lib$spawn("RUN CMC:UT_SPEC_HELP");
-		smg_status = smg$set_cursor_mode(scope.smg_pbid, smg$m_cursor_off);
+		smg_status = smg$set_cursor_mode(scope.smg_pbid, SMG$M_CURSOR_OFF);
 		smg_status = smg$set_broadcast_trapping(scope.smg_pbid, &(read_3broadcast), &(scope));
 		smg_status = smg$repaint_screen(scope.smg_pbid);
 		lib$set_symbol("CMC$HELP_LIBRARY", "");
 		lib$set_symbol("CMC$HELP_KEY", "");
 		BGosub(loadall);
 	}
-	else if (scope.scope_exit == smg$k_trm_f15)
+	else if (scope.scope_exit == SMG$K_TRM_F15)
 	{
 		if (hit == 0)
 		{

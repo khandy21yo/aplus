@@ -21,7 +21,7 @@ public:
 	}
 
 	//!
-	//! brief Copy into a db_map_cdd into specific class variables
+	//! \brief Copy into a db_map_cdd into specific class variables
 	//!
 	virtual void copy_tomap(db_map_cdd &dbmap)
 	{
@@ -34,7 +34,7 @@ public:
 		dbmap["fdata"] = fdata;
 	}
 	//!
-	//! brief Copy into a db_map_cdd into specific class variables
+	//! \brief Copy into a db_map_cdd into specific class variables
 	//!
 	virtual void copy_frommap(db_map_cdd &dbmap)
 	{
@@ -48,11 +48,11 @@ public:
 	}
 
 public:
-	//!vProgram name
+	//! Program name
 	std::string programname; //[39];
 	//! Item number
 	std::string item; //[6];
-	// System name
+	//! System name
 	std::string system; //[2];
 	//! Yes or No Flag for Undefined Input
 	std::string allowund; //[1];

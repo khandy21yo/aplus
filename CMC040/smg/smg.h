@@ -16,10 +16,14 @@ static const long TT$M_WRAP = 2;	//!< Terminal setting wraparound
 
 static const int SMG$M_BOLD = 1;	//< Display in Bold
 static const int SMG$M_NORMAL = 0;	//< Display in Normal
+static const int SMG$M_BLINK = 4;	//< Blink
 static const int SMG$M_BORDER = 2;	//< Display border around window
+static const int SMG$M_CURSOR_OFF = 0;	//< Turn off cursor
+static const int SMG$M_CURSOR_ON = 1;	//< Turn on cursor
 
 static const int SMG$K_TRM_BUFFER_FULL = -9997;	//!< Buffer full error
 static const int SMG$K_TRM_CANCELLED = -9998;	//!< Cancelled error
+static const int SMG$K_TRM_COMMA = -9985;	//!< Keypad comma
 static const int SMG$K_TRM_CTRLB = ('B' & 0x1f);	//!< Control/B
 static const int SMG$K_TRM_CTRLC = ('C' & 0x1f);	//!< Control/C
 static const int SMG$K_TRM_CTRLD = ('D' & 0x1f);	//!< Control/D
@@ -41,6 +45,7 @@ static const int SMG$K_TRM_CTRLZ = ('Z' & 0x1f);	//!< Control/Z
 static const int SMG$K_TRM_DELETE = KEY_BACKSPACE;	//!< Delete key
 static const int SMG$K_TRM_DO = KEY_F(16);	//!< DO (F16) key
 static const int SMG$K_TRM_DOWN = KEY_DOWN;	//!< Down arrow
+static const int SMG$K_TRM_ENTER = -9983;	//!< Keypad enter
 static const int SMG$K_TRM_F6 = KEY_F(6);	//!< F6 key
 static const int SMG$K_TRM_F7 = KEY_F(7);	//!< F7 key
 static const int SMG$K_TRM_F8 = KEY_F(8);	//!< F8 key
@@ -58,6 +63,7 @@ static const int SMG$K_TRM_F20 = KEY_F(20);	//!< F20 key
 static const int SMG$K_TRM_FIND = KEY_FIND;	//!< FIND key
 static const int SMG$K_TRM_HELP = KEY_HELP;	//!< HELP key
 static const int SMG$K_TRM_INSERT_HERE = KEY_IC;	//!< Insert key
+static const int SMG$K_TRM_KP0 = -9987;		//!< Keypad 0
 static const int SMG$K_TRM_KP1 = KEY_C1;	//!< Keypad 1
 static const int SMG$K_TRM_KP2 = -9996;		//!< Keypad 2
 static const int SMG$K_TRM_KP3 = KEY_C3;	//!< Keypad 3
@@ -68,7 +74,9 @@ static const int SMG$K_TRM_KP7 = KEY_A1;	//!< Keypad 7
 static const int SMG$K_TRM_KP8 = -9993;		//!< Keypad 8
 static const int SMG$K_TRM_KP9 = KEY_A3;	//!< Keypad 9
 static const int SMG$K_TRM_LEFT = KEY_LEFT;	//!< Left arrow
+static const int SMG$K_TRM_MINUS = -9986;	//!< Keypad minus
 static const int SMG$K_TRM_NEXT_SCREEN = KEY_NEXT;	//!< Next
+static const int SMG$K_TRM_PERIOD = -9984;	//!< Keypad period
 static const int SMG$K_TRM_PF1 = -9992;		//!< Keypad 8
 static const int SMG$K_TRM_PF2 = -9991;		//!< Keypad 8
 static const int SMG$K_TRM_PF3 = -9989;		//!< Keypad 8
@@ -90,7 +98,7 @@ private:
 };
 
 //!
-//! \btief \brief Virtual display class
+//! \brief \brief Virtual display class
 //!
 class smg_display_id
 {
@@ -116,7 +124,14 @@ class smg_keyboard_id
 
 
 //
-// Function names
+// LIB Function names
+//
+long lib$set_symbol(
+	const std::string &symbol,
+	const std::string &value);
+
+//
+// smg Function names
 //
 long smg$begin_display_update(
 	smg_display_id display);
@@ -163,6 +178,9 @@ long smg$paste_virtual_display(
 	long row,
 	long col,
 	long a = 0);
+long smg$pop_virtual_display(
+	smg_display_id &display,
+	smg_pasteboard_id &pbid);
 long smg$put_chars(
 	smg_display_id &display,
 	const std::string &text,

@@ -1,0 +1,10 @@
+This subrirectory contains implementation of several VMS functions
+that are not standard under normal POSIX enviornment.
+
+This includes LIB$, SMG$, etc..
+
+These functions are implemented only as far as necessary to provide
+the functionality to the aplus CMC040 code. The parameter passing
+mechanisms and types are not impleented accurately, just close enough
+to work with the translated code.
+
