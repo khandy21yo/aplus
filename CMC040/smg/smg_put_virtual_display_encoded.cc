@@ -1,20 +1,22 @@
 //! \file
-//! \btief  Put characters
+//! \btief  Put characters encoded
 //!
 #include <string>
 #include "smg/smg.h"
 
 //!
-//! \brief Put characters
+//! \brief Put characters encoded
 //!
-long smg$put_chars(
+//! \todo Currently ignores the "encoded" part.
+//!
+long smg_put_virtual_display_encoded(
 	smg_display_id &display,	//!< Display to write to
+	long length,
 	const std::string &text,	//!< Text to write
 	long row,			//!< Row to dosplay at
 	long col,			//!< Column to display at
-	long eline,			//!< erase line
-	long flags,			//!< Flags
-	long comp,			//!< ???
+	long a,
+	long b,
 	long charset)
 {
 	if (flags & SMG$M_BOLD)
@@ -32,3 +34,6 @@ long smg$put_chars(
 		attroff(A_STANDOUT);
 	}
 }
+
+
+

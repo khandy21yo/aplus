@@ -206,6 +206,15 @@ long smg$put_chars(
 	long flags = 0,
 	long comp = 0,
 	long charset = 0);
+long smg_put_virtual_display_encoded(
+	smg_display_id &display,
+	long length,
+	const std::string &text,
+	long row,
+	long col,
+	long a,
+	long b,
+	long charset);
 long  smg$read_keystroke(
 	smg_keyboard_id kbid,
 	int &retchar,

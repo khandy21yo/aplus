@@ -69,7 +69,7 @@ long dspl_scroll(
 		//!< The returned array that holds the Fun Scroll values.
 	long &smg_scope_exit,
 		//< A function key that is assigned a command.
-	std::string &smg_scroll_option)
+	const std::string &smg_scroll_option)
 		//!< The returned user's options.
 {
 	/*

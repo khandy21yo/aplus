@@ -65,6 +65,7 @@ libsmg_a_SOURCES = \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_pop_virtual_display.cc \
 	smg/smg_put_chars.cc \
+	smg/smg_put_virtual_display_encoded.cc \
 	smg/smg_read_keystroke.cc \
 	smg/smg_read_string.cc \
 	smg/smg_repaint_screen.cc \

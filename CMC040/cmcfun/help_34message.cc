@@ -91,7 +91,8 @@ void help_34message(
 	//
 	// Size of the array
 	const long num_lines = 3000;
-	std::string line_num[num_lines + 1];
+	std::vector<std::string> line_num;
+	line_num.resize(num_lines + 1);
 	//
 	// Dimension statements
 	//
@@ -251,9 +252,17 @@ menu:;
 		// Top
 		// Bottom
 	}
-	else if ((scope.scope_exit == SMG$K_TRM_UP) || ((scope.scope_exit == SMG$K_TRM_DOWN) || ((scope.scope_exit == SMG$K_TRM_LEFT) || ((scope.scope_exit == SMG$K_TRM_RIGHT) || ((scope.scope_exit == SMG$K_TRM_PREV_SCREEN) || ((scope.scope_exit == SMG$K_TRM_NEXT_SCREEN) || ((scope.scope_exit == SMG$K_TRM_F18) || (scope.scope_exit == SMG$K_TRM_F19))))))))
+	else if ((scope.scope_exit == SMG$K_TRM_UP) ||
+		((scope.scope_exit == SMG$K_TRM_DOWN) ||
+		((scope.scope_exit == SMG$K_TRM_LEFT) ||
+		((scope.scope_exit == SMG$K_TRM_RIGHT) ||
+		((scope.scope_exit == SMG$K_TRM_PREV_SCREEN) ||
+		((scope.scope_exit == SMG$K_TRM_NEXT_SCREEN) ||
+		((scope.scope_exit == SMG$K_TRM_F18) ||
+		(scope.scope_exit == SMG$K_TRM_F19))))))))
 	{
-		v = dspl_scroll(smg_scroll, line_num, scope.scope_exit, "");
+		v = dspl_scroll(smg_scroll, line_num, scope.scope_exit,
+			"");
 		//
 		// F17 - Magic key to edit APP file
 		//
@@ -268,7 +277,7 @@ menu:;
 		{
 			BGosub(loadall);
 		}
-		st = lbr$ini_control(lr_index, lbr$c_read);
+		st = lbr$ini_control(lr_index, LBR$C_READ);
 		st = lbr$open(lr_index, lib1_name, 0, ".TLB");
 		if ((st & 1) == 0)
 		{
@@ -278,9 +287,10 @@ menu:;
 		lib$set_symbol("CMC$HELP_LIBRARY", lib1_name);
 		lib$set_symbol("CMC$HELP_KEY", key1_name);
 		smg_status = smg$disable_broadcast_trapping(scope.smg_pbid);
-		smg_status = lib$spawn("RUN CMC:UT_SPEC_HELP");
+		smg_status = lib$spawn("ut_spec_help");
 		smg_status = smg$set_cursor_mode(scope.smg_pbid, SMG$M_CURSOR_OFF);
-		smg_status = smg$set_broadcast_trapping(scope.smg_pbid, &(read_3broadcast), &(scope));
+		smg_status = smg$set_broadcast_trapping(scope.smg_pbid,
+			&(read_3broadcast), &(scope));
 		smg_status = smg$repaint_screen(scope.smg_pbid);
 		lib$set_symbol("CMC$HELP_LIBRARY", "");
 		lib$set_symbol("CMC$HELP_KEY", "");
@@ -294,8 +304,10 @@ menu:;
 			// Display full message
 			//
 			BGosub(loadall);
-			smg_status = smg$paste_virtual_display(svd, scope.smg_pbid, 1, 1);
-			smg_status = smg$paste_virtual_display(scope.smg_option, scope.smg_pbid, 21, 1);
+			smg_status = smg$paste_virtual_display(svd,
+				scope.smg_pbid, 1, 1);
+			smg_status = smg$paste_virtual_display(scope.smg_option,
+				scope.smg_pbid, 21, 1);
 			hit = 1;
 		}
 		//
@@ -372,11 +384,13 @@ loadall:;
 				{
 					if (severity == "E")
 					{
-						st = libr_digsr(default_lib, "E$$CMCERR", line_num);
+						st = libr_digsr(default_lib,
+							"E$$CMCERR", line_num);
 					}
 					else
 					{
-						st = libr_digsr(default_lib, "H$$NODETAIL", line_num);
+						st = libr_digsr(default_lib,
+							"H$$NODETAIL", line_num);
 					}
 					lib1_name = orig_lib;
 				}
