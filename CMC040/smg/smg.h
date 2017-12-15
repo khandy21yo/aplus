@@ -162,15 +162,29 @@ long smg$cursor_column(
 	smg_display_id gisplay);
 long smg$cursor_row(
 	smg_display_id gisplay);
+long smg$draw_line(
+	smg_display_id &display,
+	long row1,
+	long column1,
+	long row2,
+	long column2);
 long smg$end_display_update(
 	smg_display_id display);
 long smg$erase_display(
 	smg_display_id &display);
+long smg$erase_line(
+	smg_display_id &window,
+	int row,
+	int col);
 long smg$flush_buffer(
 	smg_pasteboard_id &pbid);
 long smg$get_broadcast_message(
 	smg_pasteboard_id &pbid,
 	std::string &text);
+long smg$get_display_attr(
+	smg_display_id &display,
+	long *height = 0,
+	long *width = 0);
 long smg$label_border(
 	smg_display_id &display,
 	const std::string &&label);
@@ -190,7 +204,8 @@ long smg$put_chars(
 	long col,
 	long eline = 0,
 	long flags = 0,
-	long a = 0);
+	long comp = 0,
+	long charset = 0);
 long  smg$read_keystroke(
 	smg_keyboard_id kbid,
 	int &retchar,

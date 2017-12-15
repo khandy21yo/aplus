@@ -54,10 +54,13 @@ libsmg_a_SOURCES = \
 	smg/smg_create_virtual_keyboard.cc \
 	smg/smg_cursor_column.c \
 	smg/smg_cursor_row.c \
+	smg/smg_draw_line.cc \
 	smg/smg_end_display_update.cc \
 	smg/smg_erase_display.cc \
+	smg/smg_erase_line.cc \
 	smg/smg_flush_buffer.cc \
 	smg/smg_get_broadcast_message.cc \
+	smg/smg_get_display_attr.cc \
 	smg/smg_label_botder.cc \
 	smg/smg_paste_virtual_display.cc \
 	smg/smg_pop_virtual_display.cc \

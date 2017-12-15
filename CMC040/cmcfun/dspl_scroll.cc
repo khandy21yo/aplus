@@ -328,6 +328,7 @@ static void doscroll(smg_scroll_cdd &smg_scroll, int newtop)
 	change = newtop - smg_scroll.top_line;
 	screenlines = (smg_scroll.scroll_bot - smg_scroll.scroll_top) + 1;
 
+#if 0 // curses doesn't scroll like this, so just force a redraw
 	/*
 	 * Push lines upward
 	 */
@@ -358,7 +359,7 @@ static void doscroll(smg_scroll_cdd &smg_scroll, int newtop)
 			SMG$M_DOWN,
 			change);
 	}
-
+#endif
 	/*
 	 * Set the top line
 	 */
@@ -476,7 +477,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 	 */
 	if (smg_scroll.draw_cols[0] != ' ')
 	{
-		smg$get_display_attr(smg_scroll.window, height, width);
+		smg$get_display_attr(smg_scroll.window, &height, &width);
 
 		for (lineloop = 0;
 			(lineloop < smg_scroll.draw_cols.size()) &&

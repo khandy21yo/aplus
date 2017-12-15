@@ -14,7 +14,8 @@ long smg$put_chars(
 	long col,			//! Column to display at
 	long eline,			//! erase line
 	long flags,			//!< Flags
-	long a)				//< ???
+	long comp,			//< ???
+	long charset)
 {
 	if (flags & SMG$M_BOLD)
 	{
