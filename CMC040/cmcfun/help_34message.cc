@@ -80,6 +80,7 @@ void help_34message(
 	std::string text;
 	long under;
 	long v;
+	long junk;
 
 	BStack(20);
 	smg_scroll_cdd smg_scroll;
@@ -239,7 +240,7 @@ menu:;
 		// Print the array
 		//
 		smg_scroll.top_line = smg_scroll.beg_element;
-		v = dspl_scroll(smg_scroll, line_num, 0, "PAINT");
+		v = dspl_scroll(smg_scroll, line_num, junk, "PAINT");
 		//
 		// Movement
 		//
@@ -405,7 +406,7 @@ loadall:;
 		text = basic::edit(line_num[1], 1 + 4 + 8 + 16 + 128);
 		text = text.substr(0, text.size() - 3);
 	}
-	v = dspl_scroll(smg_scroll, line_num, 0, "PAINT");
+	v = dspl_scroll(smg_scroll, line_num, junk, "PAINT");
 	BReturn;
 
 }
