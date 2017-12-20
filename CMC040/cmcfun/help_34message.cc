@@ -18,6 +18,8 @@
 #include "cmcfun.h"
 #include "scopedef.h"
 #include "smg/smg.h"
+#include "smg/lib.h"
+#include "smg/lbr.h"
 #include "cmcfun/scroll.h"
 
 
@@ -64,7 +66,7 @@ void help_34message(
 	std::string key3;
 	std::string lib1_name;
 	std::string lib_file;
-	long lr_index;
+	lbr_index_cdd lr_index;
 	std::string old_help_item;
 	std::string old_help_severity;
 	std::string old_program;
@@ -279,7 +281,7 @@ menu:;
 			BGosub(loadall);
 		}
 		st = lbr$ini_control(lr_index, LBR$C_READ);
-		st = lbr$open(lr_index, lib1_name, 0, ".TLB");
+		st = lbr$open(lr_index, lib1_name, 0, ".tlb");
 		if ((st & 1) == 0)
 		{
 			lib1_name = default_lib;

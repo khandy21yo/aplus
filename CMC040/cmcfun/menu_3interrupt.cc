@@ -18,6 +18,7 @@
 #include "peferences.h"
 #include "cmcfun.h"
 #include 'scopedef.h"
+#include "smg/lib.h"
 #include "smg/smg.h"
 
 //!

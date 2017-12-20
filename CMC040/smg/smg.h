@@ -121,18 +121,6 @@ class smg_keyboard_id
 };
 
 //
-// Key definitions
-//
-
-
-//
-// LIB Function names
-//
-long lib$set_symbol(
-	const std::string &symbol,
-	const std::string &value);
-
-//
 // smg Function names
 //
 long smg$begin_display_update(
