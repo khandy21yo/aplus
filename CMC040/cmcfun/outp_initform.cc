@@ -21,8 +21,8 @@
 #include "database.h"
 #include "cmcfun/report.h"
 
-#include "utl_report.h"
-#include "utl_reportx.h"
+#include "utl/utl_report.h"
+#include "utl/utl_reportx.h"
 
 //
 // Globals
