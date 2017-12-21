@@ -36,6 +36,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/help_34message.cc \
        	cmcfun/libr_3insert.cc \
 	cmcfun/menu_3interrupt.cc \
+	cmcfun/outp_initform.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
        	cmcfun/read_initialize.cc \
