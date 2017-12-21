@@ -5,6 +5,7 @@
 #define _lib_h_
 
 #include <string>
+#include <cstdlib>
 
 //
 // Constants
@@ -18,5 +19,13 @@ long lib$set_symbol(
 	const std::string &symbol,
 	const std::string &value);
 
+//!
+//! \brief Spawn process
+//
+static inline int lib$spawn(
+	const std::string &command)	//!< Command to execute
+{
+	system(command.c_str());
+}
 #endif
 

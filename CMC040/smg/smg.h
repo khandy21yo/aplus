@@ -21,6 +21,7 @@ static const int SMG$M_CURSOR_OFF = 0;	//< Turn off cursor
 static const int SMG$M_CURSOR_ON = 1;	//< Turn on cursor
 static const int SMG$M_DOWN = 2;	//< scroll down
 static const int SMG$M_NORMAL = 0;	//< Display in Normal
+static const int SMG$M_UNDERLINE = 8;	//< Display in Underline
 static const int SMG$M_UP = 1;		//< scroll up
 
 static const int SMG$K_TRM_BUFFER_FULL = -9997;	//!< Buffer full error

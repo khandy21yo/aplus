@@ -35,6 +35,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/func_round.cc \
 	cmcfun/help_34message.cc \
        	cmcfun/libr_3insert.cc \
+	cmcfun/libr_digsr.cc \
 	cmcfun/menu_3interrupt.cc \
 	cmcfun/outp_initform.cc \
 	cmcfun/outp_line.cc \

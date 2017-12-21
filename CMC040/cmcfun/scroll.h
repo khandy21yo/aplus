@@ -8,7 +8,7 @@
 #include <vector>
 
 //!
-//! Scrolling structure
+//! \brief Scrolling structure
 //!
 class smg_scroll_cdd
 {

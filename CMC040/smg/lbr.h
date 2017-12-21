@@ -13,7 +13,7 @@ static long LBR$C_READ = 1;	//!< Reading
 
 
 //!
-//! \Brief lib$ structure
+//! \brief lib$ structure
 //!
 class lbr_index_cdd
 {

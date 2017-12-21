@@ -289,11 +289,11 @@ menu:;
 		st = lbr$close(lr_index);
 		lib$set_symbol("CMC$HELP_LIBRARY", lib1_name);
 		lib$set_symbol("CMC$HELP_KEY", key1_name);
-		smg_status = smg$disable_broadcast_trapping(scope.smg_pbid);
+//		smg_status = smg$disable_broadcast_trapping(scope.smg_pbid);
 		smg_status = lib$spawn("ut_spec_help");
 		smg_status = smg$set_cursor_mode(scope.smg_pbid, SMG$M_CURSOR_OFF);
-		smg_status = smg$set_broadcast_trapping(scope.smg_pbid,
-			&(read_3broadcast), &(scope));
+//		smg_status = smg$set_broadcast_trapping(scope.smg_pbid,
+//			&(read_3broadcast), &(scope));
 		smg_status = smg$repaint_screen(scope.smg_pbid);
 		lib$set_symbol("CMC$HELP_LIBRARY", "");
 		lib$set_symbol("CMC$HELP_KEY", "");

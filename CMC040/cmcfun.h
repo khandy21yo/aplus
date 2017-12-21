@@ -78,6 +78,10 @@ double func_round(double xnum, int xprec);
 long libr_3insert(const std::string &lib_name,
 	const std::string &file_name,
 	const std::string &key_name);
+long libr_digsr(
+	const std::string &lib_name,
+	const std::string &key_name,
+	std::vector<std::string> &code);
 std::string prnt_date(
 	const std::string &indate,
 	long outlen);

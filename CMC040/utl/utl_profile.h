@@ -6,6 +6,9 @@
 #ifndef _utl_profile_h_
 #define _utl_profile_h_
 
+//!
+//! \brief Company profile information
+//!
 class utl_profile_cdd : public db_rmsrelative_cdd
 {
 public:
