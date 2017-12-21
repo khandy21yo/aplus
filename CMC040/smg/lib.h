@@ -12,9 +12,16 @@
 //
 //
 
-//
-// LIB Function names
-//
+//!
+//! \brief delete file
+//!
+long lib$delete_file(
+	std::string name)
+{
+	unlink(name.c_str());
+	return 0;
+}
+
 long lib$set_symbol(
 	const std::string &symbol,
 	const std::string &value);

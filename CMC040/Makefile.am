@@ -50,6 +50,8 @@ libcmcfun_a_SOURCES = \
 
 libsmg_a_SOURCES = \
 	smg/lib_set_symbol.cc \
+	smg/libr_get_record.cc \
+	smg/lbr_lookup_key.cc \
 	smg/lbr_open.cc \
 	smg/smg_begin_display_update.cc \
 	smg/smg_change_pbd_characteristics.cc \

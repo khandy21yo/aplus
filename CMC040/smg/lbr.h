@@ -20,6 +20,7 @@ class lbr_index_cdd
 public:
 	long mode;		//!!< Operation mode (LBRC_READ)
 	std::string name;	//!< Library name being referenced
+	std::string datum;	//~< Data from lookup
 
 };
 
@@ -32,6 +33,9 @@ static inline long lbr$close(
 	// Don't really need to do anything
 }
 
+long lbr$get_record(
+	lbr_index_cdd &lr_index,
+	std::string &text);
 //!
 //! \brief initialize control structure
 //!
@@ -42,6 +46,10 @@ static inline long lbr$ini_control(
 	lr_index.mode = omode;
 	return 1;
 }
+long lbr$lookup_key(
+	lbr_index_cdd &lr_index,
+	const std::string &key_name,
+	long txrfa);
 long lbr$open(
 	lbr_index_cdd &lr_index,
 	const std::string &lib1_name,

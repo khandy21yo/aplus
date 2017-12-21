@@ -88,7 +88,7 @@ void entr_3message(
 	long int flag);
 std::string entr_3option(
 	scope_struct &scope,
-	std::string &op_group,
+	const std::string &op_group,
 	std::string &op_possible,
 	long &op_curop,
 	long op_flagw);

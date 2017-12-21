@@ -191,7 +191,6 @@ long libr_digsr(
 	//
 	// Initilization
 	//
-	OnErrorGoto(L_19000);
 	curr_line = std::stol(code[0]);
 	if (curr_line < 1)
 	{
@@ -328,7 +327,33 @@ text1:;
 	//
 	if (!(literal))
 	{
+#if 0
 		smg_status = str$find_first_substring(inp, position, sub_match, "*", "&", "^*", "\\*", "^&", "\\&", "_", "#", "^~", "\\~", "\t");
+#else
+		//
+		// Tru to do same thing as STR$ routine
+		//
+		position = inp.find_first_of("*&_#\t");
+		static const char* sp[] =
+			{"^*", "\\*", "^&", "\\&", "^~", "\\~", 0};
+		for (int loop = 0; sp[loop] != 0; loop++)
+		{
+			int ptr2 = inp.find(sp[loop]);
+			if (position == std::string::npos ||
+				(ptr2 != std::string::npos && ptr2 < position))
+			{
+				position = ptr2;
+			}
+		}
+		if (position == std::string::npos)
+		{
+			position = 0;
+		}
+		else
+		{
+			position--;
+		}
+#endif
 	}
 	//
 	// If none found, handle properly
@@ -1268,49 +1293,4 @@ blankline:;
 	curr_line = curr_line + 1;
 	code[curr_line] = std::string("") + fdl.fdl;
 	BReturn;
-
-	//*******************************************************************
-L_19000:;
-	// Trap errors
-	//*******************************************************************
-	switch (Be.erl)
-	{
-	// Left Margin
-	case 6030:
-	case 6040:
-
-		// Illegal number
-		if (Be.err == 52)
-		{
-			left_mar = 0;
-			BGosub(breaktext);
-			total_text = " %% Illegal Number %%";
-			BGosub(breaktext);
-			OnErrorZero;
-			goto commandloop;
-		}
-		// Tab Stops
-		break;
-
-	case 6090:
-
-		// Illegal number
-		if (Be.err == 52)
-		{
-			for (i = 1; i <= 31; i++)
-			{
-				ts[i] = 8 * i;
-			}
-			ts[32] = 32767;
-			BGosub(breaktext);
-			total_text = " %% Illegal Number %%";
-			BGosub(breaktext);
-			OnErrorZero;
-			goto commandloop;
-		}
-		break;
-
-	}
-	OnErrorZero;
-	return Result;
 }

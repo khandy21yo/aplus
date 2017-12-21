@@ -58,7 +58,7 @@ static std::string colon = ":";
 //!
 std::string entr_3option(
 	scope_struct &scope,
-	std::string &op_group,
+	const std::string &op_group,
 		//!< The passed string that tells what type of option it is.
 	std::string &op_possible,
 		//!< The passed choice of options the user gets.

@@ -10,21 +10,28 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
 #include "basicfun.h"
 
-#include "peferences.h"
+#include "preferences.h"
 #include "cmcfun.h"
-#include 'scopedef.h"
+#include "scopedef.h"
 #include "smg/lib.h"
 #include "smg/smg.h"
 
+//
+// Include files
+//
+struct screencapture_struct
+{
+	long lines;
+	std::string screen[25];
+};
+
 //!
-//!
-//! Abstract:HELP
-//!	.p
 //!	The ^*Interrupt Command Level\* is accessable from any process
 //!	by pressing the interrupt key. After option has been selected,
 //!	a subprocess is created and the current process waits for
@@ -51,8 +58,6 @@
 //!
 //!	CALL MENU_3INTERRUPT
 //!
-//! Author:
-//!
 // \author 12/01/89 - Kevin Handy
 //!	Taken from MENU_INTERRUPT.
 //!
@@ -61,7 +66,7 @@ void menu_3interrupt(
 {
 	long i;
 	std::string inp;
-	long interupt_ch;
+	std::ofstream interupt_ch;
 	std::string interupt_file;
 	std::string lib_key;
 	std::string lib_name;
@@ -80,26 +85,14 @@ void menu_3interrupt(
 	std::string temp;
 	long under;
 	long x;
+	long start;
 
 	screencapture_struct screencapture;
-	long int_option;
-	long old_option;
-	long old_message;
+	smg_display_id int_option;
+	smg_display_id old_option;
+	smg_display_id old_message;
 	// --
 
-	//
-	// Include files
-	//
-	struct screencapture_struct
-	{
-		long lines;
-		std::string screen[25];
-	};
-	//
-	// External functions
-	//
-	extern long dspl_screencapture_V2([Unknown Node Type 416@169], [Unknown Node Type 351@169]);
-	//
 	// Declare variables
 	//
 	//
@@ -139,10 +132,10 @@ selectoption:;
 		(scope.scope_exit == SMG$K_TRM_CTRLZ))
 	{
 		goto exitfunction;
-		//
-		// Good keys
-		//
 	}
+	//
+	// Good keys
+	//
 	else if ((scope.scope_exit == 0) ||
 		((scope.scope_exit == 10) ||
 		((scope.scope_exit == 12) ||
@@ -150,12 +143,12 @@ selectoption:;
 		(scope.scope_exit == SMG$K_TRM_DO)))))
 	{
 		// Good key
-		//
-		// Bad keys
-		//
 	}
 	else
 	{
+		//
+		// Bad keys
+		//
 		entr_3badkey(scope, scope.scope_exit);
 		goto selectoption;
 	}
@@ -176,10 +169,6 @@ selectoption:;
 	//	for the  spawn process. Return without any macro command
 	//	will spawn directly into CMC Menu.
 	//
-	// Index:
-	//	.x Menu>Command
-	//	.x Command>Menu
-	//
 	// --
 	if (opt == "M")
 	{
@@ -189,10 +178,13 @@ selectoption:;
 macro:;
 		// ** Converted from a select statement **
 		// ^C, ^Z, Exit
-		if ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_CTRLC) ||
-			((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_F8) ||
-			 ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_F10) ||
-			  (entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_CTRLZ))))
+		start = -1;
+		int e3 = entr_3enter(scope, scope.smg_option, 1, 22, inp, start,
+			16 + 4096);
+	       if ((e3 == SMG$K_TRM_CTRLC) ||
+			(e3 == SMG$K_TRM_F8) ||
+			(e3 == SMG$K_TRM_F10) ||
+			(e3 == SMG$K_TRM_CTRLZ))
 		{
 			smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
 			// Restore OPTION  virtual display
@@ -202,12 +194,6 @@ macro:;
 			goto exitfunction;
 			// Good keys
 		}
-		else if ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 0) ||
-			((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 10) ||
-			((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 12) ||
-			((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 13) ||
-			((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_DO) ||
-			(entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_F7))))))
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -216,28 +202,28 @@ macro:;
 		inp = basic::edit(inp, 4 + 8 + 128);
 		sys_status = lib$set_symbol("CMC$COMMAND", inp);
 		smg_status = smg$unpaste_virtual_display(scope.smg_option, scope.smg_pbid);
-		subr_3spawn(scope, "MENU");
+		subr_3spawn(scope, "menu");
 		sys_status = lib$set_symbol("CMC$COMMAND", "");
-		//
-		// Exit
-		//
 	}
 	else if (opt == "X")
 	{
 		//
-		// Help
+		// Exit
 		//
 	}
 	else if (opt == "H")
 	{
+		//
+		// Help
+		//
 		help_34message(scope, "", "H", scope.prg_program, "", "HELP");
 		goto selectoption;
-		//
-		// DCL
-		//
 	}
 	else if (opt == "L")
 	{
+		//
+		// DCL
+		//
 		// ++
 		// Abstract:DCL
 		//	^*DCL\*
@@ -246,9 +232,6 @@ macro:;
 		//	Prompt ^*$Subprocess\* indicates
 		//	spawning process. After typing LOGOUT subprocess returns
 		//	back to the current process.
-		//
-		// Index:
-		//	.x DCL
 		//
 		// --
 		smg_status = smg$unpaste_virtual_display(scope.smg_option, scope.smg_pbid);
@@ -264,17 +247,13 @@ macro:;
 		//	^*Clipboard\* allows for selection of  any part of current screen and to paste
 		//	it into a text file.
 		//
-		// Index:
-		//	.x Clipboard>Command
-		//	.x Command>Clipboard
-		//
 		// --
-		//
-		// Document the current screen
-		//
 	}
 	else if (opt == "D")
 	{
+		//
+		// Document the current screen
+		//
 		// ++
 		// Abstract:DOCUMENT
 		//	^*Document\*
@@ -285,10 +264,6 @@ macro:;
 		//	.note
 		//	The current process is temporarily interrupted.
 		//	.end note
-		//
-		// Index:
-		//	.x Document>Command
-		//	.x Command>Document
 		//
 		// --
 		//
@@ -340,7 +315,12 @@ docu:;
 		inp = temp + std::string(55 - temp.size(), ' ');
 		// ** Converted from a select statement **
 		// ^C, ^Z, Exit
-		if ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_CTRLC) || ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_F8) || ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_F10) || (entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_CTRLZ))))
+		long start = -01;
+		int e3 = entr_3enter(scope, scope.smg_option, 1, 22, inp, start, 16 + 4096);
+	       if (e3 == SMG$K_TRM_CTRLC) ||
+			(e3 == SMG$K_TRM_F8) ||
+			(e3 == SMG$K_TRM_F10) ||
+			(e3  == SMG$K_TRM_CTRLZ))))
 		{
 			smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
 			// Restore OPTION  virtual display
@@ -350,7 +330,6 @@ docu:;
 			goto exitfunction;
 			// Good keys
 		}
-		else if ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 0) || ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 10) || ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 12) || ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == 13) || ((entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_DO) || (entr_3enter(scope, scope.smg_option, 1, 22, inp, -1, 16 + 4096) == SMG$K_TRM_F7))))))
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -385,34 +364,13 @@ docu:;
 		//
 		// Put the pasteboard out to the temp file
 		//
-		screencapture.lines = 0;
-		for (x = 0; x <= 24; x++)
-		{
-			screencapture.screen[x] = "";
-		}
-		p1 = &(dspl_screencapture);
-		p2 = &(screencapture);
-		smg_status = smg$put_pasteboard(&scope.smg_pbid, p1, p2, &0);
-		//
-		// Insert text file into a library
-		//
 		under = ((source + "_").find("_", 0) + 1);
 		lib_name = std::string("SIC:WINDOWS_") + temp.substr(0, under - 1);
 		//
 		// Create text file to insert into window library
 		//
-		interupt_file = std::string("WIND_") + read_sysjob + ".TMP";
-		smg_status = lib$get_lun[interupt_ch];
-		BasicChannel[interupt_ch].ForOutput();
-		BasicChannel[interupt_ch].SetRecordSize(255);
-		BasicChannel[interupt_ch].open(interupt_file);
-		if (!BasicChannel[interupt_ch].is_open() { throw BasicError(5); }
-		for (i = 0; i <= 23; i++)
-		{
-			BasicChannel[interupt_ch] << boost::trim_right_copy(screencapture.screen[i]) << std::endl;
-		}
-		BasicChannel[interupt_ch].close();
-		smg_status = lib$free_lun[interupt_ch];
+		interupt_file = std::string("WIND_") + read_sysjob() + ".TMP";
+		scr_dump(interupt_file.c_str());
 		//
 		// Insert file into the library
 		//
@@ -420,7 +378,7 @@ docu:;
 		//
 		// Distroy text file
 		//
-		smg_status = lib$delete_file(interupt_file + ";*");
+		smg_status = lib$delete_file(interupt_file);
 		//
 		// Bad keys
 		//

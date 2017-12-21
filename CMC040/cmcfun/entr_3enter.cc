@@ -42,75 +42,36 @@ static char *strnset(char *s, int ch, size_t n);
  */
 #define WORDMARK " ,.!?;:"
 
-/*
- *
- *++
- *
- * Abstract:HELP
- *	.b
- *	.lm +5
- *	This function is used to enter/edit a string on the screen
- *	using the cursor movement keys (left and right) to
- *	position the cursor inside of the string.
- *	.lm -5
- *
- * Index:
- *
- * Parameter:
- *
- *	SCOPE
- *		CMC Environment structure.
- *
- *	XX_VDID
- *		Creates or deletes the window that holds the string.
- *
- *	CPOSY
- *		The Y position (Horozontal) at which to start the entry.
- *
- *	CPOSX
- *		The X position (Vertical) at which to start the entry.
- *
- *	XSTR
- *		The string passed between the program and the user.
- *		The program passes a default, and the user can edit it.
- *
- *	START
- *		The passed variable that tells where to position the
- *		cursor. (-1 defaults to 0).
- *
- *	FLAG
- *		.table
- *		4 - Adds a forced keypunch mode
- *
- *		8 - Sets a timeout.
- *
- *		16 - Force to upper case.
- *
- *		4096 - Use blanks instead of underlines
- *		.endtable
- *
- *	Returned value
- *		Enters a string on the screen and
- *		positions the cursor inside of the string.
- *
- * Author:
- *
- *	06/21/84 - Kevin Handy
- *
- */
-
-
-/*
- * Main entry point
- */
+//!
+//!	This function is used to enter/edit a string on the screen
+//!	using the cursor movement keys (left and right) to
+//!	position the cursor inside of the string.
+//!
+//!
+//! \returns Enters a string on the screen and
+//!	positions the cursor inside of the string.
+//!
+//! \author 06/21/84 - Kevin Handy
+//!
 long entr_3enter(
 	struct scope_struct &scope,
+		//!< CMC Environment structure.
 	smg_display_id &xx_vdid,
+		//!< Creates or deletes the window that holds the string.
 	long cposy,
+		//!< The Y position (Horozontal) at which to start the entry.
 	long cposx,
+		//!< The X position (Vertical) at which to start the entry.
 	std::string &xstr,
+		//!< The string passed between the program and the user.
+		//! The program passes a default, and the user can edit it.
 	long &start,
+ 		//!< cursor. (-1 defaults to 0).
 	long flag)
+		//!< 4 - Adds a forced keypunch mode
+		//!	8 - Sets a timeout.
+		//!	16 - Force to upper case.
+		//!	4096 - Use blanks instead of underlines
 {
 	int xlen;
 	int clearflag;
