@@ -2,6 +2,9 @@
 //
 // Report handling structure.
 
+#ifndef _utl_reportx_h_
+#define _utl_reportx_h_
+
 class utl_reportx_cdd
 {
 public:
@@ -66,9 +69,11 @@ public:
 	// Starting time
 	std::string stime;
 	// Window for selection menu
-	long windoW;
+	long window;
 	// Cannot detach flag
 	long detach;
 	// Spooler From Name
 	std::string spoolform;
 };
+
+#endif

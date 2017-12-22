@@ -9,9 +9,12 @@
 // on Wednesday, December 20, 2017 at 16:47:01
 //
 
+#include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
+#include <string>
 
 #include "basicfun.h"
 
@@ -19,10 +22,12 @@
 #include "cmcfun.h"
 #include "scopedef.h"
 #include "database.h"
-#include "cmcfun/report.h"
 
-#include "utl/utl_report.h"
 #include "utl/utl_reportx.h"
+#include "utl/utl_report.h"
+#include "cmcfun/report.h"
+#include "smg/lib.h"
+#include "smg/smg.h"
 
 //
 // Globals
@@ -60,7 +65,7 @@ extern scope_struct scope;
 //
 // --
 long outp_initform(
-	utl_reportx_cdd utl_reportx,
+	utl_reportx_cdd &utl_reportx,
 	const std::string &reportnum,
 	const std::string &fixset)
 {
@@ -70,7 +75,7 @@ long outp_initform(
 	long flag;
 	long i;
 	std::string jj;
-	ofstream prnt_ch;
+	std::ofstream prnt_ch;
 	std::string setflg;
 	long smg_status;
 	long stat;
@@ -91,27 +96,10 @@ long outp_initform(
 	utl_report_cdd utl_report;
 	utl_report_cdd utl_report_sys;
 	printx_cdd printx;
-	long utl_report_ch;
-	long utl_sysrep_ch;
-	long smg_blank;
+	smg_display_id smg_blank;
 
-	jj = read_sysjob;
+	jj = read_sysjob();
 
-	//
-	// Open REPORT file
-	//
-	if (utl_report_ch == 0)
-	{
-		try
-		{
-#include "SOURCE:[UTL.OPEN]UTL_REPORT.MOD"
-		}
-		catch(basic::BasicError &Be)
-		{
-			filename = "UTL_REPORT";
-			goto helperror;
-		}
-	}
 	//
 	// Get Report
 	//
@@ -152,29 +140,6 @@ L_345:;
 	user_report = -2;
 	//
 L_350:;
-	// Open system file
-	//
-	try
-	{
-		if (utl_sysrep_ch == 0)
-		{
-#include "SOURCE:[UTL.OPEN]UTL_SYSREP.OPN"
-		}
-		//
-		// Get report from system report file
-		//
-		BasicChannel[utl_sysrep_ch].SetKey(0);
-		BasicChannel[utl_sysrep_ch].SetKeyMode(Equal);
-		BasicChannel[utl_sysrep_ch].SetKeyValue(reportnum);
-		BasicChannel[utl_sysrep_ch].SetRegardless();
-		BasicChannel[utl_sysrep_ch].Get();
-		BasicChannel[utl_sysrep_ch].close();
-	}
-	catch(basic::BasicError &Be)
-	{
-		filename = "CMC:UTL_REPORT";
-		goto helperror;
-	}
 	//
 	// Put or update record into report file
 	//
@@ -241,14 +206,14 @@ L_510:;
 	{
 		BasicChannel[prnt_ch].ForOutput();
 		BasicChannel[prnt_ch].open(utl_work_dev + tempfile);
-		if (!BasicChannel[prnt_ch].is_open() { throw BasicError(5); }
+		if (!BasicChannel[prnt_ch].is_open()) { throw basic::BasicError(5); }
 	}
 	catch(basic::BasicError &Be)
 	{
 		filename = "TEMP";
 		goto helperror;
 	}
-	sys_status = lib$set_symbol("CMC$REPORT", tempfile, 0);
+	sys_status = lib$set_symbol("CMC$REPORT", tempfile);
 	if ((sys_status & 1) == 0)
 	{
 		entr_3message(scope, std::string("Unable to declare symbol for work file. ") + std::to_string(sys_status), 0);
@@ -347,7 +312,7 @@ L_530:;
 	{
 		if (directflag == 0)
 		{
-			smg_status = smg$delete_virtual_display[(long)(utl_reportx.window)];
+			smg_status = smg$delete_virtual_display(utl_reportx.window)
 		}
 		BGosub(killtempfile);
 		goto exitprogram;
@@ -370,7 +335,7 @@ L_530:;
 		//
 		// Delete report window
 		//
-		smg_status = smg$delete_virtual_display[(long)(utl_reportx.window)];
+		smg_status = smg$delete_virtual_display(utl_reportx.window);
 	}
 	//
 	// Write the data out to the ascii file
@@ -387,7 +352,7 @@ L_530:;
 	}
 	if (directflag == 0)
 	{
-		smg_status = smg$delete_virtual_display[smg_blank];
+		smg_status = smg$delete_virtual_display(smg_blank);
 	}
 	//
 	// Restore original values for the help message
@@ -395,7 +360,7 @@ L_530:;
 	scope.prg_ident = temp_ident;
 	scope.prg_program = temp_program;
 	BGosub(killtempfile);
-	outp_initform_V1 = CMC$_NORMAL;
+	Result = CMC$_NORMAL;
 	return Result;
 exitprogram:;
 	//******************************************************************
@@ -414,25 +379,16 @@ exitprogram:;
 	{
 		smg_status = smg$change_pbd_characteristics(scope.smg_pbid, 80);
 	}
-	outp_initform_V1 = CMC$_ABORT;
+	Result = CMC$_ABORT;
 	return Result;
 	//******************************************************************
 	// Delete temp file to prepare for exit
 	//******************************************************************
 killtempfile:;
 	BasicChannel[prnt_ch].close();
-	smg_status = lib$delete_file[(long)(utl_work_dev + tempfile + ";*")];
+	smg_status = lib$delete_file(utl_work_dev + tempfile + ";*");
 	BReturn;
 
-	//*******************************************************************
-	// Trap errors
-	//*******************************************************************
-	//
-	// Untrapped error
-	//
-	filename = "";
-	OnErrorZero;
-	goto helperror;
 helperror:;
 	//
 	// This moved from inside error to outside so that errors occuring
@@ -442,5 +398,4 @@ helperror:;
 	//
 	help_34message(scope, std::to_string(Be.erl) + " " + basic::ert(Be.err), "E", Be.ern, filename, std::to_string(Be.err));
 	goto exitprogram;
-	return Result;
 }

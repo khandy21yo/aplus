@@ -44,6 +44,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/read_initialize.cc \
        	cmcfun/read_sysjob.cc \
        	cmcfun/read_syspn.cc \
+	cmcfun/subr_3spawn.cc \
        	cmcfun/time_code.cc \
        	cmcfun/time_invcode.cc \
        	cmcfun/time_now.cc

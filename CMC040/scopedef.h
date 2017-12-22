@@ -120,5 +120,8 @@ void read_3broadcast(
 	void *a3,
 	void *a4);
 void read_initialize(void);
+void subr_3spawn(
+        scope_struct &scope,
+        const std::string &pname);
 
 #endif

@@ -201,7 +201,7 @@ macro:;
 		}
 		inp = basic::edit(inp, 4 + 8 + 128);
 		sys_status = lib$set_symbol("CMC$COMMAND", inp);
-		smg_status = smg$unpaste_virtual_display(scope.smg_option, scope.smg_pbid);
+		smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
 		subr_3spawn(scope, "menu");
 		sys_status = lib$set_symbol("CMC$COMMAND", "");
 	}
@@ -234,7 +234,7 @@ macro:;
 		//	back to the current process.
 		//
 		// --
-		smg_status = smg$unpaste_virtual_display(scope.smg_option, scope.smg_pbid);
+		smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
 		subr_3spawn(scope, "");
 		//
 		// Clipboard
@@ -317,10 +317,10 @@ docu:;
 		// ^C, ^Z, Exit
 		long start = -01;
 		int e3 = entr_3enter(scope, scope.smg_option, 1, 22, inp, start, 16 + 4096);
-	       if (e3 == SMG$K_TRM_CTRLC) ||
+	       if ((e3 == SMG$K_TRM_CTRLC) ||
 			(e3 == SMG$K_TRM_F8) ||
 			(e3 == SMG$K_TRM_F10) ||
-			(e3  == SMG$K_TRM_CTRLZ))))
+			(e3  == SMG$K_TRM_CTRLZ))
 		{
 			smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
 			// Restore OPTION  virtual display
@@ -360,7 +360,7 @@ docu:;
 		// Restore MESSAGE virtual display
 		//
 		scope.smg_message = old_message;
-		smg_status = smg$unpaste_virtual_display(scope.smg_option, scope.smg_pbid);
+		smg_status = smg$pop_virtual_display(scope.smg_option, scope.smg_pbid);
 		//
 		// Put the pasteboard out to the temp file
 		//
