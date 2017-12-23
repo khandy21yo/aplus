@@ -7,6 +7,7 @@ lib_LIBRARIES = \
 	libsmg.a
 
 bin_PROGRAMS = \
+	dbtest \
 	testbatch \
 	tk_spec_inlibbat \
 	tk_spec_checkline \
@@ -81,6 +82,10 @@ libsmg_a_SOURCES = \
 	smg/smg_sewt_cursor_abs.cc \
 	smg/smg_set_cursor_mode.cc \
 	smg/smg_set_term_characteristics.cc
+
+# dbtest
+dbtest_SOURCES = dbtest.cc
+dbtest_LDADD = -lpq
 
 # utl
 testbatch_SOURCES = utl/testbatch.cc

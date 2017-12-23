@@ -106,10 +106,7 @@ long outp_initform(
 	user_report = 0;
 	try
 	{
-		BasicChannel[utl_report_ch].SetKey(0);
-		BasicChannel[utl_report_ch].SetKeyMode(Equal);
-		BasicChannel[utl_report_ch].SetKeyValue(reportnum);
-		BasicChannel[utl_report_ch].Get();
+		utl_report_ch.Get(reportnum);
 	}
 	catch(basic::BasicError &Be)
 	{
@@ -117,29 +114,24 @@ long outp_initform(
 		{
 			goto L_350;
 		}
-		if (Be.err == 154)
-		{
-			goto L_345;
-		}
 		goto helperror;
 	}
 	utl_report_sys = utl_report;
 	user_report = -1;
-	goto L_350;
-	//
-L_345:;
-	// Get Report
-	//
-	user_report = 0;
-	BasicChannel[utl_report_ch].SetKey(0);
-	BasicChannel[utl_report_ch].SetKeyMode(Equal);
-	BasicChannel[utl_report_ch].SetKeyValue(reportnum);
-	BasicChannel[utl_report_ch].SetRegardless();
-	BasicChannel[utl_report_ch].Get();
-	utl_report_sys = utl_report;
-	user_report = -2;
 	//
 L_350:;
+	//
+	// Get Report
+	//
+	try
+	{
+		utl_sysrep_ch.Get(reportnum);
+	}
+	catch(basic::BasicError &Be)
+	{
+		filename = "UTL_REPORT";
+		goto helperror;
+	}
 	//
 	// Put or update record into report file
 	//

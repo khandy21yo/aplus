@@ -143,11 +143,95 @@ public:
 typedef std::map<std::string, std::string> db_map_cdd;
 
 //!
+//! \brief enum for allowed data types
+//!
+enum db_datatype_enum
+{
+	DB_TYPE_STRING =1,	//!< std::string
+	DB_TYPE_LONG,		//!< long
+	DB_TYPE_DOUBLE		//!< double (numeric)
+};
+
+//!
+//! \brief Field definitions
+//!
+class db_field_cdd
+{
+public:
+	int length;		//!< Maximum characters, digits, etc.
+	int type;		//!< Typr of data in field
+
+public:
+	//!< Constructor
+	db_field_cdd(
+		int xlength = 0,	//!< Max length
+		int xtype = 0)		//!< Data type
+	{
+		length = xlength;
+		type = xtype;
+	}
+	//!
+	//! \brief copy value from map into simple variable
+	virtual void copy_frommap(
+		const std::string &xvalue)	//!> Value to copy from
+	{
+	}
+	//!
+	//! \brief copy value from descrete value into map value
+	//!
+	virtual void copy_tomap(
+		std::string &xvalue)		//!< Value to copy to
+	{
+	}
+};
+
+//!
+//! \brief Field definitions
+//!
+class db_field_string_cdd : public db_field_cdd
+{
+public:
+	std::string *valueptr;		//!< Pointer to descrete value
+
+public:
+	//!< Constructor
+	db_field_string_cdd(
+		std::string &xvalue,		//!< Pointer to string value
+		int xlength = 0) :		//!< Max string length
+		db_field_cdd(xlength, DB_TYPE_STRING)
+	{
+		valueptr = &xvalue;
+	}
+
+	//! \brief Copt value from map string into descrete variable
+	virtual void copy_frommap(
+		const std::string &xvalue)
+	{
+		*valueptr = xvalue;
+	}
+	//! \brief Copy value from deascrete variable into map string
+	virtual void copy_tomape(
+		std::string &xvalue)		//!< Value to assign
+	{
+		xvalue = *valueptr;
+	}
+};
+
+//!
+//! \brief list to define database fields
+//!
+//! This hold infividual values in a key/data format.
+//!
+typedef std::map<std::string, db_field_cdd> db_fieldmap_cdd;
+
+//!
 //! \brief base class for all rms type data files
 //!
 class db_rms_cdd
 {
 public:
+	db_fieldmap_cdd fields;
+		//!< List of field definitions
 	db_map_cdd db_values;
 		//!< std::map containing values read from a table
 	std::string table_name;
@@ -155,8 +239,32 @@ public:
 
 	int load_psql(PGresult *result, int row, db_map_cdd &dbmap);
 
-	virtual void copy_tomap(db_map_cdd &dbmap);
-	virtual void copy_frommap(db_map_cdd &dbmap);
+	//!
+	//! \brief Copy all fields from the db_values map to the
+	//! descrete split out variables.
+	//!
+	void copy_frommap(db_map_cdd &dbmap)
+	{
+		for (auto loop = fields.begin();
+			loop != fields.end();
+			loop++)
+		{
+			(*loop).second.copy_frommap(db_values[(*loop).first]);
+		}
+	}
+	//!
+	//! \brief Copy all fields to the db_values map from the
+	//! descrete split out variables.
+	//!
+	void copy_tomap(db_map_cdd &dbmap)
+	{
+		for (auto loop = fields.begin();
+			loop != fields.end();
+			loop++)
+		{
+			(*loop).second.copy_tomap(db_values[(*loop).first]);
+		}
+	}
 };
 
 //!
