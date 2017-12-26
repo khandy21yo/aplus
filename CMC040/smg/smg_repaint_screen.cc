@@ -5,7 +5,7 @@
 #include "smg/smg.h"
 
 //!
-//! \breif refresh screen
+//! \brief refresh screen
 //
 long smg$repaint_screen(
 	smg_pasteboard_id &pbid)

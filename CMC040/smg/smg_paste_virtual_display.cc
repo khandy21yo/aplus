@@ -1,5 +1,5 @@
 //! \file
-//! \btief Paste virtual display
+//! \brief Paste virtual display
 //!
 
 #include "smg/smg.h"

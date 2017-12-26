@@ -1,5 +1,5 @@
 //! \file
-//! \bried Functions to emulate SMG using curses and panels
+//! \brief Functions to emulate SMG using curses and panels
 //!
 #ifndef _smg_h_
 #define _smg_h_

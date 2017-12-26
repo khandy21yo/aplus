@@ -45,17 +45,19 @@
 //!
 void help_34message(
 	scope_struct &scope,
+		//!< Scope definition
 	const std::string &messages,
 		//!< Passed variable that tells what type of error
 		//! the user is receiving.
 	const std::string &help_severity,
-		//!> Passed variable showing that there is an error
+		//!< Passed variable showing that there is an error
 		//! in the program.
 	const std::string &help_progname,
-		//!> The passed program name where the error is comming from.
+		//!< The passed program name where the error is comming from.
 	const std::string &help_filename,
+		//!< File name
 	const std::string &help_item)
-		//!> Passed item tells the official name of the error.
+		//!< Passed item tells the official name of the error.
 {
 	long curr_line;
 	std::string default_lib;

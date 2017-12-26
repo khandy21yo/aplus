@@ -16,7 +16,7 @@
 //!
 //!	This function returns the number of the current image as a string.
 //!
-//! \rteurns This function returns the job name of the current image.
+//! \returns This function returns the job name of the current image.
 //!
 //! Example:
 //!

@@ -1,5 +1,5 @@
 //! \file
-//! \btief  Put characters
+//! \brief  Put characters
 //!
 #include <string>
 #include "smg/smg.h"
@@ -15,7 +15,7 @@ long smg$put_chars(
 	long eline,			//!< erase line
 	long flags,			//!< Flags
 	long comp,			//!< ???
-	long charset)
+	long charset)			//!< Character set
 {
 	if (flags & SMG$M_BOLD)
 	{

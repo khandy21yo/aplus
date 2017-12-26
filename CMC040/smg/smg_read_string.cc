@@ -7,19 +7,19 @@
 
 
 //!
-//! \briefRead string
+//! \brief Read string
 //!
 long smg$read_string(
-	smg_keyboard_id &kbid,
-	std::string &retstring,
-	long a,
-	long xlen,
-	long modifier,
-	long timeout,
-	const char *term_set,
-	long data_length,
-	int &retchar,
-	smg_display_id &option)
+	smg_keyboard_id &kbid,		//!< Keyboard
+	std::string &retstring,		//!< Returned sting
+	long a,				//!< ???
+	long xlen,			//!<Length toread
+	long modifier,			//!< Modifiers
+	long timeout,			//!< Timeout
+	const char *term_set,		//!< Terminator character
+	long data_length,		//!< Length of data
+	int &retchar,			//!< Returned character
+	smg_display_id &option)		//!< Display to use
 {
 	fill in details
 }

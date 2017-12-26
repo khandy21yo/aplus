@@ -19,7 +19,7 @@
 //!
 void entr_3badkey(
 	struct scope_struct &scope,
-		//!i< Structure created by window initilzation.
+		//!< Structure created by window initilzation.
 	long bad_value)
 		//!< Enters a integer value of an error.
 {

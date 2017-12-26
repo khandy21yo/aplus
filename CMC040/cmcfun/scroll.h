@@ -1,5 +1,5 @@
 //! \file
-//! \btief  Scrolling structure
+//! \brief  Scrolling structure
 //!
 
 #ifndef _scroll_h_

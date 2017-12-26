@@ -1,5 +1,5 @@
 //! \file
-//! \btief  Put characters encoded
+//! \brief  Put characters encoded
 //!
 #include <string>
 #include "smg/smg.h"
@@ -11,13 +11,13 @@
 //!
 long smg_put_virtual_display_encoded(
 	smg_display_id &display,	//!< Display to write to
-	long length,
+	long length,			//!< Length
 	const std::string &text,	//!< Text to write
 	long row,			//!< Row to dosplay at
 	long col,			//!< Column to display at
-	long a,
-	long b,
-	long charset)
+	long a,				//!< ???
+	long b,				//!< ???
+	long charset)			//!< Character set
 {
 	if (flags & SMG$M_BOLD)
 	{

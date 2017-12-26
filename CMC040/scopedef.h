@@ -15,9 +15,9 @@
 
 #include "smg/smg.h"
 
-//
+//!
 //! \brief Global information about the display
-//
+//!
 struct scope_struct
 {
 	//! \brief Exit status of entry routines

@@ -34,7 +34,7 @@ long libr_3insert(
 	const std::string &lib_name,
 		//!< Passed name of library to insert text into.
 	const std::string &file_name,
-		//!> Passed name of file containing text to insert
+		//!< Passed name of file containing text to insert
 		//! into the library.
 	const std::string &key_name)
 		//!< Passed name of key to append to text.

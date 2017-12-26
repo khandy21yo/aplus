@@ -34,7 +34,7 @@ long read_35set(
 	std::string item,
 		//!< The particular passed section of data on that file.
 	utl_set_cdd &utl_set_read)
-		//!  returned record
+		//!< returned record
 {
 	long exit_status = CMC$_UNDEFINED;
 	PGconn *dbh;		// Database connection

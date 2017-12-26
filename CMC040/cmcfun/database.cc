@@ -123,8 +123,8 @@ int db_rmsrelative_cdd::get_record(int record)
 	if ((result != NULL) && (PQresultStatus(result) == PGRES_TUPLES_OK) &&
 		PQntuples(result) > 0)
 	{
-		load_psql(result, 0, db_values);
-		copy_frommap(db_values);
+		load_psql(result, 0, values);
+		copy_frommap(values);
 	};
 
 	return 0;

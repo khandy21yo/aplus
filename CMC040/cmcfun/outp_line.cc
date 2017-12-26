@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include "basicfun.h"
 
-
 #include "preferences.h"
 #include "cmcfun.h"
 #include "rcmcfun/eport.h"
@@ -25,73 +24,23 @@
 extern scope_struct scope;
 
 //!
-//! Abstract:HELP
-//!	.p
+//! \brief Handle Paging on Reports
+//!
 //!	This subroutine handles paging for the report
 //!	programs existing in all systems.
 //!
-//! Parameters:
-//!
-//!	COLUMNS$
-//!		Passed specification for not only where the
-//!		columns are, but also labels for
-//!		these columns.  This string is used for shipping
-//!		the report to Graphics, a Spreadsheet, or a
-//!		Database.  Each column of data should have a
-//!		section in this string, in this form:
-//!
-//!		... <DataType><Label>:<EndingPos>, ...
-//!
-//!		<DataType> is a single character describing
-//!			the type of data passed in that column:
-//!			($ = String, D = Date, P = Phone number,
-//!			T = Time, and V = Number value).
-//!		<Label> is a label for the data passed in that
-//!			column.
-//!		<EndingPos> is the horizontal position along
-//!			the line where this column ends.
-//!
-//!	UTL_REPORTX
-//!		This passed structure contains the definitions of
-//!		various items for the report being printed.  These
-//!		items are modified according to actions taken; line
-//!		number, page number incremented, etc.
-//!
-//!	HDR()
-//!		Headers to be printed on the top of every page.
-//!
-//!	TXT
-//!		Passed text to print.
-//!
-//!	LINEOFF
-//!		Variable used to control paging.  A positive value
-//!		causes paging to occur that many lines earlier,
-//!		and a negitive value causes it to occur that many
-//!		lines later.  A special case of LINEOFF >= 1000
-//!		exists that forces a new page, but the line is not
-//!		counted/printed.
-//!
 //! Example:
 //!
-//!	.
-//!	.
-//!	.
 //!	CALL OUTP_INITFROMFILE(UTL_REPORTX, 80%)
-//!	.
-//!	.
-//!	.
+//!
 //!	TITLE$(1%) = "This is the report"
 //!	TITLE$(2%) = "For the current period"
 //!	TITLE$(3%) = ""
 //!	TITLE$(4%) = "Key  Description          Date     Time  Flag"
 //!	TITLE$(5%) = ""
-//!.
-//!.
-//!.
+//!
 //!	LAYOUT$ = "$KEY:005,$DESCR:026,DDATE:035,TTIME:041,VFLAG:043"
-//!	.
-//!	.
-//!	.
+//!
 //!	LINE$ = KEY$ + " " +
 //!		DESCRIPTION$ + " " +
 //!		PRNT_DATE(DATE$, 0%) + " " +
@@ -99,21 +48,44 @@ extern scope_struct scope;
 //!		FORMAT$(FLAG%, "#")
 //!
 //!	CALL OUTP_LINE(LAYOUT$, UTL_REPORTX, TITLES$(), LINE$, 0%)
-//!	.
-//!	.
-//!	.
 //!
-//! Author:
+//! \author 03/23/87 - Kevin Handy
 //!
-//!	03/23/87 - Kevin Handy
-//!
-//! --
 void outp_line(
 	const std::string &columns,
+		//!< Passed specification for not only where the
+		//!	columns are, but also labels for
+		//!	these columns.  This string is used for shipping
+		//!	the report to Graphics, a Spreadsheet, or a
+		//!	Database.  Each column of data should have a
+		//!	section in this string, in this form:
+		//!
+		//!	... [DataType][Label]:[EndingPos], ...
+		//!
+		//!	[DataType] is a single character describing
+		//!		the type of data passed in that column:
+		//!		($ = String, D = Date, P = Phone number,
+		//!		T = Time, and V = Number value).
+		//!	[Label] is a label for the data passed in that
+		//!		column.
+		//!	[EndingPos] is the horizontal position along
+		//!		the line where this column ends.
 	utl_reportx_cdd &utl_reportx,
+		//!< This passed structure contains the definitions of
+		//! various items for the report being printed.  These
+		//! items are modified according to actions taken; line
+		//! number, page number incremented, etc.
 	const std::vector<std::string> &hdr,
+		//!< Headers to be printed on the top of every page.
 	const std::string &txt,
+		//!< Passed text to print.
 	long lineoff)
+		//!< Variable used to control paging.  A positive value
+		//! causes paging to occur that many lines earlier,
+		//! and a negitive value causes it to occur that many
+		//! lines later.  A special case of LINEOFF >= 1000
+		//! exists that forces a new page, but the line is not
+		//! counted/printed.
 {
 	long colonpos;
 	std::string column;

@@ -32,7 +32,7 @@ std::string prnt_date(
 	const std::string &indate,
 		//!< The passed date that is to be formatted.
 	long outlen)
-		//!> The passed integer that tells how the date should be
+		//!< The passed integer that tells how the date should be
 		//! formatted.
 {
 	int loop;

@@ -11,5 +11,6 @@ int main()
 {
 	utl_set_cdd utl_set;
 
+	utl_set.dump();
 }
 

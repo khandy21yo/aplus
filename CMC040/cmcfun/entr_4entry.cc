@@ -31,7 +31,7 @@
 //! \returns Returned through the function is the character(s), if
 //!	any, that were typed.
 //!
-//! \autjor 06/20/85 - Kevin Handy
+//! \author 06/20/85 - Kevin Handy
 //!
 //! \author 09/24/89 - Kevin Handy
 //!		Taken from ENTR_ENTRY and greatly modified so that
@@ -40,9 +40,9 @@
 //!
 long entr_4entry(
 	scope_struct &scope,
-		//< scope strucyure
+		//!< scope strucyure
 	smg_display_id &smg_option,
-		//!> The passed window number being used for input.
+		//!< The passed window number being used for input.
 	long xflag)
 		//!< XFLAG% 
 		//!		A flag word as follows:

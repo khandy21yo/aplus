@@ -1,5 +1,5 @@
 //! \file
-//! \bried Library functions
+//! \brief Library functions
 //!
 #ifndef _libmg_h_
 #define _lib_h_

@@ -183,6 +183,15 @@ public:
 		std::string &xvalue)		//!< Value to copy to
 	{
 	}
+	//!
+	//! \brief Dump values for debugging
+	//!
+	void dump(void)
+	{
+		std::cerr << "  Field" << std::endl;
+		std::cerr << "    Length: " << length <<"\n" <<
+			"    Type: " << type << std::endl;
+	}
 };
 
 //!
@@ -197,8 +206,8 @@ public:
 	//!< Constructor
 	db_field_string_cdd(
 		std::string &xvalue,		//!< Pointer to string value
-		int xlength = 0) :		//!< Max string length
-		db_field_cdd(xlength, DB_TYPE_STRING)
+		int xlength = 0)		//!< Max string length
+		: db_field_cdd(xlength, DB_TYPE_STRING)
 	{
 		valueptr = &xvalue;
 	}
@@ -232,7 +241,7 @@ class db_rms_cdd
 public:
 	db_fieldmap_cdd fields;
 		//!< List of field definitions
-	db_map_cdd db_values;
+	db_map_cdd values;
 		//!< std::map containing values read from a table
 	std::string table_name;
 		//!< Name of the database table
@@ -240,7 +249,7 @@ public:
 	int load_psql(PGresult *result, int row, db_map_cdd &dbmap);
 
 	//!
-	//! \brief Copy all fields from the db_values map to the
+	//! \brief Copy all fields from the values map to the
 	//! descrete split out variables.
 	//!
 	void copy_frommap(db_map_cdd &dbmap)
@@ -249,11 +258,11 @@ public:
 			loop != fields.end();
 			loop++)
 		{
-			(*loop).second.copy_frommap(db_values[(*loop).first]);
+			(*loop).second.copy_frommap(values[(*loop).first]);
 		}
 	}
 	//!
-	//! \brief Copy all fields to the db_values map from the
+	//! \brief Copy all fields to the values map from the
 	//! descrete split out variables.
 	//!
 	void copy_tomap(db_map_cdd &dbmap)
@@ -262,7 +271,33 @@ public:
 			loop != fields.end();
 			loop++)
 		{
-			(*loop).second.copy_tomap(db_values[(*loop).first]);
+			(*loop).second.copy_tomap(values[(*loop).first]);
+		}
+	}
+	//!
+	//! \brief Dump out informatopm in structure
+	//!
+	void dump(void)
+	{
+		std::cerr << "db_rms" << std::endl;
+		std::cerr << "  Table: " << table_name << std::endl;
+		for (auto loop = fields.begin();
+			loop != fields.end();
+			loop++)
+		{
+			std::cerr << "  Field "<<
+				(*loop).first <<
+				std::endl;
+			(*loop).second.dump();
+		}
+		for (auto loop1 = values.begin();
+			loop1 != values.end();
+			loop1++)
+		{
+			std::cerr << "  Value "<<
+				(*loop1).first <<
+				(*loop1).second <<
+				std::endl;
 		}
 	}
 };

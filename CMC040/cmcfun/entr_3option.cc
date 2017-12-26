@@ -58,6 +58,7 @@ static std::string colon = ":";
 //!
 std::string entr_3option(
 	scope_struct &scope,
+		//!< Scope structure
 	const std::string &op_group,
 		//!< The passed string that tells what type of option it is.
 	std::string &op_possible,
@@ -66,7 +67,7 @@ std::string entr_3option(
 		//!< The returned integer that holds the number of options and
 		//! which option is currently being looked at.
 	long op_flagw)
-		//!> 1 - Wide menu (132 columns) (IGNORED - NOT NECESSARY)
+		//!< 1 - Wide menu (132 columns) (IGNORED - NOT NECESSARY)
 		//! 2 - Leave menu on (IGNORED - NOT NECESSARY)
 		//! 4 - Flag stating that the menu is already displayed
 		//!     (IGNORED - NOT NECESSARY)
