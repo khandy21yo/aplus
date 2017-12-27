@@ -18,33 +18,20 @@ public:
 	utl_set_cdd(void)
 	{
 		table_name = "utl_set";
-	}
-
-	//!
-	//! \brief Copy into a db_map_cdd into specific class variables
-	//!
-	virtual void copy_tomap(db_map_cdd &dbmap)
-	{
-		dbmap["programname"] = programname;
-		dbmap["item"] = item;
-		dbmap["system"] = system;
-		dbmap["allowund"] = allowund;
-		dbmap["hard"] = hard;
-		dbmap["sdata"] = sdata;
-		dbmap["fdata"] = fdata;
-	}
-	//!
-	//! \brief Copy into a db_map_cdd into specific class variables
-	//!
-	virtual void copy_frommap(db_map_cdd &dbmap)
-	{
-		programname = dbmap["programname"];
-		item = dbmap["item"];
-		system = dbmap["system"];
-		allowund = dbmap["allowund"];
-		hard = dbmap["hard"];
-		sdata = dbmap["sdata"];
-		fdata = dbmap["fdata"];
+		fields["programname"] =
+			db_field_string_cdd(programname, 39);
+		fields["item"] =
+			db_field_string_cdd(item, 6);
+		fields["system"] =
+			db_field_string_cdd(system, 2);
+		fields["allowund"] =
+			db_field_string_cdd(allowund, 1);
+		fields["hard"] =
+			db_field_string_cdd(hard, 1);
+		fields["sdata"] =
+			db_field_string_cdd(sdata, 30);
+		fields["fdata"] =
+			db_field_string_cdd(fdata, 30);
 	}
 
 public:

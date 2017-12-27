@@ -188,9 +188,8 @@ public:
 	//!
 	void dump(void)
 	{
-		std::cerr << "  Field" << std::endl;
-		std::cerr << "    Length: " << length <<"\n" <<
-			"    Type: " << type << std::endl;
+		std::cerr << "    Length: " << length <<
+			", Type: " << type << std::endl;
 	}
 };
 
@@ -285,7 +284,7 @@ public:
 			loop != fields.end();
 			loop++)
 		{
-			std::cerr << "  Field "<<
+			std::cerr << "  Field: "<<
 				(*loop).first <<
 				std::endl;
 			(*loop).second.dump();

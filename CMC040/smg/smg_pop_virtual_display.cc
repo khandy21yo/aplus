@@ -8,9 +8,9 @@ include <smg/smg.h>
 //!
 //! \brief pop virtual display
 //
-long smg$pop_virtual_display(
-	smg_display_id &display,
-	smg_pasteboard_id &pbid)
+long smg$pop_virtual_display(	
+	smg_display_id &display,	//!< Display to pop
+	smg_pasteboard_id &pbid)	/?!< Pasteboard to pop from
 {
 	del_panel(display.pan);
 	delwin(display.win);

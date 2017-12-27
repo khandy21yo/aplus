@@ -39,6 +39,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/libr_digsr.cc \
 	cmcfun/menu_3interrupt.cc \
 	cmcfun/outp_initform.cc \
+	cmcfun/outp_initfromfile.cc \
 	cmcfun/outp_line.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
@@ -62,6 +63,7 @@ libsmg_a_SOURCES = \
 	smg/smg_create_virtual_keyboard.cc \
 	smg/smg_cursor_column.c \
 	smg/smg_cursor_row.c \
+	smg/smg_delete_virtual_display.cc \
 	smg/smg_draw_line.cc \
 	smg/smg_end_display_update.cc \
 	smg/smg_erase_display.cc \

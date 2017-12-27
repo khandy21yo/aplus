@@ -151,6 +151,8 @@ long smg$cursor_column(
 	smg_display_id gisplay);
 long smg$cursor_row(
 	smg_display_id gisplay);
+long smg$delete_virtual_display(
+	smg_display_id &display);
 long smg$draw_line(
 	smg_display_id &display,
 	long row1,
