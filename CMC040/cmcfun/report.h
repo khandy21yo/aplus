@@ -4,8 +4,13 @@
 #ifndef _report_h_
 #define _report_h_
 
+#include "utl/utl_reportx.h"
+
 static const long print_maxgrp = 30;
 static const long print_maxitm = 100;
+
+static const long OUTP_TOSPOOL = 1;	//!< Spool output
+static const long OUTP_TODISPLAY = 2;	//!< Display output
 
 class printx_cdd
 {
@@ -31,6 +36,10 @@ public:
 //
 //
 //
+void outp_3writestructure(
+	utl_reportx_cdd &utl_reportx,
+	std::ofstream &output_ch,
+	printx_cdd &printx);
 long outp_initform(
 	utl_reportx_cdd &utl_reportx,
 	const std::string &reportnum,

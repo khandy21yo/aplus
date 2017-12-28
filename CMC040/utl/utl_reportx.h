@@ -15,7 +15,7 @@ public:
 	// Program name
 	std::string pronam;
 	// Spooler name
-	std::string spoo;
+	std::string spool;
 	// Option data
 	std::string optdef[10];
 	// Default output file/device name
@@ -69,11 +69,12 @@ public:
 	// Starting time
 	std::string stime;
 	// Window for selection menu
-	long window;
+	smg_display_id window;
 	// Cannot detach flag
 	long detach;
 	// Spooler From Name
 	std::string spoolform;
+	long offset;
 };
 
 #endif

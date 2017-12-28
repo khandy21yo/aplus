@@ -304,7 +304,7 @@ L_530:;
 	{
 		if (directflag == 0)
 		{
-			smg_status = smg$delete_virtual_display(utl_reportx.window)
+			smg_status = smg$delete_virtual_display(utl_reportx.window);
 		}
 		BGosub(killtempfile);
 		goto exitprogram;
@@ -388,6 +388,6 @@ helperror:;
 	// error to occur inside of an error no matter if it is in a
 	// different module.
 	//
-	help_34message(scope, std::to_string(Be.erl) + " " + basic::ert(Be.err), "E", Be.ern, filename, std::to_string(Be.err));
+	help_34message(scope, std::to_string(0) + " " + "Error", "E", 0, filename, std::to_string(0));
 	goto exitprogram;
 }
