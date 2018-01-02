@@ -74,6 +74,9 @@ void find_file(
 	int flag,
 	const std::string &prefix,
 	const std::string &suffix);
+long find_fileexists(
+	const std::string wildf,
+	long flag);
 double func_round(double xnum, int xprec);
 long libr_3insert(const std::string &lib_name,
 	const std::string &file_name,

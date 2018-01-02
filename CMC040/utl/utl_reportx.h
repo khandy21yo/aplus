@@ -75,6 +75,10 @@ public:
 	// Spooler From Name
 	std::string spoolform;
 	long offset;
+	std::string  aftertime; //[6];
+	//!< Run After Time (HHMMSS) */
+	std::string  background; //[1];
+	//!< Run Background? */
 };
 
 #endif

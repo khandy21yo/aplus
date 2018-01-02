@@ -15,7 +15,7 @@ static const long OUTP_TODISPLAY = 2;	//!< Display output
 class printx_cdd
 {
 public:
-	long print_groups;
+	long groups;
 		//!< Number of groups
 	std::string groupx[print_maxgrp + 1];
 		//!< Groups
@@ -36,10 +36,17 @@ public:
 //
 //
 //
+long find_3printgroupitem(
+	const std::string &group,
+	const std::string &item,
+	printx_cdd &printx);
 void outp_3writestructure(
 	utl_reportx_cdd &utl_reportx,
 	std::ofstream &output_ch,
 	printx_cdd &printx);
+std::string  outp_createstr(
+	const std::string &Source,
+	const std::string &Item);
 long outp_initform(
 	utl_reportx_cdd &utl_reportx,
 	const std::string &reportnum,

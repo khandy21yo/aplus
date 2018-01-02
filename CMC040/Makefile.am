@@ -31,7 +31,9 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_4entry.cc \
 	cmcfun/entr_4specialkeys.cc \
 	cmcfun/entr_macro.cc \
+	cmcfun/find_3printgroupitem.cc \
        	cmcfun/find_file.cc \
+	cmcfun/find_fileexists.cc \
        	cmcfun/func_4scoseq.cc \
        	cmcfun/func_round.cc \
 	cmcfun/help_34message.cc \
@@ -39,8 +41,10 @@ libcmcfun_a_SOURCES = \
 	cmcfun/libr_digsr.cc \
 	cmcfun/menu_3interrupt.cc \
 	cmcfun/outp_3writestructure.cc \
+	cmcfun/outp_createstr.cc \
 	cmcfun/outp_initform.cc \
 	cmcfun/outp_initfromfile.cc \
+	cmcfun/outp_initstructure.cc \
 	cmcfun/outp_line.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \

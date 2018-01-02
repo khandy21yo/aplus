@@ -74,4 +74,8 @@ public:
 		//!< Description = Spooler From Name
 };
 
+void outp_initstructure(
+	const utl_report_cdd &utl_report,
+	utl_reportx_cdd &utl_reportx);
+
 #endif
