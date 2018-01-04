@@ -245,6 +245,15 @@ public:
 	std::string table_name;
 		//!< Name of the database table
 
+	//! \brief Assignment Operator
+	db_rms_cdd & operator=(const db_rms_cdd &xdb)
+	{
+		fields = xdb.fields;
+		values = xdb.values;
+		table_name = xdb.table_name;
+		return *this;
+	}
+
 	int load_psql(PGresult *result, int row, db_map_cdd &dbmap);
 
 	//!
@@ -312,6 +321,13 @@ class db_rmsrelative_cdd : public db_rms_cdd
 {
 public:
 	int get_record(int record);
+
+	//! \brief Assignment Operator
+	db_rmsrelative_cdd & operator=(const db_rmsrelative_cdd &xdb)
+	{
+		db_rms_cdd::operator=(xdb);
+		return *this;
+	}
 };
 
 //!
@@ -319,6 +335,13 @@ public:
 //!
 class db_rmsindexed_cdd : public db_rms_cdd
 {
+public:
+	//! \brief Assignment Operator
+	db_rmsindexed_cdd & operator=(const db_rmsindexed_cdd &xdb)
+	{
+		db_rms_cdd::operator=(xdb);
+		return *this;
+	}
 };
 
 

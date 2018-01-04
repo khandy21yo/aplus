@@ -112,6 +112,31 @@ public:
 	long rows;	//!< Number of rows
 	long cols;	//!< Number of columns
 	std::string label;	//!< Border label
+
+public:
+	//! \brief assignment operator
+	smg_display_id & operator=(const smg_display_id &xid)
+	{
+		border = xid.border;
+		win = xid.win;
+		panel = xid.panel;
+		rows = xid.rows;
+		cols = xid.cols;
+		label = xid.label;
+		return *this;
+	}
+	//! \brief assignment operator
+	smg_display_id & operator=(int xid)
+	{
+		if (xid != 0)
+		{
+			std::cerr << "Bad assignment to smg_display_id" <<
+				std::endl;
+		}
+		win = 0;
+		panel = 0;
+		return *this;
+	}
 };
 
 //
