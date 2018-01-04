@@ -12,6 +12,13 @@ static const long print_maxitm = 100;
 
 static const long OUTP_TOSPOOL = 1;	//!< Spool output
 static const long OUTP_TODISPLAY = 2;	//!< Display output
+static const long OUTP_TOPL = 3;	//!< PlanPerfect output
+static const long OUTP_TO2020 = 4;	//!< 2020 output
+static const long OUTP_TODOCUMENT = 5;	//!< Document output
+static const long OUTP_TEMP = 6;	//!< Temp output
+static const long OUTP_TOLOCAL = 7;	//!< Local printer output
+static const long OUTP_TODEVICE = 8;	//!< Devicer output
+static const long OUTP_TOWP = 9;	//!< Word Perfect output
 
 class printx_cdd
 {
@@ -37,6 +44,10 @@ public:
 //
 //
 //
+void outp_36initfromfile(
+	scope_struct &scope,
+	utl_reportx_cdd &utl_reportx,
+	int xwidth);
 long find_3printgroupitem(
 	const std::string &group,
 	const std::string &item,

@@ -15,7 +15,10 @@
 #include "basicfun.h"
 
 #include "preferences.h"
-$include "cmcfun,h""
+#include "database.h"
+#include "cmcfun.h"
+#include "scopedef.h"
+#include "smg/smg.h"
 #include "cmcfun/report.h"
 #include "utl/utl_reportx.h"
 
@@ -54,7 +57,7 @@ void outp_initfromfile(
 	//
 	// Open keyboard if not open
 	//
-	if (scope.smg_option == 0)
+	if (scope.smg_option.win == 0)
 	{
 		read_initialize();
 	}

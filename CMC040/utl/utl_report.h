@@ -79,6 +79,8 @@ public:
 		table_name ="utl_report";
 	}
 	void Get(const std::string &repnum);
+	void Put(void);
+	void Update(void);
 };
 
 void outp_initstructure(

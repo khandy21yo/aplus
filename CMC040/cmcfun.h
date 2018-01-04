@@ -93,6 +93,9 @@ std::string read_syspn(void);
 long time_code(const std::string &datum);
 std::string time_invcode(long tcode);
 std::string time_now(void);
+void writ_string(
+	const std::string &Source,
+	std::string &Result);
 
 #endif
 

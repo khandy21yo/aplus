@@ -40,6 +40,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/libr_3insert.cc \
 	cmcfun/libr_digsr.cc \
 	cmcfun/menu_3interrupt.cc \
+	cmcfun/outp_36initfromfile.cc \
 	cmcfun/outp_3writestructure.cc \
 	cmcfun/outp_createstr.cc \
 	cmcfun/outp_initform.cc \
@@ -56,6 +57,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/time_code.cc \
        	cmcfun/time_invcode.cc \
        	cmcfun/time_now.cc \
+	cmcfun/writ_string.cc \
 	utl/utl_report.cc
 
 libsmg_a_SOURCES = \
