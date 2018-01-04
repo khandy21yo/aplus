@@ -5,6 +5,7 @@
 #define _report_h_
 
 #include "utl/utl_reportx.h"
+#include "utl/utl_report.h"
 
 static const long print_maxgrp = 30;
 static const long print_maxitm = 100;
@@ -60,5 +61,11 @@ void outp_line(
 	const std::vector<std::string> &hdr,
 	const std::string &txt,
 	long lineoff);
+void outp_settings(
+	utl_report_cdd &utl_report,
+	utl_reportx_cdd &utl_reportx,
+	utl_report_cdd &update_ch,
+	const std::string &left_side_cmd,
+	const std::string &right_side_cmd);
 
 #endif

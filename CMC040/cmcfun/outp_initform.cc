@@ -25,6 +25,7 @@
 
 #include "utl/utl_reportx.h"
 #include "utl/utl_report.h"
+#include "utl/utl_sysrep.h"
 #include "cmcfun/report.h"
 #include "smg/lib.h"
 #include "smg/smg.h"
@@ -86,8 +87,8 @@ long outp_initform(
 	std::string temp_ident;
 	std::string temp_program;
 	long user_report;
-	long utl_report_ch;
-	long utl_sysrep_ch;
+	utl_report_cdd utl_report_ch;
+	utl_sysrep_cdd utl_sysrep_ch;
 	std::string utl_work_dev;
 	long xloop;
 
@@ -153,7 +154,7 @@ L_350:;
 		{
 			if (user_report == -1)
 			{
-				RmsUpdate(utl_report_ch);
+				utl_report_ch.Update();
 			}
 		}
 		catch(basic::BasicError &Be)
@@ -166,7 +167,7 @@ L_350:;
 	{
 		try
 		{
-			BasicChannel[utl_report_ch].Put();
+			utl_report_ch.Put();
 		}
 		catch(basic::BasicError &Be)
 		{
@@ -188,17 +189,17 @@ L_510:;
 	// Set up the report settings screen
 	//******************************************************************
 	xloop = xloop + 1;
-	tempfile = std::string("PRNT") + jj + "_" + std::to_string(xloop) + ".TMP";
+	tempfile = std::string("/tmp/prnt") + jj + "_" +
+		std::to_string(xloop) + ".tmp";
 	if (find_fileexists(utl_work_dev + tempfile, flag))
 	{
 		goto L_510;
 	}
-	BasicChannel[prnt_ch].close();
+	prnt_ch.close();
 	try
 	{
-		BasicChannel[prnt_ch].ForOutput();
-		BasicChannel[prnt_ch].open(utl_work_dev + tempfile);
-		if (!BasicChannel[prnt_ch].is_open()) { throw basic::BasicError(5); }
+		prnt_ch.open(tempfile.c_str());
+		if (!prnt_ch.is_open()) { throw basic::BasicError(5); }
 	}
 	catch(basic::BasicError &Be)
 	{
@@ -216,10 +217,7 @@ L_510:;
 	//
 	try
 	{
-		BasicChannel[utl_report_ch].SetKey(0);
-		BasicChannel[utl_report_ch].SetKeyMode(Equal);
-		BasicChannel[utl_report_ch].SetKeyValue(reportnum);
-		BasicChannel[utl_report_ch].Get();
+		utl_report_ch.Get(reportnum);
 	}
 	catch(basic::BasicError &Be)
 	{
@@ -235,11 +233,7 @@ L_510:;
 L_525:;
 	// Get the report record
 	//
-	BasicChannel[utl_report_ch].SetKey(0);
-	BasicChannel[utl_report_ch].SetKeyMode(Equal);
-	BasicChannel[utl_report_ch].SetKeyValue(reportnum);
-	BasicChannel[utl_report_ch].SetRegardless();
-	BasicChannel[utl_report_ch].Get();
+	utl_report_ch.Get(reportnum);
 	goto L_530;
 	//
 L_530:;
@@ -296,7 +290,6 @@ L_530:;
 	//
 	outp_settings(utl_report, utl_reportx, utl_report_ch,
 		std::string("DD SF SP EP CP AF OF AS ") + setflg, "PT ");
-	BasicChannel[utl_report_ch].Unlock();
 	//
 	// Un-normal abort, exit, etc.
 	//
@@ -333,7 +326,7 @@ L_530:;
 	// Write the data out to the ascii file
 	//
 	outp_3writestructure(utl_reportx, prnt_ch, printx);
-	BasicChannel[prnt_ch].close();
+	prnt_ch.close();
 	//
 	// Initilize for output
 	//
@@ -377,7 +370,7 @@ exitprogram:;
 	// Delete temp file to prepare for exit
 	//******************************************************************
 killtempfile:;
-	BasicChannel[prnt_ch].close();
+	prnt_ch.close();
 	smg_status = lib$delete_file(utl_work_dev + tempfile + ";*");
 	BReturn;
 

@@ -16,6 +16,7 @@
 #include "preferences.h"
 #include "cmcfun.h"
 #include "scopedef.h"
+#include "database.h"
 #include "report.h"
 
 

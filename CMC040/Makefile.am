@@ -46,6 +46,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_initfromfile.cc \
 	cmcfun/outp_initstructure.cc \
 	cmcfun/outp_line.cc \
+	cmcfun/cmcfun/outp_initform.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
        	cmcfun/read_initialize.cc \
@@ -54,7 +55,8 @@ libcmcfun_a_SOURCES = \
 	cmcfun/subr_3spawn.cc \
        	cmcfun/time_code.cc \
        	cmcfun/time_invcode.cc \
-       	cmcfun/time_now.cc
+       	cmcfun/time_now.cc \
+	utl/utl_report.cc
 
 libsmg_a_SOURCES = \
 	smg/lib_set_symbol.cc \

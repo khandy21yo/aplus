@@ -9,7 +9,7 @@
 //!
 //! \brief Utility Report File
 //!
-class utl_report_cdd
+class utl_report_cdd : public db_rmsindexed_cdd
 {
 public:
 	std::string system; //[6];
@@ -72,6 +72,13 @@ public:
 		//!< Report Width in Characters
 	std::string spoolform; //[20];
 		//!< Description = Spooler From Name
+
+public:
+	utl_report_cdd()
+	{
+		table_name ="utl_report";
+	}
+	void Get(const std::string &repnum);
 };
 
 void outp_initstructure(

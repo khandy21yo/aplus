@@ -22,6 +22,7 @@
 
 #include "preferences.h"
 #include "cmcfun.h"
+#include "database.h"
 
 #include "smg/smg.h"
 #include "cmcfun/report.h"
