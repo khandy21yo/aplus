@@ -22,6 +22,28 @@ long lib$delete_file(
 	return 0;
 }
 
+//!
+//! \brief Get sumbol
+//!
+static long lib$get_symbol(
+	const std::string &symbol,
+	std::string &value,
+	int a,
+	int b)
+{
+	char *result = getenv(symbol.c_str());
+	if (result != 0)
+	{
+		value = result;
+		return 1;
+	}
+	else
+	{
+		value = "";
+		return 0;
+	}
+}
+
 long lib$set_symbol(
 	const std::string &symbol,
 	const std::string &value);

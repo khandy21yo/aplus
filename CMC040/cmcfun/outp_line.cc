@@ -15,11 +15,16 @@
 #include <unistd.h>
 #include "basicfun.h"
 
+#include "smg/smg.h"
+
 #include "preferences.h"
 #include "cmcfun.h"
-#include "rcmcfun/eport.h"
+#include "database.h"
+#include "scopedef.h"
+#include "cmcfun/report.h"
 #include "utl/utl_reportx.h"
 #include "utl/utl_profile.h"
+#include "scroll.h"
 
 extern scope_struct scope;
 
@@ -100,7 +105,6 @@ void outp_line(
 	std::string old_help_item;
 	std::string old_help_severity;
 	std::string old_program;
-	void outp_formff();
 	long print_flag1;
 	long print_flag2;
 	long q_flag;
@@ -120,7 +124,7 @@ void outp_line(
 	utl_profile_cdd utl_profile;
 	smg_scroll_cdd smg_scroll;
 	std::vector<std::string> smg_text;
-	smg_text.allocate(max_smg_text + 1);
+	smg_text.resize(max_smg_text + 1);
 	long rrr_flag;
 	std::string title1;
 	extern long outp_xunsol;
@@ -150,16 +154,6 @@ void outp_line(
 		}
 		return Result;
 	};
-	//
-	// Create a structure to contain all of the display stuff for
-	// scrolling up and down.
-	//
-#include "SOURCE:[SMG.OPEN]SMG_SCROLL.HB"
-	//
-	// External functions
-	//
-	extern long dspl_scrollcir(NULL);
-	// (It's really an AST routine)
 	//
 	// Save the key for help
 	//
@@ -200,13 +194,19 @@ void outp_line(
 	if ((utl_reportx.printto == OUTP_TOLOCAL) && (utl_reportx.pageno >= utl_reportx.startp))
 	{
 		writ_string(utl_reportx.tolocal, tolocal);
-		BasicChannel[(long)(utl_reportx.chan)] << tolocal;
+		utl_reportx.chan << tolocal;
 	}
 	//
 	// Force the title if this is the first time through,
 	// or it is time to do a page.
 	//
-	if ((utl_reportx.pageno == 0) && (utl_reportx.printto < 10) || ((utl_reportx.lineno + lineoff) >= (utl_reportx.pagelen - 7) && (utl_reportx.printto != OUTP_TODISPLAY)) && (utl_reportx.printto < 10) || ((utl_reportx.lineno) >= (utl_reportx.pagelen) && (utl_reportx.printto == OUTP_TODISPLAY)))
+	if ((utl_reportx.pageno == 0) &&
+		(utl_reportx.printto < 10) ||
+		((utl_reportx.lineno + lineoff) >= (utl_reportx.pagelen - 7) &&
+		(utl_reportx.printto != OUTP_TODISPLAY)) &&
+		(utl_reportx.printto < 10) ||
+		((utl_reportx.lineno) >= (utl_reportx.pagelen) &&
+		(utl_reportx.printto == OUTP_TODISPLAY)))
 	{
 		BGosub(L_2000);
 	}
@@ -352,7 +352,7 @@ void outp_line(
 			}
 			if (print_flag2)
 			{
-				BasicChannel[(long)(utl_reportx.chan)] << temp << std::endl;
+				utl_reportx.chan << temp << std::endl;
 			}
 			if (utl_reportx.lineno == 1)
 			{
@@ -364,7 +364,7 @@ void outp_line(
 		}
 		else
 		{
-			BasicChannel[(long)(utl_reportx.chan)] << fnoffset(txt, utl_reportx.offset) << std::endl;
+			utl_reportx.chan << fnoffset(txt, utl_reportx.offset) << std::endl;
 		}
 	}
 	//
@@ -374,19 +374,15 @@ L_1500:;
 	if (utl_reportx.printto == OUTP_TOLOCAL)
 	{
 		writ_string(utl_reportx.toscreen, toscreen);
-		BasicChannel[(long)(utl_reportx.chan)] << toscreen;
-		//
-		// Test to force a buffer flush
-		//
-		// CLOSE UTL_REPORTX::CHAN
-		// OPEN UTL_REPORTX::DEFOUT AS FILE UTL_REPORTX::CHAN,
-		//	ACCESS APPEND,
-		//	RECORDSIZE 511%
+		utl_reportx.chan << toscreen;
 	}
 	if (junk3 != "")
 	{
+		//
+		// Test to force a buffer flush
+		//
 		entr_3message(scope, junk3 + " of " + title1, 1 + 16);
-		smg_status = smg$flush_buffer[(long)(scope.smg_pbid)];
+		smg_status = smg$flush_buffer(scope.smg_pbid);
 	}
 	//
 	// Flag to end program if we reach the end page number
@@ -432,9 +428,7 @@ L_1500:;
 	}
 	else
 	{
-		smg_status = smg$disable_unsolicited_input[(long)(scope.smg_pbid)];
 		smg_status = entr_4specialkeys(scope, scope.smg_option, 256, rrr_flag);
-		smg_status = smg$enable_unsolicited_input(scope.smg_pbid, &(outp_xunsol), &(scope.smg_kbid));
 	}
 	rrr_flag = 0;
 exitsub:;
@@ -464,7 +458,6 @@ L_2000:;
 	//
 	if (utl_reportx.pageno == 1)
 	{
-		smg_status = smg$enable_unsolicited_input(scope.smg_pbid, &(outp_xunsol), &(scope.smg_kbid));
 		rrr_flag = 0;
 	}
 	//
@@ -480,9 +473,7 @@ L_2000:;
 		if ((utl_reportx.pageno != 1) && (utl_reportx.autoscroll == 0))
 		{
 pauseloop:;
-			smg_status = smg$disable_unsolicited_input[(long)(scope.smg_pbid)];
 			entr_3message(scope, title1, 0);
-			smg_status = smg$enable_unsolicited_input(scope.smg_pbid, &(outp_xunsol), &(scope.smg_kbid));
 			// ** Converted from a select statement **
 			//
 			// Autoscroll Toggle Key Typed
@@ -539,9 +530,7 @@ pauseloop:;
 			}
 			else
 			{
-				smg_status = smg$disable_unsolicited_input[(long)(scope.smg_pbid)];
 				entr_3badkey(scope, scope.scope_exit);
-				smg_status = smg$enable_unsolicited_input(scope.smg_pbid, &(outp_xunsol), &(scope.smg_kbid));
 				goto pauseloop;
 			}
 		}
@@ -689,8 +678,8 @@ L_2050:;
 		// Modified to adjust for excesses in
 		// paging section, and room for blank
 		// lines at bottom of page.
-		BasicChannel[(long)(utl_reportx.chan)].GetOstream() << std::endl;
-		BasicChannel[(long)(utl_reportx.chan)].GetOstream() << std::endl;
+		utl_reportx.chan << std::endl;
+		utl_reportx.chan << std::endl;
 		junk_V2 = 0;
 		junk = boost::trim_right_copy(utl_profile.rep_name);
 		BGosub(L_3000);
@@ -704,8 +693,8 @@ L_2050:;
 			junk = boost::trim_right_copy(utl_reportx.repdate);
 			BGosub(L_3000);
 		}
-		BasicChannel[(long)(utl_reportx.chan)].GetOstream() << std::endl;
-		BasicChannel[(long)(utl_reportx.chan)] << fnoffset(basic::Qstring(utl_reportx.repwidth, '='), utl_reportx.offset) << std::endl;
+		utl_reportx.chan << std::endl;
+		utl_reportx.chan << fnoffset(basic::Qstring(utl_reportx.repwidth, '='), utl_reportx.offset) << std::endl;
 		for (junk1 = junk1 + 1; !(hdr[junk1] == ""); junk1++)
 		{
 			junk = boost::trim_right_copy(hdr[junk1]);
@@ -713,7 +702,7 @@ L_2050:;
 			{
 				junk = "";
 			}
-			BasicChannel[(long)(utl_reportx.chan)] << fnoffset(junk, utl_reportx.offset) << std::endl;
+			utl_reportx.chan << fnoffset(junk, utl_reportx.offset) << std::endl;
 			utl_reportx.lineno = utl_reportx.lineno + 1;
 		}
 	}
@@ -737,21 +726,21 @@ L_3000:;
 		text = std::string("Date: ") + basic::Qdate(0);
 		text = text + std::string(utl_reportx.repwidth / 2 - text.size() - junk.size() / 2, ' ') + junk;
 		text = text + std::string(utl_reportx.repwidth - text.size() - junk3.size(), ' ') + junk3;
-		BasicChannel[(long)(utl_reportx.chan)] << fnoffset(text, utl_reportx.offset) << std::endl;
+		utl_reportx.chan << fnoffset(text, utl_reportx.offset) << std::endl;
 		break;
 
 	case 2:
 
 		text = std::string("Time: ") + basic::Qtime(0);
 		text = text + std::string(utl_reportx.repwidth / 2 - text.size() - junk.size() / 2, ' ') + junk;
-		text = text + std::string(utl_reportx.repwidth - text.size() - "V3.6".size(), ' ') + "V3.6";
-		BasicChannel[(long)(utl_reportx.chan)] << fnoffset(text, utl_reportx.offset) << std::endl;
+		text = text + std::string(utl_reportx.repwidth - text.size() - strlen("V3.6"), ' ') + "V3.6";
+		utl_reportx.chan << fnoffset(text, utl_reportx.offset) << std::endl;
 		break;
 
 	default:
 		text = "";
 		text = text + std::string(utl_reportx.repwidth / 2 - text.size() - junk.size() / 2, ' ') + junk;
-		BasicChannel[(long)(utl_reportx.chan)] << fnoffset(text, utl_reportx.offset) << std::endl;
+		utl_reportx.chan << fnoffset(text, utl_reportx.offset) << std::endl;
 		break;
 
 	}

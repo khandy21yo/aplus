@@ -47,7 +47,8 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_initfromfile.cc \
 	cmcfun/outp_initstructure.cc \
 	cmcfun/outp_line.cc \
-	cmcfun/cmcfun/outp_initform.cc \
+	cmcfun/outp_initform.cc \
+	cmcfun/prnt_fancydate.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
        	cmcfun/read_initialize.cc \

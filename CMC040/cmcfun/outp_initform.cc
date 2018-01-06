@@ -293,7 +293,9 @@ L_530:;
 	//
 	// Un-normal abort, exit, etc.
 	//
-	if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLC) || (scope.scope_exit == SMG$K_TRM_F8))
+	if ((scope.scope_exit == SMG$K_TRM_F10) ||
+		(scope.scope_exit == SMG$K_TRM_CTRLC) ||
+		(scope.scope_exit == SMG$K_TRM_F8))
 	{
 		if (directflag == 0)
 		{

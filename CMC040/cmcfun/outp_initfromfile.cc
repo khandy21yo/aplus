@@ -51,7 +51,7 @@ extern scope_struct scope;
 //
 
 void outp_initfromfile(
-	utl_reportx_cdd utl_reportx,
+	utl_reportx_cdd &utl_reportx,
 	int xwidth)
 {
 	//

@@ -88,6 +88,8 @@ long libr_digsr(
 std::string prnt_date(
 	const std::string &indate,
 	long outlen);
+std::string prnt_fancydate(
+	const std::string &adate);
 std::string read_sysjob(void);
 std::string read_syspn(void);
 long time_code(const std::string &datum);

@@ -9,6 +9,7 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
@@ -17,6 +18,7 @@
 #include "preferences.h"
 #include "cmcfun.h"
 #include "database.h"
+#include "smg/lib.h"
 #include "smg/smg.h"
 #include "scopedef.h"
 #include "report.h"
@@ -65,6 +67,8 @@ void outp_36initfromfile(
 	std::string tolocal;
 	std::string toscreen;
 
+	std::ifstream report_ch;
+
 	OnErrorStack;
 	long sys_status;
 	long templong;
@@ -97,9 +101,8 @@ void outp_36initfromfile(
 	//
 	// Allocate a channel for report
 	//
-	utl_reportx.chan.ForInput();
-	utl_reportx.chan.open(tempfile);
-	if (!BasicChannel[utl_reportx.chan].is_open()) { throw basic::BasicError(5); }
+	report_ch.open(tempfile);
+	if (!report_ch.is_open()) { throw basic::BasicError(5); }
 	//
 	// Assume no errors
 	//
@@ -119,9 +122,9 @@ L_700:;
 	//
 	try
 	{
-		getline(BasicChannel[(long)(utl_reportx.chan)], inline_V1);
-		if (BasicChannel[(long)(utl_reportx.chan)].eof()) { throw basic::BasicError(11); }	// End of file on device
-		if (BasicChannel[(long)(utl_reportx.chan)].fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
+		getline(report_ch, inline_V1);
+		if (report_ch.eof()) { throw basic::BasicError(11); }	// End of file on device
+		if (report_ch.fail()) { throw basic::BasicError(12); }	// Fatal system I/O failure
 	}
 	catch(basic::BasicError &Be)
 	{
@@ -386,7 +389,7 @@ L_750:;
 	//******************************************************************
 L_1100:;
 	utl_reportx.nextrun = "";
-	BasicChannel[utl_reportx.chan].close();
+	report_ch.close();
 	//
 	// Delete the old file
 	//
@@ -434,32 +437,9 @@ L_1100:;
 	else if (utl_reportx.printto == OUTP_TODEVICE)
 	{
 		//
-		// FIXME: Why the double open, first with RECORDTYPE NONE, then
-		// without. I'm reverting this nonsense for now to see if it becomes
-		// obvious.
-		//
-		// Apparently it is needed to keep from getting an extra line feed
-		// before the initilization string is sent out, which causes many
-		// printers to advance the page one line every time a report starts.
-		// Yuck.
-		//
-		//		OPEN UTL_REPORTX::DEFOUT AS FILE UTL_REPORTX::CHAN,
-		//			ORGANIZATION SEQUENTIAL,
-		//			ACCESS APPEND,
-		//			RECORDSIZE 511%
-		BasicChannel[utl_reportx.chan].SetOrginization(SEQUENTIAL);
-		BasicChannel[utl_reportx.chan].SetAccess(APPEND);
-		BasicChannel[utl_reportx.chan].SetRecordSize(511);
-		BasicChannel[utl_reportx.chan].SetRecordType(NONE);
-		BasicChannel[utl_reportx.chan].open(utl_reportx.defout);
-		if (!BasicChannel[utl_reportx.chan].is_open()) { throw basic::BasicError(5); }
-		BasicChannel[(long)(utl_reportx.chan)] << printinit;
-		BasicChannel[utl_reportx.chan].close();
-		BasicChannel[utl_reportx.chan].SetOrginization(SEQUENTIAL);
-		BasicChannel[utl_reportx.chan].SetAccess(APPEND);
-		BasicChannel[utl_reportx.chan].SetRecordSize(511);
-		BasicChannel[utl_reportx.chan].open(utl_reportx.defout);
-		if (!BasicChannel[utl_reportx.chan].is_open()) { throw basic::BasicError(5); }
+		utl_reportx.chan.open(utl_reportx.defout);
+		if (!utl_reportx.chan.is_open()) { throw basic::BasicError(5); }
+		utl_reportx.chan << printinit;
 		//
 		// Local printer
 		//
@@ -473,19 +453,17 @@ L_1100:;
 		//
 		if (utl_reportx.defout == "TT:")
 		{
-			utl_reportx.chan = 0;
+			//utl_reportx.chan = 0;
 		}
 		else
 		{
 			//
 			// Open keyboard for output
 			//
-			BasicChannel[utl_reportx.chan].SetAccess(APPEND);
-			BasicChannel[utl_reportx.chan].SetRecordSize(511);
-			BasicChannel[utl_reportx.chan].open(utl_reportx.defout);
-			if (!BasicChannel[utl_reportx.chan].is_open()) { throw basic::BasicError(5); }
+			utl_reportx.chan.open(utl_reportx.defout);
+			if (!utl_reportx.chan.is_open()) { throw basic::BasicError(5); }
 		}
-		BasicChannel[(long)(utl_reportx.chan)] << tolocal << printinit << toscreen;
+		utl_reportx.chan << tolocal << printinit << toscreen;
 		//
 		// Else a file
 		//
@@ -495,33 +473,25 @@ L_1100:;
 		(utl_reportx.printto == OUTP_TO2020) ||
 		(utl_reportx.printto == OUTP_TOPL))
 	{
-		BasicChannel[utl_reportx.chan].SetOrginization(SEQUENTIAL);
-		BasicChannel[utl_reportx.chan].SetAccess(APPEND);
-		BasicChannel[utl_reportx.chan].SetRecordSize(511);
-		BasicChannel[utl_reportx.chan].SetAllow(READ);
-		BasicChannel[utl_reportx.chan].open(utl_reportx.defout);
-		if (!BasicChannel[utl_reportx.chan].is_open()) { throw basic::BasicError(5); }
+		utl_reportx.chan.open(utl_reportx.defout);
+		if (!utl_reportx.chan.is_open()) { throw basic::BasicError(5); }
 		//
 		// Else a file
 		//
 	}
 	else
 	{
-		BasicChannel[utl_reportx.chan].SetOrginization(SEQUENTIAL);
-		BasicChannel[utl_reportx.chan].SetAccess(APPEND);
-		BasicChannel[utl_reportx.chan].SetRecordSize(511);
-		BasicChannel[utl_reportx.chan].SetAllow(READ);
-		BasicChannel[utl_reportx.chan].open(utl_reportx.defout);
-		if (!BasicChannel[utl_reportx.chan].is_open()) { throw basic::BasicError(5); }
-		BasicChannel[(long)(utl_reportx.chan)] << printinit;
+		utl_reportx.chan.open(utl_reportx.defout);
+		if (!utl_reportx.chan.is_open()) { throw basic::BasicError(5); }
+		utl_reportx.chan << printinit;
 	}
 	return;
 	//
 crash:;
 	// Exit from function with an error
 	//
-	utl_reportx.stat = Be.err;
-	entr_3message(scope, std::string("ERROR: OUTP_36INITFROMFILE (") + std::to_string(Be.err) + ") " + basic::ert(Be.err) + " at line " + std::to_string(Be.erl) + " in " + Be.ern, 4);
+	utl_reportx.stat = 5;
+	entr_3message(scope, std::string("ERROR: OUTP_36INITFROMFILE (") + "Error" + ") " + "Error" + " at line " + "0", 4);
 	entr_3message(scope, std::string("ERROR: OUTP_36INITFROMFILE (") + inline_V1 + ") ", 4);
 	return;
 	//*******************************************************************

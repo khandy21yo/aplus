@@ -5,6 +5,8 @@
 #ifndef _utl_reportx_h_
 #define _utl_reportx_h_
 
+#include <fstream>
+
 class utl_reportx_cdd
 {
 public:
@@ -57,13 +59,13 @@ public:
 	// Next program to run
 	std::string nextrun;
 	// Channel for report output
-	long chan;
+	std::ofstream chan;
 	// Exit status
 	long stat;
 	// Page number
 	long pageno;
 	// Line number
-	long linenO;
+	long lineno;
 	// Starting date
 	std::string sdate;
 	// Starting time

@@ -11,11 +11,12 @@
 
 #include <cstdlib>
 #include <string>
-#include <cunistd>
+#include <unistd.h>
 #include "basicfun.h"
 
 #include "preferences.h"
-#incoude "cmcfun.h"
+#include "cmcfun.h"
+#include "database.h"
 #include "scopedef.h"
 #include "cmcfun/report.h"
 #include "utl/utl_report.h"

@@ -64,7 +64,7 @@ long outp_initform(
 	const std::string &reportnum,
 	const std::string &fixset);
 void outp_initfromfile(
-	utl_reportx_cdd utl_reportx,
+	utl_reportx_cdd &utl_reportx,
 	int xwidth);
 void outp_line(
 	const std::string &columns,
