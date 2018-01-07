@@ -79,5 +79,10 @@ long dspl_scroll(
 	std::vector<std::string> &smg_array,
 	long &smg_scope_exit,
 	const std::string &smg_scroll_option);
+long dspl_scrollcir(
+	smg_scroll_cdd &smg_scroll,
+	std::vector<std::string> &smg_array,
+	long smg_scope_exit,
+	const std::string &smg_scroll_option);
 
 #endif

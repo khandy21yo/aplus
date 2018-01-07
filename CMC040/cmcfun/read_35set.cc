@@ -64,8 +64,8 @@ long read_35set(
 		for (int pkgs = 0; pkgs < PQntuples(result); pkgs++)
 		{
 			utl_set_read.load_psql(result, pkgs,
-				utl_set_read.db_values);
-			utl_set_read.copy_frommap(utl_set_read.db_values);
+				utl_set_read.values);
+			utl_set_read.copy_frommap(utl_set_read.values);
 
 			exit_status = CMC$_NORMAL;
 		}

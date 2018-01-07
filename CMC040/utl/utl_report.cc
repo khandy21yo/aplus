@@ -4,9 +4,13 @@
 #include <string>
 
 #include "basicfun.h"
-#include "preferences"
+#include "preferences.h"
 #include "cmcfun.h"
+#include "scopedef.h"
 #include "database.h"
+#include "smg/smg.h"
+#include "cmcfun/report.h"
+#include "utl/utl_reportx.h"
 #include "utl/utl_report.h"
 
 //!
@@ -17,8 +21,8 @@
 //! This is a 1st try at implementing the rms Get on an indexed file,
 //! and shouldbevome part of the db_rmsindesed_cdd class. eventually.
 //!
-void utl_report::Get(
-	const std::string &xrepnum);
+void utl_report_cdd::Get(
+	const std::string &xrepnum)
 	//!< Key tosarch for
 {
 	PGconn *dbh;		// Database connection
@@ -51,7 +55,7 @@ void utl_report::Get(
 	}
 	else
 	{
-		throw BasicError(155);
+		throw basic::BasicError(155);
 	}
 
 }

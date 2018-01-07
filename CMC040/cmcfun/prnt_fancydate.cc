@@ -12,7 +12,7 @@
 /*
  * Static variables
  */
-static char *monthname[] = 
+static const char *monthname[] = 
 {
 	"***",
 	"January",
@@ -77,7 +77,7 @@ std::string prnt_fancydate(
 	 */
 	if (adate.size() == 8)
 	{
-		playtest = adate;
+		playtext = adate;
 	}
 	else
 	{
@@ -87,9 +87,9 @@ std::string prnt_fancydate(
 	/*
 	 * Pull numeric values of day, month, year
 	 */
-	day = std::strtoi(playtext.substr(6, 2);
-	month =std::strroi(playtext.substr(4,2));
-	year = std::strtoi(playtext.substr(0, 4));
+	day = std::strtol(playtext.substr(6, 2).c_str(), 0, 10);
+	month =std::strtol(playtext.substr(4,2).c_str(), 0, 10);
+	year = std::strtol(playtext.substr(0, 4).c_str(), 0, 10);
 
 	if ((month < 0) || (month > 12))
 	{
@@ -99,9 +99,9 @@ std::string prnt_fancydate(
 	/*
 	 * Create output string
 	 */
-	playtext = monthname[month] + " " +
-		std::ro_string(day) + "," +
+	playtext = std::string(monthname[month]) + " " +
+		std::to_string(day) + "," +
 		std::to_string(year);
 
-	return playtest;
+	return playtext;
 }

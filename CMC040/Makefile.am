@@ -23,6 +23,7 @@ libcmcfun_a_SOURCES = \
        	cmcfun/date_invdcode.cc \
        	cmcfun/date_today.cc \
 	cmcfun/dspl_scroll.cc \
+	cmcfun/dspl_scrollcir.cc \
 	cmcfun/entr_3badkey.cc \
 	cmcfun/entr_3enter.cc \
 	cmcfun/entr_3entrystring.cc \
@@ -43,6 +44,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_36initfromfile.cc \
 	cmcfun/outp_3writestructure.cc \
 	cmcfun/outp_createstr.cc \
+	cmcfun/outp_formff.cc \
 	cmcfun/outp_initform.cc \
 	cmcfun/outp_initfromfile.cc \
 	cmcfun/outp_initstructure.cc \

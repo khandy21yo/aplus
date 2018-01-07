@@ -59,6 +59,8 @@ void outp_3writestructure(
 std::string  outp_createstr(
 	const std::string &Source,
 	const std::string &Item);
+void outp_formff(
+	utl_reportx_cdd &utl_reportx);
 long outp_initform(
 	utl_reportx_cdd &utl_reportx,
 	const std::string &reportnum,

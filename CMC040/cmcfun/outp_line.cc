@@ -566,7 +566,7 @@ pauseloop:;
 			//
 			// Set up scrolling region
 			//
-			smg_status = smg$set_display_scroll_region(utl_reportx.window, junk1 - junk_V2, 20);
+//			smg_status = smg$set_display_scroll_region(utl_reportx.window, junk1 - junk_V2, 20);
 			//
 			// Create SMG_SCROLL array
 			//

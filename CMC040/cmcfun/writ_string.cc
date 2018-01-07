@@ -1,36 +1,8 @@
 //! \file
-///*
- * %TITLE "Write Out a Terminal Control String"
- * %SBTTL "WRIT_STRING"
- * %IDENT "V3.6 Calico"
- */
-
- /*
- * Abstract:HELP
- *	.b
- *	This function is used to format a device comtrol string
- *	to prepare to write it out to a device.
- *	.lm -5
- *
- * Parameters:
- *
- *	TARGET$
- *		The passed string the user wants written out in terminal
- *		control.
- *
- *	RESULT$
- *		The returned result of the string written out in a terminal
- *		control string.
- *
- * Example:
- *
- *	CALL WRIT_STRING(SEQ$,RESULT$)
- *
- * AUTHOR:
- *
- *	12/13/85 - Kevin Handy
- *
- */
+//! %TITLE "Write Out a Terminal Control String"
+//! %SBTTL "WRIT_STRING"
+//! %IDENT "V3.6 Calico"
+//!/
 
 /*
  * Include files
@@ -41,15 +13,37 @@
 #include "preferences.h"
 #include "cmcfun.h"
 
+//!*
+//! Abstract:HELP
+//!	.b
+//!	This function is used to format a device comtrol string
+//!	to prepare to write it out to a device.
+//!	.lm -5
 //!
-//! \brief Write string
-//
+//! Parameters:
+//!
+//!	TARGET$
+//!		The passed string the user wants written out in terminal
+//!		control.
+//!
+//!	RESULT$
+//!		The returned result of the string written out in a terminal
+//!		control string.
+//!
+//! Example:
+//!
+//!	CALL WRIT_STRING(SEQ$,RESULT$)
+//!
+//! AUTHOR:
+//!
+//!	12/13/85 - Kevin Handy
+//!
 void writ_string(
 	const std::string &Source,
 	std::string &Result)
 {
 	int SourceLoop;
-	int Character;
+	char Character;
 	int SourceLength = Source.size();
 
 	/*
@@ -83,7 +77,7 @@ void writ_string(
 				(Source[SourceLoop + 2] - '0') * 10 +
 				(Source[SourceLoop + 3] - '0');
 
-			Result += char(Character);
+			Result += Character;
 			SourceLoop += 3;
 			break;
 
@@ -91,7 +85,7 @@ void writ_string(
 			/*
 			 * Process a normal character
 			 */
-			BuildString[BuildLength++] = char(Character);
+			Result += Character;
 			break;
 		}
 	}
