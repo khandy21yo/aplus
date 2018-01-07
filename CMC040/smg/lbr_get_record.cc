@@ -16,7 +16,7 @@ long lbr$get_record(
 	//
 	// Nothing left
 	//
-	if lr_index.value.size() == 0)
+	if (lr_index.datum.size() == 0)
 	{
 		text = "";
 		return 0;
@@ -25,16 +25,16 @@ long lbr$get_record(
 	//
 	// Pull off one line of text
 	//
-	int pos = lr_index.find('\n');
+	int pos = lr_index.datum.find('\n');
 	if (pos == std::string::npos)
 	{
-		text = lr_index.value;
-		lr_index.value.empty();
+		text = lr_index.datum;
+		lr_index.datum.empty();
 	}
 	else
 	{
-		text = lr_index.substr(0, pos - 1);
-		lr_index.erase(0, npos);
+		text = lr_index.datum.substr(0, pos - 1);
+		lr_index.datum.erase(0, lr_index.datum.npos);
 	}
 
 	return 1;
