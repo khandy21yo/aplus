@@ -44,6 +44,8 @@ static const char* DataValue[] = {
 	"Interest      Principal    Loan Balance","0","0","", NULL};
 basic::DataListClass DataList(DataValue);
 
+extern scope_struct scope;
+
 //!
 //! Abstract:HELP
 //!	.b
@@ -111,14 +113,12 @@ int main(
 
 	BStack(20);
 	OnErrorStack;
-// #pragma psect static_rw scope,gbl,ovr
-	scope_struct scope;
-// #pragma psect end scope
+
 	utl_reportx_cdd utl_reportx;
-// #pragma psect static_rw tt_flag_option,gbl,ovr
+
 	std::string flagtitle;
 	std::string flagtype[5];
-// #pragma psect end tt_flag_option
+
 	long xlong;
 	long ylong;
 	smg_display_id smg_view;
@@ -162,11 +162,6 @@ int main(
 	//	Menu Command Level> /AMORTIZATION
 	//	.END LITERAL
 	//	.lm -5
-	//
-	// Index:
-	//	.x Present Value
-	//	.x Interest Rate
-	//	.x Payment per Period
 	//
 	// --
 	//
@@ -589,8 +584,6 @@ dataentry:;
 		//	Valid codes may be displayed by pressing ^*List Choices\*.
 		//	.lm -5
 		//
-		// Index:
-		//
 		// --
 		option_item = basic::edit(entr_3stringlist(scope, smg_view, "2;15", "Option ", option_item, flag, "'E", deflt, flagtype, flagtitle, "007"), -1);
 		//**** Fix? ****
@@ -618,9 +611,6 @@ dataentry:;
 		//	This field will accommodate a number as large as 99,999,999.99.
 		//	.lm -5
 		//
-		// Index:
-		//	.x Amount of Loan
-		//
 		// --
 		amo_item = entr_3number(scope, smg_view, "4;7", "Loan ", amo_item, flag, "###,###,###.##", deflt);
 		break;
@@ -640,13 +630,6 @@ dataentry:;
 		//	per year.
 		//	.lm -5
 		//
-		// Index:
-		//	.x Interest Rate
-		//	.x Interest>Periodic
-		//	.x Periodic Interest
-		//	.x Interest>Effective
-		//	.x Effective Interest
-		//
 		// --
 		ra_item = entr_3number(scope, smg_view, "7;13", "Rate ", ra_item, flag, "##.##", deflt);
 		break;
@@ -665,9 +648,6 @@ dataentry:;
 		//	enter 12 periods per year.
 		//	.lm -5
 		//
-		// Index:
-		//	.x Period
-		//
 		// --
 		py_item = entr_3number(scope, smg_view, "10;14", "Periods ", py_item * 1.0, flag, "###", deflt);
 		break;
@@ -683,11 +663,6 @@ dataentry:;
 		//	the number of periods needed to pay a loan.
 		//	.lm -5
 		//
-		// Index:
-		//	.x Total Periods>Amortization
-		//	.x Amortization>Total Periods
-		//	.x Periods>Total
-		//
 		// --
 		tp_item = entr_3number(scope, smg_view, "13;14", "Periods ", tp_item * 1.0, flag, "###", deflt);
 		break;
@@ -702,9 +677,6 @@ dataentry:;
 		//	The ^*Payment per Period\* field enters
 		//	the amount required to be paid each period.
 		//	.lm -5
-		//
-		// Index:
-		//	.x Payment
 		//
 		// --
 		pamo_item = entr_3number(scope, smg_view, "7;47", "Payment ", pamo_item, flag, "###,###,###.##", deflt);
@@ -722,8 +694,6 @@ dataentry:;
 		//	enters the date the first payment is due.
 		//	.lm -5
 		//
-		// Index:
-		//
 		// --
 		date_item = entr_3date(scope, smg_view, "10;50", "From Date", date_item, flag, "'E", deflt);
 		break;
@@ -739,11 +709,6 @@ dataentry:;
 		//	enters the payment which is displayed on the
 		//	screen.
 		//	.lm -5
-		//
-		// Index:
-		//	.x Payment Number>Amortization
-		//	.x Number>Payment
-		//	.x Amortization>Payment Number
 		//
 		// --
 		j_item = entr_3number(scope, smg_view, "13;54", "Number ", j_item * 1.0, flag, "###", deflt);
@@ -857,10 +822,6 @@ L_19000:;
 	filename = "";
 	OnErrorZero;
 	goto helperror;
-	// 20000	DEF FNRAIN(R, A, I, N%) = R / I * ((1.0 + I) ^ N% - 1.0) - A
-	// 20010	DEF FNRIN(R, I, N%) = R * (N% * I * (1.0 + I) ^
-	//		(N% - 1%) - (1.0 + I) ^ N% + 1.0) / I ^ 2%
-
 
 	return EXIT_SUCCESS;
 }

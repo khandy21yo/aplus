@@ -4,6 +4,7 @@
 #ifndef _report_h_
 #define _report_h_
 
+#include "database.h"
 #include "utl/utl_reportx.h"
 #include "utl/utl_report.h"
 
@@ -19,6 +20,7 @@ static const long OUTP_TEMP = 6;	//!< Temp output
 static const long OUTP_TOLOCAL = 7;	//!< Local printer output
 static const long OUTP_TODEVICE = 8;	//!< Devicer output
 static const long OUTP_TOWP = 9;	//!< Word Perfect output
+static const long OUTP_TOFILE = 10;	//!< Text file output
 
 class printx_cdd
 {
@@ -59,6 +61,8 @@ void outp_3writestructure(
 std::string  outp_createstr(
 	const std::string &Source,
 	const std::string &Item);
+void outp_finish(
+	utl_reportx_cdd &utl_reportx);
 void outp_formff(
 	utl_reportx_cdd &utl_reportx);
 long outp_initform(
@@ -80,5 +84,7 @@ void outp_settings(
 	utl_report_cdd &update_ch,
 	const std::string &left_side_cmd,
 	const std::string &right_side_cmd);
+void outp_spool(
+	utl_reportx_cdd &utl_reportx);
 
 #endif

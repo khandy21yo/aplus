@@ -44,18 +44,20 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_36initfromfile.cc \
 	cmcfun/outp_3writestructure.cc \
 	cmcfun/outp_createstr.cc \
+	cmcfun/outp_finish.cc \
 	cmcfun/outp_formff.cc \
 	cmcfun/outp_initform.cc \
 	cmcfun/outp_initfromfile.cc \
 	cmcfun/outp_initstructure.cc \
 	cmcfun/outp_line.cc \
-	cmcfun/outp_initform.cc \
+	cmcfun/outp_spool.cc \
 	cmcfun/prnt_fancydate.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
        	cmcfun/read_initialize.cc \
        	cmcfun/read_sysjob.cc \
        	cmcfun/read_syspn.cc \
+	cmcfun/subr_3exitprogram.cc \
 	cmcfun/subr_3spawn.cc \
        	cmcfun/time_code.cc \
        	cmcfun/time_invcode.cc \
