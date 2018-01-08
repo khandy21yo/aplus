@@ -1,37 +1,14 @@
-// %TITLE "Amortization Schedule"
+//! \file
+//! \brief Amortization Schedule
 // %SBTTL "UT_SPEC_AMORTIZATION"
 // %IDENT "V3.6a Calico"
-//
-//
-// ++
-// Abstract:HELP
-//	.b
-//	.lm +5
-//	This program will calculate and print (display) the amortization
-//	schedule.  There are four items which can be calculated:
-//	.table 3,25
-//	.te
-//	^*Present Value
-//	.te
-//	Interest Rate
-//	.te
-//	Number or Periods
-//	.te
-//	Payment per Period\*
-//	.end table
-//	.lm -5
-//
-// Index:
-//	.x Present Value
-//	.x Interest Rate
-//	.x Payment per Period
-//
-// --
 //
 // Source: ../../CMC030/utl/source/ut_spec_amortization.bas
 // Translated from Basic to C++ using btran
 // on Friday, November 24, 2017 at 23:41:57
 //
+
+
 
 #include <cstdlib>
 #include <string>
@@ -39,12 +16,15 @@
 #include <unistd.h>
 #include <cmath>
 
-#include "preferences.h"
 #include "basicfun.h"
 #include "pusing.h"
 #include "datalist.h"
+
+#include "preferences.h"
 #include "cmcfun.h"
+#include "database.h"
 #include "scopedef.h"
+#include "cmcfun/report.h"
 
 #include "utl/utl_reportx.h"
 
@@ -64,7 +44,27 @@ static const char* DataValue[] = {
 	"Interest      Principal    Loan Balance","0","0","", NULL};
 basic::DataListClass DataList(DataValue);
 
-int main(int argc, char **argv)
+//!
+//! Abstract:HELP
+//!	.b
+//!	.lm +5
+//!	This program will calculate and print (display) the amortization
+//!	schedule.  There are four items which can be calculated:
+//!	.table 3,25
+//!	.te
+//!	^*Present Value
+//!	.te
+//!	Interest Rate
+//!	.te
+//!	Number or Periods
+//!	.te
+//!	Payment per Period\*
+//!	.end table
+//!	.lm -5
+//!
+int main(
+	int argc,
+	char **argv)
 {
 	double amo_item;
 	std::string atext;
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	long test;
 	std::string test_date;
 	std::string text;
-	std::string title[11];
+	std::vector<std::string> title;
 	long tp_item;
 
 	BStack(20);

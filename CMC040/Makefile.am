@@ -93,7 +93,7 @@ libsmg_a_SOURCES = \
 	smg/smg_repaint_screen.cc \
 	smg/smg_ring_bell.cc \
 	smg/smg_set_broadcast_trapping \
-	smg/smg_sewt_cursor_abs.cc \
+	smg/smg_set_cursor_abs.cc \
 	smg/smg_set_cursor_mode.cc \
 	smg/smg_set_term_characteristics.cc
 

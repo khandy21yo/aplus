@@ -9,10 +9,10 @@
 //1
 long smg$set_cursor_abs(
 	smg_display_id &display,
-	long col_row,
-	long col_col)
+	long row,
+	long col)
 {
-	wmove(display.win, roe + display.border, col + display.border);
+	wmove(display.win, row + display.border, col + display.border);
 }
 
 
