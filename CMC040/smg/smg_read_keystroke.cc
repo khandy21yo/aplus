@@ -2,7 +2,7 @@
 //! \brief Read keystrole
 //!
 
-#include <string>>
+#include <string>
 
 #include "smg/smg.h"
 

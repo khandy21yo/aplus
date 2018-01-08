@@ -175,9 +175,9 @@ long smg$create_virtual_display(
 long smg$create_virtual_keyboard(
 	smg_keyboard_id &kbid);
 long smg$cursor_column(
-	smg_display_id gisplay);
+	smg_display_id &display);
 long smg$cursor_row(
-	smg_display_id gisplay);
+	smg_display_id &display);
 long smg$delete_virtual_display(
 	smg_display_id &display);
 long smg$draw_line(
@@ -187,7 +187,7 @@ long smg$draw_line(
 	long row2,
 	long column2);
 long smg$end_display_update(
-	smg_display_id display);
+	smg_display_id &display);
 long smg$erase_display(
 	smg_display_id &display);
 long smg$erase_line(

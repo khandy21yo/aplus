@@ -15,9 +15,9 @@ long smg$get_display_attr(
 	{
 		*height = display.rows;
 	}
-	if (width
+	if (width)
 	{
-		width = display.cols;
+		*width = display.cols;
 	}
 
 	return 1;

@@ -19,20 +19,13 @@ long smg_put_virtual_display_encoded(
 	long b,				//!< ???
 	long charset)			//!< Character set
 {
-	if (flags & SMG$M_BOLD)
-	{
-		attron(A_STANDOUT);
-	}
-
+	//!
+	//! \todo Needs to handle the encoded part
+	//!
 	mvwaddstr(display.win,
 		row + display.border,
 		col + display.border,
 		text.c_str());
-
-	if (flags & SMG$M_BOLD)
-	{
-		attroff(A_STANDOUT);
-	}
 }
 
 

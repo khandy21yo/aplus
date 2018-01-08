@@ -45,7 +45,7 @@ long lbr$lookup_key(
 	{
 		for (int pkgs = 0; pkgs < PQntuples(result); pkgs++)
 		{
-			lr_index.value = PQGetValue(result, 0, 0);
+			lr_index.datum = PQgetvalue(result, 0, 0);
 		}
 	}
 	else

@@ -3,6 +3,8 @@
 //!
 //! \author Kevin Handy, Dec 2017
 
+#include <iostream>
+
 #include "preferences.h"
 #include "database.h"
 #include "smg/lbr.h"
@@ -22,7 +24,7 @@ long lbr$open(
 	//
 	// Save the name
 	//
-	lr_index.name = libl_name;
+	lr_index.name = lib1_name;
 
 	//
 	// Does it exist
@@ -31,7 +33,7 @@ long lbr$open(
 
 	std::string cmd =
 		"SELECT * FROM information_schema.tables WHERE table_name = '" +
-		lib_name +
+		lib1_name +
 		"'";
 
 //	std::cerr << "Check for lib " << cmd << std::endl;

@@ -11,7 +11,7 @@ long smg$erase_line(
 	int row,
 	int col)
 {
-	wmove(sindow.win, row + window.border, col + window.border);
+	wmove(window.win, row + window.border, col + window.border);
 	wclrtoeol(window.win);
 }
 

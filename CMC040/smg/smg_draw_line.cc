@@ -5,7 +5,7 @@
 #include "smg/smg.h"
 
 //!
-/?! \brief dra line
+//! \brief dra line
 //!
 long smg$draw_line(
 	smg_display_id &display,
@@ -17,14 +17,14 @@ long smg$draw_line(
 	if (row1 == row2)
 	{
 		mvwhline(display.win,
-			row1 + display.border, col1 + display.border,
-			ACS_HLINE, col2 - col1 + 1)
+			row1 + display.border, column1 + display.border,
+			ACS_HLINE, column2 - column1 + 1);
 	}
-	else if (column11 == column2)
+	else if (column1 == column2)
 	{
 		mvwvline(display.win,
-			row1 + display.border, col1 + display.border,
-			ACS_VLINE, row2 - row1 + 1)
+			row1 + display.border, column1 + display.border,
+			ACS_VLINE, row2 - row1 + 1);
 	}
 	else
 	{

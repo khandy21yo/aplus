@@ -2,8 +2,10 @@
 ////! \brief begin display update
 ////!
 
+#include <string>
+
 #include "preferences.h"
-@include "cmcfun.h"
+#include "cmcfun.h"
 #include "smg/smg.h"
 
 //!
