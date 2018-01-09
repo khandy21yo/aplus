@@ -65,6 +65,10 @@ public:
 //
 // Prototypes
 //
+void dspl_splitcursor(
+	const std::string &curstr,
+	long &rxxx,
+	long &cyyy);
 void entr_3badkey(
 	struct scope_struct &scope,
 	long bad_value);
@@ -86,6 +90,15 @@ void entr_3message(
 	scope_struct &scope,
 	const std::string &mesg,
 	long int flag);
+double entr_3number(
+	scope_struct &scope,
+	smg_display_id &xx_vdid,
+	const std::string &op_cpos,
+	const std::string &op_prompt,
+	double xdeflt,
+	long op_flag,
+	const std::string &op_xformat,
+	std::string &op_deflt);
 std::string entr_3option(
 	scope_struct &scope,
 	const std::string &op_group,

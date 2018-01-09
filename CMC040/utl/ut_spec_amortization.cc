@@ -110,7 +110,7 @@ int main(
 	std::string text;
 	std::vector<std::string> title;
 	long tp_item;
-
+	std::string junk;
 	BStack(20);
 	OnErrorStack;
 
@@ -289,7 +289,7 @@ changer:;
 		//*****************************************************
 		// Change information on the screen
 		//*****************************************************
-		loop = entr_3number(scope, scope.smg_option, "", "Item to change", 0.0, 4, "##", "");
+		loop = entr_3number(scope, scope.smg_option, "", "Item to change", 0.0, 4, "##", junk);
 		// ** Converted from a select statement **
 		//
 		// Control c
@@ -813,7 +813,7 @@ helperror:;
 	//******************************************************************
 	// Help Message for an error
 	//******************************************************************
-	help_34message(scope, std::to_string(Be.erl) + " " + basic::ert(Be.err), "E", Be.ern, filename, std::to_string(Be.err));
+	help_34message(scope, std::to_string(0) + " " + basic::ert(0), "E", "", filename, std::to_string(0));
 	goto exitprogram;
 	//******************************************************************
 L_19000:;
