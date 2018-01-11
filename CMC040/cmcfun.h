@@ -67,6 +67,8 @@ long comp_string(const std::string &test_string,
 	const std::string &wildcard_string);
 long date_daycode(const std::string &day);
 std::string date_invdcode(long daycode);
+std::string date_storedate(
+	const std::string &xdeflt);
 std::string date_today(void);
 void find_file(
 	const std::string &wildf,
