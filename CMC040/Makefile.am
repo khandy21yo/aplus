@@ -22,6 +22,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/date_3select.cc \
 	cmcfun/date_daycode.cc \
 	cmcfun/date_invdcode.cc \
+	cmcfun/date_dayofweek.cc \
 	cmcfun/date_storedate.cc \
 	cmcfun/date_today.cc \
 	cmcfun/dspl_scroll.cc \
@@ -57,6 +58,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_line.cc \
 	cmcfun/outp_spool.cc \
 	cmcfun/prnt_fancydate.cc \
+	cmcfun/prnt_monthyyyy.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
 	cmcfun/read_initialize.cc \
@@ -76,6 +78,7 @@ libsmg_a_SOURCES = \
 	smg/lbr_lookup_key.cc \
 	smg/lbr_open.cc \
 	smg/smg_begin_display_update.cc \
+	smg/smg_begin_pasteboard_update.cc \
 	smg/smg_change_pbd_characteristics.cc \
 	smg/smg_create_pasteboard.cc \
 	smg/smg_create_virtual_display.cc \
@@ -85,6 +88,7 @@ libsmg_a_SOURCES = \
 	smg/smg_delete_virtual_display.cc \
 	smg/smg_draw_line.cc \
 	smg/smg_end_display_update.cc \
+	smg/smg_end_pasteboard_update.cc \
 	smg/smg_erase_display.cc \
 	smg/smg_erase_line.cc \
 	smg/smg_flush_buffer.cc \

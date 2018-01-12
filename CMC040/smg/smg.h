@@ -153,6 +153,8 @@ class smg_keyboard_id
 //
 long smg$begin_display_update(
 	smg_display_id display);
+long smg$begin_pasteboard_update(
+	smg_pasteboard_id pasteboard);
 int smg$change_pbd_characteristics(
 	smg_pasteboard_id &pbid, 
 	long screen_width, 
@@ -188,8 +190,12 @@ long smg$draw_line(
 	long column2);
 long smg$end_display_update(
 	smg_display_id &display);
+long smg$end_pasteboard_update(
+	smg_pasteboard_id &pasteboard);
 long smg$erase_display(
-	smg_display_id &display);
+	smg_display_id &display,
+	long a = 0,
+	long b = 0);
 long smg$erase_line(
 	smg_display_id &window,
 	int row,

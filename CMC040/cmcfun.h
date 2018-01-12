@@ -67,6 +67,7 @@ long comp_string(const std::string &test_string,
 	const std::string &wildcard_string);
 long date_daycode(const std::string &day);
 std::string date_invdcode(long daycode);
+long date_dayofweek(long cod);
 std::string date_storedate(
 	const std::string &xdeflt);
 std::string date_today(void);
@@ -91,6 +92,8 @@ std::string prnt_date(
 	const std::string &indate,
 	long outlen);
 std::string prnt_fancydate(
+	const std::string &adate);
+std::string prnt_monthyyyy(
 	const std::string &adate);
 std::string read_sysjob(void);
 std::string read_syspn(void);

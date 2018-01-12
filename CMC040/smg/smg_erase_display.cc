@@ -8,7 +8,10 @@
 //! \brief Erase display
 //!
 long smg$erase_display(
-	smg_display_id &display)	//!< Display to erase
+	smg_display_id &display,	//!< Display to erase
+	long a,				//!< ???
+	long b)				//!< ???
 {
+	//! \todo deal with a,b
 	werase(display.win);
 }
