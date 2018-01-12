@@ -19,10 +19,11 @@ libcmcfun_a_SOURCES = \
 	cmcfun/assg_unmakebatch.cc \
 	cmcfun/comp_string.cc \
 	cmcfun/database.cc \
-       	cmcfun/date_daycode.cc \
-       	cmcfun/date_invdcode.cc \
+	cmcfun/date_3select.cc \
+	cmcfun/date_daycode.cc \
+	cmcfun/date_invdcode.cc \
 	cmcfun/date_storedate.cc \
-       	cmcfun/date_today.cc \
+	cmcfun/date_today.cc \
 	cmcfun/dspl_scroll.cc \
 	cmcfun/dspl_splitcursor.cc \
 	cmcfun/dspl_scrollcir.cc \
@@ -37,12 +38,12 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_4specialkeys.cc \
 	cmcfun/entr_macro.cc \
 	cmcfun/find_3printgroupitem.cc \
-       	cmcfun/find_file.cc \
+	cmcfun/find_file.cc \
 	cmcfun/find_fileexists.cc \
-       	cmcfun/func_4scoseq.cc \
-       	cmcfun/func_round.cc \
+	cmcfun/func_4scoseq.cc \
+	cmcfun/func_round.cc \
 	cmcfun/help_34message.cc \
-       	cmcfun/libr_3insert.cc \
+	cmcfun/libr_3insert.cc \
 	cmcfun/libr_digsr.cc \
 	cmcfun/menu_3interrupt.cc \
 	cmcfun/outp_36initfromfile.cc \
@@ -58,14 +59,14 @@ libcmcfun_a_SOURCES = \
 	cmcfun/prnt_fancydate.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
-       	cmcfun/read_initialize.cc \
-       	cmcfun/read_sysjob.cc \
-       	cmcfun/read_syspn.cc \
+	cmcfun/read_initialize.cc \
+	cmcfun/read_sysjob.cc \
+	cmcfun/read_syspn.cc \
 	cmcfun/subr_3exitprogram.cc \
 	cmcfun/subr_3spawn.cc \
-       	cmcfun/time_code.cc \
-       	cmcfun/time_invcode.cc \
-       	cmcfun/time_now.cc \
+	cmcfun/time_code.cc \
+	cmcfun/time_invcode.cc \
+	cmcfun/time_now.cc \
 	cmcfun/writ_string.cc \
 	utl/utl_report.cc
 

@@ -65,6 +65,9 @@ public:
 //
 // Prototypes
 //
+std::string date_3select(
+	scope_struct &scope,
+	const std::string &starting_date);
 void dspl_splitcursor(
 	const std::string &curstr,
 	long &rxxx,
