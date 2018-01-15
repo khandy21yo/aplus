@@ -695,7 +695,7 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		date_item = entr_3date(scope, smg_view, "10;50", "From Date", date_item, flag, "'E", deflt);
+		date_item = entr_3date(scope, smg_view, "10;50", "From Date", date_item, flag, "'E", deflt, 8);
 		break;
 
 	case 8:

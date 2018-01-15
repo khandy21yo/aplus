@@ -103,6 +103,10 @@ void entr_3message(
 	scope_struct &scope,
 	const std::string &mesg,
 	long int flag);
+void entr_3messagenewwindow(
+	scope_struct &scope, 
+	const std::string &mesg, 
+	long int flag);
 double entr_3number(
 	scope_struct &scope,
 	smg_display_id &xx_vdid,
@@ -118,6 +122,18 @@ std::string entr_3option(
 	std::string &op_possible,
 	long &op_curop,
 	long op_flagw);
+std::string entr_3stringlist(
+	scope_struct &scope,
+	smg_display_id &xx_vdid,
+	const std::string &op_cpos,
+	const std::string &op_prompt,
+	const std::string &op_xstart,
+	long &op_flag,
+	const std::string &op_xformat,
+	std::string &op_xdeflt,
+	const std::vector<std::string> &op_vtext,
+	const std::string &op_thetitle,
+	const std::string &op_drawcols);
 long entr_4entry(
 	scope_struct &scope,
 	smg_display_id &smg_option,

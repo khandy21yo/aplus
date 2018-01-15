@@ -45,7 +45,7 @@
 /*
  * Static variables
  */
-static char *monthname[] = 
+static const char *monthname[] = 
 {
 	"***",
 	"January",
@@ -107,5 +107,5 @@ std::string prnt_monthyyyy(
 	 */
 	sprintf(playtext, "%s %04d", monthname[month], year);
 
-	return playtesxt;
+	return playtext;
 }

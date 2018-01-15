@@ -3,6 +3,8 @@
 //!
 #pragma module date_dayofweek "V3.6 Calico"
 
+#include <string>
+
 #include "preferences.h"
 #include "cmcfun.h"
 
