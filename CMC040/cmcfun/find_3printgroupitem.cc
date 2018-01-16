@@ -27,28 +27,22 @@
 //!	information is stored.
 //!	.lm -5
 //!
-//! Parameters:
-//!
-//!	GROUP$
-//!		This passed string is the group the user is searching for.
-//!
-//!	ITEM$
-//!		This passed string is the item the user is looking for.
-//!
-//!
-//!	This function returns the position of the group/item in
+//! \returns This function returns the position of the group/item in
 //!	the PRINT.ITEM$() array
 //!
 //! Example:
 //!
 //!	GROUP% = FIND_3PRINTGROUPITEM("RQ","*")
 //!
-//! \aauthor 10/20/92 - Kevin Handy
+//! \author 10/20/92 - Kevin Handy
 //!
 long find_3printgroupitem(
 	const std::string &group,
+		//!< This passed string is the group the user is searching for.
 	const std::string &item,
+		//!< This passed string is the item the user is looking for.
 	printx_cdd &printx)
+		//!< Settings structure
 {
 	long Result;
 	long i;

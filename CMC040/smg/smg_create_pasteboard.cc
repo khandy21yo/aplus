@@ -8,13 +8,12 @@
 //
 // curses doesn't give us the anility to change rows/columns like smg does.
 //
-int smg$create_pasteboard(
+long smg$create_pasteboard(
 	smg_pasteboard_id &smg_pbid,
-	int a,
-	int b,
+	long a,
+	long b,
 	long *smg_rows,
-	long *smg_cols
-)
+	long *smg_cols)
 {
 	initscr();
 	cbreak();

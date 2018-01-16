@@ -1,4 +1,4 @@
-//! \gilr
+//! \file
 //! \brief Fancy Date Formatter
 //
 #pragma module prnt_fancydate "V3.6 Calico"

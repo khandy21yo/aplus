@@ -75,10 +75,10 @@ std::string prnt_date(
 	/*
 	 * Generated formatted date
 	 */
-	if (*outlen == 8)
+	if (outlen == 8)
 	{
 		sprintf(outtext, "%2.2s/%2.2s/%4.4s",
-			worktex t +4, worktext + 6, worktext);
+			worktext +4, worktext + 6, worktext);
 	}
 	else
 	{
@@ -89,5 +89,5 @@ std::string prnt_date(
 	/*
 	 * Return string
 	 */
-	return outtext
+	return outtext;
 }

@@ -9,13 +9,20 @@
 // on Thursday, January 04, 2018 at 10:11:35
 //
 
+#include <string>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
 #include "basicfun.h"
 #include "datalist.h"
 
+#include "preferences.h"
+#include "cmcfun.h"
+#include "scopedef.h"
+#include "cmcfun/report.h"
 
+
+extern scope_struct scope;
 
 //
 // Data Statement
@@ -176,12 +183,7 @@ void outp_settings(
 
 	BStack(20);
 	OnErrorStack;
-// #pragma psect static_rw scope,gbl,ovr
-	scope_struct scope;
-// #pragma psect end scope
-// #pragma psect static_rw printx,gbl,ovr
 	printx_cdd printx;
-// #pragma psect end printx
 	long devchar;
 	long xpos;
 	long ypos;
@@ -194,32 +196,9 @@ void outp_settings(
 	std::string otype_V2[31];
 	std::string rdata1[101][14];
 	std::string rdata2[101];
-	// --
-	//
-	// Include files
-	//
-#include "FUNC_INCLUDE:FUNCTION.HB"
-#include "LIB$ROUTINES" %library "SYS$LIBRARY:BASIC$STARLET.TLB"
-#include "$DVIDEF" %library "SYS$LIBRARY:BASIC$STARLET.TLB"
-#include "$DCDEF" %library "SYS$LIBRARY:BASIC$STARLET.TLB"
-#include "FUNC_INCLUDE:UTL_WINDOW.INC"
-#include "FUNC_INCLUDE:PRINT35.INC"
-#include "SOURCE:[UTL.OPEN]UTL_REPORT.HB"
-#include "SOURCE:[UTL.OPEN]UTL_REPORTX.HB"
-	//
-	// External functions
-	//
-	extern long find_3printgroupitem(NULL);
-	extern std::string libr_select(NULL);
-	extern long edt$edit(NULL);
-	//
-	// Declare variables
-	//
 	//
 	// Dimension statements
 	//
-	OnErrorGoto(L_19000);
-	smg_status = lib$get_lun[output_ch];
 	report_keep_item = scope.prg_item;
 	report_keep_ident = scope.prg_ident;
 	report_keep_prg = scope.prg_program;
@@ -304,7 +283,7 @@ void outp_settings(
 	//
 	// Force information about output device
 	//
-	output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[(long)(utl_reportx.printto)];
+	output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[utl_reportx.printto];
 	BGosub(L_6400);
 	//
 	// Do not ask for settings if FORM_DIRECT
@@ -415,7 +394,7 @@ changee:;
 		{
 			goto L_4040;
 		}
-		switch ((long)(scope.scope_exit))
+		switch (scope.scope_exit)
 		{
 		// Uparrow
 		case 274:
@@ -572,7 +551,7 @@ L_4080:;
 		//
 		// Refresh screen
 		//
-		st = smg$repaint_screen[(long)(scope.smg_pbid)];
+		st = smg$repaint_screen(scope.smg_pbid);
 		try
 		{
 			unlink(wild_file + ";-1");
@@ -716,7 +695,7 @@ entertwo:;
 		//	.x Report Settings>End Page
 		//
 		// --
-		output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[(long)(utl_reportx.printto)];
+		output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[utl_reportx.printto];
 		output = (output + std::string(64, ' ')).substr(0, 64);
 		output = entr_3string(scope, utl_reportx.window, "1;19", "Destination", output, cbflag | 16, "'LLLLLLLLLLLLLLLLLLL", "");
 		// ** Converted from a select statement **
@@ -797,12 +776,12 @@ entertwo:;
 		utl_reportx.spoolform = entr_3string(scope, utl_reportx.window, "2;19", "Spooler Form", utl_reportx.spoolform, cbflag | 16, "'E", "");
 		if (scope.scope_exit == SMG$K_TRM_F14)
 		{
-			read_queform("SYS$PRINT", rdata1[(NULL)][(NULL)], stat);
+			read_queform("SYS$PRINT", rdata1, stat);
 			for (iz = 1; iz <= std::stol(rdata1[0][0]); iz++)
 			{
 				rdata2[iz] = (rdata1[iz][1] + std::string(31, ' ')).substr(0, 31) + " " + rdata1[iz][2] + " " + (rdata1[iz][3] + std::string(31, ' ')).substr(0, 31);
 			}
-			x = entr_3choice(scope, "", "", rdata2[NULL], "", 138, "  Form Name                        #  ""Form Stock", "034,038", 0);
+			x = entr_3choice(scope, "", "", rdata2 "", 138, "  Form Name                        #  ""Form Stock", "034,038", 0);
 			scope.scope_exit = 0;
 			if (x > 0)
 			{
@@ -1613,7 +1592,7 @@ paintreport:;
 	// Paint where report is going to
 	//***************************************************************
 paintto:;
-	output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[(long)(utl_reportx.printto)];
+	output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[utl_reportx.printto];
 	output = (output + std::string(20, ' ')).substr(0, 20);
 	smg_status = smg$put_chars(utl_reportx.window, output, 1, 19, 0, smg$m_bold);
 	BReturn;
@@ -1834,7 +1813,7 @@ L_6420:;
 		// Is OD equal to the terminal this process is running
 		// on if so then output to terminal or local printer?
 		//
-		if (read_syslog[(long)(temp)] == read_syslog[(long)("TT:")])
+		if (read_syslog(temp) == read_syslog("TT:"))
 		{
 			ftype = 5;
 		}
@@ -1847,7 +1826,7 @@ L_6420:;
 		//
 		// Force extension of .PRT
 		//
-		temp1 = read_syslog[(long)(temp)];
+		temp1 = read_syslog(temp);
 		if ((temp1.find(".", 0) + 1) == 0)
 		{
 			if (basic::right(temp1, temp1.size()) != ":")
@@ -2101,7 +2080,7 @@ L_9010:;
 	}
 	if (printer_printer[2] != "")
 	{
-		x = entr_3choice(scope, "4;43", "13;20", printer_printer[NULL], printx.deflt[k], 26, boost::trim_right_copy(printx.descr[k]).substr(0, 18), "", 0);
+		x = entr_3choice(scope, "4;43", "13;20", printer_printer, printx.deflt[k], 26, boost::trim_right_copy(printx.descr[k]).substr(0, 18), "", 0);
 		if (x > -1)
 		{
 			printx.deflt[k] = printer_printer[x];

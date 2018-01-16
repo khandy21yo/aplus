@@ -162,12 +162,12 @@ int smg$change_pbd_characteristics(
 	long *smg_cols = 0, 
 	long a = 0, 
 	long *smg_rows = 0);
-int smg$create_pasteboard(
+long smg$create_pasteboard(
 	smg_pasteboard_id &smg_pbid,
 	long a,
 	long b,
-	long *rows,
-	long *cols);
+	long *smg_rows,
+	long *smg_cols);
 long smg$create_virtual_display(
 	long rows,
 	long cols,

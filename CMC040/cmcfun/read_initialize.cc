@@ -161,13 +161,6 @@ void read_initialize(void)
 	//
 	smg_status = smg$set_cursor_mode(scope.smg_pbid, 1);
 	//
-	// Set broadcast trapping
-	//
-	// (READ_BROADCAST is actually a function, but...)
-	//
-	smg_status = smg$set_broadcast_trapping(scope.smg_pbid,
-		&read_3broadcast, &scope);
-	//
 	// Set up hardware form feed so reports will page correctly
 	// through printer port.
 	//

@@ -60,11 +60,13 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_initstructure.cc \
 	cmcfun/outp_line.cc \
 	cmcfun/outp_spool.cc \
+	cmcfun/prnt_date.cc \
 	cmcfun/prnt_fancydate.cc \
 	cmcfun/prnt_monthyyyy.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
 	cmcfun/read_initialize.cc \
+	cmcfun/outp_settings.cc \
 	cmcfun/read_sysjob.cc \
 	cmcfun/read_syspn.cc \
 	cmcfun/subr_3exitprogram.cc \
