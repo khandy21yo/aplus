@@ -15,7 +15,7 @@
 //!
 //! \brief delete file
 //!
-long lib$delete_file(
+static long lib$delete_file(
 	std::string name)
 {
 	unlink(name.c_str());

@@ -1,6 +1,6 @@
 
-AM_CPPFLAGS = -I ~/btran/lib
-AM_LDFLAGS = -L ~/btran/lib -L .
+AM_CPPFLAGS = -I ~/btran/lib  @CURSES_CFLAGS@
+AM_LDFLAGS = -L ~/btran/lib -L . @CURSES_LIBS@ @PANEL_LIBS@
 
 lib_LIBRARIES = \
 	libcmcfun.a \
@@ -29,6 +29,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/dspl_splitcursor.cc \
 	cmcfun/dspl_scrollcir.cc \
 	cmcfun/entr_3badkey.cc \
+	cmcfun/entr_3choice.cc \
 	cmcfun/entr_3date.cc \
 	cmcfun/entr_3enter.cc \
 	cmcfun/entr_3entrystring.cc \

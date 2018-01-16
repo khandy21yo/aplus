@@ -117,7 +117,7 @@ int main(
 	utl_reportx_cdd utl_reportx;
 
 	std::string flagtitle;
-	std::string flagtype[5];
+	std::vector<std::string> flagtype;
 
 	long xlong;
 	long ylong;

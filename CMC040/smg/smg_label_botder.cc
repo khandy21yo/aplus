@@ -11,7 +11,8 @@
 //!
 long smg$label_border(
 	smg_display_id &display,	//!< Display to be labeled
-	const std::string &&label)	//!< Label to apply
+	const std::string &label,	//!< Label to apply
+	long label_pos)			//!< Position of label
 {
 	display.label = label;
 }

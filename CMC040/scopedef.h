@@ -75,6 +75,16 @@ void dspl_splitcursor(
 void entr_3badkey(
 	struct scope_struct &scope,
 	long bad_value);
+long entr_3choice(
+	scope_struct &scope,
+	const std::string &wposition,
+	const std::string &wsize,
+	std::vector<std::string> &text,
+	std::string &selected,
+	long flag,
+	const std::string &title,
+	const std::string &draw_cols,
+	long border_pos);
 std::string entr_3date(
 	scope_struct &scope,
 	smg_display_id &xx_vdid,
@@ -131,7 +141,7 @@ std::string entr_3stringlist(
 	long &op_flag,
 	const std::string &op_xformat,
 	std::string &op_xdeflt,
-	const std::vector<std::string> &op_vtext,
+	std::vector<std::string> &op_vtext,
 	const std::string &op_thetitle,
 	const std::string &op_drawcols);
 long entr_4entry(

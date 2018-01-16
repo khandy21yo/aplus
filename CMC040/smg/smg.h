@@ -26,6 +26,7 @@ static const int SMG$M_UNDERLINE = 8;	//< Display in Underline
 static const int SMG$M_REVERSE = 16;	//< Display in Revere
 static const int SMG$M_UP = 1;		//< scroll up
 
+static const int SMG$K_TIMEOUT = -9982;	//!< Buffer full error
 static const int SMG$K_TRM_BUFFER_FULL = -9997;	//!< Buffer full error
 static const int SMG$K_TRM_CANCELLED = -9998;	//!< Cancelled error
 static const int SMG$K_TRM_COMMA = -9985;	//!< Keypad comma
@@ -211,7 +212,8 @@ long smg$get_display_attr(
 	long *width = 0);
 long smg$label_border(
 	smg_display_id &display,
-	const std::string &&label);
+	const std::string &labeli,
+	long label_pos = 0);
 long smg$paste_virtual_display(
 	smg_display_id &display,
 	smg_pasteboard_id &pbid,

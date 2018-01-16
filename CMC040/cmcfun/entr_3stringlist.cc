@@ -107,7 +107,7 @@ std::string entr_3stringlist(
 	long &op_flag,
 	const std::string &op_xformat,
 	std::string &op_xdeflt,
-	const std::vector<std::string> &op_vtext,
+	std::vector<std::string> &op_vtext,
 	const std::string &op_thetitle,
 	const std::string &op_drawcols)
 {
