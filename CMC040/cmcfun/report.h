@@ -27,20 +27,31 @@ class printx_cdd
 public:
 	long groups;
 		//!< Number of groups
-	std::string groupx[print_maxgrp + 1];
+	std::vector<std::string> groupx;
 		//!< Groups
-	long groupp[print_maxgrp + 1];
+	std::vector<long> groupp;
 		//!< Pointer to lines
-	std::string deflt[print_maxgrp + 1];
+	std::vector<std::string> deflt;
 		//!< Default value
-	std::string _descr[print_maxgrp + 1];
+	std::vector<std::string> descr;
 		//!< Description
 	long items;
 		//!< Number of items
-	std::string item[print_maxitm + 1];
+	std::vector<std::string> item;
 		//!< items
-	std::string sequ[print_maxitm + 1];
+	std::vector<std::string> sequ;
 		//!< Sequences
+public:
+	//! Constructor
+	printx_cdd(void)
+	{
+		groupx.resize(print_maxgrp + 1);
+		groupp.resize(print_maxgrp + 1);
+		deflt.resize(print_maxgrp + 1);
+		descr.resize(print_maxgrp + 1);
+		item.resize(print_maxitm + 1);
+		sequ.resize(print_maxitm + 1);
+	}
 };
 
 //
@@ -82,8 +93,8 @@ void outp_settings(
 	utl_report_cdd &utl_report,
 	utl_reportx_cdd &utl_reportx,
 	utl_report_cdd &update_ch,
-	const std::string &left_side_cmd,
-	const std::string &right_side_cmd);
+	std::string &left_side_cmd,
+	std::string &right_side_cmd);
 void outp_spool(
 	utl_reportx_cdd &utl_reportx);
 

@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include "basicfun.h"
 #include "datalist.h"
+#include "pusing.h"
 
 #include "preferences.h"
 #include "cmcfun.h"
@@ -125,8 +126,8 @@ void outp_settings(
 	utl_report_cdd &utl_report,
 	utl_reportx_cdd &utl_reportx,
 	utl_report_cdd &update_ch,
-	const std::string &left_side_cmd,
-	const std::string &right_side_cmd)
+	std::string &left_side_cmd,
+	std::string &right_side_cmd)
 {
 	long cbflag;
 	long comma;
@@ -141,7 +142,7 @@ void outp_settings(
 	long j;
 	long k;
 	long loop;
-	Gfloat m;
+	double m;
 	long m_V1;
 	long ocount;
 	std::string opt;
@@ -154,7 +155,6 @@ void outp_settings(
 	long pdn;
 	long print_to;
 	long print_len;
-	Gfloat prnt_date();
 	long q_i;
 	std::string report_keep_ident;
 	std::string report_keep_item;
@@ -182,7 +182,6 @@ void outp_settings(
 	long ypos_V8;
 
 	BStack(20);
-	OnErrorStack;
 	printx_cdd printx;
 	long devchar;
 	long xpos;
@@ -216,7 +215,7 @@ void outp_settings(
 		//
 		// Create new window
 		//
-		smg_status = smg$create_virtual_display(18, 78, utl_reportx.window, smg$m_border);
+		smg_status = smg$create_virtual_display(18, 78, utl_reportx.window, SMG$M_BORDER);
 		smg_status = smg$label_border(utl_reportx.window, boost::trim_right_copy(utl_report.repnum) + " - " + boost::trim_right_copy(utl_report.repdes));
 	}
 	//
@@ -227,7 +226,7 @@ void outp_settings(
 		// ** Converted from a select statement **
 		if (utl_report.opttype[i] == "d")
 		{
-			utl_reportx.optdef[i] = prnt_date(date_today, 8);
+			utl_reportx.optdef[i] = prnt_date(date_today(), 8);
 		}
 	}
 	//
@@ -323,6 +322,8 @@ L_4010:;
 		goto L_4190;
 	}
 	else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || (scope.scope_exit == SMG$K_TRM_DO)))))
+	{
+	}
 	else
 	{
 		entr_3badkey(scope, scope.scope_exit);
@@ -484,11 +485,11 @@ L_4050:;
 		utl_report.spoolform = utl_reportx.spoolform;
 		try
 		{
-			RmsUpdate((long)(update_ch));
-			BasicChannel[(long)(update_ch)].SetKey(0);
-			BasicChannel[(long)(update_ch)].SetKeyMode(Equal);
-			BasicChannel[(long)(update_ch)].SetKeyValue(utl_report.repnum);
-			BasicChannel[(long)(update_ch)].Get();
+			RmsUpdate(update_ch);
+			BasicChannel[update_ch].SetKey(0);
+			BasicChannel[update_ch].SetKeyMode(Equal);
+			BasicChannel[update_ch].SetKeyValue(utl_report.repnum);
+			BasicChannel[update_ch].Get();
 		}
 		catch(basic::BasicError &Be)
 		{
@@ -1263,7 +1264,7 @@ L_6030:;
 		//
 		// Print item
 		//
-		smg_status = smg$put_chars(utl_reportx.window, utl_reportx.optdef[pdn].substr(0, print_len), ypos_V8, xpos_V7, 0, smg$m_bold);
+		smg_status = smg$put_chars(utl_reportx.window, utl_reportx.optdef[pdn].substr(0, print_len), ypos_V8, xpos_V7, 0, SMG$M_BOLD);
 		//
 		// It might be one of the printer functions
 		//
@@ -1575,7 +1576,7 @@ paintreport:;
 		if (utl_report.optlen[i] & basic::edit(utl_report.descr[i], -1) != "")
 		{
 			smg_status = smg$put_chars(utl_reportx.window, basic::Format(i + 1, "(<0>#) ") + utl_report.descr[i].substr(0, 20) + " ", i + 14, 1);
-			smg_status = smg$put_chars(utl_reportx.window, utl_reportx.optdef[i].substr(0, 12), 0, 0, 0, smg$m_bold);
+			smg_status = smg$put_chars(utl_reportx.window, utl_reportx.optdef[i].substr(0, 12), 0, 0, 0, SMG$M_BOLD);
 		}
 	}
 	for (i = 5; i <= 9; i++)
@@ -1583,7 +1584,7 @@ paintreport:;
 		if (utl_report.optlen[i] & basic::edit(utl_report.descr[i], -1) != "")
 		{
 			smg_status = smg$put_chars(utl_reportx.window, basic::Format(i + 1, "(<0>#) ") + utl_report.descr[i].substr(0, 20) + " ", i + 9, 40);
-			smg_status = smg$put_chars(utl_reportx.window, utl_reportx.optdef[i].substr(0, 14), 0, 0, 0, smg$m_bold);
+			smg_status = smg$put_chars(utl_reportx.window, utl_reportx.optdef[i].substr(0, 14), 0, 0, 0, SMG$M_BOLD);
 		}
 	}
 	BReturn;
@@ -1594,7 +1595,7 @@ paintreport:;
 paintto:;
 	output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[utl_reportx.printto];
 	output = (output + std::string(20, ' ')).substr(0, 20);
-	smg_status = smg$put_chars(utl_reportx.window, output, 1, 19, 0, smg$m_bold);
+	smg_status = smg$put_chars(utl_reportx.window, output, 1, 19, 0, SMG$M_BOLD);
 	BReturn;
 
 	//***************************************************************
@@ -1605,7 +1606,7 @@ paintprint:;
 	q_i = 0;
 	if (((left_side_cmd + right_side_cmd).find("PT", 0) + 1))
 	{
-		smg_status = smg$put_chars(utl_reportx.window, utl_reportx.printtype, 1, 67, 0, smg$m_bold);
+		smg_status = smg$put_chars(utl_reportx.window, utl_reportx.printtype, 1, 67, 0, SMG$M_BOLD);
 		for (i = 1; i <= printx.groups; i++)
 		{
 			//
@@ -1616,7 +1617,7 @@ paintprint:;
 				q_i = q_i + 1;
 				print_line[q_i] = i;
 				smg_status = smg$put_chars(utl_reportx.window, std::string("(") + printx.groupx[i] + ") " + printx.descr[i] + " ", q_i + 1, 41);
-				smg_status = smg$put_chars(utl_reportx.window, printx.deflt[i], 0, 0, 0, smg$m_bold);
+				smg_status = smg$put_chars(utl_reportx.window, printx.deflt[i], 0, 0, 0, SMG$M_BOLD);
 			}
 		}
 	}
@@ -2142,7 +2143,7 @@ helperror:;
 	//******************************************************************
 	// Help Message for an error
 	//******************************************************************
-	help_34message(scope, std::to_string(Be.erl) + " " + basic::ert(Be.err), "E", Be.ern, filename, std::to_string(Be.err));
+	help_34message(scope, std::to_string(0) + " " + basic::ert(0), "E", "", filename, std::to_string(0));
 	goto exitprogram;
 notlocked:;
 	//*******************************************************************
@@ -2158,6 +2159,5 @@ L_19000:;
 	// Untrapped error
 	//
 	filename = "";
-	OnErrorZero;
 	goto helperror;
 }

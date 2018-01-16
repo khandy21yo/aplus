@@ -91,6 +91,8 @@ long outp_initform(
 	utl_sysrep_cdd utl_sysrep_ch;
 	std::string utl_work_dev;
 	long xloop;
+	std::string left_cmd;
+	std::string right_cmd;
 
 	BStack(20);
 
@@ -288,8 +290,10 @@ L_530:;
 	//
 	// Ask user to change settings
 	//
+	left_cmd = std::string("DD SF SP EP CP AF OF AS ") + setflg;
+	right_cmd = "PT ";
 	outp_settings(utl_report, utl_reportx, utl_report_ch,
-		std::string("DD SF SP EP CP AF OF AS ") + setflg, "PT ");
+		left_cmd, right_cmd);
 	//
 	// Un-normal abort, exit, etc.
 	//
