@@ -189,12 +189,20 @@ void outp_settings(
 	long sys_status;
 	long output_ch;
 	long print_line[print_maxgrp + 1];
-	std::string printer_printer[201];
+	std::vector<std::string> printer_printer;
 	std::string xtype[21];
 	long otype_V4[31];
 	std::string otype_V2[31];
-	std::string rdata1[101][14];
+	std::vector<std::vector<std::string> > rdata1;
 	std::string rdata2[101];
+	double form_w;
+	double form_vp;
+	double form_l;
+	double form_lp;
+	double form_hp;
+	std::string form_wp;
+	std::string Junk;
+
 	//
 	// Dimension statements
 	//
@@ -344,7 +352,7 @@ L_4040:;
 			reqitm = basic::right(reqitm, comma + 1);
 			goto changee;
 		}
-		itm = basic::edit(entr_3string(scope, utl_reportx.window, "", "Change", "  ", 4, "", ""), -1);
+		itm = basic::edit(entr_3string(scope, utl_reportx.window, "", "Change", "  ", 4, "", Junk, 2), -1);
 		if (itm.size() < 2 && itm != "")
 		{
 			itm = std::string("0") + itm;
@@ -359,6 +367,8 @@ L_4040:;
 			goto L_4010;
 		}
 		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || (scope.scope_exit == SMG$K_TRM_DO)))))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -426,7 +436,7 @@ changee:;
 	else if (opt == "B")
 	{
 L_4050:;
-		itm = basic::edit(entr_3string(scope, utl_reportx.window, "", "Blank", "  ", 4, "", ""), -1);
+		itm = basic::edit(entr_3string(scope, utl_reportx.window, "", "Blank", "  ", 4, "", Junk, 2), -1);
 		if (itm.size() < 2 && itm != "")
 		{
 			itm = std::string("0") + itm;
@@ -441,6 +451,8 @@ L_4050:;
 			goto L_4010;
 		}
 		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || (scope.scope_exit == SMG$K_TRM_DO)))))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -524,7 +536,7 @@ L_4050:;
 	else if (opt == "W")
 	{
 L_4080:;
-		wild_file = basic::edit(entr_3string(scope, utl_reportx.window, "", "Wildcard Name", std::string(20, ' '), 4, "", ""), -1);
+		wild_file = basic::edit(entr_3string(scope, utl_reportx.window, "", "Wildcard Name", std::string(20, ' '), 4, "", Junk, 20), -1);
 		// ** Converted from a select statement **
 		if ((scope.scope_exit == 3) || (scope.scope_exit == 290))
 		{
@@ -546,21 +558,15 @@ L_4080:;
 			entr_3badkey(scope, scope.scope_exit);
 			goto L_4080;
 		}
-		st = edt$edit(wild_file + ".WLD", 0, 0, 0, 0, 0, 0, 0);
+//		st = edt$edit(wild_file + ".WLD", 0, 0, 0, 0, 0, 0, 0);
+//		//!\todo selection of editor
+		system(("vi " + wild_file).c_str());
 		// Off
 		st = smg$set_cursor_mode(scope.smg_pbid, 1);
 		//
 		// Refresh screen
 		//
 		st = smg$repaint_screen(scope.smg_pbid);
-		try
-		{
-			unlink(wild_file + ";-1");
-		}
-		catch(basic::BasicError &Be)
-		{
-			goto L_4010;
-		}
 		//
 		// eXit
 		//
@@ -625,9 +631,6 @@ L_4150:;
 exitprogram:;
 	//
 L_4190:;
-	// Exit from function (Leaves window there)
-	//
-	smg_status = lib$free_lun[output_ch];
 	//
 	// Recover the help key
 	//
@@ -698,7 +701,7 @@ entertwo:;
 		// --
 		output = boost::trim_right_copy(utl_reportx.defout) + " " + xtype[utl_reportx.printto];
 		output = (output + std::string(64, ' ')).substr(0, 64);
-		output = entr_3string(scope, utl_reportx.window, "1;19", "Destination", output, cbflag | 16, "'LLLLLLLLLLLLLLLLLLL", "");
+		output = entr_3string(scope, utl_reportx.window, "1;19", "Destination", output, cbflag | 16, "'LLLLLLLLLLLLLLLLLLL", Junk, 64);
 		// ** Converted from a select statement **
 		if ((scope.scope_exit == 3) || (scope.scope_exit == 290))
 		{
@@ -709,6 +712,8 @@ entertwo:;
 			goto L_6092;
 		}
 		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || ((scope.scope_exit == SMG$K_TRM_DO) || ((scope.scope_exit == 274) || (scope.scope_exit == 275)))))))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -774,22 +779,23 @@ entertwo:;
 		//	.x Report Settings>Start Page
 		//
 		// --
-		utl_reportx.spoolform = entr_3string(scope, utl_reportx.window, "2;19", "Spooler Form", utl_reportx.spoolform, cbflag | 16, "'E", "");
-		if (scope.scope_exit == SMG$K_TRM_F14)
-		{
-			read_queform("SYS$PRINT", rdata1, stat);
-			for (iz = 1; iz <= std::stol(rdata1[0][0]); iz++)
-			{
-				rdata2[iz] = (rdata1[iz][1] + std::string(31, ' ')).substr(0, 31) + " " + rdata1[iz][2] + " " + (rdata1[iz][3] + std::string(31, ' ')).substr(0, 31);
-			}
-			x = entr_3choice(scope, "", "", rdata2 "", 138, "  Form Name                        #  ""Form Stock", "034,038", 0);
-			scope.scope_exit = 0;
-			if (x > 0)
-			{
-				utl_reportx.spoolform = boost::trim_right_copy(rdata2[x].substr(0, 31));
-				goto entertwo;
-			}
-		}
+		utl_reportx.spoolform = entr_3string(scope, utl_reportx.window, "2;19", "Spooler Form", utl_reportx.spoolform, cbflag | 16, "'E", Junk, 16);
+		//! \todo List of form names. Do I really want to care about this?
+//		if (scope.scope_exit == SMG$K_TRM_F14)
+//		{
+//			read_queform("SYS$PRINT", rdata1, stat);
+//			for (iz = 1; iz <= std::stol(rdata1[0][0]); iz++)
+//			{
+//				rdata2[iz] = (rdata1[iz][1] + std::string(31, ' ')).substr(0, 31) + " " + rdata1[iz][2] + " " + (rdata1[iz][3] + std::string(31, ' ')).substr(0, 31);
+//			}
+//			x = entr_3choice(scope, "", "", rdata2, "", 138, "  Form Name                        #  Form Stock", "034,038", 0);
+//			scope.scope_exit = 0;
+//			if (x > 0)
+//			{
+//				utl_reportx.spoolform = boost::trim_right_copy(rdata2[x].substr(0, 31));
+//				goto entertwo;
+//			}
+//		}
 		//
 		// Enter the starting page
 		//
@@ -819,7 +825,7 @@ entertwo:;
 		//	.x Report Settings>Start Page
 		//
 		// --
-		utl_reportx.startp = entr_3number(scope, utl_reportx.window, "5;19", "Start Page", utl_reportx.startp * 1.0, cbflag, "#####", "");
+		utl_reportx.startp = entr_3number(scope, utl_reportx.window, "5;19", "Start Page", utl_reportx.startp * 1.0, cbflag, "#####", Junk);
 		//
 		// Enter the ending page
 		//
@@ -847,7 +853,7 @@ entertwo:;
 		//	.x Report Settings>End Page
 		//
 		// --
-		utl_reportx.endp = entr_3number(scope, utl_reportx.window, "6;19", "End Page", utl_reportx.endp * 1.0, cbflag, "#####", "");
+		utl_reportx.endp = entr_3number(scope, utl_reportx.window, "6;19", "End Page", utl_reportx.endp * 1.0, cbflag, "#####", Junk);
 		//
 		// Enter the number of copies
 		//
@@ -873,7 +879,7 @@ entertwo:;
 		//	.x Report Setting>Copies
 		//
 		// --
-		utl_reportx.copies = entr_3number(scope, utl_reportx.window, "7;19", "Number of Copies", utl_reportx.copies * 1.0, cbflag, "#####", "");
+		utl_reportx.copies = entr_3number(scope, utl_reportx.window, "7;19", "Number of Copies", utl_reportx.copies * 1.0, cbflag, "#####", Junk);
 		if (utl_reportx.copies > 19)
 		{
 			entr_3message(scope, "Have you considered a copy machine??", 1);
@@ -1012,7 +1018,7 @@ entertwo:;
 		//
 		// --
 		utl_reportx.repdate = (utl_reportx.repdate + std::string(20, ' ')).substr(0, 20);
-		utl_reportx.repdate = entr_3string(scope, utl_reportx.window, "12;19", "Report Date", utl_reportx.repdate, cbflag, "'E", "");
+		utl_reportx.repdate = entr_3string(scope, utl_reportx.window, "12;19", "Report Date", utl_reportx.repdate, cbflag, "'E", Junk, 16);
 		//
 		// Printer type
 		//
@@ -1047,7 +1053,7 @@ entertwo:;
 		// --
 		temp_printtype = utl_reportx.printtype;
 L_6020:;
-		utl_reportx.printtype = entr_3string(scope, utl_reportx.window, "1;67", "Printer Type", utl_reportx.printtype, cbflag | 16, "'E", "");
+		utl_reportx.printtype = entr_3string(scope, utl_reportx.window, "1;67", "Printer Type", utl_reportx.printtype, cbflag | 16, "'E", Junk, 6);
 		// ** Converted from a select statement **
 		//
 		// Exit
@@ -1211,13 +1217,13 @@ L_6030:;
 		else if (utl_report.opttype[pdn] == "S")
 		{
 			temp1 = std::string("'") + basic::Qstring(print_len - 1, 'L');
-			inp = entr_3string(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag | 16, temp1, "");
+			inp = entr_3string(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag | 16, temp1, Junk, 20);
 			// String
 		}
 		else
 		{
 			temp1 = std::string("'") + basic::Qstring(print_len - 1, 'L');
-			inp = entr_3string(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag, temp1, "");
+			inp = entr_3string(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag, temp1, Junk, 20);
 		}
 		// ** Converted from a select statement **
 		if ((scope.scope_exit == 3) || (scope.scope_exit == 290))
@@ -1229,6 +1235,8 @@ L_6030:;
 			goto L_6092;
 		}
 		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || ((scope.scope_exit == SMG$K_TRM_DO) || ((scope.scope_exit == 274) || (scope.scope_exit == 275)))))))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -1284,7 +1292,7 @@ L_6080:;
 		// We got a match
 		//
 		k = print_line[i];
-		temp = entr_3string(scope, utl_reportx.window, std::to_string(i + 1) + ";67", boost::trim_right_copy(printx.descr[k]), printx.deflt[k], 0, "'E", "");
+		temp = entr_3string(scope, utl_reportx.window, std::to_string(i + 1) + ";67", boost::trim_right_copy(printx.descr[k]), printx.deflt[k], 0, "'E", Junk, 20);
 		scope.prg_item = std::string("FLD") + printx.groupx[k];
 		// ++
 		// Abstract:FLDLP
@@ -1505,6 +1513,8 @@ L_6080:;
 			goto L_6080;
 		}
 		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || ((scope.scope_exit == SMG$K_TRM_DO) || ((scope.scope_exit == SMG$K_TRM_UP) || (scope.scope_exit == SMG$K_TRM_DOWN)))))))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -1535,6 +1545,8 @@ L_6080:;
 	}
 	// ** Converted from a select statement **
 	if ((scope.scope_exit == 0) || ((scope.scope_exit == 3) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || ((scope.scope_exit == SMG$K_TRM_DO) || ((scope.scope_exit == SMG$K_TRM_UP) || ((scope.scope_exit == SMG$K_TRM_DOWN) || ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))))))))))
+	{
+	}
 	else
 	{
 		entr_3badkey(scope, scope.scope_exit);
@@ -1751,64 +1763,65 @@ L_6405:;
 	//	4 - File
 	//	5 - Users Terminal (printer port?)
 	//
-	sys_status = lib$getdvi(dvi$_devclass, 0, temp, devchar, 0, 0);
+	//! \todo determine device type
+//	sys_status = lib$getdvi(dvi$_devclass, 0, temp, devchar, 0, 0);
 	//
 	// Certain errors may mean that it is a file
 	//
-	if ((sys_status == 324) || (sys_status == 2312))
-	{
-		ftype = 4;
+//	if ((sys_status == 324) || (sys_status == 2312))
+//	{
+		ftype = OUTP_TOFILE;
 		goto L_6420;
-	}
+//	}
 	//
 	// Error 2288 occurs when attempting to go over DECNET.
 	// Attempt to guess where it is really going, and then
 	// hope for the best.  Haven't yet figured out how to test
 	// devices across networks.
 	//
-	if (sys_status == 2288)
-	{
-		//
-		// If name ends with a colon, assume it is a printer
-		// othwewise assume it is a file.
-		//
-		if (basic::right(temp, temp.size()) == ":")
-		{
-			ftype = 3;
-		}
-		else
-		{
-			ftype = 4;
-		}
-		goto L_6420;
-	}
-	//
-	// Invalid type?
-	//
-	if ((sys_status & 1) == 0)
-	{
-		entr_3message(scope, std::string("Invalid output device: ") + temp + " (" + std::to_string(sys_status) + ")", 0);
-		goto exitsub;
-	}
-	// ** Converted from a select statement **
-	if (devchar == dc$_disk)
-	{
-		ftype = 4;
-	}
-	else if ((devchar == dc$_lp) || ((devchar == dc$_mailbox) || (devchar == dc$_term)))
-	{
-		ftype = 3;
-	}
-	else
-	{
-		entr_3message(scope, std::string("Invalid output device: ") + temp + " (" + std::to_string(sys_status) + ")", 0);
-		goto exitsub;
-	}
+//	if (sys_status == 2288)
+//	{
+//		//
+//		// If name ends with a colon, assume it is a printer
+//		// othwewise assume it is a file.
+//		//
+//		if (basic::right(temp, temp.size()) == ":")
+//		{
+//			ftype = OUTP_TODEVICE;
+//		}
+//		else
+//		{
+//			ftype = OUTP_TOFILE;
+//		}
+//		goto L_6420;
+//	}
+//	//
+//	// Invalid type?
+//	//
+//	if ((sys_status & 1) == 0)
+//	{
+//		entr_3message(scope, std::string("Invalid output device: ") + temp + " (" + std::to_string(sys_status) + ")", 0);
+//		goto exitsub;
+//	}
+//	// ** Converted from a select statement **
+//	if (devchar == dc$_disk)
+//	{
+//		ftype = OUTP_TOFILE;
+//	}
+//	else if ((devchar == dc$_lp) || ((devchar == dc$_mailbox) || (devchar == dc$_term)))
+//	{
+//		ftype = OUTP_TODEVICE;
+//	}
+//	else
+//	{
+//		entr_3message(scope, std::string("Invalid output device: ") + temp + " (" + std::to_string(sys_status) + ")", 0);
+//		goto exitsub;
+//	}
 	//
 L_6420:;
 	// Handle output to users keyboard
 	//
-	if (ftype == 3)
+	if (ftype == OUTP_TODEVICE)
 	{
 		//
 		// Is OD equal to the terminal this process is running
@@ -1816,13 +1829,13 @@ L_6420:;
 		//
 		if (read_syslog(temp) == read_syslog("TT:"))
 		{
-			ftype = 5;
+			ftype = OUTP_TOLOCAL;
 		}
 	}
 	//
 	// Is it going to a printable device?
 	//
-	if (ftype == 4)
+	if (ftype == OUTP_TOFILE)
 	{
 		//
 		// Force extension of .PRT
@@ -1857,7 +1870,7 @@ L_6420:;
 		switch (ftype)
 		{
 		// Display on users terminal
-		case 5:
+		case OUTP_TOLOCAL:
 
 			goto L_6450;
 			break;
@@ -1884,7 +1897,7 @@ L_6420:;
 	}
 	else if (print_to == OUTP_TOWP)
 	{
-		if (ftype == 4)
+		if (ftype == OUTP_TOFILE)
 		{
 			goto L_6450;
 		}
@@ -1894,7 +1907,7 @@ L_6420:;
 	}
 	else if (print_to == OUTP_TODOCUMENT)
 	{
-		if (ftype == 4)
+		if (ftype == OUTP_TOFILE)
 		{
 			goto L_6450;
 		}
@@ -1904,7 +1917,7 @@ L_6420:;
 	}
 	else if ((print_to == OUTP_TO2020) || (print_to == OUTP_TOPL))
 	{
-		if (ftype == 4)
+		if (ftype == OUTP_TOFILE)
 		{
 			goto L_6450;
 		}
@@ -1975,6 +1988,8 @@ L_6472:;
 			goto exitsub;
 		}
 		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || (scope.scope_exit == SMG$K_TRM_DO)))))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -2002,7 +2017,7 @@ L_6472:;
 L_6475:;
 			try
 			{
-				unlink(temp);
+				unlink(temp.c_str());
 				goto L_6475;
 			}
 			catch(basic::BasicError &Be)

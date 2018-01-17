@@ -80,6 +80,8 @@ long outp_initform(
 	utl_reportx_cdd &utl_reportx,
 	const std::string &reportnum,
 	const std::string &fixset);
+void outp_initialize(
+	const std::string &print_type);
 void outp_initfromfile(
 	utl_reportx_cdd &utl_reportx,
 	int xwidth);

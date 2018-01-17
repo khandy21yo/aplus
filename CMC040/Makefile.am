@@ -37,7 +37,9 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_3messagenewwindow.cc \
 	cmcfun/entr_3number.cc \
 	cmcfun/entr_3option.cc \
+	cmcfun/entr_3stringlcc \
 	cmcfun/entr_3stringlist.cc \
+	cmcfun/entr_3yesno.cc \
 	cmcfun/entr_4entry.cc \
 	cmcfun/entr_4specialkeys.cc \
 	cmcfun/entr_macro.cc \
@@ -57,6 +59,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/outp_formff.cc \
 	cmcfun/outp_initform.cc \
 	cmcfun/outp_initfromfile.cc \
+	cmcfun/outp_initialize.cc \
 	cmcfun/outp_initstructure.cc \
 	cmcfun/outp_line.cc \
 	cmcfun/outp_spool.cc \

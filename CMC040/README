@@ -16,11 +16,15 @@ Necessary packages required to compile include
 	libboost-dev
 	postgresql
 	libpq-dev
+	pkg-config		Required for ncurses to configure
+	libncurses-dev
+	autoconf
+	autoconf-archive
 
-Some of the changes
+Some of the changes from the VMS version
 
 	Change struct's to classes
 
 	Change array of strings (char *x[])  passed to vector of strings
-	(std::vectorMstd::string> &x).
+	(std::vector<std::string> &x).
 
