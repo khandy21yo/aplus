@@ -921,7 +921,7 @@ entertwo:;
 		{
 			temp = "N";
 		}
-		utl_reportx.autoscroll = entr_3yesno(scope, utl_reportx.window, "8;19", "Autoscroll", temp, cbflag, "'E", "") == "Y";
+		utl_reportx.autoscroll = entr_3yesno(scope, utl_reportx.window, "8;19", "Autoscroll", temp, cbflag, "'E", Junk) == "Y";
 		//
 		// Enter Run After Time
 		//
@@ -945,7 +945,7 @@ entertwo:;
 		//	.x Report Settings>After
 		//
 		// --
-		utl_reportx.aftertime = entr_3time(scope, utl_reportx.window, "9;19", "Run AFter Time", utl_reportx.aftertime, cbflag, "", "");
+		utl_reportx.aftertime = entr_3time(scope, utl_reportx.window, "9;19", "Run AFter Time", utl_reportx.aftertime, cbflag, "", Junk);
 		//
 		// Enter Background/forground mode
 		//
@@ -972,7 +972,7 @@ entertwo:;
 		//	.x Report Settings>Background
 		//
 		// --
-		utl_reportx.background = entr_3yesno(scope, utl_reportx.window, "10;19", "Background", utl_reportx.background, cbflag, "'E", "");
+		utl_reportx.background = entr_3yesno(scope, utl_reportx.window, "10;19", "Background", utl_reportx.background, cbflag, "'E", Junk);
 		//
 		// Enter offset
 		//
@@ -993,7 +993,7 @@ entertwo:;
 		//	.x Report Settings>Offset
 		//
 		// --
-		utl_reportx.offset = entr_3number(scope, utl_reportx.window, "11;19", "Offset", utl_reportx.offset * 1.0, cbflag, "####", "");
+		utl_reportx.offset = entr_3number(scope, utl_reportx.window, "11;19", "Offset", utl_reportx.offset * 1.0, cbflag, "####", Junk);
 		//
 		// Enter report date
 		//
@@ -1058,7 +1058,9 @@ L_6020:;
 		//
 		// Exit
 		//
-		if ((scope.scope_exit == 3) || ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ)))
+		if ((scope.scope_exit == 3) ||
+			(scope.scope_exit == SMG$K_TRM_F10) ||
+			(scope.scope_exit == SMG$K_TRM_CTRLZ))
 		{
 			goto L_6092;
 			//
@@ -1088,7 +1090,15 @@ L_6020:;
 			BGosub(L_6300);
 			goto L_6020;
 		}
-		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || ((scope.scope_exit == SMG$K_TRM_DO) || ((scope.scope_exit == SMG$K_TRM_UP) || (scope.scope_exit == SMG$K_TRM_DOWN)))))))
+		else if ((scope.scope_exit == 0) ||
+			(scope.scope_exit == 10) ||
+			(scope.scope_exit == 12) ||
+			(scope.scope_exit == 13) ||
+			(scope.scope_exit == SMG$K_TRM_DO) ||
+			(scope.scope_exit == SMG$K_TRM_UP) ||
+			(scope.scope_exit == SMG$K_TRM_DOWN))
+		{
+		}
 		else
 		{
 			entr_3badkey(scope, scope.scope_exit);
@@ -1170,7 +1180,7 @@ L_6030:;
 		if (utl_report.opttype[pdn] == "F")
 		{
 			temp1 = basic::Qstring(print_len - 3, '#') + ".##";
-			m = entr_3number(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), std::stod(utl_reportx.optdef[pdn]) * 1.0, cbflag, temp1, "");
+			m = entr_3number(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), std::stod(utl_reportx.optdef[pdn]) * 1.0, cbflag, temp1, Junk);
 			inp = basic::Format(m, temp1);
 			work = (inp.find("%", 0) + 1);
 			if (work)
@@ -1192,26 +1202,26 @@ L_6030:;
 			}
 			tmep = utl_reportx.optdef[pdn].substr(0, tt + 2);
 			tmep = basic::mid(tmep, 7, tt - 4) + tmep.substr(0, 2) + basic::mid(tmep, 4, 2);
-			inp = entr_3date(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), tmep, cbflag, std::to_string(tt), "");
+			inp = entr_3date(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), tmep, cbflag, std::to_string(tt), Junk);
 			inp = basic::mid(inp, tt - 3, 2) + "/" + basic::mid(inp, tt - 1, 2) + "/" + inp.substr(0, tt - 4);
 			// Integer
 		}
 		else if (utl_report.opttype[pdn] == "I")
 		{
 			temp1 = basic::Qstring(print_len, '#');
-			m_V1 = entr_3number(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), std::stod(utl_reportx.optdef[pdn]) * 1.0, cbflag, temp1, "");
+			m_V1 = entr_3number(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), std::stod(utl_reportx.optdef[pdn]) * 1.0, cbflag, temp1, Junk);
 			inp = basic::Format(m_V1, temp1);
 			// Period
 		}
 		else if (utl_report.opttype[pdn] == "P")
 		{
-			inp = entr_period(utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag, "", "");
+			inp = entr_period(utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag, "", Junk);
 			// Yes/No
 		}
 		else if (utl_report.opttype[pdn] == "Y")
 		{
 			temp1 = std::string("'") + basic::Qstring(print_len - 1, 'L');
-			inp = entr_3yesno(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag, temp1, "");
+			inp = entr_3yesno(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), utl_reportx.optdef[pdn].substr(0, temp_V5), cbflag, temp1, Junk);
 			// Upper case string
 		}
 		else if (utl_report.opttype[pdn] == "S")

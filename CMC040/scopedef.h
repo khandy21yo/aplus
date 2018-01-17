@@ -154,6 +154,15 @@ std::string entr_3stringlist(
 	std::vector<std::string> &op_vtext,
 	const std::string &op_thetitle,
 	const std::string &op_drawcols);
+std::string entr_3time(
+	scope_struct &scope,
+	smg_display_id &xx_vdid,
+	const std::string &opt_cpos,
+	const std::string &opt_prompt,
+	const std::string &opt_xdflt,
+	long opt_flag,
+	const std::string &opt_kind,
+	std::string &opt_deflt);
 std::string entr_3yesno(
 	scope_struct &scope,
 	smg_display_id &xx_vdid,

@@ -12,6 +12,7 @@
 #include <cstring>
 #include <unistd.h>
 #include "basicfun.h"
+#include "pusing.h"
 
 #include "preferences.h"
 #include "cmcfun.h"
@@ -85,7 +86,33 @@ std::string entr_3yesno(
 	long xpos;
 	long ypos;
 	long y1pos;
-	std::string vtext[6];
+	std::vector<std::string> vtext {
+		"2",
+		"Y    Yes",
+		"N    No"};
+
+	//
+	// Function To Expand 'Y' and 'N' into three characters YES/NO
+	//
+	auto fnyn = [&](std::string strx)
+	{
+		std::string Result;
+
+		// ** Converted from a select statement **
+		if (strx == "Y")
+		{
+			Result = "Yes";
+		}
+		else if (strx == "N")
+		{
+			Result = "No ";
+		}
+		else
+		{
+			Result = strx + "  ";
+		}
+		return Result;
+	};
 	//
 	// Split out cursor positioning function
 	//
@@ -121,7 +148,7 @@ std::string entr_3yesno(
 	// Attributes
 	if ((op_cpos != "") && ((op_flag & 64) == 0))
 	{
-		smg_status = smg$put_chars(xx_vdid, basic::Format(fnyn(gets), op_xformat), xpos, ypos, 0, smg$m_reverse);
+		smg_status = smg$put_chars(xx_vdid, basic::Format(fnyn(gets), op_xformat), xpos, ypos, 0, SMG$M_REVERSE);
 	}
 	//
 	// Initilization/prompt
@@ -181,10 +208,7 @@ L_1100:;
 	}
 	else if (gets_V2 == SMG$K_TRM_F14)
 	{
-		vtext[0] = "2";
-		vtext[1] = "Y    Yes";
-		vtext[2] = "N    No";
-		x = entr_3choice(scope, "", "", vtext[NULL], gets, 138, "Value  Description", "006", 0);
+		x = entr_3choice(scope, "", "", vtext, gets, 138, "Value  Description", "006", 0);
 		if (x > 0)
 		{
 			gets = basic::edit(vtext[x].substr(0, 5 - 3), 4 + 8 + 32 + 128 + 256);
@@ -208,41 +232,17 @@ L_3000:;
 	// Attributes
 	if ((op_cpos != "") && ((op_flag & 64) == 0))
 	{
-		smg_status = smg$put_chars(xx_vdid, basic::Format(fnyn(gets), op_xformat), xpos, ypos, 0, smg$m_bold);
+		smg_status = smg$put_chars(xx_vdid, basic::Format(fnyn(gets), op_xformat), xpos, ypos, 0, SMG$M_BOLD);
 	}
 	smg_status = smg$flush_buffer(scope.smg_pbid);
 	//
 	// Hide cursor
 	//
 	smg_status = smg$set_cursor_mode(scope.smg_pbid, 1);
-	entr_3yesno_V1 = gets;
+	Result = gets;
 	if (op_flag & 128)
 	{
 		op_xdeflt = gets;
 	}
-	return Result;
-	//
-	// Function To Expand 'Y' and 'N' into three characters YES/NO
-	//
-
-	auto fnyn = [&](std::string strx)
-	{
-		std::string Result;
-
-		// ** Converted from a select statement **
-		if (strx == "Y")
-		{
-			Result = "Yes";
-		}
-		else if (strx == "N")
-		{
-			Result = "No ";
-		}
-		else
-		{
-			Result = strx + "  ";
-		}
-		return Result;
-	};
 	return Result;
 }

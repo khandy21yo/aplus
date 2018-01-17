@@ -95,11 +95,17 @@ std::string prnt_fancydate(
 	const std::string &adate);
 std::string prnt_monthyyyy(
 	const std::string &adate);
+std::string prnt_time(
+	const std::string &intime,
+	long flag);
 std::string read_sysjob(void);
 std::string read_syspn(void);
 long time_code(const std::string &datum);
 std::string time_invcode(long tcode);
 std::string time_now(void);
+std::string time_storetime(
+	const std::string &xdeflt,
+	std::string kind);
 void writ_string(
 	const std::string &Source,
 	std::string &Result);

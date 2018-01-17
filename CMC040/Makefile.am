@@ -39,6 +39,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_3option.cc \
 	cmcfun/entr_3stringlcc \
 	cmcfun/entr_3stringlist.cc \
+	cmcfun/entr_3time.cc \
 	cmcfun/entr_3yesno.cc \
 	cmcfun/entr_4entry.cc \
 	cmcfun/entr_4specialkeys.cc \
@@ -66,6 +67,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/prnt_date.cc \
 	cmcfun/prnt_fancydate.cc \
 	cmcfun/prnt_monthyyyy.cc \
+	cmcfun/prnt_time.cc \
 	cmcfun/read_35set.cc \
 	cmcfun/read_3broadcast.cc \
 	cmcfun/read_initialize.cc \
@@ -77,6 +79,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/time_code.cc \
 	cmcfun/time_invcode.cc \
 	cmcfun/time_now.cc \
+	cmcfun/time_storetime.cc \
 	cmcfun/writ_string.cc \
 	utl/utl_report.cc
 
