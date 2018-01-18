@@ -1948,10 +1948,13 @@ L_6450:;
 		// See if file already exists
 		//
 	}
-	else if ((print_to == OUTP_TOFILE) || ((print_to == OUTP_TOWP) || ((print_to == OUTP_TODOCUMENT) || ((print_to == OUTP_TO2020) || (print_to == OUTP_TOPL)))))
+	else if ((print_to == OUTP_TOFILE) ||
+		(print_to == OUTP_TOWP) ||
+		(print_to == OUTP_TODOCUMENT) ||
+		(print_to == OUTP_TO2020) ||
+		(print_to == OUTP_TOPL))
 	{
 		//
-L_6470:;
 		// Random access File structured device?
 		//
 		try
@@ -1991,13 +1994,20 @@ L_6472:;
 		// Index:
 		//
 		// --
-		v = entr_3option(scope, "Command ", "Append Overwrite eXit", opt7, 0);
+		Junk = "Append Overwrite eXit";
+		v = entr_3option(scope, "Command ", Junk, opt7, 0);
 		// ** Converted from a select statement **
-		if ((scope.scope_exit == SMG$K_TRM_CTRLC) || ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ)))
+		if ((scope.scope_exit == SMG$K_TRM_CTRLC) ||
+			(scope.scope_exit == SMG$K_TRM_F10) ||
+			(scope.scope_exit == SMG$K_TRM_CTRLZ))
 		{
 			goto exitsub;
 		}
-		else if ((scope.scope_exit == 0) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || (scope.scope_exit == SMG$K_TRM_DO)))))
+		else if ((scope.scope_exit == 0) ||
+			(scope.scope_exit == 10) ||
+			(scope.scope_exit == 12) ||
+			(scope.scope_exit == 13) ||
+			(scope.scope_exit == SMG$K_TRM_DO))
 		{
 		}
 		else
@@ -2025,19 +2035,8 @@ L_6472:;
 			//
 			// --
 L_6475:;
-			try
-			{
-				unlink(temp.c_str());
-				goto L_6475;
-			}
-			catch(basic::BasicError &Be)
-			{
-				if (Be.err == 5)
-				{
-					goto L_6470;
-				}
-				goto helperror;
-			}
+			unlink(temp.c_str());
+			goto L_6475;
 			//
 			// Append
 			//

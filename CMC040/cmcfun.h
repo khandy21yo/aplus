@@ -99,6 +99,8 @@ std::string prnt_time(
 	const std::string &intime,
 	long flag);
 std::string read_sysjob(void);
+std::string read_syslog(
+        const std::string &lognam1);
 std::string read_syspn(void);
 long time_code(const std::string &datum);
 std::string time_invcode(long tcode);

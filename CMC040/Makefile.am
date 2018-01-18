@@ -73,6 +73,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/read_initialize.cc \
 	cmcfun/outp_settings.cc \
 	cmcfun/read_sysjob.cc \
+	cmcfun/read_syslog.cc \
 	cmcfun/read_syspn.cc \
 	cmcfun/subr_3exitprogram.cc \
 	cmcfun/subr_3spawn.cc \
