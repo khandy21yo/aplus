@@ -19,16 +19,24 @@ long smg$put_chars(
 {
 	if (flags & SMG$M_BOLD)
 	{
-		attron(A_BOLD);
+		wattron(display.win, A_BOLD);
 	}
 
+#if 1
 	mvwaddstr(display.win,
 		row + display.border - 1,
 		col + display.border - 1,
 		text.c_str());
+#else
+	wmove(display.win,
+		row + display.border - 1,
+		col + display.border - 1);
+	waddstr(display.win,
+		text.c_str());
+#endif
 
 	if (flags & SMG$M_BOLD)
 	{
-		attroff(A_BOLD);
+		wattroff(display.win, A_BOLD);
 	}
 }

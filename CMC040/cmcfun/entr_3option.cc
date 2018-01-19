@@ -418,9 +418,11 @@ std::string entr_3option(
 /*
  * Display current option however necessary
  */
-static void drawoption(scope_struct &scope,
+static void drawoption(
+	scope_struct &scope,
 	struct option_list_struct &option_list,
-	int flag, int flag_byte)
+	int flag,
+	int flag_byte)
 {
 	/*
 	 * Local variables
