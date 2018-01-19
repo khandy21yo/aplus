@@ -19,16 +19,16 @@ long smg$put_chars(
 {
 	if (flags & SMG$M_BOLD)
 	{
-		attron(A_STANDOUT);
+		attron(A_BOLD);
 	}
 
 	mvwaddstr(display.win,
-		row + display.border,
-		col + display.border,
+		row + display.border - 1,
+		col + display.border - 1,
 		text.c_str());
 
 	if (flags & SMG$M_BOLD)
 	{
-		attroff(A_STANDOUT);
+		attroff(A_BOLD);
 	}
 }

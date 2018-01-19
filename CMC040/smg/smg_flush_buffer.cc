@@ -11,4 +11,5 @@ long smg$flush_buffer(
 	smg_pasteboard_id &pbid)
 {
 	update_panels();
+	doupdate();
 }

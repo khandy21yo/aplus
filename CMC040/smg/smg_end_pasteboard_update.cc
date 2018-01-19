@@ -15,6 +15,7 @@ long smg$end_pasteboard_update(
 	smg_pasteboard_id &pasteboard)		//! Display to update
 {
 	update_panels();
+	doupdate();
 }
 
 

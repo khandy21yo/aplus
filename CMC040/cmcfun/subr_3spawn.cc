@@ -44,4 +44,5 @@ void subr_3spawn(
 	endwin();
 	system(pname.c_str());
 	update_panels();
+	doupdate();
 }

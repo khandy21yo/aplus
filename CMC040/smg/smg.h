@@ -283,5 +283,7 @@ long smg$set_term_characteristics(
 	long d);
 
 
+long smg_xxx_draw_border(
+	smg_display_id &display);
 #endif
 

@@ -130,7 +130,7 @@ std::string entr_3option(
 	option_count = 0;
 	nameptr = 0;
 	option_list[0].option = '\0';
-	option_list[0].name[0] = '\0';
+	option_list[0].name = "";
 	option_list[0].curoppos = 1;
 
 	for (chptr = 0; chptr < op_possible.size(); chptr++)
@@ -147,7 +147,7 @@ std::string entr_3option(
 				option_count++;
 				nameptr = 0;
 				option_list[option_count].option = '\0';
-				option_list[option_count].name[0] = '\0';
+				option_list[option_count].name = "";
 				option_list[option_count].curoppos = chptr + 2;
 			}
 			continue;
@@ -156,8 +156,8 @@ std::string entr_3option(
 		/*
 		 * Append to name
 		 */
-		option_list[option_count].name[nameptr++] = ch;
-		option_list[option_count].name[nameptr] = '\0';
+		option_list[option_count].name += ch;
+		nameptr++;
 
 		/*
 		 * If first upper case letter, make command char
@@ -437,11 +437,9 @@ static void drawoption(scope_struct &scope,
 		/*
 		 * Display entirely in bold
 		 */
-		segment = option_list.name[0];
-
 		smg$put_chars(
 			scope.smg_option,		/* Window */
-			segment,			/* Text */
+			option_list.name,		/* Text */
 			option_list.line,		/* Line */
 			option_list.column,		/* Column */
 			0,				/* Erase line */
@@ -470,11 +468,9 @@ static void drawoption(scope_struct &scope,
 		/*
 		 * Display left side normal
 		 */
-		segment = option_list.name[0];
-
 		smg$put_chars(
 			scope.smg_option,		/* Window */
-			segment,			/* Text */
+			option_list.name,		/* Text */
 			option_list.line,		/* Line */
 			option_list.column,		/* Column */
 			0,				/* Erase line */
