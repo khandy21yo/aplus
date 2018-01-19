@@ -18,6 +18,7 @@ long smg$create_pasteboard(
 	initscr();
 	cbreak();
 	noecho();
+	keypad(stdscr, TRUE);
 
 	if (smg_rows != 0)
 	{
