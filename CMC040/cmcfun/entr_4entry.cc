@@ -84,6 +84,7 @@ long entr_4entry(
 	 * Get input character
 	 */
  l6000:
+	update_panels();
 	if (timeout != 0)
 	{
 		retchar = getch();

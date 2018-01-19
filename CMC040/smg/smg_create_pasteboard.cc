@@ -27,4 +27,6 @@ long smg$create_pasteboard(
 	{
 		*smg_cols = COLS;
 	}
+
+	return 1;
 }

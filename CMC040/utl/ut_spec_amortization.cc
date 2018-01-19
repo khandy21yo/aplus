@@ -525,6 +525,7 @@ setinitial:;
 	// Set initial value
 	//******************************************************************
 	flagtitle = "Item   Description";
+	flagtype.resize(6);
 	flagtype[0] = "04";
 	flagtype[1] = "02   Present Value";
 	flagtype[2] = "03   Interest  Rate";
