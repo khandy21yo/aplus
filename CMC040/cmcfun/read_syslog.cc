@@ -47,7 +47,7 @@ std::string read_syslog(
 	//! \todo Linux logicals are noothing like what VMS has.
 	//! This needs some work.
 
-	if (Resullt == "TT:")
+	if (Result == "TT:")
 	{
 		Result = "/dev/tty";
 	}

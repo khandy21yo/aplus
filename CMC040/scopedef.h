@@ -183,6 +183,14 @@ long entr_4specialkeys(
 	long retchar);
 long entr_macro(
 	scope_struct &scope);
+std::string entr_period(
+	smg_display_id &xx_vdid,
+	const std::string &cpos,
+	const std::string &prompt,
+	const std::string &xdflt,
+	long flag,
+	const std::string &xformat,
+	std::string &deflt);
 int func_4scoseq(
 	int x);
 void help_34message(
@@ -192,6 +200,11 @@ void help_34message(
 	const std::string &help_progname,
 	const std::string &help_filename,
 	const std::string &help_item);
+std::string libr_select(
+	const std::string &lib_name,
+	const std::string &lib_title,
+	const std::string &lib_help,
+	std::string &optlist);
 void menu_3interrupt(
 	scope_struct &scope);
 void read_3broadcast(

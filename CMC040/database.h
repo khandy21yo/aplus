@@ -351,4 +351,15 @@ public:
 //
 extern db_connection db_conn;
 
+
+long read_period(
+	const std::string &xoption,
+	const std::string &xera,
+	std::string &xperiod,
+	std::string &xper_desc,
+	std::string &xstatus,
+	std::string &xstart_date,
+	std::string &xfinish_date,
+	long &xage);
+
 #endif

@@ -44,6 +44,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_4entry.cc \
 	cmcfun/entr_4specialkeys.cc \
 	cmcfun/entr_macro.cc \
+	cmcfun/entr_period.cc \
 	cmcfun/find_3printgroupitem.cc \
 	cmcfun/find_file.cc \
 	cmcfun/find_fileexists.cc \
@@ -52,6 +53,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/help_34message.cc \
 	cmcfun/libr_3insert.cc \
 	cmcfun/libr_digsr.cc \
+	cmcfun/libr_select.cc \
 	cmcfun/menu_3interrupt.cc \
 	cmcfun/outp_36initfromfile.cc \
 	cmcfun/outp_3writestructure.cc \
@@ -72,6 +74,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/read_3broadcast.cc \
 	cmcfun/read_initialize.cc \
 	cmcfun/outp_settings.cc \
+	cmcfun/read_period.cc \
 	cmcfun/read_sysjob.cc \
 	cmcfun/read_syslog.cc \
 	cmcfun/read_syspn.cc \

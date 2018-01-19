@@ -42,7 +42,7 @@ static const char* DataValue[] = {
 	"(05) Total Periods","06","43","(06) Payment per Period","09","43",
 	"(07) Date of First Payment","12","43","(08) Payment No.","16","35",
 	"Interest      Principal    Loan Balance","0","0","", NULL};
-basic::DataListClass DataList(DataValue);
+static basic::DataListClass DataList(DataValue);
 
 extern scope_struct scope;
 

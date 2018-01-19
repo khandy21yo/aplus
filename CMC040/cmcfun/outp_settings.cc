@@ -51,7 +51,7 @@ static const char* DataValue[] = {
 	"1","DP","1","DISPLAY","2","SPOOL","2","SPOOLER","2","SP","5","PP",
 	"5","PRINTER PORT","7","WP","7","WORD PROCESSING","9","DOCUMENT","9",
 	"DOCUMENTATION","10","2020","10","S2020","11","PL","0","", NULL};
-basic::DataListClass DataList(DataValue);
+static basic::DataListClass DataList(DataValue);
 
 //!
 //! \brief Report Settings
@@ -129,6 +129,10 @@ void outp_settings(
 	std::string &left_side_cmd,
 	std::string &right_side_cmd)
 {
+#if 1
+	abort();
+//! \todo actually get this converted properly
+#else
 	long cbflag;
 	long comma;
 	long end_loop;
@@ -2184,4 +2188,5 @@ L_19000:;
 	//
 	filename = "";
 	goto helperror;
+#endif
 }

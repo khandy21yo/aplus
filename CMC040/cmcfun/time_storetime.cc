@@ -172,8 +172,11 @@ std::string time_storetime(
 	//
 	// Anything besides numbers and colons is illegal
 	//
+#if 0
+//! \todo Xlate code
 	test = basic::Xlate(newt, basic::Qstring(46, 0) + ":" + basic::Qstring(11, 0) + ":");
 	if ((test.size() > 2) || (test == newt) || (basic::Xlate(newt, basic::Qstring(46, 0) + "." + 0 + "0123456789:") != newt))
+#endif
 	{
 		goto L_10000;
 	}
@@ -265,5 +268,6 @@ std::string time_storetime(
 			newt = (basic::right(std::to_string(hr + 100), 2) + basic::right(newt, 3)).substr(0, 6);
 		}
 	}
+L_10000:
 	return newt.substr(0, 6);
 }
