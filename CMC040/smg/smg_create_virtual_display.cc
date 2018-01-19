@@ -20,7 +20,7 @@ long smg$create_virtual_display(
 	display.rows = rows;
 	display.cols = cols;
 
-	if (flags & SMG$M_BOLD)
+	if (flags & SMG$M_BORDER)
 	{
 		display.border = 1;
 	}
