@@ -21,6 +21,10 @@ long smg$put_chars(
 	{
 		wattron(display.win, A_BOLD);
 	}
+	if (flags & SMG$M_REVERSE)
+	{
+		wattron(display.win, A_REVERSE);
+	}
 
 #if 1
 	mvwaddstr(display.win,
@@ -38,5 +42,9 @@ long smg$put_chars(
 	if (flags & SMG$M_BOLD)
 	{
 		wattroff(display.win, A_BOLD);
+	}
+	if (flags & SMG$M_REVERSE)
+	{
+		wattroff(display.win, A_REVERSE);
 	}
 }

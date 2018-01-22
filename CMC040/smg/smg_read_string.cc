@@ -42,13 +42,13 @@ long smg$read_string(
 			if (retstring.size() >= xlen)
 			{
 				retchar = ch;
-				return 0;
+				return 1;
 			}
 		}
 		else
 		{
 			retchar = ch;
-			return ch;
+			return 1;
 		}
 	}
 }

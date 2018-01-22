@@ -152,7 +152,9 @@ std::string entr_3string(
 	//
 	if ((op_cpos != "") && ((op_flag & 64) == 0))
 	{
-		smg_status = smg$put_chars(xx_vdid, basic::Format(gets, t_format), xpos, ypos, 0, SMG$M_REVERSE);
+		smg_status = smg$put_chars(xx_vdid,
+			basic::Format(gets, t_format), xpos, ypos, 0,
+			SMG$M_REVERSE);
 	}
 	//
 	// Initilization/prompt

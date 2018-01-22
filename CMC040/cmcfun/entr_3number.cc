@@ -179,7 +179,7 @@ L_130:;
 	// Initilize default value
 	//
 	gets1 = std::to_string(func_round(gets * pow(10.0, xlen2), 0));
-	gets1 = gets1 + std::string(op_xformat.size() - gets1.size(), ' ');
+	gets1.resize(op_xformat.size(), ' ');
 	//
 L_1000:;
 	// Initilization/prompt
@@ -241,7 +241,8 @@ L_1000:;
 	if (basic::edit(test_format, -1).substr(0, 1) == "%")
 	{
 		help_34message(scope, "number out of range", "W", "ENTR_3NUMBER", "", "ILLNUMBER");
-		gets1 = gets_V2 + std::string(op_xformat.size() - gets_V2.size(), ' ');
+		gets1 = gets_V2;
+		gets1.resize(op_xformat.size(), ' ');
 		goto L_1000;
 	}
 	//
@@ -286,7 +287,8 @@ illnum:;
 	//	.x Number
 	//
 	// --
-	gets1 = gets_V2 + std::string(op_xformat.size() - gets_V2.size(), ' ');
+	gets1 = gets_V2;
+	gets1.resize(op_xformat.size(), ' ');
 	goto L_1000;
 	//*******************************************************************
 L_18900:;
