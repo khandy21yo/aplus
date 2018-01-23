@@ -13,6 +13,8 @@ long smg$set_cursor_abs(
 	long col)
 {
 	wmove(display.win, row + display.border, col + display.border);
+	update_panels();
+	doupdate();
 }
 
 

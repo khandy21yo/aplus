@@ -15,13 +15,6 @@
 #include "smg/smg.h"
 
 /*
- * External functions
- */
-/* int entr_4entry(); */
-/* int entr_3entrystring(); */
-/* int entr_4specialkeys(); */
-
-/*
  * Prototypes
  */
 static void DisplayText(char *work, int xlen, char blank_char,
