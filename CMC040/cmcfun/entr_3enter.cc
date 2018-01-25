@@ -288,7 +288,7 @@ long entr_3enter(
 		case SMG$K_TRM_DELETE:
 			if (cxpos > 0)
 			{
-				work.erase(cxpos, 1);
+				work.erase(cxpos - 1, 1);
 				work.resize(xlen, ' ');
 
 				cxpos--;
