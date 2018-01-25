@@ -117,6 +117,15 @@ public:
 	std::string label;	//!< Border label
 
 public:
+	//! \brief Constructor
+	smg_display_id(void)
+	{
+		border = 0;
+		win = 0;
+		panel = 0;
+		rows = 0;
+		cols = 0;
+	}
 	//! \brief assignment operator
 	smg_display_id & operator=(const smg_display_id &xid)
 	{

@@ -17,7 +17,7 @@
 /*
  * Prototypes
  */
-static void DisplayText(char *work, int xlen, char blank_char,
+static void DisplayText(std::string &work, int xlen, char blank_char,
 	smg_display_id &xx_vdid, long cposy, long cposx, long cxpos);
 static void strinsert(char str[], int shift, int xlen);
 
@@ -72,20 +72,20 @@ long entr_3enter(
 	int cxpos;
 	int nocr;
 	char blank_char;
-	char work[132];
+	std::string work;
 	int i;
 	long getc;
 	long junk;
 	long readcount;
 	std::string xwork1;
-	char work1[132];
+	std::string work1;
 
  l500:
 	/*
 	 * Initilize information
 	 */
 	xlen = xstr.size();			/* Length of string */
-	strcpy(work, xstr.c_str());
+	work = xstr;
 						/* Force different copy */
 	clearflag = (start == -1);		/* Zero input string? */
 
@@ -153,114 +153,60 @@ long entr_3enter(
 		}
 	}
 
-	if (readcount <= 1)
+	update_panels();
+	doupdate();
+
+	/*
+	 * Get one character
+	 */
+	getc = entr_4entry(scope, xx_vdid, (256 | flag));
+
+	/*
+	 * Handle special characters
+	 */
+	if ((getc < 32) ||
+		((getc >= 127) && (getc < 160)) || (getc >= 255))
 	{
-		/*
-		 * Get one character
-		 */
-		getc = entr_4entry(scope, xx_vdid, (256 | flag));
-
-		/*
-		 * Handle special characters
-		 */
-		if ((getc < 32) ||
-			((getc >= 127) && (getc < 160)) || (getc >= 255))
-		{
-			/* Do Nothing (if statement backwards now) */
-		}
-		else
-		{
-			/*
-			 * First character typed may blank out entire field
-			 */
-			if (clearflag)
-			{
-				/*
-				 * Blank it out
-				 */
-				strnset(work, ' ', xlen);
-			}
-
-			/*
-			 * If too many characters have been typed
-			 */
-			if (cxpos >= xlen)
-			{
-				smg$ring_bell(scope.smg_kbid);
-			}
-			else
-			{
-				strinsert(work + cxpos, 1, xlen - cxpos);
-				if (flag & 16)
-				{
-					work[cxpos++] = toupper(getc);
-				}
-				else
-				{
-					work[cxpos++] = getc;
-				}
-			}
-			getc = 0;
-
-			/*
-			 * Display changed text
-			 */
-			DisplayText(work, xlen, blank_char, xx_vdid,
-				cposy, cposx, cxpos);
-
-		}
+		/* Do Nothing (if statement backwards now) */
 	}
 	else
 	{
 		/*
-		 * Allocate dynamic string descriptor
-		 */
-		xwork1 = std::string(readcount, ' ');
-
-		/*
-		 * Grab a bunch of characters
-		 */
-		junk = 256 | flag;
-
-		getc = entr_3entrystring(scope, xx_vdid,
-			junk, readcount, xwork1);
-
-		readcount = xwork1.size();
-
-		/*
 		 * First character typed may blank out entire field
 		 */
-		if (clearflag != 0)
+		if (clearflag)
 		{
 			/*
 			 * Blank it out
 			 */
-			strnset(work, ' ', xlen);
+			work = std::string(xlen, ' ');
 		}
 
 		/*
-		 * Insert characters into string (If non-zero)
+		 * If too many characters have been typed
 		 */
-		if (xwork1.size() != 0)
+		if (cxpos >= xlen)
 		{
-			strinsert(work + cxpos,
-				readcount,
-				xlen - cxpos);
-			for (i = 0; i < readcount; i++)
+			smg$ring_bell(scope.smg_kbid);
+		}
+		else
+		{
+			if (flag & 16)
 			{
-				work[cxpos++] = xwork1[i];
+				getc = toupper(getc);
 			}
-
+			work.insert(cxpos, 1, getc);
+			work.resize(xlen, ' ');
+			cxpos++;
 		}
+		getc = 0;
 
-		if ((clearflag != 0) || (xwork1.size() != 0))
-		{
-			/*
-			 * Display changed text
-			 */
-			DisplayText(work, xlen, blank_char, xx_vdid,
-				cposy, cposx, cxpos);
-		}
+		/*
+		 * Display changed text
+		 */
+		DisplayText(work, xlen, blank_char, xx_vdid,
+			cposy, cposx, cxpos);
+
 	}
 
 	/*
@@ -290,7 +236,7 @@ long entr_3enter(
 		 */
 		case SMG$K_TRM_CTRLE:
 			cxpos = xlen;
-			while ((cxpos > 0) && (work[cxpos-1] == ' '))
+			while ((cxpos > 0) && (work[cxpos - 1] == ' '))
 			{
 				cxpos--;
 			}
@@ -342,11 +288,8 @@ long entr_3enter(
 		case SMG$K_TRM_DELETE:
 			if (cxpos > 0)
 			{
-				for (i = cxpos-1; i<=xlen-2; i++)
-				{
-					work[i] = work[i+1];
-				}
-				work[xlen-1] = ' ';
+				work.erase(cxpos, 1);
+				work.resize(xlen, ' ');
 
 				cxpos--;
 
@@ -360,11 +303,8 @@ long entr_3enter(
 		 */
 		case SMG$K_TRM_F12:
 		case SMG$K_TRM_CTRLU:
-			for (i = cxpos; i<=xlen-1; i++)
-			{
-				work[i-cxpos] = work[i];
-			}
-			strnset(work + xlen - cxpos, ' ', cxpos + 1);
+			work.erase(0, cxpos);
+			work.resize(xlen, ' ');
 			cxpos = 0;
 			goto l1000;
 
@@ -381,11 +321,8 @@ long entr_3enter(
 			{
 				junk--;
 			}
-			for (i = junk; i<=cxpos; i++)
-			{
-				work[i] = work[i+cxpos-junk];
-			}
-			strnset(work + xlen - (cxpos - junk), ' ', cxpos - junk);
+			work.erase(junk + 1, cxpos - junk);
+			work.resize(xlen, ' ');
 
 			cxpos = junk;
 			goto l1000;
@@ -423,43 +360,42 @@ long entr_3enter(
  * Internal function to output the text onto the screen, converting
  * the trailing characters to underscores if necessary.
  */
-static void DisplayText(char *work, int xlen, char blank_char,
-	smg_display_id &xx_vdid, long cposy, long cposx, long cxpos)
+static void DisplayText(
+	std::string &work,
+	int xlen,
+	char blank_char,
+	smg_display_id &xx_vdid,
+	long cposy,
+	long cposx,
+	long cxpos)
 {
-	char work1[132];
-	std::string xwork1;
+	std::string work1;
 	int i;
 
 	/*
 	 * Create a working copy
 	 */
-	strncpy(work1, work, xlen);
+	work1 = work;
 
 	/*
 	 * Convert trailing spaces to the specified blank charactwr
 	 */
 	if (blank_char != ' ')
 	{
-		for (i = xlen-1; i>=0; i--)
+		for (i = xlen - 1;
+			(i >= 0) && (work1[i] == ' ') && (i >= cxpos);
+			i--)
 		{
-			if ((work1[i] == ' ') && (i >= cxpos))
-				work1[i] = blank_char;
-			else
-				break;
+			work1[i] = blank_char;
 		}
 	}
-
-	/*
-	 * Create string descriptor
-	 */
-	xwork1 = work1;
 
 	/*
 	 * Write out string
 	 */
 	smg$put_chars(
 		xx_vdid,
-		xwork1,
+		work1,
 		cposy,
 		cposx
 	);
