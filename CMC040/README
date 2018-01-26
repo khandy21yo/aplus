@@ -5,10 +5,8 @@ change radically at any time. Much of the code will be disabled while other
 parts are being worked on.
 
 Much of the code has been translated using btran
-(http://github.com/khandy21yo/btran.git), and requires the libraryies and headers
-that it supplies. An example translation command is
-
-~/btran/src/btran ../../CMC030/tk/source/tk_spec_checkline.bas  > tk_spec_checkline.cc
+(http://github.com/khandy21yo/btran.git), and requires the libraryies ands
+ headers that it supplies.
 
 Necessary packages required to compile include
 
@@ -24,6 +22,8 @@ Necessary packages required to compile include
 Some of the changes from the VMS version
 
 	Change struct's to classes
+
+	Change character arrays to std::string
 
 	Change array of strings (char *x[])  passed to vector of strings
 	(std::vector<std::string> &x).
