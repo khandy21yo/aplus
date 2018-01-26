@@ -76,7 +76,6 @@ long entr_3enter(
 	int i;
 	long getc;
 	long junk;
-	long readcount;
 	std::string xwork1;
 	std::string work1;
 
@@ -131,27 +130,10 @@ long entr_3enter(
 	/*
 	 * Set current cursor position
 	 */
-	junk = cposx + cxpos;
 	smg$set_cursor_abs(
 		xx_vdid,
 		cposy,
-		junk
-	);
-
- l1110:
-	/*
-	 * Determine how many characters we can snatch at one time
-	 */
-	readcount = xlen - cxpos;
-
-	for (junk = cxpos; junk < xlen; junk++)
-	{
-		if (work[junk] != ' ')
-		{
-			readcount = 1;
-			break;
-		}
-	}
+		cposx + cxpos);
 
 	update_panels();
 	doupdate();

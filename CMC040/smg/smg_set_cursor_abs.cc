@@ -2,6 +2,8 @@
 //! \brief set cursor position
 //!
 
+#include <iostream>
+#include <assert.h>
 #include "smg/smg.h"
 
 //!
@@ -12,7 +14,16 @@ long smg$set_cursor_abs(
 	long row,
 	long col)
 {
-	wmove(display.win, row + display.border, col + display.border);
+	int status;
+
+	assert(display.win != 0);
+
+	status = wmove(display.win, row + display.border - 1,
+		col + display.border - 1);
+	top_panel(display.panel);
+
+	assert (status != ERR);
+
 	update_panels();
 	doupdate();
 }
