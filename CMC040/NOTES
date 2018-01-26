@@ -1,0 +1,7 @@
+NOTES for problems I may need later.
+
+To move the physical cursor to the correct window, call top_pabel();
+
+To resize the screen, see resizeterm(). I don't know it it works ons
+ a real terminal.
+
