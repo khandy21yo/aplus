@@ -124,7 +124,7 @@ long dspl_scroll(
 		line = smg_scroll.scroll_top +
 			(smg_scroll.cur_line - smg_scroll.top_line);
 
-		smg$put_chars(smg_scroll.window, spaces,
+		smg$put_chars(*smg_scroll.window, spaces,
 			line, 1);
 	}
 
@@ -233,7 +233,7 @@ long dspl_scroll(
 		line = smg_scroll.scroll_top +
 			smg_scroll.cur_line - smg_scroll.top_line;
 
-		smg$put_chars(smg_scroll.window, spaces,
+		smg$put_chars(*smg_scroll.window, spaces,
 			line, 1, 0, SMG$M_BOLD);
 	}
 
@@ -334,7 +334,7 @@ static void doscroll(smg_scroll_cdd &smg_scroll, int newtop)
 	 */
 	if ((change > 0) && (change <= screenlines))
 	{
-		smg$scroll_display_area(smg_scroll.window,
+		smg$scroll_display_area(*smg_scroll.window,
 			smg_scroll.scroll_top,
 			1,
 			screenlines,
@@ -351,7 +351,7 @@ static void doscroll(smg_scroll_cdd &smg_scroll, int newtop)
 	if ((change < 0) && (-change <= screenlines))
 	{
 		change = -change;
-		smg$scroll_display_area(smg_scroll.window,
+		smg$scroll_display_area(*smg_scroll.window,
 			smg_scroll.scroll_top,
 			1,
 			screenlines,
@@ -387,7 +387,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 	/*
 	 * Turn on display update
 	 */
-	smg$begin_display_update(smg_scroll.window);
+	smg$begin_display_update(*smg_scroll.window);
 
 	/*
 	 * Paint all lines
@@ -442,7 +442,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 		/*
 		 * Output the line
 		 */
-		status = smg$erase_line(smg_scroll.window, row, 1);
+		status = smg$erase_line(*smg_scroll.window, row, 1);
 
 		if (((smg_scroll.smg_flag & 1) != 0) && (text.size() != 0))
 		{
@@ -450,7 +450,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 			length = text.size();
 
 			smg_put_virtual_display_encoded(
-				smg_scroll.window,
+				*smg_scroll.window,
 				length,
 				text,
 				row,
@@ -461,7 +461,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 		}
 		else
 		{
-			status = smg$put_chars(smg_scroll.window,
+			status = smg$put_chars(*smg_scroll.window,
 				text,
 				row,
 				leaderone,
@@ -477,7 +477,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 	 */
 	if (smg_scroll.draw_cols[0] != ' ')
 	{
-		smg$get_display_attr(smg_scroll.window, &height, &width);
+		smg$get_display_attr(*smg_scroll.window, &height, &width);
 
 		for (lineloop = 0;
 			(lineloop < smg_scroll.draw_cols.size()) &&
@@ -491,7 +491,7 @@ static void dopaint(smg_scroll_cdd &smg_scroll,
 	/*
 	 * Turn off display update
 	 */
-	smg$end_display_update(smg_scroll.window);
+	smg$end_display_update(*smg_scroll.window);
 }
 
 static void drawline(smg_scroll_cdd &smg_scroll,
@@ -513,5 +513,5 @@ static void drawline(smg_scroll_cdd &smg_scroll,
 	/*
 	 * Display line
 	 */
-	smg$draw_line(smg_scroll.window, 1, column, height, column);
+	smg$draw_line(*smg_scroll.window, 1, column, height, column);
 }

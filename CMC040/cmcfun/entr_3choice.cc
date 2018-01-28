@@ -314,7 +314,7 @@ L_20:;
 		smg_status = smg$put_chars(smg_choice, title, 1, 1);
 		smg_status = smg$draw_line(smg_choice, 2, 1, 2, wcols);
 	}
-	smg_scroll.window = smg_choice;
+	smg_scroll.window = &smg_choice;
 	smg_scroll.scroll_top = 3;
 	if (flag & 16)
 	{

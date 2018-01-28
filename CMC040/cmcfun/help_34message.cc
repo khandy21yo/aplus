@@ -103,11 +103,11 @@ void help_34message(
 	//
 	default_lib = "REF:HELP_DEFAULT";
 	// Save the COMMON Ident
-	old_help_severity = scope.prg_ident + "";
+	old_help_severity = scope.prg_ident;
 	// Save the COMMON program name
-	old_program = scope.prg_program + "";
+	old_program = scope.prg_program;
 	// Save the COMMON item
-	old_help_item = scope.prg_item + "";
+	old_help_item = scope.prg_item;
 	// Make copies of the parameters, because if help is called using
 	// map information, and help changes them, the calling variables
 	// will (magically) change at the same time.
@@ -129,7 +129,8 @@ void help_34message(
 	}
 	else
 	{
-		text = boost::trim_right_copy(s_help_filename) + " " + boost::trim_right_copy(messages);
+		text = boost::trim_right_copy(s_help_filename) + " " +
+			boost::trim_right_copy(messages);
 	}
 	severity = s_help_severity.substr(0, 1);
 	// ** Converted from a select statement **
@@ -151,6 +152,7 @@ void help_34message(
 		smg_status = smg$set_cursor_mode(scope.smg_pbid, SMG$M_CURSOR_OFF);
 		//
 		// Just display (don't stop)
+		//
 		entr_3message(scope, text, 1 + 16);
 		goto restorescope;
 	}
@@ -164,10 +166,10 @@ void help_34message(
 	//
 	// Create virtual display
 	//
-	smg_status = smg$create_virtual_display(20, 132, svd);
-	smg_status = smg$create_virtual_display(1, 132, scope.smg_option);
-	smg_status = smg$create_virtual_display(2, 132, scope.smg_message, SMG$M_BORDER);
-	smg_scroll.window = svd;
+	smg_status = smg$create_virtual_display(20, COLS, svd);
+	smg_status = smg$create_virtual_display(1, COLS, scope.smg_option);
+	smg_status = smg$create_virtual_display(2, COLS, scope.smg_message);
+	smg_scroll.window = &svd;
 	smg_scroll.scroll_top = 3;
 	smg_scroll.scroll_bot = 20;
 	smg_scroll.top_array = 1;
@@ -196,12 +198,15 @@ void help_34message(
 	{
 		lib_file = s_help_program;
 	}
-	lib_file = orig_lib = std::string("REF:HELP_") + lib_file.substr(0, under - 1);
+	orig_lib = std::string("REF:HELP_") + lib_file.substr(0, under - 1);
+	lib_file = orig_lib;
 	//
 	// What is the key name
 	//
-	key1 = (severity + "$" + s_help_program + "$" + s_help_filename + s_help_item).substr(0, 39);
-	key2 = (severity + "$" + s_help_filename + "$" + s_help_item).substr(0, 39);
+	key1 = (severity + "$" + s_help_program + "$" + s_help_filename +
+		s_help_item).substr(0, 39);
+	key2 = (severity + "$" + s_help_filename + "$" +
+		s_help_item).substr(0, 39);
 	key3 = (severity + "$$" + s_help_item).substr(0, 39);
 	//
 	// Load array and print it to the virtual display
@@ -216,7 +221,8 @@ void help_34message(
 		smg_status = smg$paste_virtual_display(svd, scope.smg_pbid, 1, 1);
 		smg_status = smg$paste_virtual_display(scope.smg_option, scope.smg_pbid, 21, 1);
 	}
-	smg_status = smg$paste_virtual_display(scope.smg_message, scope.smg_pbid, 23, 1);
+	smg_status = smg$paste_virtual_display(scope.smg_message,
+		scope.smg_pbid, 23, 1);
 menu:;
 	//
 	// Display desired message
@@ -232,13 +238,15 @@ menu:;
 	}
 	else
 	{
-		entr_3message(scope, std::string("%") + o_help_program + "-" + severity + "-" + s_help_item + ", " + text, 4 + 8);
+		entr_3message(scope, std::string("%") + o_help_program + "-" +
+			severity + "-" + s_help_item + ", " + text, 4 + 8);
 	}
 	// ** Converted from a select statement **
 	//
 	// ^C
 	//
-	if ((scope.scope_exit == SMG$K_TRM_CTRLC) || (scope.scope_exit == SMG$K_TRM_F11))
+	if ((scope.scope_exit == SMG$K_TRM_CTRLC) ||
+		(scope.scope_exit == SMG$K_TRM_F11))
 	{
 		//
 		// Print the array

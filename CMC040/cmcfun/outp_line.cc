@@ -570,7 +570,7 @@ pauseloop:;
 			//
 			// Create SMG_SCROLL array
 			//
-			smg_scroll.window = utl_reportx.window;
+			smg_scroll.window = &utl_reportx.window;
 			smg_scroll.scroll_top = junk1 - junk_V2;
 			smg_scroll.scroll_bot = 20;
 			smg_scroll.top_array = 1;

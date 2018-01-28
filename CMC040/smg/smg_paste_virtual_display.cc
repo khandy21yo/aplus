@@ -2,6 +2,7 @@
 //! \brief Paste virtual display
 //!
 
+#include <assert.h>
 #include "smg/smg.h"
 
 //!
@@ -20,7 +21,12 @@ long smg$paste_virtual_display(
 		display.cols + display.border * 2,
 		row - display.border - 1,
 		col - display.border - 1);
+
+	assert(display.win != 0);
+
 	display.panel = new_panel(display.win);
+
+	assert(display.panel != 0);
 
 	smg_xxx_draw_border(display);
 

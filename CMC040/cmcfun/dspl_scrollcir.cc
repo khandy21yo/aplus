@@ -145,7 +145,7 @@ long dspl_scrollcir(
 	/*
 	 * Return the attributes of a virtual display
 	 */
-	smg_status = smg$get_display_attr(smg_scroll.window,
+	smg_status = smg$get_display_attr(*smg_scroll.window,
 		&height, &width);
 
 	/*
@@ -157,7 +157,7 @@ long dspl_scrollcir(
 
 		line = vcurl - vtopl + smg_scroll.scroll_top;
 
-		smg$put_chars(smg_scroll.window, spaces,
+		smg$put_chars(*smg_scroll.window, spaces,
 			line, one);
 	}
 
@@ -287,7 +287,7 @@ exitprogram:
 
 		line = vfind - vtopl + smg_scroll.scroll_top;
 
-		smg$put_chars(smg_scroll.window, spaces,
+		smg$put_chars(*smg_scroll.window, spaces,
 			line, one, zero, smgmbold);
 	}
 
@@ -329,8 +329,8 @@ static void paintwindow(smg_scroll_cdd &smg_scroll,
 	{
 		bot = vend;
 	}
-	smg_status = smg$begin_display_update(smg_scroll.window);
-	smg_status = smg$erase_display(smg_scroll.window);
+	smg_status = smg$begin_display_update(*smg_scroll.window);
+	smg_status = smg$erase_display(*smg_scroll.window);
 
 	for (i = *vtopl; i <= bot; i++)
 	{
@@ -338,7 +338,7 @@ static void paintwindow(smg_scroll_cdd &smg_scroll,
 		printline(smg_scroll, rows, leader, i, smg_array,
 			height, width);
 	}
-	smg_status = smg$end_display_update(smg_scroll.window);
+	smg_status = smg$end_display_update(*smg_scroll.window);
 }
 
 /*
@@ -360,13 +360,13 @@ static void printline(smg_scroll_cdd &smg_scroll,
 	{
 		tlen = text.size();
 		smg_status =
-			smg_put_virtual_display_encoded(smg_scroll.window, 
+			smg_put_virtual_display_encoded(*smg_scroll.window, 
 			tlen,
 			text, rows, leader1, zero, zero, zero);
 	}
 	else
 	{
-		smg_status = smg$put_chars(smg_scroll.window,
+		smg_status = smg$put_chars(*smg_scroll.window,
 			text,
 			rows,
 			leader1,
@@ -381,7 +381,7 @@ static void printline(smg_scroll_cdd &smg_scroll,
 	 */
 	if (smg_scroll.smg_flag & 2)
 	{
-		smg$get_display_attr(smg_scroll.window, &height, &width);
+		smg$get_display_attr(*smg_scroll.window, &height, &width);
 
 		for (lineloop = 0;
 			(lineloop < sizeof(smg_scroll.draw_cols)) &&
@@ -513,5 +513,5 @@ static void drawline(
 	/*
 	 * Display line
 	 */
-	smg$draw_line(smg_scroll.window, one, column, height, column);
+	smg$draw_line(*smg_scroll.window, one, column, height, column);
 }

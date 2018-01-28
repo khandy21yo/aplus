@@ -17,12 +17,19 @@ long smg$create_virtual_display(
 	long b,			//!< ??
 	long c)			//!< Flags applied to screm
 {
+	display.win = 0;
+	display.panel = 0;
 	display.rows = rows;
 	display.cols = cols;
+	display.label = "";
 
 	if (flags & SMG$M_BORDER)
 	{
 		display.border = 1;
+	}
+	else
+	{
+		display.border = 0;
 	}
 	return 1;
 }

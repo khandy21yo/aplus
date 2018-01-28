@@ -13,8 +13,10 @@
 class smg_scroll_cdd
 {
 public:
-	/* This is the window Virtual Display ID */
-	smg_display_id window;
+	//! This is a pointer to the window Virtual Display ID
+	//! We use a pointer here because otherwise we have two defining
+	//! structures for the window. This one and the original one.
+	smg_display_id *window;
 
 	/* The top row of the scrolling region within the window. */
 	long scroll_top;

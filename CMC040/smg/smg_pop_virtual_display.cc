@@ -14,7 +14,10 @@ long smg$pop_virtual_display(
 	smg_display_id &display,	//!< Display to pop
 	smg_pasteboard_id &pbid)	//!< Pasteboard to pop from
 {
-	assert (display.panel != 0);
+//	if (display.panel == 0)
+//	{
+//		return 0;
+//	}
 
 	if (display.panel != 0)
 	{
