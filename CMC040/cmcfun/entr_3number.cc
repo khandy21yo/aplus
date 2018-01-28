@@ -156,15 +156,15 @@ L_130:;
 	// Set up a format string to enter a number. Allow maximum
 	// display to be 999999999.<xlen>
 	//
-	junk = (op_xformat.find(".", 0) + 1);
+	junk = op_xformat.find(".", 0);
 	xlen2 = 0;
 	if (junk)
 	{
-		for (i = junk + 1; i <= op_xformat.size(); i++)
+		for (i = junk; i < op_xformat.size(); i++)
 		{
-			if (basic::mid(op_xformat, i, 1) == "#")
+			if (op_xformat[i] == '#')
 			{
-				xlen2 = xlen2 + 1;
+				xlen2++;
 			}
 		}
 	}
@@ -173,7 +173,9 @@ L_130:;
 	//
 	if ((op_cpos != "") && ((op_flag & 64) == 0))
 	{
-		smg_status = smg$put_chars(xx_vdid, basic::Format(gets, op_xformat), xpos, ypos, 0, SMG$M_REVERSE);
+		smg_status = smg$put_chars(xx_vdid,
+			basic::Format(gets, op_xformat), xpos, ypos, 0,
+			SMG$M_REVERSE);
 	}
 	//
 	// Initilize default value
@@ -190,7 +192,7 @@ L_1000:;
 	//
 	// Normal entry
 	//
-	gets_V2 = gets1 + "";
+	gets_V2 = gets1;
 	zz = -1;
 	temp = entr_3enter(scope, scope.smg_option, 1, y1pos, gets_V2, zz, op_flag);
 	switch (scope.scope_exit)

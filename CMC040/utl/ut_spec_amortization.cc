@@ -289,7 +289,8 @@ changer:;
 		//*****************************************************
 		// Change information on the screen
 		//*****************************************************
-		loop = entr_3number(scope, scope.smg_option, "", "Item to change", 0.0, 4, "##", junk);
+		loop = entr_3number(scope, scope.smg_option, "",
+			"Item to change", 0.0, 4, "##", junk);
 		// ** Converted from a select statement **
 		//
 		// Control c
@@ -613,7 +614,8 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		amo_item = entr_3number(scope, smg_view, "4;7", "Loan ", amo_item, flag, "###,###,###.##", deflt);
+		amo_item = entr_3number(scope, smg_view, "4;7", "Loan ",
+			amo_item, flag, "###,###,###.##", deflt);
 		break;
 
 	case 3:
@@ -632,7 +634,8 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		ra_item = entr_3number(scope, smg_view, "7;13", "Rate ", ra_item, flag, "##.##", deflt);
+		ra_item = entr_3number(scope, smg_view, "7;13",
+			"Rate ", ra_item, flag, "##.##", deflt);
 		break;
 
 	case 4:
@@ -650,7 +653,8 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		py_item = entr_3number(scope, smg_view, "10;14", "Periods ", py_item * 1.0, flag, "###", deflt);
+		py_item = entr_3number(scope, smg_view, "10;14",
+			"Periods ", py_item * 1.0, flag, "###", deflt);
 		break;
 
 	case 5:
@@ -665,7 +669,8 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		tp_item = entr_3number(scope, smg_view, "13;14", "Periods ", tp_item * 1.0, flag, "###", deflt);
+		tp_item = entr_3number(scope, smg_view, "13;14",
+			"Periods ", tp_item * 1.0, flag, "###", deflt);
 		break;
 
 	case 6:
@@ -680,7 +685,8 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		pamo_item = entr_3number(scope, smg_view, "7;47", "Payment ", pamo_item, flag, "###,###,###.##", deflt);
+		pamo_item = entr_3number(scope, smg_view, "7;47",
+			"Payment ", pamo_item, flag, "###,###,###.##", deflt);
 		break;
 
 	case 7:
@@ -712,7 +718,8 @@ dataentry:;
 		//	.lm -5
 		//
 		// --
-		j_item = entr_3number(scope, smg_view, "13;54", "Number ", j_item * 1.0, flag, "###", deflt);
+		j_item = entr_3number(scope, smg_view, "13;54",
+			"Number ", j_item * 1.0, flag, "###", deflt);
 		break;
 
 	}
