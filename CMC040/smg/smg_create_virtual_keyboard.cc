@@ -12,4 +12,5 @@
 long smg$create_virtual_keyboard(
 	smg_keyboard_id &kbid)
 {
+	return 1;
 }

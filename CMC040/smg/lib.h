@@ -1,7 +1,7 @@
 //! \file
 //! \brief Library functions
 //!
-#ifndef _libmg_h_
+#ifndef _lib_h_
 #define _lib_h_
 
 #include <string>
@@ -55,6 +55,7 @@ static inline int lib$spawn(
 	const std::string &command)	//!< Command to execute
 {
 	system(command.c_str());
+	return 1;
 }
 #endif
 

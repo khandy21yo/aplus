@@ -54,6 +54,7 @@ int db_connection::connect()
 		exit(EXIT_FAILURE);
 	}
 	isconnected = true;
+	return 0;
 }
 
 //
@@ -62,6 +63,7 @@ int db_connection::connect()
 int db_connection::disconnect()
 {
 	PQfinish(dbh);
+	return 0;
 }
 
 // ************************************************

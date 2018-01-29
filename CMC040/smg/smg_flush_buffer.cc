@@ -12,4 +12,5 @@ long smg$flush_buffer(
 {
 	update_panels();
 	doupdate();
+	return 1;
 }

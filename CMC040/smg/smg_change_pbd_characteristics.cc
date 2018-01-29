@@ -24,5 +24,6 @@ int smg$change_pbd_characteristics(
 	{
 		*smg_cols = COLS;
 	}
+	return 1;
 }
 

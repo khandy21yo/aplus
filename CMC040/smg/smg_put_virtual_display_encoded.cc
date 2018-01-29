@@ -26,6 +26,7 @@ long smg_put_virtual_display_encoded(
 		row + display.border,
 		col + display.border,
 		text.c_str());
+	return 1;
 }
 
 

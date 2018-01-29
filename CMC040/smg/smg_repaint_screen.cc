@@ -13,4 +13,5 @@ long smg$repaint_screen(
 	// \TODO How do you force curses to redraw everything
 	update_panels();
 	doupdate();
+	return 1;
 }

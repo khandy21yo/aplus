@@ -16,6 +16,7 @@ long smg$end_display_update(
 {
 	update_panels();
 	doupdate();
+	return 1;
 }
 
 

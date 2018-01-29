@@ -33,7 +33,7 @@ void entr_3badkey(
 	std::string p5 = "";
 	std::string p6 = "INVKEY";
 
-	bv = abs(bad_value);
+	bv = labs(bad_value);
 
 	switch(bv)
 	{
@@ -160,47 +160,40 @@ void entr_3badkey(
 		default:
 			if (bv >= 1 && bv <= 26)
 			{
-				sprintf(str1, "Control/%c", bv + 64);
-				xkey = str1;
+				xkey = std::string("Control/") + char(bv + 64);
 				break;
 			}
 
 			if (bv >= 32 && bv <= 126)
 			{
-				sprintf(str1, "%c", bv);
-				xkey = str1;
+				xkey = char(bv);
 				break;
 			}
 
 			if (bv >= 257 && bv <= 259)
 			{
-				sprintf(str1, "PF%d", bv-255);
-				xkey = str1;
+				xkey = "PF" + std::to_string( bv-255);
 				break;
 			}
 
 			if (bv >= 281 && bv <= 300)
 			{
-				sprintf(str1, "F%d", bv-280);
-				xkey = str1;
+				xkey = std::string("F") +
+					std::to_string(bv - 280);
 				break;
 			}
 
-			sprintf(str1, "Scancode %d", bv);
-			xkey = str1;
+			xkey = std::string("Scancode ") +
+				std::to_string(bv);
 			break;
 	}
 
 	if (bad_value < 0)
 	{
-		sprintf(str2, "Gold/%s", xkey);
-		xkey = str2;
+		xkey = "Gold/" + xkey;
 	}
 
-
-	sprintf(str3, "<%s> invalid key here", xkey);
-
-	message = str3;
+	message = "<" + xkey + "> invalid key here";
 
 	help_34message(scope, message, p3, p4, p5, p6);
 }

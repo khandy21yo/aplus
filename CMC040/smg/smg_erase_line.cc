@@ -13,5 +13,6 @@ long smg$erase_line(
 {
 	wmove(window.win, row + window.border, col + window.border);
 	wclrtoeol(window.win);
+	return 1;
 }
 

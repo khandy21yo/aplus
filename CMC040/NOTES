@@ -5,3 +5,15 @@ To move the physical cursor to the correct window, call top_pabel();
 To resize the screen, see resizeterm(). I don't know it it works ons
  a real terminal.
 
+Ro compile in clang
+
+	export CXXFLAGS='-std=c++11 -O0 -g'
+	export CXX=clang++
+	export CC=clang
+
+Problems with BGosub
+
+	1. Confuses the debugger. Loses track of line being exevuted.
+	2.Confuses GCC's optimizer. Variables optimized out that shoulfn't be.
+
+

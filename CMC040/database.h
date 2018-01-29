@@ -101,6 +101,7 @@ public:
 		{
 			connect();
 		}
+		return 0;
 	}
 	//
 	// Connect. Assumes that it is not currently connected.
@@ -118,6 +119,7 @@ public:
 			disconnect();
 		}
 		isconnected = false;
+		return 0;
 	}
 	//
 	// Disconnect. Assumes we are connected.

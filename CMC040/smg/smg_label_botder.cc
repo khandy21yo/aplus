@@ -15,5 +15,6 @@ long smg$label_border(
 	long label_pos)			//!< Position of label
 {
 	display.label = label;
+	return 1;
 }
 

@@ -47,4 +47,5 @@ long smg$put_chars(
 	{
 		wattroff(display.win, A_REVERSE);
 	}
+	return 1;
 }

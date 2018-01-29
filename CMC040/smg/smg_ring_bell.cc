@@ -11,5 +11,6 @@ long smg$ring_bell(
 	smg_keyboard_id &vdid)
 {
 	beep();
+	return 1;
 }
 

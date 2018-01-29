@@ -31,6 +31,7 @@ static inline long lbr$close(
 	lbr_index_cdd &lr_index)	//!< Control structure
 {
 	// Don't really need to do anything
+	return 1;
 }
 
 long lbr$get_record(
