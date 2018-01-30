@@ -79,7 +79,6 @@ double entr_3number(
 	const std::string &op_xformat,
 	std::string &op_deflt)
 {
-	double Result;
 	double gets;
 	std::string gets_V2;
 	std::string gets1;
@@ -109,8 +108,6 @@ double entr_3number(
 
 	auto fnrep = [&](std::string orgin, std::string lokfor, std::string repwit)
 	{
-		std::string Result;
-
 l100:;
 		i = (orgin.find(lokfor, 0) + 1);
 		if (i)
@@ -118,8 +115,7 @@ l100:;
 			orgin = orgin.substr(0, i - 1) + repwit + basic::right(orgin, i + 1);
 			goto l100;
 		}
-		Result = orgin;
-		return Result;
+		return orgin;
 	};
 	//
 	// Select value to use
@@ -180,7 +176,7 @@ L_130:;
 	//
 	// Initilize default value
 	//
-	gets1 = std::to_string(func_round(gets * pow(10.0, xlen2), 0));
+	gets1 = std::to_string(long(func_round(gets * pow(10.0, xlen2), 0)));
 	gets1.resize(op_xformat.size(), ' ');
 	//
 L_1000:;
@@ -255,7 +251,6 @@ l3000:;
 	{
 		smg_status = smg$put_chars(xx_vdid, basic::Format(gets, op_xformat), xpos, ypos, 0, SMG$M_BOLD);
 	}
-	Result = gets;
 	//
 	// Return value in OP_DEFLT if supposed to
 	//
@@ -267,7 +262,8 @@ l3000:;
 	// Erase message if there are any
 	//
 	smg_status = smg$erase_display(scope.smg_message);
-	return Result;
+	return gets;
+
 illnum:;
 	help_34message(scope, "illegal number format", "W", "ENTR_3NUMBER", "", "ILLNUMBER");
 	// ++
@@ -297,6 +293,5 @@ L_18900:;
 	// Display error message
 	//*******************************************************************
 	help_34message(scope, std::to_string(0) + " " + basic::ert(0), "E", "ENTR_3NUMBER", "", std::to_string(0));
-	Result = xdeflt;
-	return Result;
+	return xdeflt;
 }
