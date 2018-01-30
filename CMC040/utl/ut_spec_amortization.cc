@@ -138,6 +138,195 @@ int main(
 		Result = (1 - pow(1 + i_V4, -n)) / i_V4;
 		return Result;
 	};
+
+	//******************************************************************
+	// Set initial value
+	//******************************************************************
+	auto setinitial = [&](void)
+	{
+		flagtitle = "Item   Description";
+		flagtype.resize(6);
+		flagtype[0] = "04";
+		flagtype[1] = "02   Present Value";
+		flagtype[2] = "03   Interest  Rate";
+		flagtype[3] = "05   Total Periods";
+		flagtype[4] = "06   Pay Per Period";
+		option_item = "06";
+		amo_item = 0.0;
+		ra_item = 0.0;
+		py_item = 0;
+		tp_item = 0;
+		pamo_item = 0.0;
+		j_item = 0.0;
+		date_item = "        ";
+	};
+
+	auto dataentry = [&](void)
+	{
+		//******************************************************************
+		// Enter/Diaplay items
+		//******************************************************************
+		temp = boost::trim_right_copy(scope.prg_item);
+		scope.prg_item = std::string("FLD") + basic::Format(loop, "<0>##");
+		switch (loop)
+		{
+		case 1:
+
+			// ++
+			// Abstract:FLD001
+			//	.x Field
+			//	^*(01) Field\*
+			//	.b
+			//	.lm +5
+			//	The ^*Field\* enters one of four
+			//	codes indicating which item is to be calculated.
+			//	.b
+			//	Valid codes may be displayed by pressing ^*List Choices\*.
+			//	.lm -5
+			//
+			// --
+			option_item = basic::edit(entr_3stringlist(scope, smg_view,
+				"2;15", "Option ", option_item, flag, "'E", deflt,
+				flagtype, flagtitle, "007"), -1);
+			//**** Fix? ****
+			j = 0;
+			for (i = 1; i <= 4; i++)
+			{
+				if (flagtype[i].substr(0, 2) == option_item)
+				{
+					j = i;
+				}
+			}
+			smg_status = smg$put_chars(smg_view,
+				basic::right(flagtype[j], 3), 2, 18, 0, SMG$M_BOLD);
+			break;
+
+		case 2:
+
+			// ++
+			// Abstract:FLD002
+			//	^*(02) Amount of Loan\*
+			//	.b
+			//	.lm +5
+			//	The ^*Amount of Loan\* field enters
+			//	the amount of an obligation.
+			//	.b
+			//	This field will accommodate a number as large as 99,999,999.99.
+			//	.lm -5
+			//
+			// --
+			amo_item = entr_3number(scope, smg_view, "4;7", "Loan ",
+				amo_item, flag, "###,###,###.##", deflt);
+			break;
+
+		case 3:
+
+			// ++
+			// Abstract:FLD003
+			//	^*(03) Interest Rate\*
+			//	.b
+			//	.lm +5
+			//	The ^*Interest Rate\* field enters
+			//	a periodic interest rate.
+			//	.b
+			//	If the periodic interest rate is to be the same as
+			//	an effective interest rate, there must be only one period
+			//	per year.
+			//	.lm -5
+			//
+			// --
+			ra_item = entr_3number(scope, smg_view, "7;13",
+				"Rate ", ra_item, flag, "##.##", deflt);
+			break;
+
+		case 4:
+
+			// ++
+			// Abstract:FLD004
+			//	^*(04) Period per Year\*
+			//	.b
+			//	.lm +5
+			//	The ^*Period per Year\* field enters
+			//	the number of periods there will be per year.
+			//	.b
+			//	For example, if the present value will be compounded monthly,
+			//	enter 12 periods per year.
+			//	.lm -5
+			//
+			// --
+			py_item = entr_3number(scope, smg_view, "10;14",
+				"Periods ", py_item * 1.0, flag, "###", deflt);
+			break;
+
+		case 5:
+
+			// ++
+			// Abstract:FLD005
+			//	^*(05) Total Periods\*
+			//	.b
+			//	.lm +5
+			//	The ^*Total Periods\* field enters
+			//	the number of periods needed to pay a loan.
+			//	.lm -5
+			//
+			// --
+			tp_item = entr_3number(scope, smg_view, "13;14",
+				"Periods ", tp_item * 1.0, flag, "###", deflt);
+			break;
+
+		case 6:
+
+			// ++
+			// Abstract:FLD006
+			//	^*(06) Payment per Period\*
+			//	.b
+			//	.lm +5
+			//	The ^*Payment per Period\* field enters
+			//	the amount required to be paid each period.
+			//	.lm -5
+			//
+			// --
+			pamo_item = entr_3number(scope, smg_view, "7;47",
+				"Payment ", pamo_item, flag, "###,###,###.##", deflt);
+			break;
+
+		case 7:
+
+			// ++
+			// Abstract:FLD007
+			//	.x Starting Date
+			//	^*(07) Date of the First Payment\*
+			//	.b
+			//	.lm +5
+			//	The ^*Date of the First Payment\* field
+			//	enters the date the first payment is due.
+			//	.lm -5
+			//
+			// --
+			date_item = entr_3date(scope, smg_view, "10;50",
+				"From Date", date_item, flag, "'E", deflt, 8);
+			break;
+
+		case 8:
+
+			// ++
+			// Abstract:FLD008
+			//	^*(08) Payment Number\*
+			//	.b
+			//	.lm +5
+			//	The ^*Payment Number\* field
+			//	enters the payment which is displayed on the
+			//	screen.
+			//	.lm -5
+			//
+			// --
+			j_item = entr_3number(scope, smg_view, "13;54",
+				"Number ", j_item * 1.0, flag, "###", deflt);
+			break;
+
+		}
+		scope.prg_item = temp;
+	};
 	// ++
 	// Abstract:COMMAND
 	//	^*AMORTIZATION\*
@@ -174,7 +363,7 @@ int main(
 	//*******************************************************************
 	read_initialize();
 	report = "UT019";
-	BGosub(setinitial);
+	setinitial();
 	//
 	// Create a display window
 	//
@@ -217,11 +406,11 @@ L_1100:;
 		//*****************************************************
 		// Add new information on the screen
 		//*****************************************************
-		BGosub(setinitial);
+		setinitial();
 		flag = 1;
 		for (loop = 1; loop <= max_item; loop++)
 		{
-			BGosub(dataentry);
+			dataentry();
 		}
 		for (loop = 1; loop <= max_item; loop++)
 		{
@@ -242,7 +431,7 @@ L_1100:;
 			}
 add:;
 			flag = 0;
-			BGosub(dataentry);
+			dataentry();
 			// ** Converted from a select statement **
 			//
 			// Control c
@@ -317,7 +506,7 @@ changer:;
 		}
 changer1:;
 		flag = 0;
-		BGosub(dataentry);
+		dataentry();
 		// ** Converted from a select statement **
 		//
 		// Control c
@@ -521,26 +710,6 @@ exitprogram:;
 	//******************************************************************
 	smg_status = smg$delete_virtual_display(smg_view);
 	subr_3exitprogram(scope, "", "");
-setinitial:;
-	//******************************************************************
-	// Set initial value
-	//******************************************************************
-	flagtitle = "Item   Description";
-	flagtype.resize(6);
-	flagtype[0] = "04";
-	flagtype[1] = "02   Present Value";
-	flagtype[2] = "03   Interest  Rate";
-	flagtype[3] = "05   Total Periods";
-	flagtype[4] = "06   Pay Per Period";
-	option_item = "06";
-	amo_item = 0.0;
-	ra_item = 0.0;
-	py_item = 0;
-	tp_item = 0;
-	pamo_item = 0.0;
-	j_item = 0.0;
-	date_item = "        ";
-	BReturn;
 
 repaint:;
 	//******************************************************************
@@ -560,171 +729,10 @@ repaint:;
 	flag = 1;
 	for (loop = 1; loop <= max_item; loop++)
 	{
-		BGosub(dataentry);
+		dataentry();
 	}
 	BReturn;
 
-dataentry:;
-	//******************************************************************
-	// Enter/Diaplay items
-	//******************************************************************
-	temp = boost::trim_right_copy(scope.prg_item);
-	scope.prg_item = std::string("FLD") + basic::Format(loop, "<0>##");
-	switch (loop)
-	{
-	case 1:
-
-		// ++
-		// Abstract:FLD001
-		//	.x Field
-		//	^*(01) Field\*
-		//	.b
-		//	.lm +5
-		//	The ^*Field\* enters one of four
-		//	codes indicating which item is to be calculated.
-		//	.b
-		//	Valid codes may be displayed by pressing ^*List Choices\*.
-		//	.lm -5
-		//
-		// --
-		option_item = basic::edit(entr_3stringlist(scope, smg_view, "2;15", "Option ", option_item, flag, "'E", deflt, flagtype, flagtitle, "007"), -1);
-		//**** Fix? ****
-		j = 0;
-		for (i = 1; i <= 4; i++)
-		{
-			if (flagtype[i].substr(0, 2) == option_item)
-			{
-				j = i;
-			}
-		}
-		smg_status = smg$put_chars(smg_view, basic::right(flagtype[j], 3), 2, 18, 0, SMG$M_BOLD);
-		break;
-
-	case 2:
-
-		// ++
-		// Abstract:FLD002
-		//	^*(02) Amount of Loan\*
-		//	.b
-		//	.lm +5
-		//	The ^*Amount of Loan\* field enters
-		//	the amount of an obligation.
-		//	.b
-		//	This field will accommodate a number as large as 99,999,999.99.
-		//	.lm -5
-		//
-		// --
-		amo_item = entr_3number(scope, smg_view, "4;7", "Loan ",
-			amo_item, flag, "###,###,###.##", deflt);
-		break;
-
-	case 3:
-
-		// ++
-		// Abstract:FLD003
-		//	^*(03) Interest Rate\*
-		//	.b
-		//	.lm +5
-		//	The ^*Interest Rate\* field enters
-		//	a periodic interest rate.
-		//	.b
-		//	If the periodic interest rate is to be the same as
-		//	an effective interest rate, there must be only one period
-		//	per year.
-		//	.lm -5
-		//
-		// --
-		ra_item = entr_3number(scope, smg_view, "7;13",
-			"Rate ", ra_item, flag, "##.##", deflt);
-		break;
-
-	case 4:
-
-		// ++
-		// Abstract:FLD004
-		//	^*(04) Period per Year\*
-		//	.b
-		//	.lm +5
-		//	The ^*Period per Year\* field enters
-		//	the number of periods there will be per year.
-		//	.b
-		//	For example, if the present value will be compounded monthly,
-		//	enter 12 periods per year.
-		//	.lm -5
-		//
-		// --
-		py_item = entr_3number(scope, smg_view, "10;14",
-			"Periods ", py_item * 1.0, flag, "###", deflt);
-		break;
-
-	case 5:
-
-		// ++
-		// Abstract:FLD005
-		//	^*(05) Total Periods\*
-		//	.b
-		//	.lm +5
-		//	The ^*Total Periods\* field enters
-		//	the number of periods needed to pay a loan.
-		//	.lm -5
-		//
-		// --
-		tp_item = entr_3number(scope, smg_view, "13;14",
-			"Periods ", tp_item * 1.0, flag, "###", deflt);
-		break;
-
-	case 6:
-
-		// ++
-		// Abstract:FLD006
-		//	^*(06) Payment per Period\*
-		//	.b
-		//	.lm +5
-		//	The ^*Payment per Period\* field enters
-		//	the amount required to be paid each period.
-		//	.lm -5
-		//
-		// --
-		pamo_item = entr_3number(scope, smg_view, "7;47",
-			"Payment ", pamo_item, flag, "###,###,###.##", deflt);
-		break;
-
-	case 7:
-
-		// ++
-		// Abstract:FLD007
-		//	.x Starting Date
-		//	^*(07) Date of the First Payment\*
-		//	.b
-		//	.lm +5
-		//	The ^*Date of the First Payment\* field
-		//	enters the date the first payment is due.
-		//	.lm -5
-		//
-		// --
-		date_item = entr_3date(scope, smg_view, "10;50", "From Date", date_item, flag, "'E", deflt, 8);
-		break;
-
-	case 8:
-
-		// ++
-		// Abstract:FLD008
-		//	^*(08) Payment Number\*
-		//	.b
-		//	.lm +5
-		//	The ^*Payment Number\* field
-		//	enters the payment which is displayed on the
-		//	screen.
-		//	.lm -5
-		//
-		// --
-		j_item = entr_3number(scope, smg_view, "13;54",
-			"Number ", j_item * 1.0, flag, "###", deflt);
-		break;
-
-	}
-	scope.prg_item = temp;
-	BReturn;
 
 calcul:;
 	flag = 1;
@@ -741,7 +749,7 @@ calcul:;
 				amo_item = pamo_item * fnani(tp_item, 0.01 * ra_item / py_item);
 			}
 			loop = 2;
-			BGosub(dataentry);
+			dataentry();
 		}
 		else if (option_item == "03")
 		{
@@ -758,7 +766,7 @@ calcul:;
 			}
 			ra_item = delta * py_item * 100.0;
 			loop = 3;
-			BGosub(dataentry);
+			dataentry();
 		}
 		else if (option_item == "05")
 		{
@@ -767,7 +775,7 @@ calcul:;
 				tp_item = -log(1 - amo_item * ra_item * 0.01 / py_item / pamo_item) / log(1 + ra_item * 0.01 / py_item) + 1;
 			}
 			loop = 5;
-			BGosub(dataentry);
+			dataentry();
 			res = 0.0;
 			if (py_item != 0)
 			{
@@ -784,7 +792,7 @@ calcul:;
 				pamo_item = amo_item / fnani(tp_item, ra_item * 0.01 / py_item);
 			}
 			loop = 6;
-			BGosub(dataentry);
+			dataentry();
 		}
 	}
 	catch(basic::BasicError &Be)
