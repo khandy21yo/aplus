@@ -111,8 +111,6 @@ int main(
 	std::vector<std::string> title;
 	long tp_item;
 	std::string junk;
-	BStack(20);
-	OnErrorStack;
 
 	utl_reportx_cdd utl_reportx;
 
@@ -327,6 +325,113 @@ int main(
 		}
 		scope.prg_item = temp;
 	};
+
+
+	auto repsub = [&](void)
+	{
+		if (ra_item != 0.0)
+		{
+			if (j == -1)
+			{
+				ipp = ppp = 0.0;
+				lpp = amo_item;
+				return;
+			}
+			ipp = (func_round(amo_item, 2) *
+				pow(1 + ra_item * 0.01 / py_item, j) -
+				func_round(pamo_item, 2) *
+				fnni(j, ra_item * 0.01 / py_item)) *
+				ra_item * 0.01 / py_item;
+			ppp = func_round(pamo_item, 2) - func_round(ipp, 2);
+			lpp = amo_item * pow(1 + ra_item * 0.01 / py_item, j) -
+				func_round(pamo_item, 2) *
+				fnni(j, ra_item * 0.01 / py_item) - ppp;
+			iid = iid + ipp;
+			pd = pd + ppp;
+		}
+		return;
+	};
+
+	auto calcul = [&](void)
+	{
+		flag = 1;
+		//
+		// Ignore errors (usually caused by fields not filled in)
+		//
+		// ** Converted from a select statement **
+		if (option_item == "02")
+		{
+			if (py_item != 0)
+			{
+				amo_item = pamo_item *
+					fnani(tp_item, 0.01 * ra_item / py_item);
+			}
+			loop = 2;
+			dataentry();
+		}
+		else if (option_item == "03")
+		{
+			ra_item = 0.0008;
+			delta = 0.0008;
+			if (amo_item != 0.0)
+			{
+				delta = pamo_item / amo_item *
+					(pow(1.0 + ra_item, tp_item) - 1.0) /
+					pow(1.0 + ra_item, tp_item);
+			}
+			while (fabs(ra_item - delta) > 0.000001)
+			{
+				ra_item = delta;
+				delta = pamo_item / amo_item *
+					(pow(1.0 + ra_item, tp_item) - 1.0) /
+					pow(1.0 + ra_item, tp_item);
+			}
+			ra_item = delta * py_item * 100.0;
+			loop = 3;
+			dataentry();
+		}
+		else if (option_item == "05")
+		{
+			if (py_item != 0)
+			{
+				tp_item = -log(1 - amo_item * ra_item * 0.01 / py_item / pamo_item) /
+					log(1 + ra_item * 0.01 / py_item) + 1;
+			}
+			loop = 5;
+			dataentry();
+			res = 0.0;
+			if (py_item != 0)
+			{
+				res = amo_item *
+					pow(1 + ra_item * 0.01 / py_item, tp_item) -
+					pamo_item * fnni(tp_item - 1, ra_item * 0.01 / py_item) *
+					(1 + ra_item * 0.01 / py_item);
+			}
+			res_V2 = basic::Format(res, "$###,###,###.##");
+			smg_status = smg$put_chars(smg_view, res_V2, 14, 3);
+			smg_status = smg$put_chars(smg_view, "( Last Payment )", 15, 3);
+		}
+		else if (option_item == "06")
+		{
+			if (py_item != 0)
+			{
+				pamo_item = amo_item /
+					fnani(tp_item, ra_item * 0.01 / py_item);
+			}
+			loop = 6;
+			dataentry();
+		}
+L_10360:;
+		j = j_item;
+		j = j - 1;
+		repsub();
+		text = basic::Format(ipp, "##,###,###.##") + "  " +
+			basic::Format(ppp, "##,###,###.##") + "  " +
+			basic::Format(lpp, "###,###,###.##");
+		smg_status = smg$put_chars(smg_view, text, 17, 31, 0,
+			SMG$M_BOLD);
+	};
+
 	// ++
 	// Abstract:COMMAND
 	//	^*AMORTIZATION\*
@@ -357,7 +462,6 @@ int main(
 	// Declare constants
 	//
 	const long max_item = 8;
-	OnErrorGoto(L_19000);
 	//*******************************************************************
 	// Initilize query
 	//*******************************************************************
@@ -373,15 +477,36 @@ int main(
 	//
 	smg_status = smg$label_border(smg_view, std::string("Amortization schedule for ") + basic::edit(scope.prg_company, 140));
 	smg_status = smg$paste_virtual_display(smg_view, scope.smg_pbid, 2, 2);
+
 	//******************************************************************
-L_1000:;
 	// Main option menu
 	//******************************************************************
-	BGosub(repaint);
+L_1000:;
+//repaint:;
+	//******************************************************************
+	// Repaint the screen
+	//******************************************************************
+	DataList.Reset();
+	DataList.Read(xlong);
+	DataList.Read(ylong);
+	DataList.Read(atext);
+	while (xlong)
+	{
+		smg_status = smg$put_chars(smg_view, atext, xlong, ylong);
+		DataList.Read(xlong);
+		DataList.Read(ylong);
+		DataList.Read(atext);
+	}
+	flag = 1;
+	for (loop = 1; loop <= max_item; loop++)
+	{
+		dataentry();
+	}
+
 	//
-L_1100:;
 	// Enter options
 	//
+L_1100:;
 	scope.prg_item = "";
 	optlist = "Add Change Print Help eXit";
 	opt = entr_3option(scope, "COMMAND", optlist, opt_V1, 0);
@@ -470,7 +595,7 @@ add:;
 				goto L_1100;
 			}
 		}
-		BGosub(calcul);
+		calcul();
 	}
 	else if (opt == "C")
 	{
@@ -497,7 +622,7 @@ changer:;
 		}
 		if (loop == 0)
 		{
-			BGosub(calcul);
+			calcul();
 			goto L_1100;
 		}
 		if (loop < 1 || loop > max_item)
@@ -591,7 +716,7 @@ changer1:;
 		{
 			for (j = 0; j <= tp_item - 1; j++)
 			{
-				BGosub(repsub);
+				repsub();
 				text = basic::Format(j + 1, "##########") + basic::Format(ipp, "###,###,###.##") + basic::Format(ppp, "###,###,###.##") + basic::Format(lpp, "###,###,###.##") + basic::Format(iid, "###,###,###.##") + basic::Format(pd, "###,###,###.##");
 				outp_line("", utl_reportx, title, text, 0);
 				if (utl_reportx.stat)
@@ -609,7 +734,7 @@ changer1:;
 			ro = std::stol(n_date.substr(0, 4));
 			for (j = 0; j <= tp_item - 1; j++)
 			{
-				BGosub(repsub);
+				repsub();
 				text = prnt_date(n_date, 8) +
 					basic::Format(ipp, "###,###,###.##") +
 					basic::Format(ppp, "###,###,###.##") +
@@ -645,7 +770,7 @@ changer1:;
 			cd = date_daycode(date_item);
 			for (j = 0; j <= tp_item - 1; j++)
 			{
-				BGosub(repsub);
+				repsub();
 				text = prnt_date(date_invdcode(cd + 7 * j), 8) +
 					basic::Format(ipp, "###,###,###.##") +
 					basic::Format(ppp, "###,###,###.##") +
@@ -672,7 +797,7 @@ nextyear:;
 		for (i = 0; i <= py_item - 1; i++)
 		{
 			in = i * intrv;
-			BGosub(repsub);
+			repsub();
 			text = prnt_date(date_invdcode(cd + in), 8) +
 				basic::Format(ipp, "###,###,###.##") +
 				basic::Format(ppp, "###,###,###.##") +
@@ -711,133 +836,10 @@ exitprogram:;
 	smg_status = smg$delete_virtual_display(smg_view);
 	subr_3exitprogram(scope, "", "");
 
-repaint:;
-	//******************************************************************
-	// Repaint the screen
-	//******************************************************************
-	DataList.Reset();
-	DataList.Read(xlong);
-	DataList.Read(ylong);
-	DataList.Read(atext);
-	while (xlong)
-	{
-		smg_status = smg$put_chars(smg_view, atext, xlong, ylong);
-		DataList.Read(xlong);
-		DataList.Read(ylong);
-		DataList.Read(atext);
-	}
-	flag = 1;
-	for (loop = 1; loop <= max_item; loop++)
-	{
-		dataentry();
-	}
-	BReturn;
-
-
-calcul:;
-	flag = 1;
-	//
-	// Ignore errors (usually caused by fields not filled in)
-	//
-	try
-	{
-		// ** Converted from a select statement **
-		if (option_item == "02")
-		{
-			if (py_item != 0)
-			{
-				amo_item = pamo_item * fnani(tp_item, 0.01 * ra_item / py_item);
-			}
-			loop = 2;
-			dataentry();
-		}
-		else if (option_item == "03")
-		{
-			ra_item = 0.0008;
-			delta = 0.0008;
-			if (amo_item != 0.0)
-			{
-				delta = pamo_item / amo_item * (pow(1.0 + ra_item, tp_item) - 1.0) / pow(1.0 + ra_item, tp_item);
-			}
-			while (fabs(ra_item - delta) > 0.000001)
-			{
-				ra_item = delta;
-				delta = pamo_item / amo_item * (pow(1.0 + ra_item, tp_item) - 1.0) / pow(1.0 + ra_item, tp_item);
-			}
-			ra_item = delta * py_item * 100.0;
-			loop = 3;
-			dataentry();
-		}
-		else if (option_item == "05")
-		{
-			if (py_item != 0)
-			{
-				tp_item = -log(1 - amo_item * ra_item * 0.01 / py_item / pamo_item) / log(1 + ra_item * 0.01 / py_item) + 1;
-			}
-			loop = 5;
-			dataentry();
-			res = 0.0;
-			if (py_item != 0)
-			{
-				res = amo_item * pow(1 + ra_item * 0.01 / py_item, tp_item) - pamo_item * fnni(tp_item - 1, ra_item * 0.01 / py_item) * (1 + ra_item * 0.01 / py_item);
-			}
-			res_V2 = basic::Format(res, "$###,###,###.##");
-			smg_status = smg$put_chars(smg_view, res_V2, 14, 3);
-			smg_status = smg$put_chars(smg_view, "( Last Payment )", 15, 3);
-		}
-		else if (option_item == "06")
-		{
-			if (py_item != 0)
-			{
-				pamo_item = amo_item / fnani(tp_item, ra_item * 0.01 / py_item);
-			}
-			loop = 6;
-			dataentry();
-		}
-	}
-	catch(basic::BasicError &Be)
-	{
-		goto L_10360;
-	}
-L_10360:;
-	j = j_item;
-	j = j - 1;
-	BGosub(repsub);
-	text = basic::Format(ipp, "##,###,###.##") + "  " + basic::Format(ppp, "##,###,###.##") + "  " + basic::Format(lpp, "###,###,###.##");
-	smg_status = smg$put_chars(smg_view, text, 17, 31, 0, SMG$M_BOLD);
-	BReturn;
-
-repsub:;
-	if (ra_item != 0.0)
-	{
-		if (j == -1)
-		{
-			ipp = ppp = 0.0;
-			lpp = amo_item;
-			goto retrepsub;
-		}
-		ipp = (func_round(amo_item, 2) * pow(1 + ra_item * 0.01 / py_item, j) - func_round(pamo_item, 2) * fnni(j, ra_item * 0.01 / py_item)) * ra_item * 0.01 / py_item;
-		ppp = func_round(pamo_item, 2) - func_round(ipp, 2);
-		lpp = amo_item * pow(1 + ra_item * 0.01 / py_item, j) - func_round(pamo_item, 2) * fnni(j, ra_item * 0.01 / py_item) - ppp;
-		iid = iid + ipp;
-		pd = pd + ppp;
-	}
-retrepsub:;
-	BReturn;
-
 helperror:;
 	//******************************************************************
 	// Help Message for an error
 	//******************************************************************
 	help_34message(scope, std::to_string(0) + " " + basic::ert(0), "E", "", filename, std::to_string(0));
 	goto exitprogram;
-	//******************************************************************
-L_19000:;
-	// Error trapping
-	//******************************************************************
-	filename = "";
-	OnErrorZero;
-	goto helperror;
-
-	return EXIT_SUCCESS;
 }
