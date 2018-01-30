@@ -126,13 +126,9 @@ l100:;
 		{
 			gets = std::stod(op_deflt);
 		}
-		catch(basic::BasicError &Be)
+		catch(...)
 		{
 			gets = 0.0;
-			if (Be.erl == 120)
-			{
-				goto L_130;
-			}
 			goto illnum;
 		}
 	}
@@ -223,7 +219,7 @@ L_1000:;
 	{
 		gets = std::stod(gets_V2);
 	}
-	catch(basic::BasicError &Be)
+	catch(...)
 	{
 		goto illnum;
 	}
