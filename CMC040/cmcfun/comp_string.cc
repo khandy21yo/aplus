@@ -81,8 +81,8 @@ long comp_string(
 	//
 	try
 	{
-std::cerr << "comp_string('" << test_stringa << "', '" <<
-	str2 << "')" << std::endl;
+// std::cerr << "comp_string('" << test_stringa << "', '" <<
+//	str2 << "')" << std::endl;
 
 		std::regex re(str2);
 		if (std::regex_match(test_stringa, re))
@@ -100,8 +100,8 @@ std::cerr << "comp_string('" << test_stringa << "', '" <<
 		// If we get an error, it probably means a bad
 		// wildcard string has been passed.
 		//
-std::cerr << "comp_string: Bad regex on ('" << str2 << "', '" <<
-	test_stringa << "'" << std::endl;
+// std::cerr << "comp_string: Bad regex on ('" << str2 << "', '" <<
+//	test_stringa << "'" << std::endl;
 		return 0;
 	}
 }
