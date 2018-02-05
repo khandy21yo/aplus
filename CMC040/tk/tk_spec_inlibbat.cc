@@ -81,8 +81,6 @@ int main(int argc, char **argv)
 	std::string w_file_name;
 	std::string ztext;
 
-	BStack(20);
-
 	std::vector<std::string> file_name_V1;
 	std::vector<std::string> dir_name;
 	std::string prefix[4];
@@ -310,8 +308,7 @@ L_525:;
 						((text.find(":", 0) + 1) != 0 && 
 						 basic::right(text, (text.find("!", 0) + 1) + 1)[0] == 32))
 					{
-						BGosub(subcode);
-						goto L_530;
+						goto subcode;
 					}
 					text_line = basic::right(boost::trim_right_copy(text), 4);
 					dexcl = 0;
@@ -415,7 +412,9 @@ subcode:;
 		k_ext = "";
 	}
 	// ** Converted from a select statement **
-	if ((prog_type == "RPRT") || ((prog_type == "POST") || (prog_type == "FORM")))
+	if ((prog_type == "RPRT") ||
+		((prog_type == "POST") ||
+		(prog_type == "FORM")))
 	{
 		writ_file_ch << ".!!" << std::endl;
 		writ_file_ch << ".!.SCREEN " << 
@@ -490,7 +489,7 @@ putlib:;
 	//*******************************************************************
 	writ_file_ch.open(w_file_name.c_str());
 	severity = "";
-	BReturn;
+	goto L_530;
 
 helperror:;
 	//*******************************************************************

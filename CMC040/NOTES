@@ -3,7 +3,7 @@ NOTES for problems I may need later.
 To move the physical cursor to the correct window, call top_pabel();
 
 To resize the screen, see resizeterm(). I don't know it it works ons
- a real terminal.
+a real terminal.
 
 Ro compile in clang
 
@@ -14,6 +14,12 @@ Ro compile in clang
 Problems with BGosub
 
 	1. Confuses the debugger. Loses track of line being exevuted.
-	2.Confuses GCC's optimizer. Variables optimized out that shoulfn't be.
+	2. Confuses GCC's optimizer. Variables optimized out that shoulfn't be.
 
+Curses will leave a xterm in a weird state if the program crashes.
+Scrollback doesn't work, and may not cr/lf at end of lines. Rerun program
+and exit to reset.
+
+When converting an array to a vector, .resize() it to skip over the
+invalid access bugs.
 
