@@ -37,12 +37,15 @@ std::string read_syspn(void)
 	// This is probably a Linux specific way of doing this
 	//
 	char path[PATH_MAX];
-	if (path != NULL)
+	int cnt;
+
+	if ((cnt = readlink("/proc/self/exe", path, PATH_MAX)) == -1)
 	{
-		if (readlink("/proc/self/exe", path, PATH_MAX) == -1)
-		{
-			path[0] = 0;
-		}
+		path[0] = 0;
+	}
+	else
+	{
+		path[cnt] = '\0';
 	}
 	return path;
 }

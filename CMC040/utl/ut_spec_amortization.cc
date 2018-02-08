@@ -91,7 +91,7 @@ int main(
 	long nm;
 	std::string n_date;
 	std::string opt;
-	long opt_V1;
+	long opt_V1 = 0;
 	std::string option_item;
 	std::string optlist;
 	double pamo_item;
