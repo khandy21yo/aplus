@@ -25,7 +25,7 @@ long lbr$lookup_key(
 	//
 	std::string cmd =
 		"SELECT value FROM " +
-		lr_index.name + "  WHERE table_libkey = $1";
+		lr_index.name + "  WHERE libkey = $1";
 
 	const char *params[2];
 
