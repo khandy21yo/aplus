@@ -146,7 +146,11 @@ int main(int argc, char **argv)
 		prefix[3] = aplushome + "/aplus/CMC030/" +
 			dir_name[j] + "/";
 #endif
-		if (dir_name[j].size() > 2)
+		if (dir_name[j] == "utl")
+		{
+			lib_name = "help_ut";
+		}
+		else if (dir_name[j].size() > 2)
 		{
 			lib_name = "help_default";
 		}

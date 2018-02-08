@@ -198,7 +198,7 @@ void help_34message(
 	{
 		lib_file = s_help_program;
 	}
-	orig_lib = std::string("REF:HELP_") + lib_file.substr(0, under - 1);
+	orig_lib = std::string("help_") + lib_file.substr(0, under - 1);
 	lib_file = orig_lib;
 	//
 	// What is the key name
