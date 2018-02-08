@@ -101,7 +101,7 @@ void help_34message(
 	//
 	// Dimension statements
 	//
-	default_lib = "REF:HELP_DEFAULT";
+	default_lib = "help_default";
 	// Save the COMMON Ident
 	old_help_severity = scope.prg_ident;
 	// Save the COMMON program name
@@ -113,9 +113,9 @@ void help_34message(
 	// will (magically) change at the same time.
 	//
 	s_help_severity = basic::edit(help_severity, 2 + 4 + 32);
-	o_help_program = s_help_program = basic::edit(help_progname, 2 + 4 + 32);
-	s_help_filename = basic::edit(help_filename, 2 + 4 + 32);
-	s_help_item = basic::edit(help_item, 2 + 4 + 32);
+	o_help_program = s_help_program = help_progname;
+	s_help_filename = help_filename;
+	s_help_item = help_item;
 	if (o_help_program == "")
 	{
 		o_help_program = s_help_item;
