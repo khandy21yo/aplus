@@ -10,6 +10,7 @@
 #include <string>
 #include <unistd.h>
 #include <linux/limits.h>
+#include <libgen.h>
 
 #include "preferences.h"
 #include "cmcfun.h"
@@ -37,6 +38,7 @@ std::string read_syspn(void)
 	// This is probably a Linux specific way of doing this
 	//
 	char path[PATH_MAX];
+	char *rpath = path;
 	int cnt;
 
 	if ((cnt = readlink("/proc/self/exe", path, PATH_MAX)) == -1)
@@ -46,6 +48,7 @@ std::string read_syspn(void)
 	else
 	{
 		path[cnt] = '\0';
+		rpath = basename(path);
 	}
-	return path;
+	return rpath;
 }
