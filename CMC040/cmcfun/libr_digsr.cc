@@ -18,36 +18,40 @@
 #include "smg/smg.h"
 #include "smg/lbr.h"
 
-struct fd_record
+//!
+//! \brief Build a 5 byte structure for attributes.
+//!
+//! This was handledusing a union in VAX Basic, but this is a better
+//! way to handle it in C++ as it generates a std::string that is fixed
+//! at 5 bytes intead of a char array that rerminates with a '\0'.
+//!
+static inline  std::string fd_build(int a, int b, char c)
 {
-	union
-	{
-		struct
-		{
-			char fd[5];
-		};
-		struct
-		{
-			short int cbeg;
-			short int clen;
-			char catr;
-		};
-	};
-};
-struct fdl_record
+	std::string Result;
+	Result.resize(5);
+	Result[0] = char(a);
+	Result[1] = char(a >> 8);
+	Result[2] = char(b);
+	Result[3] = char(b >> 8);
+	Result[4] = char(c);
+	return Result;
+}
+
+//!
+//! \brief Build a 2 byte structure for attributes.
+//!
+//! This was handledusing a union in VAX Basic, but this is a better
+//! way to handle it in C++ as it generates a std::string that is fixed
+//! at 5 bytes intead of a char array that rerminates with a '\0'.
+//!
+static inline  std::string fdl_build(int a)
 {
-	union
-	{
-		struct
-		{
-			char fdl[2];
-		};
-		struct
-		{
-			short int fdlen;
-		};
-	};
-};
+	std::string Result;
+	Result.resize(2);
+	Result[0] = char(a);
+	Result[1] = char(a >> 8);
+	return Result;
+}
 
 //!
 //!	This subroutine takes the filename and given array and
@@ -146,8 +150,6 @@ long libr_digsr(
 	long ary_attp[201];
 	long ts[33];
 	long oldts[33];
-	fd_record fd;
-	fdl_record fdl;
 
 	//*******************************************************************
 	// Blank line
@@ -159,9 +161,8 @@ long libr_digsr(
 		//
 		// Handle text
 		//
-		fdl.fdlen = 2;
 		curr_line = curr_line + 1;
-		code[curr_line] = std::string("") + fdl.fdl;
+		code[curr_line] = fdl_build(2);
 		return;
 	};
 	//*******************************************************************
@@ -243,15 +244,14 @@ long libr_digsr(
 				}
 				if (temp_end >= temp_beg)
 				{
-					fd.cbeg = temp_beg + left_mar + indent;
-					fd.clen = temp_end - temp_beg + 1;
-					fd.catr = ary_attr_V1[temp_i - 1];
-					temp_attr = temp_attr + fd.fd;
+					temp_attr = temp_attr + fd_build(
+						temp_beg + left_mar + indent,
+						temp_end - temp_beg + 1,
+						ary_attr_V1[temp_i - 1]);
 				}
 			}
-			fdl.fdlen = 2 + temp_attr.size();
 			curr_line = curr_line + 1;
-			code[curr_line] = std::string(left_mar + indent, ' ') + part_text + temp_attr + fdl.fdl;
+			code[curr_line] = std::string(left_mar + indent, ' ') + part_text + temp_attr + fdl_build(2 + temp_attr.size());
 			indent = 0;
 			temp_used = temp_used + temp_xskip;
 		}
@@ -327,9 +327,8 @@ L_9090:;
 		// Insert literal text (we go directly into the output array
 		// because it is the easiest way to go)
 		//
-		fdl.fdlen = 2;
 		curr_line = curr_line + 1;
-		code[curr_line] = std::string(left_mar, ' ') + inp + fdl.fdl;
+		code[curr_line] = std::string(left_mar, ' ') + inp + fdl_build(2);
 L_8490:;
 		return;
 	};
@@ -971,7 +970,6 @@ commandloop:;
 	//**********************************************************************
 	auto textline = [&](void)
 	{
-		fdl.fdlen = 0;
 		//
 		// Check for Margins and indent
 		//
@@ -1183,7 +1181,6 @@ endtext:;
 	{
 		curr_line = 0;
 	}
-	fdl.fdlen = fd.cbeg = fd.clen = fd.catr = 0;
 	//
 	// Set up the control structure if necessary
 	//
