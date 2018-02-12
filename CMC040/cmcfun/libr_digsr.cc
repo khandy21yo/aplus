@@ -1013,7 +1013,7 @@ text1:;
 				}
 			}
 xtestx:
-			position--;
+			position++;
 #endif
 		}
 		//
