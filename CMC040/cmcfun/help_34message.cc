@@ -86,7 +86,6 @@ void help_34message(
 	long v;
 	long junk;
 
-	BStack(20);
 	smg_scroll_cdd smg_scroll;
 	smg_display_id svd;
 	smg_display_id old_option;
@@ -98,6 +97,82 @@ void help_34message(
 	const long num_lines = 3000;
 	std::vector<std::string> line_num;
 	line_num.resize(num_lines + 1);
+	//*******************************************************************
+	// Load in the help text, and process it
+	//*******************************************************************
+	auto loadall = [&](void)
+	{
+loadall:
+		//
+		// Initialize the number of lines currently loaded
+		//
+		line_num[0] = "0";
+		//
+		// Try reading specific help file
+		//
+		st = libr_digsr(lib_file, key1, line_num);
+		key1_name = key1;
+		lib1_name = lib_file;
+		if ((st & 1) == 0)
+		{
+			//
+			// If text not found in main help file, check out
+			// the default help file.
+			//
+			st = libr_digsr(lib_file, key2, line_num);
+			if ((st & 1) != 0)
+			{
+				key1_name = key2;
+			}
+			else
+			{
+				//
+				// Check only if KEY3 <> KEY2
+				//
+				if (key3 != key2)
+				{
+					st = libr_digsr(lib_file, key3, line_num);
+				}
+				if ((st & 1) != 0)
+				{
+					key1_name = key3;
+				}
+				else
+				{
+					if (lib_file != default_lib)
+					{
+						lib_file = default_lib;
+						goto loadall;
+					}
+					else
+					{
+						if (severity == "E")
+						{
+							st = libr_digsr(default_lib,
+								"E$$CMCERR", line_num);
+						}
+						else
+						{
+							st = libr_digsr(default_lib,
+								"H$$NODETAIL", line_num);
+						}
+						lib1_name = orig_lib;
+					}
+				}
+			}
+		}
+		curr_line = std::stol(line_num[0]);
+		smg_scroll.bot_array = smg_scroll.end_element = curr_line;
+		smg_scroll.top_line = smg_scroll.beg_element;
+		if (text == " ")
+		{
+			text = basic::edit(line_num[1], 1 + 4 + 8 + 16 + 128);
+			text = text.substr(0, text.size() - 3);
+		}
+		v = dspl_scroll(smg_scroll, line_num, junk, "PAINT");
+		return;
+	};
+
 	//
 	// Dimension statements
 	//
@@ -217,7 +292,7 @@ void help_34message(
 	//
 	if (severity == "H" || severity == "E" || severity == "F")
 	{
-		BGosub(loadall);
+		loadall();
 		smg_status = smg$paste_virtual_display(svd, scope.smg_pbid, 1, 1);
 		smg_status = smg$paste_virtual_display(scope.smg_option, scope.smg_pbid, 21, 1);
 	}
@@ -288,7 +363,7 @@ menu:;
 		//
 		if (hit == 0)
 		{
-			BGosub(loadall);
+			loadall();
 		}
 		st = lbr$ini_control(lr_index, LBR$C_READ);
 		st = lbr$open(lr_index, lib1_name, 0, ".tlb");
@@ -304,7 +379,7 @@ menu:;
 		smg_status = smg$repaint_screen(scope.smg_pbid);
 		lib$set_symbol("CMC$HELP_LIBRARY", "");
 		lib$set_symbol("CMC$HELP_KEY", "");
-		BGosub(loadall);
+		loadall();
 	}
 	else if (scope.scope_exit == SMG$K_TRM_F15)
 	{
@@ -313,7 +388,7 @@ menu:;
 			//
 			// Display full message
 			//
-			BGosub(loadall);
+			loadall();
 			smg_status = smg$paste_virtual_display(svd,
 				scope.smg_pbid, 1, 1);
 			smg_status = smg$paste_virtual_display(scope.smg_option,
@@ -345,77 +420,5 @@ restorescope:;
 	scope.prg_program = old_program;
 	scope.prg_item = old_help_item;
 	return;
-loadall:;
-	//*******************************************************************
-	// Load in the help text, and process it
-	//*******************************************************************
-	//
-	// Initialize the number of lines currently loaded
-	//
-	line_num[0] = "0";
-	//
-	// Try reading specific help file
-	//
-	st = libr_digsr(lib_file, key1, line_num);
-	key1_name = key1;
-	lib1_name = lib_file;
-	if ((st & 1) == 0)
-	{
-		//
-		// If text not found in main help file, check out
-		// the default help file.
-		//
-		st = libr_digsr(lib_file, key2, line_num);
-		if ((st & 1) != 0)
-		{
-			key1_name = key2;
-		}
-		else
-		{
-			//
-			// Check only if KEY3 <> KEY2
-			//
-			if (key3 != key2)
-			{
-				st = libr_digsr(lib_file, key3, line_num);
-			}
-			if ((st & 1) != 0)
-			{
-				key1_name = key3;
-			}
-			else
-			{
-				if (lib_file != default_lib)
-				{
-					lib_file = default_lib;
-					goto loadall;
-				}
-				else
-				{
-					if (severity == "E")
-					{
-						st = libr_digsr(default_lib,
-							"E$$CMCERR", line_num);
-					}
-					else
-					{
-						st = libr_digsr(default_lib,
-							"H$$NODETAIL", line_num);
-					}
-					lib1_name = orig_lib;
-				}
-			}
-		}
-	}
-	curr_line = std::stol(line_num[0]);
-	smg_scroll.bot_array = smg_scroll.end_element = curr_line;
-	smg_scroll.top_line = smg_scroll.beg_element;
-	if (text == " ")
-	{
-		text = basic::edit(line_num[1], 1 + 4 + 8 + 16 + 128);
-		text = text.substr(0, text.size() - 3);
-	}
-	v = dspl_scroll(smg_scroll, line_num, junk, "PAINT");
-	BReturn;
 
 }
