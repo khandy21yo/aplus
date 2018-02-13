@@ -987,11 +987,11 @@ text1:;
 			// Tru to do same thing as STR$ routine
 			//
 			static const std::string sp[] =
-				{"^*", "\\*", "^&", "\\&", "^~", "\\~"};
+				{"*", "&", "^*", "\\*", "^&", "\\&", "_", "#", "^~", "\\~", "\t", ""};
 			position = -1;
 			for (int loop = 0; loop < inp.size(); loop++)
 			{
-				for (int loop2 = 0; loop2<= inp.size(); loop2++)
+				for (int loop2 = 0; sp[loop2] != ""; loop2++)
 				{
 					if (inp.compare(loop, sp[loop2].size(),
 						sp[loop2]) == 0)
@@ -1018,7 +1018,7 @@ xtestx:
 		//
 		// Handle starting part
 		//
-		this_text = inp.substr(0, position);
+		this_text = inp.substr(0, position - 1);
 		buildtext();
 		inp = basic::right(inp, position + 1);
 		switch (sub_match)
