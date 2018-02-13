@@ -33,7 +33,7 @@ long lbr$get_record(
 	}
 	else
 	{
-		text = lr_index.datum.substr(0, pos - 1);
+		text = lr_index.datum.substr(0, pos);
 		lr_index.datum.erase(0, pos + 1);
 	}
 

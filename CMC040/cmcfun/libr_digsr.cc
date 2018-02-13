@@ -27,6 +27,9 @@
 //!
 static inline  std::string fd_build(int a, int b, char c)
 {
+	//! \todo fix encoded strings
+	return "";
+
 	std::string Result;
 	Result.resize(5);
 	Result[0] = char(a);
@@ -46,6 +49,9 @@ static inline  std::string fd_build(int a, int b, char c)
 //!
 static inline  std::string fdl_build(int a)
 {
+	//! \todo fix encoded strings
+	return "";
+
 	std::string Result;
 	Result.resize(2);
 	Result[0] = char(a);
@@ -96,7 +102,7 @@ long libr_digsr(
 	long ary_attr = 0;
 	long blankl;
 	long curr_line;
-	long cur_attr;
+	long cur_attr = 0;
 	std::string dsr[11];
 	std::string dsrcom;
 	std::string dsrcom1;
@@ -110,19 +116,19 @@ long libr_digsr(
 	long j;
 	long keep_attr;
 	long left_mar;
-	long list_list;
-	long literal;
+	long list_list = 0;
+	long literal = 0;
 	lbr_index_cdd lr_index;
-	long note_footnote;
-	long note_note;
-	long note_quote;
+	long note_footnote = 0;
+	long note_note = 0;
+	long note_quote = 0;
 	long once_attr;
 	long option_table;
 	std::string part_text;
 	long right_mar;
 	long smg_status;
 	long st;
-	long table_table;
+	long table_table = 0;
 	std::string temp;
 	long temp_V4;
 	long temp1;
@@ -349,13 +355,9 @@ L_8490:;
 			{
 				list_skip[list_list] = std::stol(dsr[1]);
 			}
-			catch(basic::BasicError &Be)
+			catch(...)
 			{
-				if (Be.err == 52)
-				{
-					goto L_8090;
-				}
-				throw Be;
+				goto L_8090;
 			}
 		}
 		else
@@ -498,15 +500,9 @@ getcommand:;
 			{
 				blankl = std::stol(dsr[1]);
 			}
-			catch(basic::BasicError &Be)
+			catch(...)
 			{
-				// Illegal number
-				if (Be.err == 52)
-				{
-					blankl = 1;
-					goto L_6010;
-				}
-				throw Be;
+				blankl = 1;
 			}
 			if (blankl < 1)
 			{
@@ -537,15 +533,9 @@ L_6010:;
 			{
 				indent = std::stol(dsr[1]);
 			}
-			catch(basic::BasicError &Be)
+			catch(...)
 			{
-				// Illegal number
-				if (Be.err == 52)
-				{
-					indent = 0;
-					goto commandloop;
-				}
-				throw Be;
+				indent = 0;
 			}
 			//
 			// .lm
@@ -1028,7 +1018,7 @@ xtestx:
 		//
 		// Handle starting part
 		//
-		this_text = inp.substr(0, position - 1);
+		this_text = inp.substr(0, position);
 		buildtext();
 		inp = basic::right(inp, position + 1);
 		switch (sub_match)
