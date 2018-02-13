@@ -122,7 +122,7 @@ long libr_digsr(
 	long note_footnote = 0;
 	long note_note = 0;
 	long note_quote = 0;
-	long once_attr;
+	long once_attr = 0;
 	long option_table;
 	std::string part_text;
 	long right_mar;
@@ -422,19 +422,19 @@ getcommand:;
 				left_mar = left_mar - 4;
 				blankline();
 				list_list = list_list - 1;
-				//
-				// .end note
-				//
 			}
+			//
+			// .end note
+			//
 			else if (dsr[1] == "NOTE")
 			{
 				breaktext();
 				blankline();
 				note_note = note_note - 1;
-				//
-				// .end quote
-				//
 			}
+			//
+			// .end quote
+			//
 			else if (dsr[1] == "QUOTE")
 			{
 				breaktext();
@@ -442,10 +442,10 @@ getcommand:;
 				right_mar = right_mar + 8;
 				blankline();
 				note_quote = note_quote - 1;
-				//
-				// .end footnote
-				//
 			}
+			//
+			// .end footnote
+			//
 			else if (dsr[1] == "FOOTNOTE")
 			{
 				breaktext();
@@ -488,11 +488,11 @@ getcommand:;
 					ts[i] = oldts[i];
 				}
 			}
-			//
-			// .b
-			// .blank
-			//
 		}
+		//
+		// .b
+		// .blank
+		//
 		else if ((dsr[0] == "B") || (dsr[0] == "BLANK"))
 		{
 			breaktext();
@@ -513,19 +513,19 @@ L_6010:;
 			{
 				blankline();
 			}
-			//
-			// .br
-			// .break
-			//
 		}
+		//
+		// .br
+		// .break
+		//
 		else if ((dsr[0] == "BR") || (dsr[0] == "BREAK"))
 		{
 			breaktext();
-			//
-			// .i
-			// .indent
-			//
 		}
+		//
+		// .i
+		// .indent
+		//
 		else if ((dsr[0] == "I") || (dsr[0] == "INDENT"))
 		{
 			breaktext();
@@ -537,10 +537,10 @@ L_6010:;
 			{
 				indent = 0;
 			}
-			//
-			// .lm
-			//
 		}
+		//
+		// .lm
+		//
 		else if (dsr[0] == "LM")
 		{
 			breaktext();
@@ -553,10 +553,10 @@ L_6010:;
 			{
 				left_mar = std::stol(dsr[1]);
 			}
-			//
-			// .left
-			//
 		}
+		//
+		// .left
+		//
 		else if (dsr[0] == "LEFT")
 		{
 			// ** Converted from a select statement **
@@ -576,19 +576,19 @@ L_6010:;
 					left_mar = std::stol(dsr[2]);
 				}
 			}
-			//
-			// .lt
-			// .literal
-			//
 		}
+		//
+		// .lt
+		// .literal
+		//
 		else if ((dsr[0] == "LT") || (dsr[0] == "LITERAL"))
 		{
 			breaktext();
 			literal = -1;
-			//
-			// .list
-			//
 		}
+		//
+		// .list
+		//
 		else if (dsr[0] == "LIST")
 		{
 			//
@@ -618,37 +618,37 @@ L_6010:;
 				indent = -(this_text.size() + 1);
 				buildtext();
 				cur_attr = keep_attr;
-				//
-				// .list *
-				//
 			}
+			//
+			// .list *
+			//
 			else
 			{
 				breaktext();
 				beginlist();
 			}
-			//
-			// .els
-			//
 		}
+		//
+		// .els
+		//
 		else if (dsr[0] == "ELS")
 		{
 			breaktext();
 			left_mar = left_mar - 4;
 			blankline();
 			list_list = list_list - 1;
-			//
-			// .ls
-			//
 		}
+		//
+		// .ls
+		//
 		else if (dsr[0] == "LS")
 		{
 			breaktext();
 			beginlist();
-			//
-			// .le
-			//
 		}
+		//
+		// .le
+		//
 		else if (dsr[0] == "LE")
 		{
 			breaktext();
@@ -673,11 +673,11 @@ L_6010:;
 			indent = -(this_text.size() + 1);
 			buildtext();
 			cur_attr = keep_attr;
-			//
-			// .nt
-			// .note
-			//
 		}
+		//
+		// .nt
+		// .note
+		//
 		else if ((dsr[0] == "NOTE") || (dsr[0] == "NT"))
 		{
 			breaktext();
@@ -689,11 +689,11 @@ L_6010:;
 			this_text = dsrcom1 + ": ";
 			buildtext();
 			note_note = note_note + 1;
-			//
-			// .qt
-			// .quote
-			//
 		}
+		//
+		// .qt
+		// .quote
+		//
 		else if ((dsr[0] == "QUOTE") || (dsr[0] == "QT"))
 		{
 			breaktext();
@@ -702,19 +702,19 @@ L_6010:;
 			total_text = "";
 			blankline();
 			note_quote = note_quote + 1;
-			//
-			// .en
-			//
 		}
+		//
+		// .en
+		//
 		else if (dsr[0] == "EN")
 		{
 			breaktext();
 			blankline();
 			note_note = note_note - 1;
-			//
-			// .eqt
-			//
 		}
+		//
+		// .eqt
+		//
 		else if (dsr[0] == "EQT")
 		{
 			breaktext();
@@ -722,11 +722,11 @@ L_6010:;
 			right_mar = right_mar - 8;
 			blankline();
 			note_quote = note_quote - 1;
-			//
-			// .fn
-			// .footnote
-			//
 		}
+		//
+		// .fn
+		// .footnote
+		//
 		else if ((dsr[0] == "FOOTNOTE") || (dsr[0] == "FN"))
 		{
 			breaktext();
@@ -741,10 +741,10 @@ L_6010:;
 			breaktext();
 			blankline();
 			note_footnote = note_footnote + 1;
-			//
-			// .efn
-			//
 		}
+		//
+		// .efn
+		//
 		else if (dsr[0] == "EFN")
 		{
 			breaktext();
@@ -752,11 +752,11 @@ L_6010:;
 			right_mar = right_mar - 8;
 			blankline();
 			note_footnote = note_footnote - 1;
-			//
-			// .p
-			// .paragraph
-			//
 		}
+		//
+		// .p
+		// .paragraph
+		//
 		else if ((dsr[0] == "P") || (dsr[0] == "PARAGRAPH"))
 		{
 			breaktext();
@@ -769,10 +769,10 @@ L_6010:;
 			{
 				indent = 5;
 			}
-			//
-			// .right
-			//
 		}
+		//
+		// .right
+		//
 		else if (dsr[0] == "RIGHT")
 		{
 			// ** Converted from a select statement **
@@ -792,10 +792,10 @@ L_6010:;
 					right_mar = std::stol(dsr[2]);
 				}
 			}
-			//
-			// .rm
-			//
 		}
+		//
+		// .rm
+		//
 		else if (dsr[0] == "RM")
 		{
 			breaktext();
@@ -808,26 +808,27 @@ L_6010:;
 			{
 				right_mar = std::stol(dsr[1]);
 			}
-			//
-			// .fill, .justify (assumed to be the same thing)
-			//
 		}
-		else if ((dsr[0] == "FILL") || ((dsr[0] == "F") || ((dsr[0] == "JUSTIFY") || (dsr[0] == "J"))))
+		//
+		// .fill, .justify (assumed to be the same thing)
+		//
+		else if ((dsr[0] == "FILL") || ((dsr[0] == "F") ||
+			((dsr[0] == "JUSTIFY") || (dsr[0] == "J"))))
 		{
 			breaktext();
 			fill_flag = -1;
-			//
-			// No fill, no justify
-			//
 		}
+		//
+		// No fill, no justify
+		//
 		else if ((dsr[0] == "NF") || (dsr[0] == "NJ"))
 		{
 			breaktext();
 			fill_flag = 0;
-			//
-			// Tab Stops
-			//
 		}
+		//
+		// Tab Stops
+		//
 		else if ((dsr[0] == "TS") || (dsr[0] == "TABSTOP"))
 		{
 			for (temp_V4 = 1; temp_V4 <= i; temp_V4++)
@@ -835,10 +836,10 @@ L_6010:;
 				ts[temp_V4] = std::stol(dsr[temp_V4]);
 			}
 			ts[i + 1] = 32767;
-			//
-			// Tables
-			//
 		}
+		//
+		// Tables
+		//
 		else if (dsr[0] == "TABLE")
 		{
 			breaktext();
@@ -871,10 +872,10 @@ L_6010:;
 		else if ((dsr[0] == "TE") || (dsr[0] == "TT"))
 		{
 			breaktext();
-			//
-			// Options
-			//
 		}
+		//
+		// Options
+		//
 		else if (dsr[0] == "OPTION")
 		{
 			breaktext();
@@ -907,10 +908,10 @@ L_6010:;
 		else if (dsr[0] == "OE")
 		{
 			breaktext();
-			//
-			// Examples
-			//
 		}
+		//
+		// Examples
+		//
 		else if (dsr[0] == "EXAMPLE")
 		{
 			breaktext();
@@ -972,7 +973,6 @@ commandloop:;
 			this_text = " ";
 			buildtext();
 		}
-		//	INP$ = EDIT$(INP$, 8% + 16% + 128%)
 		inp = boost::trim_right_copy(inp);
 text1:;
 		//
@@ -1029,78 +1029,78 @@ xtestx:
 		case 1:
 
 			once_attr = once_attr | SMG$M_BOLD;
-			//
-			// Underline char (&)
-			//
 			break;
 
+		//
+		// Underline char (&)
+		//
 		case 2:
 
 			once_attr = once_attr | SMG$M_UNDERLINE;
-			//
-			// Start bold (^*)
-			//
 			break;
 
+		//
+		// Start bold (^*)
+		//
 		case 3:
 
 			cur_attr = cur_attr | SMG$M_BOLD;
 			inp = basic::right(inp, 2);
-			//
-			// Stop  Bold (\*)
-			//
 			break;
 
+		//
+		// Stop  Bold (\*)
+		//
 		case 4:
 
 			cur_attr = cur_attr & (~SMG$M_BOLD);
 			inp = basic::right(inp, 2);
-			//
-			// Start Underline (^&)
-			// Start italicized (^~)
-			//
 			break;
 
+		//
+		// Start Underline (^&)
+		// Start italicized (^~)
+		//
 		case 5:
 		case 9:
 
 			cur_attr = cur_attr | SMG$M_UNDERLINE;
 			inp = basic::right(inp, 2);
-			//
-			// Stop  Underline (\&)
-			// End italicized (\~)
-			//
 			break;
 
+		//
+		// Stop  Underline (\&)
+		// End italicized (\~)
+		//
 		case 6:
 		case 10:
 
 			cur_attr = cur_attr & (~SMG$M_UNDERLINE);
 			inp = basic::right(inp, 2);
-			//
-			// Accept char (_)
-			//
 			break;
 
+		//
+		// Accept char (_)
+		//
 		case 7:
 
 			this_text = inp.substr(0, 1);
 			buildtext();
 			inp = basic::right(inp, 2);
-			//
-			// Space char (#)
-			//
 			break;
 
+		//
+		// Space char (#)
+		//
 		case 8:
 
 			this_text = " ";
 			buildtext();
-			//
-			// Tab Character
-			//
 			break;
 
+		//
+		// Tab Character
+		//
 		case 11:
 
 			temp_V4 = total_text.size() + indent + left_mar;

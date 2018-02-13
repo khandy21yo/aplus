@@ -84,7 +84,7 @@ void help_34message(
 	std::string text;
 	long under;
 	long v;
-	long junk;
+	long junk = 0;
 
 	smg_scroll_cdd smg_scroll;
 	smg_display_id svd;
@@ -259,6 +259,7 @@ loadall:
 	smg_scroll.smg_flag = 1;
 	smg_scroll.prompt = "";
 	smg_scroll.draw_cols = "";
+	smg_scroll.v_select_line = 0;
 	under = ((s_help_program + "_").find("_", 0) + 1);
 	//
 	// Which library is it in?
