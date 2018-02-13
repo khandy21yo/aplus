@@ -292,9 +292,9 @@ loadall:
 	//
 	if (severity == "H" || severity == "E" || severity == "F")
 	{
-		loadall();
 		smg_status = smg$paste_virtual_display(svd, scope.smg_pbid, 1, 1);
 		smg_status = smg$paste_virtual_display(scope.smg_option, scope.smg_pbid, 21, 1);
+		loadall();
 	}
 	smg_status = smg$paste_virtual_display(scope.smg_message,
 		scope.smg_pbid, 23, 1);
@@ -388,11 +388,11 @@ menu:;
 			//
 			// Display full message
 			//
-			loadall();
 			smg_status = smg$paste_virtual_display(svd,
 				scope.smg_pbid, 1, 1);
 			smg_status = smg$paste_virtual_display(scope.smg_option,
 				scope.smg_pbid, 21, 1);
+			loadall();
 			hit = 1;
 		}
 		//

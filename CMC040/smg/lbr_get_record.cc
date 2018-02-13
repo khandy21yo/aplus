@@ -34,7 +34,7 @@ long lbr$get_record(
 	else
 	{
 		text = lr_index.datum.substr(0, pos - 1);
-		lr_index.datum.erase(0, lr_index.datum.npos);
+		lr_index.datum.erase(0, pos + 1);
 	}
 
 	return 1;
