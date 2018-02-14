@@ -358,7 +358,6 @@ int main(
 		//
 		// Ignore errors (usually caused by fields not filled in)
 		//
-		// ** Converted from a select statement **
 		if (option_item == "02")
 		{
 			if (py_item != 0)
@@ -475,7 +474,9 @@ L_10360:;
 	//
 	// Label the display
 	//
-	smg_status = smg$label_border(smg_view, std::string("Amortization schedule for ") + basic::edit(scope.prg_company, 140));
+	smg_status = smg$label_border(smg_view,
+		std::string("Amortization schedule for ") +
+		basic::edit(scope.prg_company, 140));
 	smg_status = smg$paste_virtual_display(smg_view, scope.smg_pbid, 2, 2);
 
 	//******************************************************************
@@ -510,22 +511,21 @@ L_1100:;
 	scope.prg_item = "";
 	optlist = "Add Change Print Help eXit";
 	opt = entr_3option(scope, "COMMAND", optlist, opt_V1, 0);
-	// ** Converted from a select statement **
 	//
 	// Control c
 	//
 	if (scope.scope_exit == 3)
 	{
 		goto L_1000;
-		//
-		// Exit key
-		//
 	}
-	else if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
+	//
+	// Exit key
+	//
+	else if ((scope.scope_exit == SMG$K_TRM_F10) ||
+		(scope.scope_exit == SMG$K_TRM_CTRLZ))
 	{
 		goto exitprogram;
 	}
-	// ** Converted from a select statement **
 	if (opt == "A")
 	{
 		//*****************************************************
@@ -539,35 +539,34 @@ L_1100:;
 		}
 		for (loop = 1; loop <= max_item; loop++)
 		{
-			// ** Converted from a select statement **
 			//
 			// Control c
 			//
 			if (scope.scope_exit == 3)
 			{
 				goto L_1000;
-				//
-				// Exit key
-				//
 			}
-			else if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
+			//
+			// Exit key
+			//
+			else if ((scope.scope_exit == SMG$K_TRM_F10) ||
+				(scope.scope_exit == SMG$K_TRM_CTRLZ))
 			{
 				goto L_1100;
 			}
 add:;
 			flag = 0;
 			dataentry();
-			// ** Converted from a select statement **
 			//
 			// Control c
 			//
 			if (scope.scope_exit == 3)
 			{
 				goto L_1000;
-				//
-				// Uparrow
-				//
 			}
+			//
+			// Uparrow
+			//
 			else if (scope.scope_exit == SMG$K_TRM_UP)
 			{
 				if (loop > 1)
@@ -575,10 +574,10 @@ add:;
 					loop = loop - 1;
 				}
 				goto add;
-				//
-				// SMG$K_TRM_DOWN
-				//
 			}
+			//
+			// SMG$K_TRM_DOWN
+			//
 			else if (scope.scope_exit == SMG$K_TRM_DOWN)
 			{
 				if (loop < max_item)
@@ -586,10 +585,10 @@ add:;
 					loop = loop + 1;
 				}
 				goto add;
-				//
-				// Exit key
-				//
 			}
+			//
+			// Exit key
+			//
 			else if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
 			{
 				goto L_1100;
@@ -605,18 +604,18 @@ changer:;
 		//*****************************************************
 		loop = entr_3number(scope, scope.smg_option, "",
 			"Item to change", 0.0, 4, "##", junk);
-		// ** Converted from a select statement **
 		//
 		// Control c
 		//
 		if (scope.scope_exit == 3)
 		{
 			goto L_1000;
-			//
-			// Exit key
-			//
 		}
-		else if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
+		//
+		// Exit key
+		//
+		else if ((scope.scope_exit == SMG$K_TRM_F10) ||
+			(scope.scope_exit == SMG$K_TRM_CTRLZ))
 		{
 			goto L_1100;
 		}
@@ -632,17 +631,16 @@ changer:;
 changer1:;
 		flag = 0;
 		dataentry();
-		// ** Converted from a select statement **
 		//
 		// Control c
 		//
 		if (scope.scope_exit == 3)
 		{
 			goto L_1000;
-			//
-			// Uparrow
-			//
 		}
+		//
+		// Uparrow
+		//
 		else if (scope.scope_exit == SMG$K_TRM_UP)
 		{
 			if (loop > 1)
@@ -650,10 +648,10 @@ changer1:;
 				loop = loop - 1;
 			}
 			goto changer1;
-			//
-			// SMG$K_TRM_DOWN
-			//
 		}
+		//
+		// SMG$K_TRM_DOWN
+		//
 		else if (scope.scope_exit == SMG$K_TRM_DOWN)
 		{
 			if (loop < max_item)
@@ -661,11 +659,12 @@ changer1:;
 				loop = loop + 1;
 			}
 			goto changer1;
-			//
-			// Exit key
-			//
 		}
-		else if ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))
+		//
+		// Exit key
+		//
+		else if ((scope.scope_exit == SMG$K_TRM_F10) ||
+			(scope.scope_exit == SMG$K_TRM_CTRLZ))
 		{
 			goto L_1100;
 		}
@@ -694,11 +693,20 @@ changer1:;
 		title[1] = "AMORTIZATION  SCHEDULE";
 		title[2] = "";
 		title[3] = ".";
-		text = std::string("Amount of Loan($):") + basic::Format(amo_item, "###,###,###.##") + std::string(24, ' ') + "Period per Year : " + basic::Format(py_item, "###");
+		text = std::string("Amount of Loan($):") +
+			basic::Format(amo_item, "###,###,###.##") +
+			std::string(24, ' ') + "Period per Year : " +
+			basic::Format(py_item, "###");
 		outp_line("", utl_reportx, title, text, 0);
-		text = std::string("Future Value ($) :") + basic::Format(famo, "###,###,###.##") + std::string(24, ' ') + "Total Periods   : " + basic::Format(tp_item, "###");
+		text = std::string("Future Value ($) :") +
+			basic::Format(famo, "###,###,###.##") +
+			std::string(24, ' ') + "Total Periods   : " +
+			basic::Format(tp_item, "###");
 		outp_line("", utl_reportx, title, text, 0);
-		text = std::string("Period Payment($):") + basic::Format(pamo_item, "###,###,###.##") + std::string(24, ' ') + "Interest Rate(%): " + basic::Format(ra_item, " ##.##");
+		text = std::string("Period Payment($):") +
+			basic::Format(pamo_item, "###,###,###.##") +
+			std::string(24, ' ') + "Interest Rate(%): " +
+			basic::Format(ra_item, " ##.##");
 		outp_line("", utl_reportx, title, text, 0);
 		outp_line("", utl_reportx, title, "", 0);
 		if (utl_reportx.stat)
@@ -717,7 +725,12 @@ changer1:;
 			for (j = 0; j <= tp_item - 1; j++)
 			{
 				repsub();
-				text = basic::Format(j + 1, "##########") + basic::Format(ipp, "###,###,###.##") + basic::Format(ppp, "###,###,###.##") + basic::Format(lpp, "###,###,###.##") + basic::Format(iid, "###,###,###.##") + basic::Format(pd, "###,###,###.##");
+				text = basic::Format(j + 1, "##########") +
+					basic::Format(ipp, "###,###,###.##") +
+					basic::Format(ppp, "###,###,###.##") +
+					basic::Format(lpp, "###,###,###.##") +
+					basic::Format(iid, "###,###,###.##") +
+					basic::Format(pd, "###,###,###.##");
 				outp_line("", utl_reportx, title, text, 0);
 				if (utl_reportx.stat)
 				{
@@ -751,7 +764,10 @@ changer1:;
 					ro = ro + 1;
 				}
 				mo = mo + nm - floor((mo + nm - 1) / 12) * 12;
-				n_date = test_date = basic::Format(ro, "<0>###") + basic::Format(mo, "<0>#") + basic::Format(da, "<0>#");
+				n_date = test_date =
+					basic::Format(ro, "<0>###") +
+					basic::Format(mo, "<0>#") +
+					basic::Format(da, "<0>#");
 				test = 0;
 				while (date_invdcode(date_daycode(n_date)) != n_date || std::stol(basic::mid(n_date, 5, 2)) != mo)
 				{

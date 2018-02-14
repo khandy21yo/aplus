@@ -28,7 +28,13 @@ Some of the changes from the VMS version
 	Change array of strings (char *x[])  passed to vector of strings
 	(std::vector<std::string> &x).
 
+	Uses a database tables in place of text libraries.
+
 INSTALLATION
+
+	You will probably want to dedicate a user account to this program,
+	as it uses the acount name for the database name, and stores work
+	files on the acount.
 
 	Modify Makefile.am so itknowd where btran is installed.
 

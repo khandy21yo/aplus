@@ -51,6 +51,10 @@ void smg_xxx_set_attrs(
 	{
 		wattron(display.win, A_UNDERLINE);
 	}
+	if (flags & SMG$M_BLINK)
+	{
+		wattron(display.win, A_BLINK);
+	}
 }
 //!
 //! \brief Turn off attribues according to the flags set
@@ -73,5 +77,9 @@ void smg_xxx_reset_attrs(
 	if (flags & SMG$M_UNDERLINE)
 	{
 		wattroff(display.win, A_UNDERLINE);
+	}
+	if (flags & SMG$M_BLINK)
+	{
+		wattroff(display.win, A_BLINK);
 	}
 }
