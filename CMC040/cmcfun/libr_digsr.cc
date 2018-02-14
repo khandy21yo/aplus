@@ -27,9 +27,6 @@
 //!
 static inline  std::string fd_build(int a, int b, char c)
 {
-	//! \todo fix encoded strings
-	return "";
-
 	std::string Result;
 	Result.resize(5);
 	Result[0] = char(a);
@@ -49,9 +46,6 @@ static inline  std::string fd_build(int a, int b, char c)
 //!
 static inline  std::string fdl_build(int a)
 {
-	//! \todo fix encoded strings
-	return "";
-
 	std::string Result;
 	Result.resize(2);
 	Result[0] = char(a);
@@ -257,7 +251,9 @@ long libr_digsr(
 				}
 			}
 			curr_line = curr_line + 1;
-			code[curr_line] = std::string(left_mar + indent, ' ') + part_text + temp_attr + fdl_build(2 + temp_attr.size());
+			code[curr_line] = std::string(left_mar + indent, ' ') +
+				part_text + temp_attr +
+				fdl_build(2 + temp_attr.size());
 			indent = 0;
 			temp_used = temp_used + temp_xskip;
 		}

@@ -89,10 +89,12 @@ long entr_4entry(
 	if (timeout != 0)
 	{
 		retchar = getch();
+		smg_status = 1;
 	}
 	else
 	{
 		retchar = getch();
+		smg_status = 1;
 	}
 
 	/*

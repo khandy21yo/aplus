@@ -294,5 +294,12 @@ long smg$set_term_characteristics(
 
 long smg_xxx_draw_border(
 	smg_display_id &display);
+void smg_xxx_set_attrs(
+	smg_display_id &display,	//!< Display to write to
+	long flags);			//!< Flags
+void smg_xxx_reset_attrs(
+	smg_display_id &display,	//!< Display to write to
+	long flags);			//!< Flags
+
 #endif
 

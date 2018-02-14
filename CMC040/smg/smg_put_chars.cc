@@ -17,6 +17,28 @@ long smg$put_chars(
 	long comp,			//!< ???
 	long charset)			//!< Character set
 {
+	smg_xxx_set_attrs(display, flags);
+
+	mvwaddstr(display.win,
+		row + display.border - 1,
+		col + display.border - 1,
+		text.c_str());
+
+	smg_xxx_reset_attrs(display, flags);
+
+	return 1;
+}
+
+//!
+//! \brief Turn on attribues according to the flags set
+//!
+//! Broken out from smg$put_chars because this is needed in
+//! multiple places.
+//!
+void smg_xxx_set_attrs(
+	smg_display_id &display,	//!< Display to write to
+	long flags)			//!< Flags
+{
 	if (flags & SMG$M_BOLD)
 	{
 		wattron(display.win, A_BOLD);
@@ -25,20 +47,21 @@ long smg$put_chars(
 	{
 		wattron(display.win, A_REVERSE);
 	}
-
-#if 1
-	mvwaddstr(display.win,
-		row + display.border - 1,
-		col + display.border - 1,
-		text.c_str());
-#else
-	wmove(display.win,
-		row + display.border - 1,
-		col + display.border - 1);
-	waddstr(display.win,
-		text.c_str());
-#endif
-
+	if (flags & SMG$M_UNDERLINE)
+	{
+		wattron(display.win, A_UNDERLINE);
+	}
+}
+//!
+//! \brief Turn off attribues according to the flags set
+//!
+//! Broken out from smg$put_chars because this is needed in
+//! multiple places.
+//!
+void smg_xxx_reset_attrs(
+	smg_display_id &display,	//!< Display to write to
+	long flags)			//!< Flags
+{
 	if (flags & SMG$M_BOLD)
 	{
 		wattroff(display.win, A_BOLD);
@@ -47,5 +70,8 @@ long smg$put_chars(
 	{
 		wattroff(display.win, A_REVERSE);
 	}
-	return 1;
+	if (flags & SMG$M_UNDERLINE)
+	{
+		wattroff(display.win, A_UNDERLINE);
+	}
 }
