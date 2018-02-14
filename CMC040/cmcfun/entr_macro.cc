@@ -70,7 +70,7 @@
 //! \author 04/06/90 - Frank F. Starman
 //!
 long entr_macro(
-	scope_struct &scope)
+	scope_struct &scope)	//!< Commn scope structure
 {
 	long Result;
 	long exit_status;
@@ -100,8 +100,8 @@ long entr_macro(
 	//
 	// Assume a good macro command
 	//
-	smg_status = smg$create_virtual_display(2, 132,
-		macro_V2, SMG$M_BORDER, 0, 0);
+	smg_status = smg$create_virtual_display(2, COLS,
+		macro_V2, 0, 0, 0);
 	smg_status = smg$paste_virtual_display(macro_V2, scope.smg_pbid, 21, 1);
 	smg_status = smg$put_chars(macro_V2, "Menu Command Level> ", 1, 1);
 	macro = std::string(50, ' ');
@@ -109,9 +109,8 @@ long entr_macro(
 entermacro:;
 	start =-1;
 	exit_status = entr_3enter(scope, macro_V2, 1, 21,
-		macro, start, 8 + 16 + 1024 + 4096);
+		macro, start, 8 + 1024 + 4096);
 
-	// ** Converted from a select statement **
 	//
 	// Help keys
 	//
@@ -119,10 +118,10 @@ entermacro:;
 	{
 		help_34message(scope, "", "H", scope.prg_program, "", "HELP");
 		goto entermacro;
-		//
-		// Good key
-		//
 	}
+	//
+	// Good key
+	//
 	else if ((exit_status == 0) ||
 		((exit_status == 10) ||
 		((exit_status == 12) ||
@@ -138,18 +137,18 @@ entermacro:;
 			exit_status = 0;
 			goto exitfunction;
 		}
-		//
-		// Repaint screen
-		//
 	}
+	//
+	// Repaint screen
+	//
 	else if ((exit_status == SMG$K_TRM_F11) ||
 		(exit_status == SMG$K_TRM_CTRLW))
 	{
 		goto exitfunction;
-		//
-		// Go to MCL
-		//
 	}
+	//
+	// Go to MCL
+	//
 	else if ((exit_status == SMG$K_TRM_F10) ||
 		(exit_status == SMG$K_TRM_CTRLZ))
 	{
@@ -160,7 +159,7 @@ entermacro:;
 		entr_3badkey(scope, scope.scope_exit);
 		goto entermacro;
 	}
-	macro = basic::edit(macro, 8 + 16 + 128);
+//	macro = basic::edit(macro, 8 + 16 + 128);
 	//
 	// Set symbol, that menu will understand it
 	//
