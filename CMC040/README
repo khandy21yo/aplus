@@ -28,3 +28,16 @@ Some of the changes from the VMS version
 	Change array of strings (char *x[])  passed to vector of strings
 	(std::vector<std::string> &x).
 
+INSTALLATION
+
+	Modify Makefile.am so itknowd where btran is installed.
+
+	Execute "./makeall" to build executables.
+
+	Ctraye PostgreSQL database for current user "createdb".
+
+	Execute "tk_spec_inslib" to build help messages. Answer the three
+	questions with "*", "P", and "*". It will grind for sometime.
+
+	Start the application. "ut_spec_amortization" is currenty the only
+	one that works. amd does anything useful.
