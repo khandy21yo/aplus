@@ -7,6 +7,15 @@
 //!
 //! \brief Put characters encoded
 //!
+//! The passed text string contains:
+//! - The text to be displayed
+//! - Encoded attribute flags
+//!   - 2 bytes for start position
+/?!   - 2 bytes for length
+//!   - 1 byte for attributes
+//! - Lenfth of encoded parts
+//!   - 2 bytes for length of encoded portion, including these two butes.
+//!
 //! \todo Currently ignores the "encoded" part.
 //!
 long smg_put_virtual_display_encoded(
