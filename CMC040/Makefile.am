@@ -50,6 +50,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/find_fileexists.cc \
 	cmcfun/func_4scoseq.cc \
 	cmcfun/func_round.cc \
+	cmcfun/help_3message.cc \
 	cmcfun/help_34message.cc \
 	cmcfun/libr_3insert.cc \
 	cmcfun/libr_digsr.cc \

@@ -193,6 +193,12 @@ std::string entr_period(
 	std::string &deflt);
 int func_4scoseq(
 	int x);
+void help_3message(
+	scope_struct &scope,
+	const std::string &messages,
+	const std::string &help_severity,
+	const std::string &help_progname,
+	const std::string &help_item);
 void help_34message(
 	scope_struct &scope,
 	const std::string &messages,

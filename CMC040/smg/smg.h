@@ -62,6 +62,7 @@ static const int SMG$K_TRM_F12 = KEY_F(12);	//!< F12 key
 static const int SMG$K_TRM_F13 = KEY_F(13);	//!< F13 key
 static const int SMG$K_TRM_F14 = KEY_F(14);	//!< F14 key
 static const int SMG$K_TRM_F15 = KEY_F(15);	//!< F15 key
+static const int SMG$K_TRM_F16 = KEY_F(16);	//!< F16 key
 static const int SMG$K_TRM_F17 = KEY_F(17);	//!< F17 key
 static const int SMG$K_TRM_F18 = KEY_F(18);	//!< F18 key
 static const int SMG$K_TRM_F19 = KEY_F(19);	//!< F19 key
