@@ -54,6 +54,8 @@ libcmcfun_a_SOURCES = \
 	cmcfun/help_34message.cc \
 	cmcfun/libr_3insert.cc \
 	cmcfun/libr_digsr.cc \
+	cmcfun/libr_extractvar.cc \
+	cmcfun/libr_insertvar.cc \
 	cmcfun/libr_select.cc \
 	cmcfun/menu_3interrupt.cc \
 	cmcfun/outp_36initfromfile.cc \
