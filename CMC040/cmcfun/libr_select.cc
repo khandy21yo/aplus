@@ -36,35 +36,14 @@ extern scope_struct scope;
 //! Parameter:
 //!
 //!	LIB_NAME$
-//!		The passed name of the library file to edit.
 //!
 //!	LIB_TITLE$
-//!		Passed title to display on select window.
 //!
 //!	LIB_HELP$
-//!		Variable passed which is used for generating help messages.
 //!
 //!	OPTLIST$
-//!		Application can select which options
-//!		to make available to the user.  Valid
-//!		options are :
-//!		.table
-//!			"S" - Select a record in library
 //!
-//!			"M" - Edit a record in library
-//!
-//!			"C" - Create a new record in library
-//!
-//!			"H" - Help message for user
-//!
-//!			"X" - Exit to exit from function
-//!		.endtable
-//!		OPTLIST$ will default to all options if
-//!		value is blank.
-//!
-//!
-//!	Returned value
-//!		A selected item (Item with an arrow on it).
+//! \returns A selected item (Item with an arrow on it).
 //!
 //! Author:
 //!
@@ -72,9 +51,28 @@ extern scope_struct scope;
 //!
 std::string libr_select(
 	const std::string &lib_name,
+		//!< The passed name of the library file to edit.
 	const std::string &lib_title,
+		//!< Passed title to display on select window.
 	const std::string &lib_help,
+		//!< Variable passed which is used for generating help messages.
 	std::string &optlist)
+		//!<	Application can select which options
+		//!<	to make available to the user.  Valid
+		//!<	options are :
+		//!<	.table
+		//!<		"S" - Select a record in library
+		//!<
+		//!<		"M" - Edit a record in library
+		//!<
+		//!<		"C" - Create a new record in library
+		//!<
+		//!<		"H" - Help message for user
+		//!<
+		//!<		"X" - Exit to exit from function
+		//!<	.endtable
+		//!<	OPTLIST$ will default to all options if
+		//!<<	value is blank.
 {
 #if 1
 	abort();

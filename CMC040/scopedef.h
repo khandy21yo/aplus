@@ -206,6 +206,11 @@ void help_34message(
 	const std::string &help_progname,
 	const std::string &help_filename,
 	const std::string &help_item);
+long libr_maintnodsr(
+	const std::string &lib_file,
+	const std::string &key_name,
+	const std::string &ptitle,
+	long pflag);
 std::string libr_select(
 	const std::string &lib_name,
 	const std::string &lib_title,
