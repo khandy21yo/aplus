@@ -91,6 +91,13 @@ long libr_digsr(
 	const std::string &lib_name,
 	const std::string &key_name,
 	std::vector<std::string> &code);
+long libr_edit(
+	const std::string &lib_name,
+	const std::string &key_name);
+long libr_extract(
+	const std::string &lib_name,
+	const std::string &file_name,
+	const std::string &key_name);
 long libr_extractvar(
 	const std::string &lib_name,
 	std::string &out_text,

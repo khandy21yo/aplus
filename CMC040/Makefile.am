@@ -55,6 +55,8 @@ libcmcfun_a_SOURCES = \
 	cmcfun/libr_3insert.cc \
 	cmcfun/libr_delete.cc \
 	cmcfun/libr_digsr.cc \
+	cmcfun/libr_edit.cc \
+	cmcfun/libr_extract.cc \
 	cmcfun/libr_extractvar.cc \
 	cmcfun/libr_insertvar.cc \
 	cmcfun/libr_maintnodsr.cc \

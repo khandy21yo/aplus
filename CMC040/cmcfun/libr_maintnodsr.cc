@@ -61,9 +61,6 @@ long libr_maintnodsr(
 	const std::string &ptitle,
 	long pflag)
 {
-#if 1
-	abort();
-#else
 	long Result;
 	std::string app_file;
 	long curr_line;
@@ -498,7 +495,6 @@ L_8000:;
 	BReturn;
 
 	return Result;
-#endif
 }
 // +-+-+
 // ++
