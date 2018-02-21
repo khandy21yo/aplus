@@ -64,72 +64,39 @@ static basic::DataListClass DataList(DataValue);
 //!
 //! Parameters:
 //!
-//!	LEFT_SIDE_CMD
-//!		The passed left side commands.
-//!
-//!	Left side commands can be:
-//!	.table
-//!		DD - Document Destination
-//!		SF - Spooler Form Name
-//!		SP - Start Page
-//!		EP - End Page
-//!		CP - Copies
-//!		AS - Autoscroll
-//!		RD - Report Date
-//!	.endtable
-//!
-//!	RIGHT_SIDE_CMD
-//!		The passed right side commands.
-//!
-//!	Right side commands can be:
-//!		PT - Printer Type
-//!
-//!	PRINT.TO% is used to decide where the output is going.
-//!
-//!	.table
-//!		1%  = Display
-//!
-//!		2%  = Spool
-//!
-//!		3%  = Output to a Device
-//!
-//!		4%  = Output to a File
-//!
-//!		5%  = Output to Local Printer
-//!
-//!		7%  = Output to Word Processor
-//!
-//!		9%  = Output to Documentation Library
-//!
-//!		10% = Output to S2020 Spreadsheet
-//!
-//!		11% = Output to PlanPerfect Spreadsheet
-//!	.endtable
-//!
-//!	UTL_REPORTX
-//!		The definition of the file to be changed.
-//!
-//!	UPDATE.CH
-//!		The channel the file will be updated on.
-//!
-//!	UTL_REPORT
-//!		The revised report settings.
-//!
-//!	This subroutine changes the report settings to fit the user's
+//! \returns This subroutine changes the report settings to fit the user's
 //!	choice.
 //!
-//! Author:
+//! \author 05/05/87 - Kevin Handy
 //!
-//!	05/05/87 - Kevin Handy
-//!
+//! Removed the utl_report parameterm as it became a duplicate of the
+//! utl_reopirt parameter.
+//
 void outp_settings(
 	utl_report_cdd &utl_report,
+		//!< The revised report settings.
 	utl_reportx_cdd &utl_reportx,
-	utl_report_cdd &update_ch,
+		//!< The definition of the file to be changed.
 	std::string &left_side_cmd,
+		//!<	The passed left side commands.
+		//!<
+		//!<	Left side commands can be:
+		//!<	.table
+		//!<		DD - Document Destination
+		//!<		SF - Spooler Form Name
+		//!<		SP - Start Page
+		//!<		EP - End Page
+		//!<		CP - Copies
+		//!<		AS - Autoscroll
+		//!<		RD - Report Date
+		//!<	.endtable
 	std::string &right_side_cmd)
+		//!> The passed right side commands.
+		//!>
+		//!>	Right side commands can be:
+		//!>		PT - Printer Type
 {
-#if 1
+#if 0
 	abort();
 //! \todo actually get this converted properly
 #else
@@ -191,7 +158,6 @@ void outp_settings(
 	long xpos;
 	long ypos;
 	long sys_status;
-	long output_ch;
 	long print_line[print_maxgrp + 1];
 	std::vector<std::string> printer_printer;
 	std::string xtype[21];
@@ -501,11 +467,7 @@ L_4050:;
 		utl_report.spoolform = utl_reportx.spoolform;
 		try
 		{
-			RmsUpdate(update_ch);
-			BasicChannel[update_ch].SetKey(0);
-			BasicChannel[update_ch].SetKeyMode(Equal);
-			BasicChannel[update_ch].SetKeyValue(utl_report.repnum);
-			BasicChannel[update_ch].Get();
+			utl_report.Update();
 		}
 		catch(basic::BasicError &Be)
 		{
@@ -1551,8 +1513,16 @@ L_6080:;
 			BGosub(paintform);
 		}
 	}
-	// ** Converted from a select statement **
-	if ((scope.scope_exit == 0) || ((scope.scope_exit == 3) || ((scope.scope_exit == 10) || ((scope.scope_exit == 12) || ((scope.scope_exit == 13) || ((scope.scope_exit == SMG$K_TRM_DO) || ((scope.scope_exit == SMG$K_TRM_UP) || ((scope.scope_exit == SMG$K_TRM_DOWN) || ((scope.scope_exit == SMG$K_TRM_F10) || (scope.scope_exit == SMG$K_TRM_CTRLZ))))))))))
+	if ((scope.scope_exit == 0) ||
+		(scope.scope_exit == 3) ||
+		(scope.scope_exit == 10) ||
+		(scope.scope_exit == 12) ||
+		(scope.scope_exit == 13) ||
+		(scope.scope_exit == SMG$K_TRM_DO) ||
+		(scope.scope_exit == SMG$K_TRM_UP) ||
+		(scope.scope_exit == SMG$K_TRM_DOWN) ||
+		(scope.scope_exit == SMG$K_TRM_F10) ||
+		(scope.scope_exit == SMG$K_TRM_CTRLZ))
 	{
 	}
 	else
@@ -1955,21 +1925,9 @@ L_6450:;
 		//
 		// Random access File structured device?
 		//
-		try
+		if (find_fileexists(temp, 0) != 0)
 		{
-			BasicChannel[output_ch].ForInput();
-			BasicChannel[output_ch].open(temp);
-			if (!BasicChannel[output_ch].is_open()) { throw basic::BasicError(5); }
-			BasicChannel[output_ch].close();
-		}
-		catch(basic::BasicError &Be)
-		{
-			if (Be.err == 5)
-			{
-				goto L_6480;
-			}
-			entr_3message(scope, std::string("Bad output file: ") + basic::ert(Be.err), 0);
-			goto L_6490;
+			goto L_6480;
 		}
 		opt7 = 0;
 L_6472:;

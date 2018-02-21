@@ -11,16 +11,16 @@
 static const long print_maxgrp = 30;
 static const long print_maxitm = 100;
 
-static const long OUTP_TOSPOOL = 1;	//!< Spool output
-static const long OUTP_TODISPLAY = 2;	//!< Display output
-static const long OUTP_TOPL = 3;	//!< PlanPerfect output
-static const long OUTP_TO2020 = 4;	//!< 2020 output
-static const long OUTP_TODOCUMENT = 5;	//!< Document output
-static const long OUTP_TEMP = 6;	//!< Temp output
-static const long OUTP_TOLOCAL = 7;	//!< Local printer output
-static const long OUTP_TODEVICE = 8;	//!< Devicer output
-static const long OUTP_TOWP = 9;	//!< Word Perfect output
-static const long OUTP_TOFILE = 10;	//!< Text file output
+static const long OUTP_TODISPLAY	= 1;
+static const long OUTP_TOSPOOL		= 2;
+static const long OUTP_TODEVICE		= 3;
+static const long OUTP_TOFILE		= 4;
+static const long OUTP_TOLOCAL		= 5;
+static const long OUTP_TOWP		= 7;
+static const long OUTP_TODOCUMENT	= 9;
+static const long OUTP_TO2020		= 10;
+static const long OUTP_TOPL		= 11;
+
 
 class printx_cdd
 {
@@ -94,7 +94,6 @@ void outp_line(
 void outp_settings(
 	utl_report_cdd &utl_report,
 	utl_reportx_cdd &utl_reportx,
-	utl_report_cdd &update_ch,
 	std::string &left_side_cmd,
 	std::string &right_side_cmd);
 void outp_spool(

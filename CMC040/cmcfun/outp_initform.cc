@@ -87,19 +87,24 @@ long outp_initform(
 	std::string temp_ident;
 	std::string temp_program;
 	long user_report;
-	utl_report_cdd utl_report_ch;
 	utl_sysrep_cdd utl_sysrep_ch;
-	std::string utl_work_dev;
 	long xloop;
 	std::string left_cmd;
 	std::string right_cmd;
-
-	BStack(20);
 
 	utl_report_cdd utl_report;
 	utl_report_cdd utl_report_sys;
 	printx_cdd printx;
 	smg_display_id smg_blank;
+
+	//******************************************************************
+	// Delete temp file to prepare for exit
+	//******************************************************************
+	auto killtempfile = [&]()
+	{
+		prnt_ch.close();
+		unlink(tempfile.c_str());
+	};
 
 	jj = read_sysjob();
 
@@ -109,8 +114,9 @@ long outp_initform(
 	user_report = 0;
 	try
 	{
-		utl_report_ch.Get(reportnum);
+		utl_report.Get(reportnum);
 	}
+#if 0 //~ \todo system version of report file
 	catch(basic::BasicError &Be)
 	{
 		if (Be.err == 155)
@@ -130,6 +136,7 @@ L_350:;
 	{
 		utl_sysrep_ch.Get(reportnum);
 	}
+#endif
 	catch(basic::BasicError &Be)
 	{
 		filename = "UTL_REPORT";
@@ -156,7 +163,7 @@ L_350:;
 		{
 			if (user_report == -1)
 			{
-				utl_report_ch.Update();
+				utl_report.Update();
 			}
 		}
 		catch(basic::BasicError &Be)
@@ -169,7 +176,7 @@ L_350:;
 	{
 		try
 		{
-			utl_report_ch.Put();
+			utl_report.Put();
 		}
 		catch(basic::BasicError &Be)
 		{
@@ -193,7 +200,7 @@ L_510:;
 	xloop = xloop + 1;
 	tempfile = std::string("/tmp/prnt") + jj + "_" +
 		std::to_string(xloop) + ".tmp";
-	if (find_fileexists(utl_work_dev + tempfile, flag))
+	if (find_fileexists(tempfile, flag))
 	{
 		goto L_510;
 	}
@@ -219,7 +226,7 @@ L_510:;
 	//
 	try
 	{
-		utl_report_ch.Get(reportnum);
+		utl_report.Get(reportnum);
 	}
 	catch(basic::BasicError &Be)
 	{
@@ -235,7 +242,7 @@ L_510:;
 L_525:;
 	// Get the report record
 	//
-	utl_report_ch.Get(reportnum);
+	utl_report.Get(reportnum);
 	goto L_530;
 	//
 L_530:;
@@ -292,7 +299,7 @@ L_530:;
 	//
 	left_cmd = std::string("DD SF SP EP CP AF OF AS ") + setflg;
 	right_cmd = "PT ";
-	outp_settings(utl_report, utl_reportx, utl_report_ch,
+	outp_settings(utl_report, utl_reportx,
 		left_cmd, right_cmd);
 	//
 	// Un-normal abort, exit, etc.
@@ -305,7 +312,7 @@ L_530:;
 		{
 			smg_status = smg$delete_virtual_display(utl_reportx.window);
 		}
-		BGosub(killtempfile);
+		killtempfile();
 		goto exitprogram;
 	}
 	//
@@ -350,14 +357,14 @@ L_530:;
 	//
 	scope.prg_ident = temp_ident;
 	scope.prg_program = temp_program;
-	BGosub(killtempfile);
+	killtempfile();
 	Result = CMC$_NORMAL;
 	return Result;
 exitprogram:;
 	//******************************************************************
 	// Exit the program
 	//******************************************************************
-	BGosub(killtempfile);
+	killtempfile();
 	//
 	// Erase Display
 	//
@@ -372,13 +379,6 @@ exitprogram:;
 	}
 	Result = CMC$_ABORT;
 	return Result;
-	//******************************************************************
-	// Delete temp file to prepare for exit
-	//******************************************************************
-killtempfile:;
-	prnt_ch.close();
-	smg_status = lib$delete_file(utl_work_dev + tempfile + ";*");
-	BReturn;
 
 helperror:;
 	//
