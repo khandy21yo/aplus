@@ -102,6 +102,10 @@ long libr_extractvar(
 	const std::string &lib_name,
 	std::string &out_text,
 	const std::string &key_name);
+long libr_index(
+	const std::string &lib_name,
+	const std::string &key_name,
+	std::vector<std::string> slibr_index);
 long libr_insertvar(
 	const std::string &lib_name,
 	const std::string &text,

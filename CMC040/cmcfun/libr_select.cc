@@ -56,7 +56,7 @@ std::string libr_select(
 		//!< Passed title to display on select window.
 	const std::string &lib_help,
 		//!< Variable passed which is used for generating help messages.
-	std::string &optlist)
+	const std::string &xoptlist)
 		//!<	Application can select which options
 		//!<	to make available to the user.  Valid
 		//!<	options are :
@@ -74,10 +74,6 @@ std::string libr_select(
 		//!<	OPTLIST$ will default to all options if
 		//!<<	value is blank.
 {
-#if 1
-	abort();
-//! \todo Actually make this work
-#else
 	std::string Result;
 	std::string finame;
 	long flagw;
@@ -98,12 +94,12 @@ std::string libr_select(
 	long width;
 	long junk;
 	std::string junks;
+	std::string optlist = xoptlist;
 
 	BStack(20);
 	smg_scroll_cdd select_scroll;
 	std::vector<std::string> zlibr_index;
 	zlibr_index.resize(2001);
-	lbr_index_cdd lib_rfa[2001];
 	//
 	// Declare variables
 	//
@@ -115,7 +111,7 @@ std::string libr_select(
 	//*******************************************************************
 	opt2 = 0;
 	zlibr_index[0] = "0";
-	libr_index(lib_name, "*", zlibr_index, lib_rfa);
+	libr_index(lib_name, "*", zlibr_index);
 	select_count = std::stol(zlibr_index[0]);
 	//*******************************************************************
 	// Step 2 - Create a scrolling region to display junk in
@@ -445,7 +441,7 @@ reload:;
 	// Set lib index to blank
 	//
 	test_count = select_count;
-	libr_index(lib_name, "*", zlibr_index, lib_rfa);
+	libr_index(lib_name, "*", zlibr_index);
 	select_count = std::stol(zlibr_index[0]);
 	for (loop = select_count + 1; loop <= test_count; loop++)
 	{
@@ -519,5 +515,4 @@ exitprogram:;
 	scope.prg_program = lib_store_program;
 	scope.prg_item = lib_store_item;
 	return Result;
-#endif
 }

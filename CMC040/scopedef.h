@@ -215,7 +215,7 @@ std::string libr_select(
 	const std::string &lib_name,
 	const std::string &lib_title,
 	const std::string &lib_help,
-	std::string &optlist);
+	const std::string &optlist);
 void menu_3interrupt(
 	scope_struct &scope);
 void read_3broadcast(

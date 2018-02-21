@@ -1048,12 +1048,6 @@ entertwo:;
 		//	LA120 LA120 Decwriter IV\*
 		//	.end table
 		//
-		// Index:
-		//	.x Printer Type
-		//	.x Printer Type
-		//	.x General Ledger Report>Printer Type
-		//	.x Report Settings>Printer Type
-		//
 		// --
 		temp_printtype = utl_reportx.printtype;
 L_6020:;
@@ -1073,7 +1067,7 @@ L_6020:;
 		}
 		else if (scope.scope_exit == SMG$K_TRM_F14)
 		{
-			temp = libr_select("CMC:PRINT_TYPE", "Printer Type", "LIBR_SELECT", "Maintain Create Help eXit");
+			temp = libr_select("print_type", "Printer Type", "LIBR_SELECT", "Maintain Create Help eXit");
 			//
 			// Valid command for LIBR_SELECT ARE:
 			//	* Maintain
@@ -1206,7 +1200,7 @@ L_6030:;
 			}
 			tmep = utl_reportx.optdef[pdn].substr(0, tt + 2);
 			tmep = basic::mid(tmep, 7, tt - 4) + tmep.substr(0, 2) + basic::mid(tmep, 4, 2);
-			inp = entr_3date(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), tmep, cbflag, std::to_string(tt), Junk);
+			inp = entr_3date(scope, utl_reportx.window, temp, boost::trim_right_copy(utl_report.descr[pdn]), tmep, cbflag, std::to_string(tt), Junk, 8);
 			inp = basic::mid(inp, tt - 3, 2) + "/" + basic::mid(inp, tt - 1, 2) + "/" + inp.substr(0, tt - 4);
 			// Integer
 		}
