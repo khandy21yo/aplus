@@ -62,8 +62,6 @@ static basic::DataListClass DataList(DataValue);
 //! Option:
 //!	OUTP_SETTINGS$FLD*
 //!
-//! Parameters:
-//!
 //! \returns This subroutine changes the report settings to fit the user's
 //!	choice.
 //!
@@ -71,7 +69,7 @@ static basic::DataListClass DataList(DataValue);
 //!
 //! Removed the utl_report parameterm as it became a duplicate of the
 //! utl_reopirt parameter.
-//
+//!
 void outp_settings(
 	utl_report_cdd &utl_report,
 		//!< The revised report settings.
@@ -96,10 +94,6 @@ void outp_settings(
 		//!>	Right side commands can be:
 		//!>		PT - Printer Type
 {
-#if 0
-	abort();
-//! \todo actually get this converted properly
-#else
 	long cbflag;
 	long comma;
 	long end_loop;
@@ -2140,5 +2134,4 @@ L_19000:;
 	//
 	filename = "";
 	goto helperror;
-#endif
 }

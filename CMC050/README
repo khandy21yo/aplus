@@ -1,0 +1,28 @@
+This directory contains a complete rewrite of the aplus accounting
+system.
+
+Drops any attempt at being compatable with the VMS version
+
+C++
+
+	Not even attempting anything like Java. It's too dependent on
+	version numbers.
+
+PostgreSQL
+
+	Has no concept of Prevois/Next record. Only sets of data.
+
+UI
+	Graphical instead of textual
+
+Printouts
+
+	PDF only
+
+Help
+
+	No integrated help text. Nobody used it anyway.
+
+WHere possiblt, programs that are "scriptable" will be used
+instead of individual programs for data entry and reporting.
+

@@ -338,6 +338,14 @@ public:
 class db_rmsindexed_cdd : public db_rms_cdd
 {
 public:
+	long key;	//!< Which key is being refered to
+
+public:
+	//! \brief constructor
+	db_rmsindexed_cdd()
+	{
+		key = 0;
+	}
 	//! \brief Assignment Operator
 	db_rmsindexed_cdd & operator=(const db_rmsindexed_cdd &xdb)
 	{

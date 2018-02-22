@@ -25,7 +25,7 @@
 
 #include "utl/utl_reportx.h"
 #include "utl/utl_report.h"
-#include "utl/utl_sysrep.h"
+#include "utl/utl_report_sys.h"
 #include "cmcfun/report.h"
 #include "smg/lib.h"
 #include "smg/smg.h"
@@ -35,40 +35,28 @@
 //
 extern scope_struct scope;
 
-//
+//!
 //! \\brief Initilize Forms Output Information
-//
-//	This function initilizes the REPORT output functions
-//	for most forms.
-//
-//	This function was written to remove redundancies in the
-//	forms, and makes fixing some bugs in forms much easier.
-//
-// Parameters:
-//
-//	UTL_REPORTX
-//		The file used to initilize the report functions.
-//
-//	REPORTNUM
-//		The report number to look up
-//
-//	FIXSET
-//		String used to initialize UTL_REPORTX fields from
-//		0 to 9.
-//
-//	Returned value
-//		Initilizes the report output functions and other
-//		information the file has.
-//
-// Author:
-//
-//	06/08/92 - Kevin Handy
-//
-// --
+//!
+//!	This function initilizes the REPORT output functions
+//!	for most forms.
+//!
+//!	This function was written to remove redundancies in the
+//!	forms, and makes fixing some bugs in forms much easier.
+//!
+//! \returns	Initilizes the report output functions and other
+//!		information the file has.
+//!
+//! \author 06/08/92 - Kevin Handy
+//!
 long outp_initform(
 	utl_reportx_cdd &utl_reportx,
+		//!< The file used to initilize the report functions.
 	const std::string &reportnum,
+		//!< The report number to look up
 	const std::string &fixset)
+		//!< String used to initialize UTL_REPORTX fields from
+		//!< 0 to 9.
 {
 	long Result;
 	long directflag;
@@ -87,13 +75,12 @@ long outp_initform(
 	std::string temp_ident;
 	std::string temp_program;
 	long user_report;
-	utl_sysrep_cdd utl_sysrep_ch;
 	long xloop;
 	std::string left_cmd;
 	std::string right_cmd;
 
 	utl_report_cdd utl_report;
-	utl_report_cdd utl_report_sys;
+	utl_report_sys_cdd utl_report_sys;
 	printx_cdd printx;
 	smg_display_id smg_blank;
 
@@ -116,14 +103,9 @@ long outp_initform(
 	{
 		utl_report.Get(reportnum);
 	}
-#if 0 //~ \todo system version of report file
 	catch(basic::BasicError &Be)
 	{
-		if (Be.err == 155)
-		{
-			goto L_350;
-		}
-		goto helperror;
+		goto L_350;
 	}
 	utl_report_sys = utl_report;
 	user_report = -1;
@@ -134,12 +116,11 @@ L_350:;
 	//
 	try
 	{
-		utl_sysrep_ch.Get(reportnum);
+		utl_report_sys.Get(reportnum);
 	}
-#endif
 	catch(basic::BasicError &Be)
 	{
-		filename = "UTL_REPORT";
+		filename = "utl_report_sys";
 		goto helperror;
 	}
 	//
