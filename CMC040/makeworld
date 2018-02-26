@@ -1,0 +1,25 @@
+# Script that build the necessary structures so the programs
+# have the necessary working stuff. A lot of this stuff will only
+# work once.
+#
+# This is more a file ful of notes, as I haven't tested thuis fully.
+#
+
+#
+# Create database on current user
+#
+createdb
+
+$
+$ Get help messages from Version 3
+#
+./tk_spec_inlibay
+*
+P
+*
+
+#
+# Create several tables
+#
+psql -f ./utl/utl_report_sys.sql
+
