@@ -1,5 +1,9 @@
 1	%TITLE "User Report Settings"
 
+	!
+	! This program dumps out a copy of cmcLutl_report.idx,
+	! in a psql compatable format, to make it possible to
+	! import it to Linux without having to retype everything.
 	! Compile:
 	!
 	!	$ BAS UN_REPORT/LINE
@@ -28,7 +32,7 @@
 
 300	WHEN ERROR IN
 		UTL_REPORT.CH% = 10%
-		UTL_REPORT.NAME$ = "UTL_REPORT.IDX"
+		UTL_REPORT.NAME$ = "CMC:UTL_REPORT.IDX"
 
 		OPEN UTL_REPORT.NAME$ FOR INPUT AS FILE UTL_REPORT.CH%, &
 			ORGANIZATION INDEXED FIXED, &
