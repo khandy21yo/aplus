@@ -96,7 +96,7 @@ long outp_initform(
 	jj = read_sysjob();
 
 	//
-	// Get Report
+	// Get Report if it exists
 	//
 	user_report = 0;
 	try
@@ -107,13 +107,11 @@ long outp_initform(
 	{
 		goto L_350;
 	}
-	utl_report_sys = utl_report;
 	user_report = -1;
 	//
+	// Get System version of Report
+	//
 L_350:;
-	//
-	// Get Report
-	//
 	try
 	{
 		utl_report_sys.Get(reportnum);
@@ -124,7 +122,7 @@ L_350:;
 		goto helperror;
 	}
 	//
-	// Put or update record into report file
+	// Put or update system version of report into users version
 	//
 	if (user_report)
 	{
@@ -142,10 +140,7 @@ L_350:;
 		utl_report.baserundate = utl_report_sys.baserundate;
 		try
 		{
-			if (user_report == -1)
-			{
-				utl_report.Update();
-			}
+			utl_report.Update();
 		}
 		catch(basic::BasicError &Be)
 		{
@@ -155,6 +150,7 @@ L_350:;
 	}
 	else
 	{
+		utl_report = utl_report_sys;
 		try
 		{
 			utl_report.Put();

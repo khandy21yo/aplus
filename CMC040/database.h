@@ -247,12 +247,11 @@ public:
 	std::string table_name;
 		//!< Name of the database table
 
-	//! \brief Assignment Operator
+	//! \brief Assignment Operator. Only copys data, not definitions.
 	db_rms_cdd & operator=(const db_rms_cdd &xdb)
 	{
-		fields = xdb.fields;
 		values = xdb.values;
-		table_name = xdb.table_name;
+		copy_frommap(values);
 		return *this;
 	}
 
