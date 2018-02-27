@@ -40,10 +40,8 @@ INSTALLATION
 
 	Execute "./makeall" to build executables.
 
-	Ctraye PostgreSQL database for current user "createdb".
-
-	Execute "tk_spec_inslib" to build help messages. Answer the three
-	questions with "*", "P", and "*". It will grind for sometime.
+	Execute 'makeworld' script to initialize databases with some
+	default values.
 
 	Start the application. "ut_spec_amortization" is currenty the only
 	one that works. amd does anything useful.
