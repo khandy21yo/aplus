@@ -16,5 +16,6 @@ long smg$set_term_characteristics(
 	//
 	// Does this need to do anuthing?
 	//
+	return 1;
 }
 

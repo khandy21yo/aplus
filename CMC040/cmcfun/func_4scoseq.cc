@@ -37,7 +37,7 @@ int func_4scoseq(
 	int xchar)
 		//!< The passed character the user wants converted.
 {
-	register int loop;
+	int loop;
 
 	/*
 	 * Translate using table only items in the correct range

@@ -220,7 +220,7 @@ l6000:
 	 */
 	if ((retchar == SMG$K_TRM_PF1) || (retchar == 7))
 	{
-		smg_status == smg$read_keystroke(
+		smg_status = smg$read_keystroke(
 			scope.smg_kbid,		/* Keyboard ID */
 			retchar,		/* Return character */
 			0,			/* Prompt */

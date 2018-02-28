@@ -93,7 +93,7 @@ std::string prnt_time(
 		{
 			ampm = " PM";
 		}
-		if (thrs < "12" && thrs >= "00" || thrs == "24")
+		if ((thrs < "12" && thrs >= "00") || thrs == "24")
 		{
 			ampm = " AM";
 		}

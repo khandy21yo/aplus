@@ -16,6 +16,7 @@ long smg$end_pasteboard_update(
 {
 	update_panels();
 	doupdate();
+	return 1;
 }
 
 

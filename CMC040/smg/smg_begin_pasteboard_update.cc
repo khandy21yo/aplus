@@ -14,6 +14,7 @@
 long smg$begin_pasteboard_update(
 	smg_pasteboard_id pbid)		//! Pasteboard to update
 {
+	return 1;
 }
 
 

@@ -14,4 +14,5 @@ long smg$erase_display(
 {
 	//! \todo deal with a,b
 	werase(display.win);
+	return 1;
 }

@@ -138,7 +138,8 @@ void entr_3message(
 			junkint = entr_4specialkeys(scope, scope.smg_message, 0, junkint);
 		}
 
-		if ((junkint < 32) || (junkint > 254) || (junkint > 126) && (junkint < 160))
+		if ((junkint < 32) || (junkint > 254) ||
+			((junkint > 126) && (junkint < 160)))
 		{
 			scope.scope_exit = junkint;
 		}

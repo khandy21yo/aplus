@@ -26,6 +26,8 @@ long smg$set_cursor_abs(
 
 	update_panels();
 	doupdate();
+
+	return 1;
 }
 
 

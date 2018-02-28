@@ -134,7 +134,7 @@ long libr_insertvar(
 			0);
 
 		//! \todo Fix status check proprtly
-		if (result = NULL)
+		if (result == NULL)
 		{
 			Result = 0;
 		}

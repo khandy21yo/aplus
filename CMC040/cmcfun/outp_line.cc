@@ -200,11 +200,11 @@ void outp_line(
 	// Force the title if this is the first time through,
 	// or it is time to do a page.
 	//
-	if ((utl_reportx.pageno == 0) &&
-		(utl_reportx.printto < 10) ||
+	if (((utl_reportx.pageno == 0) &&
+		(utl_reportx.printto < 10)) ||
 		((utl_reportx.lineno + lineoff) >= (utl_reportx.pagelen - 7) &&
-		(utl_reportx.printto != OUTP_TODISPLAY)) &&
-		(utl_reportx.printto < 10) ||
+		(utl_reportx.printto != OUTP_TODISPLAY) &&
+		(utl_reportx.printto < 10)) ||
 		((utl_reportx.lineno) >= (utl_reportx.pagelen) &&
 		(utl_reportx.printto == OUTP_TODISPLAY)))
 	{

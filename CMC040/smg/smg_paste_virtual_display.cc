@@ -50,5 +50,6 @@ long smg_xxx_draw_border(
 			mvwaddstr(display.win, 0, offset, display.label.c_str());
 		}
 	}
+	return 1;
 }
 
