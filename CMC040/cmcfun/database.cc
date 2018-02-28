@@ -18,15 +18,6 @@
 //
 db_connection db_conn;
 
-//
-// Local specia working area for building SQL query
-//
-static const char *param[80];
-	//!< Working area for building SQL parameters.
-static int pcount;
-	//!< Count of param[] filled in so far
-
-
 // ************************************************
 // db_connection
 // ************************************************
@@ -76,38 +67,6 @@ int db_connection::disconnect()
 }
 
 // ************************************************
-// db_field_cdd
-// ************************************************
-
-//!
-//! \brief Build the SET part of an SQL command for one field
-//!
-//! \returns the string to be appended to the SQL cmmand to update
-//! this one field.
-//!
-std::string db_field_cdd::update_build_set(const std::string &name)
-{
-	return "";
-}
-
-// ************************************************
-// db_field_string_cdd
-// ************************************************
-
-//!
-//! \brief Build the SET part of an SQL command for one field
-//!
-//! \returns the string to be appended to the SQL cmmand to update
-//! this one field.
-//!
-std::string db_field_string_cdd::update_build_set(const std::string &name)
-{
-	param[pcount++] = valueptr->c_str();
-	std::string command = name + "=$" + std::to_string(pcount);
-	return command;
-}
-
-// ************************************************
 // db_rms_cdd
 // ************************************************
 
@@ -129,44 +88,6 @@ int db_rms_cdd::load_psql(PGresult *result, int row, db_map_cdd &dbmap)
 	}
 
 	return 0;
-}
-
-//!
-//! \brief Create the 'SET part of a SQL update string
-//!
-//! \returns the 'SET' part of a SQL statement
-//!
-std::string db_rms_cdd::update_build_set(const db_map_cdd &dbmap)
-{
-	bool needand = false;
-	std::string buildstring;
-
-	pcount = 0;
-
-	//
-	// Check all fields read from table
-	//
-	for (auto loop = dbmap.begin(); loop != dbmap.end(); loop++)
-	{
-		const std::string &key = (*loop).first;
-		if (fields.count(key) != 0 &&
-			fields[key].compare((*loop).second) == false)
-		{
-			if (needand == true)
-			{
-				buildstring += ", ";
-			}
-			needand = true;
-			buildstring += fields[key].update_build_set(key);
-		}
-	}
-
-	if (buildstring != "")
-	{
-		buildstring = "SET " + buildstring;
-	}
-
-	return buildstring;
 }
 
 // ************************************************
