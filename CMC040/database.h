@@ -193,6 +193,21 @@ public:
 		std::cerr << "    Length: " << length <<
 			", Type: " << type << std::endl;
 	}
+
+	//!
+	//! \brief Compare the saved data against a string
+	//!
+	//! \return true if matches, false otherwise.
+	//!
+	virtual bool compare(const std::string xstr)
+	{
+		return true;
+	}
+
+	//!
+	//! \brief Build tyhe SET part of an SQL command
+	//!
+	virtual std::string update_build_set(const std::string &name);
 };
 
 //!
@@ -225,6 +240,24 @@ public:
 	{
 		xvalue = *valueptr;
 	}
+
+	//!
+	//! \brief Compare the saved data against a string
+	//!
+	//! \return true if matches, false otherwise.
+	//!
+	virtual bool compare(const std::string &xstr)
+	{
+		if (*valueptr == xstr)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	virtual std::string update_build_set(const std::string &name);
 };
 
 //!
@@ -247,8 +280,9 @@ public:
 	std::string table_name;
 		//!< Name of the database table
 
+public:
 	//! \brief Assignment Operator. Only copys data, not definitions.
-	db_rms_cdd & operator=(const db_rms_cdd &xdb)
+	virtual db_rms_cdd & operator=(const db_rms_cdd &xdb)
 	{
 		values = xdb.values;
 		copy_frommap(values);
@@ -283,6 +317,10 @@ public:
 			(*loop).second.copy_tomap(values[(*loop).first]);
 		}
 	}
+
+	void update_build();
+	std::string update_build_set(const db_map_cdd &dbmap);
+
 	//!
 	//! \brief Dump out informatopm in structure
 	//!
@@ -324,7 +362,7 @@ public:
 	int get_record(int record);
 
 	//! \brief Assignment Operator
-	db_rmsrelative_cdd & operator=(const db_rmsrelative_cdd &xdb)
+	virtual db_rmsrelative_cdd & operator=(const db_rmsrelative_cdd &xdb)
 	{
 		db_rms_cdd::operator=(xdb);
 		return *this;
@@ -346,7 +384,7 @@ public:
 		key = 0;
 	}
 	//! \brief Assignment Operator
-	db_rmsindexed_cdd & operator=(const db_rmsindexed_cdd &xdb)
+	virtual db_rmsindexed_cdd & operator=(const db_rmsindexed_cdd &xdb)
 	{
 		db_rms_cdd::operator=(xdb);
 		return *this;
