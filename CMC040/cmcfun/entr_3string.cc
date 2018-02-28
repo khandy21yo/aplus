@@ -12,6 +12,7 @@
 #include <cstring>
 #include <unistd.h>
 #include "basicfun.h"
+#include "pusing.h"
 
 #include "preferences.h"
 #include "cmcfun.h"
@@ -112,6 +113,7 @@ std::string entr_3string(
 	long y1pos;
 	long ypos;
 	std::string zpp;
+	long junk;
 
 	//
 	// Decide between default value and normal value
@@ -165,7 +167,8 @@ std::string entr_3string(
 	//
 	// Normal entry
 	//
-	temp = entr_3enter(scope, scope.smg_option, 1, y1pos, gets, -1, op_flag);
+	junk = -1;
+	temp = entr_3enter(scope, scope.smg_option, 1, y1pos, gets, junk, op_flag);
 	//
 	// Handle RSET string
 	//
@@ -204,7 +207,6 @@ l3000:;
 		{
 			gets = (boost::trim_copy(gets) + basic::Qstring(gets.size(), pad_c)).substr(0, gets.size());
 		}
-		else
 	}
 	//
 	// Re-display data on screen

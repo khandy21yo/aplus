@@ -37,7 +37,7 @@ libcmcfun_a_SOURCES = \
 	cmcfun/entr_3messagenewwindow.cc \
 	cmcfun/entr_3number.cc \
 	cmcfun/entr_3option.cc \
-	cmcfun/entr_3stringlcc \
+	cmcfun/entr_3string.cc \
 	cmcfun/entr_3stringlist.cc \
 	cmcfun/entr_3time.cc \
 	cmcfun/entr_3yesno.cc \

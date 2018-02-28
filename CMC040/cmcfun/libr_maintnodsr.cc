@@ -448,7 +448,6 @@ printfile:;
 			xyz = std::string("TYPE/OUTPUT=") + rinp + " " + app_file;
 			smg_status = lib$spawn(xyz);
 			sleep(1);
-			smg_status = smg$set_broadcast_trapping(scope.smg_pbid, &(read_3broadcast), &(scope));
 			smg_status = smg$repaint_screen(scope.smg_pbid);
 			BGosub(L_8000);
 		}

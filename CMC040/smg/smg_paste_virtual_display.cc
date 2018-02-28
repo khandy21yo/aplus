@@ -42,12 +42,13 @@ long smg_xxx_draw_border(
 	if (display.border)
 	{
 		box(display.win, 0, 0);
-	}
-	if (display.label != "")
-	{
-		int offset = (COLS - display.label.size()) / 2;
-		offset = std::max(0, offset);
-		mvwaddstr(display.win, 0, offset, display.label.c_str());
+
+		if (display.label.size() != 0)
+		{
+			int offset = (COLS - display.label.size()) / 2;
+			offset = std::max(0, offset);
+			mvwaddstr(display.win, 0, offset, display.label.c_str());
+		}
 	}
 }
 

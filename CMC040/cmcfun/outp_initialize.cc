@@ -23,7 +23,7 @@
 
 
 extern scope_struct scope;
-extern printx_cdd printx;
+printx_cdd printx;
 
 
 
