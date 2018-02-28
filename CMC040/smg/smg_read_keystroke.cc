@@ -11,7 +11,7 @@
 //! \brief Read keystroke
 //!
 long  smg$read_keystroke(
-	smg_keyboard_id kbid,		//!< Keyboard ID
+	smg_keyboard_id &kbid,		//!< Keyboard ID
 	int &retchar,			//!< Return character
 	int a,				//!< Prompt
 	int b,				//!< Time out

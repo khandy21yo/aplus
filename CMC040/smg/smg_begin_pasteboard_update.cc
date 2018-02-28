@@ -12,7 +12,7 @@
 //! \brief Begin display update
 //!
 long smg$begin_pasteboard_update(
-	smg_pasteboard_id pbid)		//! Pasteboard to update
+	smg_pasteboard_id &pbid)	//!< Pasteboard to update
 {
 	return 1;
 }

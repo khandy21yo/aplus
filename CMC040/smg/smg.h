@@ -163,9 +163,9 @@ class smg_keyboard_id
 // smg Function names
 //
 long smg$begin_display_update(
-	smg_display_id display);
+	smg_display_id &display);
 long smg$begin_pasteboard_update(
-	smg_pasteboard_id pasteboard);
+	smg_pasteboard_id &pasteboard);
 int smg$change_pbd_characteristics(
 	smg_pasteboard_id &pbid, 
 	long screen_width, 
@@ -252,7 +252,7 @@ long smg_put_virtual_display_encoded(
 	long b,
 	long charset);
 long  smg$read_keystroke(
-	smg_keyboard_id kbid,
+	smg_keyboard_id &kbid,
 	int &retchar,
 	int a,
 	int b,
