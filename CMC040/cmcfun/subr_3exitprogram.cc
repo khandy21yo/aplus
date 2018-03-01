@@ -26,20 +26,8 @@
 //!	It closes out all necessary SMG stuff, and executes
 //!	either a given program or goes to menu.
 //!
-//! Input:
-//!
-//!	OPT_DOCOMMAND
-//!		The passed command the user enters to enter another
-//!		program.
-//!
-//!	OPT_CORECOMMON
-//!		The passed string the user enters to pass to the
-//!		core common.
-//!
-//!
-//!	Returned value
-//!		It closes out all necessary information, and goes
-//!		to either a given program or to the menu.
+//! \returns It closes out all necessary information, and goes
+//!	to either a given program or to the menu.
 //!
 //! Example:
 //!
@@ -51,8 +39,13 @@
 //!
 void subr_3exitprogram(
 	scope_struct &scope,
+		//!< Program wide strucyure
 	const std::string &opt_docommand,
+		//!< The passed command the user enters to enter another
+		//!< program.
 	const std::string &opt_corecommon)
+		//!< The passed string the user enters to pass to the
+		//!> core common.
 {
 	long smg_status;
 

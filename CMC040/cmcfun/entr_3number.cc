@@ -19,65 +19,40 @@
 #include "cmcfun.h"
 #include "scopedef.h"
 
-//
-// Abstract:HELP
-//	.b
-//	.lm +5
-//	This function will enter numbers.
-//	.lm -5
-//
-// Parameters:
-//
-//	OP_CPOS
-//		'' - Do not display on top area
-//
-//	OP_FLAG
-//	.table
-//		  1 - Don't enter data (display only?)
-//
-//		  4 - Force keypunch input(no <CR> after input)
-//
-//		  8 - Indicates a timeout on input will occur
-//
-//		 32 - Use default value
-//
-//		 64 - Don't display
-//
-//		128 - Return fincal value in default
-//	.endtable
-//
-//	XX_VDID
-//		Passed variable that creates or deletes the
-//		window that holds the string.
-//
-//	OP_PROMPT
-//		The passed string used for the prompt and its initialization
-//
-//	XDEFLT
-//		One of the passed defaults for the number.
-//
-//	OP_XFORMAT
-//		The passed format for the number.
-//
-//	OP_DEFLT
-//		The default form of the number size.
-//
-//	Returned value
-//		Enters a formatted number on the screen.
-//
-// Author:
-//
-//	06/24/85 - Kevin Handy
-//
+//!
+//! Abstract:HELP
+//!	.b
+//!	.lm +5
+//!	This function will enter numbers.
+//!	.lm -5
+//!
+//! \returns Enters a formatted number on the screen.
+//!
+//! \author 06/24/85 - Kevin Handy
+//!
 double entr_3number(
 	scope_struct &scope,
+		//!< Program wide structure
 	smg_display_id &xx_vdid,
+		//!< Passed variable that creates or deletes the
+		//!< window that holds the string.
 	const std::string &op_cpos,
+		//!< '' - Do not display on top area
 	const std::string &op_prompt,
+		//!< The passed string used for the prompt and its initialization
 	double xdeflt,
+		//!< One of the passed defaults for the number.
 	long op_flag,
+		//!<  1 - Don't enter data (display only?)
+		//!<  4 - Force keypunch input(no <CR> after input)
+		//!<  8 - Indicates a timeout on input will occur
+		//!< 32 - Use default value
+		//!< 64 - Don't display
+		//!< 128 - Return fincal value in default
 	const std::string &op_xformat,
+		//!< The passed format for the number.
 	std::string &op_deflt)
+		//!< The default form of the number size.
 {
 	double gets;
 	std::string gets_V2;
@@ -87,9 +62,7 @@ double entr_3number(
 	long smg_status;
 	long temp;
 	std::string test_format;
-	long x;
 	long xlen2;
-	long y;
 	long y1pos;
 	long zz;
 
@@ -98,9 +71,7 @@ double entr_3number(
 	//
 	// Split out cursor positioning function
 	//
-	dspl_splitcursor(op_cpos, x, y);
-	xpos = x;
-	ypos = y;
+	dspl_splitcursor(op_cpos, xpos, ypos);
 	//
 	// Function to replace letters with other letters
 	//

@@ -17,4 +17,5 @@ long lib$set_symbol(
 		//!< Value to set
 {
 	setenv(symbol.c_str(), value.c_str(), 1);
+	return 1;
 }
