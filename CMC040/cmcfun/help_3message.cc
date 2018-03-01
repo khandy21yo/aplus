@@ -88,16 +88,76 @@ void help_3message(
 	long v;
 	long junk;
 
-	BStack(20);
+	//
+	// Size of the array
+	//
+	const long num_lines = 3000;
+	std::vector<std::string> line_num;
+	line_num.resize(num_lines + 1);
 	smg_scroll_cdd smg_scroll;
 	smg_display_id svd;
 	smg_display_id old_option;
 	smg_display_id old_message;
-	//
-	// Size of the array
-	const long num_lines = 3000;
-	std::vector<std::string> line_num;
-	line_num.resize(num_lines + 1);
+
+	//*******************************************************************
+	// Load in the help text, and process it
+	//*******************************************************************
+	auto loadall = [&](void)
+	{
+loadall:
+		//
+		// Initialize the number of lines currently loaded
+		//
+		line_num[0] = "0";
+		//
+		// Try reading specific help file
+		//
+		st = libr_digsr(lib_file, key1, line_num);
+		key1_name = key1;
+		lib1_name = lib_file;
+		if ((st & 1) == 0)
+		{
+			//
+			// If text not found in main help file, check out
+			// the default help file.
+			//
+			st = libr_digsr(lib_file, key2, line_num);
+			if ((st & 1) != 0)
+			{
+				key1_name = key2;
+			}
+			else
+			{
+				//
+				// Check only if KEY3 <> KEY2
+				//
+				if (key3 != key2)
+				{
+					st = libr_digsr(lib_file, key3, line_num);
+				}
+				if ((st & 1) != 0)
+				{
+					key1_name = key3;
+				}
+				else
+				{
+					if (lib_file != default_lib)
+					{
+						lib_file = default_lib;
+						goto loadall;
+					}
+					else
+					{
+						st = libr_digsr(default_lib, "H$$NODETAIL", line_num);
+					}
+				}
+			}
+		}
+		curr_line = std::stol(line_num[0]);
+		smg_scroll.bot_array = smg_scroll.end_element = curr_line;
+		smg_scroll.top_line = smg_scroll.beg_element;
+	};
+
 	//
 	// Dimension statements
 	//
@@ -227,7 +287,7 @@ void help_3message(
 	//
 	// Load array and print it to the virtual display
 	//
-	BGosub(loadall);
+	loadall();
 	junk = 0;
 	v = dspl_scroll(smg_scroll, line_num, junk, "PAINT");
 	//
@@ -293,8 +353,18 @@ menu:;
 		}
 		else if (TempS == SMG$K_TRM_F17)
 		{
-			BGosub(magickey);
-			BGosub(loadall);
+			//*******************************************************************
+			// Magic key functions
+			//*******************************************************************
+			lib$set_symbol("CMC$HELP_LIBRARY", lib1_name);
+			lib$set_symbol("CMC$HELP_KEY", key1_name);
+			smg_status = lib$spawn("RUN CMC:UT_SPEC_HELP");
+			smg_status = smg$set_cursor_mode(scope.smg_pbid, SMG$M_CURSOR_OFF);
+			smg_status = smg$repaint_screen(scope.smg_pbid);
+			lib$set_symbol("CMC$HELP_LIBRARY", "");
+			lib$set_symbol("CMC$HELP_KEY", "");
+
+			loadall();
 			junk = 0;
 			v = dspl_scroll(smg_scroll, line_num, junk, "PAINT");
 			//
@@ -320,74 +390,5 @@ exitprogram:;
 	scope.prg_program = old_program + "";
 	scope.prg_item = old_help_item + "";
 	return;
-loadall:;
-	//*******************************************************************
-	// Load in the help text, and process it
-	//*******************************************************************
-	//
-	// Initialize the number of lines currently loaded
-	//
-	line_num[0] = "0";
-	//
-	// Try reading specific help file
-	//
-	st = libr_digsr(lib_file, key1, line_num);
-	key1_name = key1;
-	lib1_name = lib_file;
-	if ((st & 1) == 0)
-	{
-		//
-		// If text not found in main help file, check out
-		// the default help file.
-		//
-		st = libr_digsr(lib_file, key2, line_num);
-		if ((st & 1) != 0)
-		{
-			key1_name = key2;
-		}
-		else
-		{
-			//
-			// Check only if KEY3 <> KEY2
-			//
-			if (key3 != key2)
-			{
-				st = libr_digsr(lib_file, key3, line_num);
-			}
-			if ((st & 1) != 0)
-			{
-				key1_name = key3;
-			}
-			else
-			{
-				if (lib_file != default_lib)
-				{
-					lib_file = default_lib;
-					goto loadall;
-				}
-				else
-				{
-					st = libr_digsr(default_lib, "H$$NODETAIL", line_num);
-				}
-			}
-		}
-	}
-	curr_line = std::stol(line_num[0]);
-	smg_scroll.bot_array = smg_scroll.end_element = curr_line;
-	smg_scroll.top_line = smg_scroll.beg_element;
-	BReturn;
-
-	//*******************************************************************
-	// Magic key functions
-	//*******************************************************************
-magickey:;
-	lib$set_symbol("CMC$HELP_LIBRARY", lib1_name);
-	lib$set_symbol("CMC$HELP_KEY", key1_name);
-	smg_status = lib$spawn("RUN CMC:UT_SPEC_HELP");
-	smg_status = smg$set_cursor_mode(scope.smg_pbid, SMG$M_CURSOR_OFF);
-	smg_status = smg$repaint_screen(scope.smg_pbid);
-	lib$set_symbol("CMC$HELP_LIBRARY", "");
-	lib$set_symbol("CMC$HELP_KEY", "");
-	BReturn;
-
 }
+
