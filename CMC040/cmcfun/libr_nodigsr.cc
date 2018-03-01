@@ -65,7 +65,6 @@ long libr_nodigsr(
 	long st;
 	std::string text;
 
-	OnErrorStack;
 	long txrfa;
 	//
 	// Assume success

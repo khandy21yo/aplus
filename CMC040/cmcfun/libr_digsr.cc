@@ -138,8 +138,6 @@ long libr_digsr(
 	std::string total_text;
 	const long max_list = 20;
 
-	BStack(20);
-	OnErrorStack;
 	long sub_match;
 	long position;
 	long txrfa;

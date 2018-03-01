@@ -93,7 +93,6 @@ double entr_3number(
 	long y1pos;
 	long zz;
 
-	OnErrorStack;
 	long xpos;
 	long ypos;
 	//
