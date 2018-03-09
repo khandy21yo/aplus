@@ -1,6 +1,6 @@
 
 AM_CPPFLAGS = -I ~/btran/lib  @CURSES_CFLAGS@
-AM_LDFLAGS = -L ~/btran/lib -L . @CURSES_LIBS@ @PANEL_LIBS@
+AM_LDFLAGS = -L ~/btran/lib -L . @CURSES_LIBS@ @PANEL_LIBS@ -Lpq
 
 lib_LIBRARIES = \
 	libcmcfun.a \
@@ -133,21 +133,21 @@ libsmg_a_SOURCES = \
 	smg/smg_set_term_characteristics.cc
 
 # dbtest
-dbtest_SOURCES = dbtest.cc
+dbtest_SOURCES = dbtest.cc cmcfun/database.cc
 dbtest_LDADD = -lpq
 
 # utl
-testbatch_SOURCES = utl/testbatch.cc
-testbatch_LDADD = libcmcfun.a -lbtran -lvms
+testbatch_SOURCES = utl/testbatch.cc cmcfun/database.cc
+testbatch_LDADD = libcmcfun.a -lbtran -lvms -lpq
 
 # tk programs
-tk_spec_checkline_SOURCES = tk/tk_spec_checkline.cc
-tk_spec_checkline_LDADD = -lbtran -lvms
+tk_spec_checkline_SOURCES = tk/tk_spec_checkline.cc cmcfun/database.cc
+tk_spec_checkline_LDADD = -lbtran -lvms -lpq
 
-tk_spec_inlibbat_SOURCES = tk/tk_spec_inlibbat.cc
+tk_spec_inlibbat_SOURCES = tk/tk_spec_inlibbat.cc cmcfun/database.cc
 tk_spec_inlibbat_LDADD = libcmcfun.a -lbtran -lvms -lpq
 
 # utl programs
-ut_spec_amortization_SOURCES = utl/ut_spec_amortization.cc
+ut_spec_amortization_SOURCES = utl/ut_spec_amortization.cc cmcfun/database.cc
 ut_spec_amortization_LDADD = libcmcfun.a libsmg.a -lbtran -lvms -lpq
 

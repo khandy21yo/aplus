@@ -70,6 +70,16 @@ int db_connection::disconnect()
 // db_rms_cdd
 // ************************************************
 
+db_rms_cdd::db_rms_cdd()
+{
+	return;
+}
+
+db_rms_cdd::~db_rms_cdd()
+{
+	return;
+}
+
 //!
 //! \brief Copy specific row into dbmap
 //!
@@ -89,6 +99,64 @@ int db_rms_cdd::load_psql(PGresult *result, int row, db_map_cdd &dbmap)
 
 	return 0;
 }
+
+long db_rms_cdd::update(void)
+{
+	abort();
+/*
+	std::string cmd;		// SQL command being built
+	db_params_cdd params;		// Parameter stack
+	bool needcomma = false;		// Do we need to insert commas
+
+	//
+	// Build SQL command to update database
+	//!
+	cmd = "UPDATE " +  table_name + "SET ";
+
+	for (auto loop = values.begin(); loop != values.end(); loop++)
+	{
+		if ((*loop).first.changed())
+		{
+			if (needcomma)
+			{
+				cmd += ", ";
+			}
+			cmd += (*loop).first.update_set(paarams)
+		}
+	}
+
+	//
+	// If needcomma is still false, then nothing is being changed,
+	// so an update is unnecessary.
+	//
+	if (needcomma == false)
+	{
+		return 1;
+	}
+
+	//
+	// Now the WHERE clause
+	//
+	cmd += update_where(params);
+
+	//
+	// Execute the command
+	//
+******
+
+	//
+	// Done
+	//
+	return 1;
+*/
+}
+
+/*
+std::string db_rms_cdd::update_where(db_params_cdd &params)
+{
+	abort();
+}
+*/
 
 // ************************************************
 // db_rmsrelative_cdd

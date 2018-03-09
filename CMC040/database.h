@@ -138,6 +138,46 @@ public:
 };
 
 //!
+//! \brief parameter stack
+//!
+//! This class holds a stack of parameters used to handle filling in
+//! parameters in SQL statements (ie. $1, $2, ...)
+//!
+//! This will be used only for character values, numeric values will
+//! be stuffed directly into the SQL command itself.
+//!
+//! This class exists to make it simpler to pass this information into
+//! and out of functions that are building up the SQL commands.
+//!
+class db_params_cdd
+{
+public:
+	int entries;
+		//!< How many parameters have been defined
+	const char *param[60];
+		//!< Table of parameters.
+		//!< Must point to null terminated char arrays.
+
+public:
+	//!
+	//! \brief Constructor
+	//!
+	db_params_cdd(void)
+	{
+		entries = 0;
+	}
+
+	//!
+	//! \brief Append a string to the list
+	//!
+	std::string append(const char *text)
+	{
+		param[entries++] = text;
+		return '$' + std::to_string(entries);
+	}
+};
+
+//!
 //! \brief map to hold database values
 //!
 //! This hold infividual values in a key/data format.
@@ -247,6 +287,8 @@ public:
 	std::string table_name;
 		//!< Name of the database table
 
+public:
+	db_rms_cdd();
 	//! \brief Assignment Operator. Only copys data, not definitions.
 	db_rms_cdd & operator=(const db_rms_cdd &xdb)
 	{
@@ -254,6 +296,7 @@ public:
 		copy_frommap(values);
 		return *this;
 	}
+	~db_rms_cdd();
 
 	int load_psql(PGresult *result, int row, db_map_cdd &dbmap);
 
@@ -309,6 +352,9 @@ public:
 				std::endl;
 		}
 	}
+
+	virtual long update(void);
+//	virtual std::string update_where(db_params_cdd &params);
 };
 
 //!
