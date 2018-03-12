@@ -102,8 +102,6 @@ int db_rms_cdd::load_psql(PGresult *result, int row, db_map_cdd &dbmap)
 
 long db_rms_cdd::update(void)
 {
-	abort();
-/*
 	std::string cmd;		// SQL command being built
 	db_params_cdd params;		// Parameter stack
 	bool needcomma = false;		// Do we need to insert commas
@@ -115,6 +113,7 @@ long db_rms_cdd::update(void)
 
 	for (auto loop = values.begin(); loop != values.end(); loop++)
 	{
+/*
 		if ((*loop).first.changed())
 		{
 			if (needcomma)
@@ -123,6 +122,7 @@ long db_rms_cdd::update(void)
 			}
 			cmd += (*loop).first.update_set(paarams)
 		}
+*/
 	}
 
 	//
@@ -142,21 +142,20 @@ long db_rms_cdd::update(void)
 	//
 	// Execute the command
 	//
-******
+	abort();
 
 	//
 	// Done
 	//
 	return 1;
-*/
 }
 
-/*
+
 std::string db_rms_cdd::update_where(db_params_cdd &params)
 {
 	abort();
 }
-*/
+
 
 // ************************************************
 // db_rmsrelative_cdd

@@ -272,7 +272,10 @@ public:
 //!
 //! This hold infividual values in a key/data format.
 //!
-typedef std::map<std::string, db_field_cdd> db_fieldmap_cdd;
+class db_fieldmap_cdd : public std::map<std::string, db_field_cdd>
+{
+public:
+};
 
 //!
 //! \brief base class for all rms type data files
@@ -354,7 +357,7 @@ public:
 	}
 
 	virtual long update(void);
-//	virtual std::string update_where(db_params_cdd &params);
+	virtual std::string update_where(db_params_cdd &params);
 };
 
 //!
