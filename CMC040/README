@@ -4,6 +4,11 @@ The code here is barely tested, and probably not very functional, and will
 change radically at any time. Much of the code will be disabled while other
 parts are being worked on.
 
+mate-terminal does not work well with this software. The software makes
+extensive use of BOLD, and mate-terminal displays BOLD as normal characters.
+Navagating the menus without BOLD is extremely difficult. xterm and
+gnome-terminal work much better.
+
 Much of the code has been translated using btran
 (http://github.com/khandy21yo/btran.git), and requires the libraryies ands
  headers that it supplies.
