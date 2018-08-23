@@ -8,6 +8,7 @@
 #
 # Create database on current user
 #
+#createdb
 ./createdbl
 
 
