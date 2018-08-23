@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# Create necessary tables used by this system in the current users
+# PostgreSQL database.
+#
+# This should only be run once, diring initialization of the system.
+#
+psql -f utl/utl_report_sys.sql
+

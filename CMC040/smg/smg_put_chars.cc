@@ -42,6 +42,7 @@ void smg_xxx_set_attrs(
 	if (flags & SMG$M_BOLD)
 	{
 		wattron(display.win, A_BOLD);
+//		wcolor_set(display.win, COLOR_BLUE, 0);
 	}
 	if (flags & SMG$M_REVERSE)
 	{
@@ -69,6 +70,7 @@ void smg_xxx_reset_attrs(
 	if (flags & SMG$M_BOLD)
 	{
 		wattroff(display.win, A_BOLD);
+//		wcolor_set(display.win, COLOR_BLACK, 0);
 	}
 	if (flags & SMG$M_REVERSE)
 	{

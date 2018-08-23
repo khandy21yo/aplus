@@ -16,6 +16,7 @@ long smg$create_pasteboard(
 	long *smg_cols)
 {
 	initscr();
+//	start_color();
 	cbreak();
 	noecho();
 	keypad(stdscr, TRUE);

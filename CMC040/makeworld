@@ -8,8 +8,12 @@
 #
 # Create database on current user
 #
-createdb
+./createdbl
 
+
+#
+# Extract help messages from source code
+#
 $
 $ Get help messages from Version 3
 #
