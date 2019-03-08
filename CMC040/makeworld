@@ -9,16 +9,16 @@
 # Create database on current user
 #
 #createdb
-./createdbl
+createdb
 
 
 #
 # Extract help messages from source code
 #
-$
-$ Get help messages from Version 3
 #
-./tk_spec_inlibay
+# Get help messages from Version 3
+#
+./tk_spec_inlibbat
 *
 P
 *
